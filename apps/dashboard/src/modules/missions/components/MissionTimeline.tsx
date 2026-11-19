@@ -31,7 +31,7 @@ import { StepPill } from "@/commons/components/turns/Steps";
 import { LiveStepLine } from "@/commons/components/turns/StepLine";
 import { formatDuration, splitThinking } from "@/commons/lib/steps";
 import { cn } from "@/commons/lib/utils";
-import { reasonOf, timelineOf, type ReasonKind, type TimelineEntry } from "../lib/timeline";
+import { reasonOf, timelineOf, turnsShown, type ReasonKind, type TimelineEntry } from "../lib/timeline";
 
 const REASON_ICON: Record<ReasonKind, LucideIcon> = {
   start: Flag,
@@ -149,7 +149,7 @@ function Reply({ text }: { text: string }) {
         <Markdown source={content} />
       </div>
       {long && (
-        <button type="button" className="btn btn-ghost btn-xs h-6 max-sm:h-8 min-h-0 gap-1 rounded-lg px-1.5 text-[11px] text-base-content/65" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <button type="button" className="btn btn-ghost btn-xs -ml-1.5 h-6 max-sm:h-8 min-h-0 gap-1 rounded-lg px-1.5 text-[11px] text-base-content/65" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
           {open ? <ChevronDown size={11} aria-hidden="true" /> : <ChevronRight size={11} aria-hidden="true" />}
           {open ? "Less" : "All of it"}
         </button>
@@ -206,22 +206,31 @@ function Entry({ entry, first, last }: { entry: TimelineEntry; first: boolean; l
 }
 
 export function MissionTimeline({ turns, live }: { turns: ChatTurn[]; live: LiveTurn | undefined }) {
+  const [open, setOpen] = useState(false);
   if (turns.length === 0 && !live) return <p className="text-sm text-base-content/65">No turn yet. The first starts as soon as it has a slot.</p>;
-  const entries = timelineOf(turns);
+  const shown = turnsShown(timelineOf(turns), open);
   const reason = live ? reasonOf(live) : null;
   return (
-    <ul className="timeline timeline-vertical timeline-compact">
-      {live && reason && (
-        <Item first last={entries.length === 0} status={live.status} icon={REASON_ICON[reason.kind]}>
-          <Head mark={{ status: live.status, icon: REASON_ICON[reason.kind] }} title={`Turn ${turns.length + 1}`} reason={reason.text} icon={REASON_ICON[reason.kind]} said={REASON_SAID[reason.kind]} at={live.startedAt} />
-          <div className="mt-2">
-            <LiveStepLine steps={live.steps} running={live.status === "running"} elapsedMs={live.status === "running" ? Math.max(0, Date.now() - live.startedAt) : (live.durationMs ?? 0)} />
-          </div>
-        </Item>
-      )}
-      {entries.map((entry, index) => (
-        <Entry key={entry.kind === "turn" ? entry.turn.id : `repeat-${entry.from}`} entry={entry} first={!live && index === 0} last={index === entries.length - 1} />
-      ))}
-    </ul>
+    <div className="space-y-2" data-turns={shown.folds ? (open ? "open" : "folded") : "whole"}>
+      <ul className="timeline timeline-vertical timeline-compact">
+        {live && reason && (
+          <Item first last={shown.entries.length === 0} status={live.status} icon={REASON_ICON[reason.kind]}>
+            <Head mark={{ status: live.status, icon: REASON_ICON[reason.kind] }} title={`Turn ${turns.length + 1}`} reason={reason.text} icon={REASON_ICON[reason.kind]} said={REASON_SAID[reason.kind]} at={live.startedAt} />
+            <div className="mt-2">
+              <LiveStepLine steps={live.steps} running={live.status === "running"} elapsedMs={live.status === "running" ? Math.max(0, Date.now() - live.startedAt) : (live.durationMs ?? 0)} />
+            </div>
+          </Item>
+        )}
+        {shown.entries.map((entry, index) => (
+          <Entry key={entry.kind === "turn" ? entry.turn.id : `repeat-${entry.from}`} entry={entry} first={!live && index === 0} last={index === shown.entries.length - 1} />
+        ))}
+      </ul>
+      {/* The older turns a press away, as the checklist's steps are: the newest few are where the mission is. */}
+      {shown.folds ? (
+        <button type="button" className="btn btn-ghost btn-sm min-h-11 w-full rounded-xl border border-dashed border-base-content/15 sm:min-h-8" aria-expanded={open} onClick={() => setOpen((was) => !was)}>
+          {open ? "Show less" : `Show ${shown.older} older ${shown.older === 1 ? "turn" : "turns"}`}
+        </button>
+      ) : null}
+    </div>
   );
 }

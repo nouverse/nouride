@@ -39,7 +39,7 @@ const daisyThemeVariables = (() => {
 })();
 
 /** The variables each theme carries for the soft look's own rules in `main.css`, beside daisyUI's. */
-const OWN = ["--fill-primary", "--fill-secondary", "--fill-success", "--fill-ink", "--shade"];
+const OWN = ["--fill-primary", "--fill-secondary", "--fill-success", "--fill-failed", "--fill-ink", "--shade"];
 
 describe("the themes", () => {
   test("are the two the dashboard switches between", () => {

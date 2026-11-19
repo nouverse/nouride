@@ -8,8 +8,10 @@
 import { describe, expect, test } from "bun:test";
 import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/wire";
 import { stepNow } from "@/commons/lib/steps";
+import { columnOf } from "@/modules/missions/lib/board";
 import { missionName } from "@/commons/lib/mission-name";
-import { actionsFor, briefShown, grouped, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, tabOf, tabsOf, whyStarted } from "@/modules/missions/lib/mission";
+import { actionsFor, briefShown, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, whyStarted } from "@/modules/missions/lib/mission";
+import { ownPicture } from "@/modules/missions/components/MissionResult";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
 import { createElement } from "react";
@@ -58,8 +60,10 @@ describe("what a person sees", () => {
     expect(seenAs(waiting("limit"))).toBe("Needs you · a limit");
     expect(seenAs(waiting("stuck"))).toBe("Needs you · stuck");
     expect(seenAs(waiting("accept"))).toBe("Needs you · accept");
-    // A draft waits on the accept that starts it: it says so, as its notice and its buttons do (0.8.11).
-    expect(seenAs(waiting("accept", { startedAt: null }))).toBe("Needs you · draft");
+    // A draft waits on the accept that starts it: it says Draft, as its card does, and is no call on the reader.
+    expect(seenAs(waiting("accept", { startedAt: null }))).toBe("Draft");
+    expect(seenTone(waiting("accept", { startedAt: null }))).toContain("text-secondary");
+    expect(seenTone(waiting("accept"))).toContain("text-warning");
     expect(seenAs({ ...MISSION, status: "failed", seen: "ended" })).toBe("Ended · failed");
     expect(seenAs({ ...MISSION, status: "stopped", seen: "ended" })).toBe("Ended · stopped");
     expect(seenAs({ ...MISSION, status: "queued" })).toBe("Working · queued");
@@ -81,18 +85,7 @@ describe("what a person sees", () => {
     expect(searchedIn({ ...MISSION, title: "The delivery test" })).toContain("The delivery test");
   });
 
-  test("the list's three groups keep the daemon's order inside each", () => {
-    const list = [waiting("input", { id: "a" }), { ...MISSION, id: "b" }, { ...MISSION, id: "c", status: "done" as const, seen: "done" as const }, { ...MISSION, id: "d", status: "stopped" as const, seen: "ended" as const }];
-    const groups = grouped(list);
-    expect([groups.needsYou, groups.working, groups.finished].map((g) => g.map((m) => m.id))).toEqual([["a"], ["b"], ["c", "d"]]);
-  });
-
-  test("a tab per group, and one per way it finished — done, failed, stopped (0.8.0); the search looks in the goal, the agent, the id and the row's line", () => {
-    expect(tabOf(waiting("input"))).toBe("needs_you");
-    expect(tabOf(MISSION)).toBe("working");
-    expect(tabOf({ seen: "done", status: "done" })).toBe("done");
-    expect(tabOf({ seen: "ended", status: "failed" })).toBe("failed");
-    expect(tabOf({ seen: "ended", status: "stopped" })).toBe("stopped");
+  test("the search looks in the goal, the agent, the id and the card's line", () => {
     const done = { ...MISSION, status: "done" as const, seen: "done" as const, report: "Wrote hello.txt and checked it" };
     expect(searchedIn({ ...done, title: "The client upgrade" })).toEqual(["The client upgrade", "Upgrade the client", "nova", "msn_3f2a91c0d4", "Wrote hello.txt and checked it"]);
     // What a chat names it by, and the question it waits on, find it too.
@@ -127,14 +120,12 @@ describe("one at work that asked a question and went on", () => {
     expect(actionsFor(asking)).toEqual(["answer", "stop"]);
   });
 
-  test("it is under Needs you and under Working, and drawn once, with what needs the reader", () => {
-    expect(tabsOf(asking)).toEqual(["needs_you", "working"]);
-    const groups = grouped([{ ...MISSION, id: "at-work" }, { ...asking, id: "asks" }]);
-    expect([groups.needsYou, groups.working].map((group) => group.map((m) => m.id))).toEqual([["asks"], ["at-work"]]);
+  test("it is in Needs you on the board: the answer is the reader's to give", () => {
+    expect(columnOf(asking)).toBe("needs");
     // Answered, it works like any other; one the reader only reads asks its own person, and is at work to them.
-    expect(tabsOf({ ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] })).toEqual(["working"]);
-    expect(tabsOf({ ...asking, changeable: false })).toEqual(["working"]);
-    expect(tabsOf(MISSION)).toEqual(["working"]);
+    expect(columnOf({ ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] })).toBe("working");
+    expect(columnOf({ ...asking, changeable: false })).toBe("working");
+    expect(columnOf(MISSION)).toBe("working");
   });
 
   test("answered, or one the reader only reads, it is a mission at work like any other", () => {
@@ -363,5 +354,29 @@ describe("the Brief card (0.8.11)", () => {
     expect(briefShown("/w/private/nouva/audit_rina/BRIEF.md", "msn_1")).toEqual({ name: "BRIEF.md", said: "Named in its goal: /w/private/nouva/audit_rina/BRIEF.md" });
     expect(briefShown("/w/private/nouva/brief-kk.md", "msn_1").name).toBe("brief-kk.md");
     expect(briefShown(null, "msn_1").name).toBe("BRIEF.md");
+  });
+});
+
+describe("a picture a report names", () => {
+  const FOLDER = "/w/private/nix/missions/msn_1";
+  const FILES = [`${FOLDER}/report-notes.md`, `${FOLDER}/flow.png`, `${FOLDER}/charts/before it.JPG`, `${FOLDER}/logo.svg`, "/home/you/project/shot.webp"];
+  const at = (name: string) => ownPicture("msn_1", FILES, FOLDER, name);
+
+  test("is one of the mission's own result files: as its folder has it, by its name alone, with ./ or a link's %20", () => {
+    expect(at("flow.png")).toBe("/api/control/missions/msn_1/files/1");
+    expect(at("./flow.png")).toBe("/api/control/missions/msn_1/files/1");
+    expect(at("charts/before%20it.JPG")).toBe("/api/control/missions/msn_1/files/2");
+    expect(at("before it.JPG")).toBe("/api/control/missions/msn_1/files/2");
+    // In a folder the person named, outside the mission's own: by its whole path or its name.
+    expect(at("/home/you/project/shot.webp")).toBe("/api/control/missions/msn_1/files/4");
+    expect(at("shot.webp")).toBe("/api/control/missions/msn_1/files/4");
+  });
+
+  test("a name it does not hold, a file that is no picture and an SVG are none: nothing is drawn from them", () => {
+    expect(at("elsewhere.png")).toBeNull();
+    expect(at("report-notes.md")).toBeNull();
+    expect(at("logo.svg")).toBeNull();
+    expect(at("https://example.com/flow.png")).toBeNull();
+    expect(at("%E0%A4%A")).toBeNull();
   });
 });

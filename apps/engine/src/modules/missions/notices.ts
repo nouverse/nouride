@@ -35,17 +35,15 @@ export function called(mission: Pick<Mission, "id" | "title">): string {
  * is whole since 0.8.11: cut to its first hundred characters, a person read half of what they had asked for. It is at
  * most `GOAL_MAX`, and a gateway splits a long message itself.
  */
-export function startedNotice(mission: Pick<Mission, "id" | "title" | "goal" | "checks" | "reviewOn" | "accept" | "jobId">, said?: string): string {
+export function startedNotice(mission: Pick<Mission, "id" | "title" | "goal" | "checks" | "reviewOn" | "accept" | "jobId">): string {
   const id = shortId(mission.id);
   const judged = [
     mission.checks.length > 0 ? `${mission.checks.length} ${plural(mission.checks.length, "check")}` : "",
     mission.reviewOn ? "reviewer" : "",
     mission.accept || (mission.checks.length === 0 && mission.jobId === null) ? "you accept" : "",
   ].filter(Boolean);
-  // Started without a draft, on the person's own words (0.8.11, `now`): they are the ground it stands on, so they are said.
-  const asked = said?.trim() ? `\nStarted at once, as asked: "${said.trim()}"` : "";
   // Its name, then the goal whole, as before: a person who typed a goal reads it back, and one who read a draft knows it.
-  return `▶ ${called(mission)}${GAP}${mission.goal.trim()}${GAP}${judged.join(" + ") || "you accept"} · stop: /mission stop ${id}${asked}`;
+  return `▶ ${called(mission)}${GAP}${mission.goal.trim()}${GAP}${judged.join(" + ") || "you accept"} · stop: /mission stop ${id}`;
 }
 
 /**

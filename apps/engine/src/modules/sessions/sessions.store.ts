@@ -161,6 +161,24 @@ export class SessionStore {
       .run(sessionIdFor(key), key.agentId, key.chatId, key.gatewayId, now, now, model);
   }
 
+  /**
+   * The conversation an answer with no model in it was written into (a command's, a notice's, `TurnStore.note`): its
+   * row, not started (0), when it has none yet, as `keepModel` writes one. Without it, `/status` sent before the first
+   * message left a turn the dashboard listed under no conversation and `DELETE /sessions/<id>` could not reach. Who
+   * opened it is read from the turn just noted; a row already there is left as it is.
+   */
+  keepAnswered(key: SessionKey): void {
+    const id = sessionIdFor(key);
+    const now = Date.now();
+    this.db
+      .prepare(
+        `INSERT INTO sessions (id, agent_id, chat_id, gateway, created_at, started_at, updated_at, opened_by)
+         VALUES (?, ?, ?, ?, ?, 0, ?, ${FIRST_PERSON})
+         ON CONFLICT(id) DO NOTHING`,
+      )
+      .run(id, key.agentId, key.chatId, key.gatewayId, now, now, id);
+  }
+
   /** And `/effort`'s, the same way. */
   keepEffort(key: SessionKey, effort: string): void {
     const now = Date.now();

@@ -91,7 +91,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",
   },
   "scripts/check-sql.ts": {
-    lines: 495,
+    lines: 496,
     why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses it lets through; the plan half is the seam when it grows",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
@@ -111,7 +111,7 @@ export const TEST_BUDGET: Record<string, Budget> = {
     why: "reflection end to end, written before `modules/reflection` was split, on this file's `enginePointedAt` harness; new cases go to tests/reflection/",
   },
   "apps/dashboard/tests/mount.test.ts": {
-    lines: 1_540,
+    lines: 1_495,
     why: "every dashboard page mounted, and the cases that click through one; the harness is `mount-harness.ts`, so a page's new cases go in a file of their own",
   },
   "apps/engine/tests/llm/prompt.test.ts": {

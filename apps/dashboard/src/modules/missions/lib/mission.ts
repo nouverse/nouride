@@ -45,21 +45,30 @@ export function waitsElsewhere(mission: Pick<MissionView, "seen" | "changeable">
   return mission.seen === "needs_you" && mission.changeable === false;
 }
 
+/** A draft: written by an agent or a person, waiting for someone to start it. Nothing of it has run. */
+export function isDraft(mission: Pick<MissionView, "status" | "waitKind" | "startedAt">): boolean {
+  return mission.status === "waiting" && mission.waitKind === "accept" && mission.startedAt === null;
+}
+
+/** A draft's tone, the Backlog's own: it waits to be started, which is no call on anybody. */
+const DRAFT_TONE = "bg-secondary/12 text-secondary border-secondary/25";
+
 /** The badge's colours: one that waits for someone else is as quiet as one that ended, since nothing is the reader's to do. */
-export function seenTone(mission: Pick<MissionView, "seen" | "changeable">): string {
-  return SEEN_TONE[waitsElsewhere(mission) ? "ended" : mission.seen];
+export function seenTone(mission: Pick<MissionView, "seen" | "changeable" | "status" | "waitKind" | "startedAt">): string {
+  if (waitsElsewhere(mission)) return SEEN_TONE.ended;
+  return isDraft(mission) ? DRAFT_TONE : SEEN_TONE[mission.seen];
 }
 
 /**
  * The words on a mission's badge: "Needs you · a question", "Working", "Ended · failed". A mission waiting in the queue is
- * working as a person sees it, and says it is queued; one running its checks says so. A draft (0.8.11) waits on an accept
- * that starts it, and says "draft": "Needs you · accept" read as a result to sign off, the chat's notice and the page's
- * buttons saying Draft, Start it and Drop it. One at work that asked a question and went on says so: "Working" alone
- * read as nothing for the person to do.
+ * working as a person sees it, and says it is queued; one running its checks says so. A draft waits on the accept that
+ * starts it and says "Draft", as its card on the board does: "Needs you · accept" read as a result to sign off, and
+ * "Needs you · draft" as a call on the reader, which a draft in the backlog is not. One at work that asked a question
+ * and went on says so: "Working" alone read as nothing for the person to do.
  */
 export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person"> & { answers?: MissionView["answers"] }): string {
   if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
-  if (mission.seen === "needs_you" && mission.waitKind === "accept" && mission.startedAt === null) return `${SEEN_LABEL.needs_you} · draft`;
+  if (isDraft(mission)) return "Draft";
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
   if (mission.status === "queued") return `${SEEN_LABEL.working} · queued`;
@@ -192,44 +201,9 @@ export function shortId(id: string): string {
   return id.slice(0, 10);
 }
 
-/**
- * The list's tabs: every mission, the two a person acts on, and the three ways one finishes — done, failed, stopped
- * (0.8.0). One Finished tab held all three, and finding why the stopped ones stopped meant reading every row.
- */
-export type MissionTab = "all" | "needs_you" | "working" | "done" | "failed" | "stopped";
-
-/** Which tab a mission is under: needs you, working, or how it finished. One that waits for someone else is at work. */
-export function tabOf(mission: Pick<MissionView, "seen" | "status" | "changeable">): Exclude<MissionTab, "all"> {
-  if (waitsElsewhere(mission)) return "working";
-  if (mission.seen === "needs_you" || mission.seen === "working") return mission.seen;
-  return mission.status === "failed" ? "failed" : mission.status === "stopped" ? "stopped" : "done";
-}
-
 /** At work with a question open that is the reader's to answer: not one they only read, which asks its own person. */
 function asksReader(mission: Pick<MissionView, "status" | "waitKind" | "changeable"> & { answers?: MissionView["answers"] }): boolean {
   return asksWhileWorking(mission) && mission.changeable !== false;
-}
-
-/**
- * Every tab a mission is under. One at work that asked the reader a question is under both a person acts on: it
- * works, and it needs them. Under Working alone, the count beside "Needs you" was one short of the menu's, and the
- * tab a person opens to see what waits for them left that question out.
- */
-export function tabsOf(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "changeable"> & { answers?: MissionView["answers"] }): Exclude<MissionTab, "all">[] {
-  const tab = tabOf(mission);
-  return tab === "working" && asksReader(mission) ? ["needs_you", tab] : [tab];
-}
-
-/**
- * Needs you, then working, then the rest — the daemon's order, kept as three groups to draw under their headings. Each
- * mission once: one at work that asked the reader a question is drawn with what needs them, where its badge says it works.
- */
-export function grouped(missions: readonly MissionView[]): { needsYou: MissionView[]; working: MissionView[]; finished: MissionView[] } {
-  return {
-    needsYou: missions.filter((m) => tabsOf(m)[0] === "needs_you"),
-    working: missions.filter((m) => tabsOf(m)[0] === "working"),
-    finished: missions.filter((m) => m.seen === "done" || m.seen === "ended"),
-  };
 }
 
 /**

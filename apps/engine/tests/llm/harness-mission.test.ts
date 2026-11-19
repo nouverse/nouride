@@ -32,7 +32,9 @@ describe("the harness on missions", () => {
   test("started as a draft the person starts, and signed off by who is there", () => {
     const text = harness(["mission"], true);
     expect(text).toContain('With `mission`: action "start" drafts it (a goal, a brief and checks that prove it done); "edit" changes the draft until the person starts it.');
-    expect(text).toContain("From a chat, `mission` makes a draft the person starts; say what it will do and how it will be judged done. Start it at once only when the person asked for that, with their words in `said`.");
+    expect(text).toContain("From a chat, `mission` makes a draft, which runs once the person starts it; say what it will do and how it will be judged done.");
+    // Never offered to start one at once.
+    expect(text).not.toContain("`said`");
     expect(text).toContain("Who signs it off: the person in this chat following the work gets checks, then `accept`, with `no_review`; the person away or leaving (\"do it, I'm off to sleep\") gets checks and the reviewer.");
   });
 

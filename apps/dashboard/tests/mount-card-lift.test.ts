@@ -1,6 +1,6 @@
 /**
- * A card that is itself what opens something lifts a little under the pointer (`LIFTS`): a mission, a background
- * helper, an agent. Its transform only, eased; one that opens nothing does not lift, so a lift always means "this opens".
+ * A card that is itself what opens something lifts a little under the pointer (`LIFTS`): a background helper, a card
+ * on Home or Settings. Its transform only, eased; one that opens nothing does not lift, so a lift always means "this opens".
  * The reduced-motion rule keeps it still (`reduced-motion.test.ts`).
  */
 
@@ -20,8 +20,8 @@ const lifting = (host: HTMLElement) =>
 
 describe("a card that opens something", () => {
   for (const [page, path, what] of [
-    ["Missions", "/missions", 'a[href$="/missions/msn_1"]'],
     ["Helpers", "/jobs", 'a[href*="/jobs/"]'],
+    // A mission is a card on the board that acts (Start, Answer): its title opens its page, and the card does not lift.
     // Agents are rows of one list under the Office now, not cards: a row does not lift.
   ] as const) {
     test(`lifts on ${page}, eased, and only where it opens something`, async () => {
@@ -63,4 +63,13 @@ describe("a card that opens something", () => {
     expect(found.length).toBeGreaterThan(5);
     for (const card of found) expect(card).toEqual({ tag: "a", eased: true });
   });
+});
+
+test("a mission's card on the board does not lift: it holds buttons, and its title is what opens the page", async () => {
+  let found: { tag: string; eased: boolean }[] = [];
+  await renderPage("/missions", async (host) => {
+    await eventually(() => host.querySelector('[data-mission="msn_1"]') !== null, 4_000, "the board");
+    found = lifting(host);
+  });
+  expect(found).toEqual([]);
 });

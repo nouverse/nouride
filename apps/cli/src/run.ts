@@ -45,6 +45,7 @@ import { mission } from "./commands/mission.ts";
 import { logs } from "./commands/logs.ts";
 import { mcp } from "./commands/mcp.ts";
 import { mcpServerCommand } from "./commands/mcp-server.ts";
+import { authCommand } from "./commands/auth.ts";
 import { peopleCommand } from "./commands/people.ts";
 import { memoryCommand } from "./commands/memory.ts";
 import { knowledge } from "./commands/knowledge.ts";
@@ -212,6 +213,8 @@ export async function runCli(install: Install): Promise<void> {
       return await mcp(await connect(), args);
     case "mcp-server":
       return await mcpServerCommand(await connect(), args);
+    case "auth":
+      return await authCommand(await connect(), args);
     case "sessions":
       return await sessions(await connect(), args);
     case "turns":

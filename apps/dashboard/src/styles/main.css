@@ -86,6 +86,8 @@
   --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   /* `font-display`: a page's title and a card's heading. */
   --font-display: "Fredoka", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  /* `bg-failed`, `text-failed`: a failed mission, in each theme's own red (`--fill-failed`). */
+  --color-failed: var(--fill-failed);
 
   /* ── Motion: where something changes, and only there ────────────────────────────────────────────
      The owner's reference (playquorum.dev/company), read from its stylesheet: what moves, moves in opacity and
@@ -184,6 +186,8 @@
   --fill-primary: #f29a7e;
   --fill-secondary: #a99af0;
   --fill-success: #86d5bd;
+  /* A failed mission's bar and badge: a red no one takes for the primary orange, which the theme's error is close to. */
+  --fill-failed: #f2617a;
   --fill-ink: #22202c;
   /* The soft shadow's colour (`shadow-soft`): deeper at night, where a light one would not show. */
   --shade: rgb(0 0 0 / 0.28);
@@ -234,6 +238,7 @@
   --fill-primary: #f08a6c;
   --fill-secondary: #8c7ae6;
   --fill-success: #7fcdb4;
+  --fill-failed: #c8283f;
   --fill-ink: #221e2e;
   --shade: rgb(60 45 30 / 0.07);
 

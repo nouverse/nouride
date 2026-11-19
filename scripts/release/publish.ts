@@ -9,9 +9,13 @@
  * `lts/<line>` for a long-term patch); the version files and the notes say this version; every tree is clean and
  * pushed; every submodule's pin is on its remote; each `main` can fast-forward to what the release pins (a long-term
  * patch leaves the mains alone); CI passed on the commit; the mirror's first page keeps every stepping stone with the
- * release on top (`mirror-page.ts`); and the tag does not exist. Then it fast-forwards the mains, tags the branch's
- * commit (annotated `[lts]` or `[quiet]` for those modes), pushes, and waits for the release run and the public half.
- * `--dry-run` stops after saying what it would run.
+ * release on top (`mirror-page.ts`); and the tag does not exist. Then, the order since 0.8.36: it opens the pull request
+ * from the release branch to `main` (or takes the one open), waits for its checks, merges it with a merge commit,
+ * deletes the branch, asks for `ci.yml` on the merge commit and waits for it to end green, moves the submodules' `main`
+ * to their pins, tags the merge commit (annotated `[quiet]` for a quiet release) and waits for the release run and the
+ * public half. A long-term patch has no pull request: its `lts/` branch's commit is tagged `[lts]`. A red check stops it
+ * with nothing merged; a new commit on the branch and the same command again take the same pull request. `--dry-run`
+ * stops after saying what it would run.
  */
 
 import { spawnSync } from "node:child_process";
@@ -75,16 +79,112 @@ export function refusals(f: PublishFacts): string[] {
   return out;
 }
 
-/** What it would run, in order, once nothing refuses. */
+/** What it would run, in order, once nothing refuses: what `--dry-run` says. `<n>` and `<merge>` are read as it goes. */
 export function plan(f: Pick<PublishFacts, "tag" | "mode" | "branch" | "pins">): string[] {
-  const steps: string[] = [];
-  if (f.mode !== "lts") {
-    steps.push(`git fetch . ${f.branch}:main`, "git push origin main");
-    for (const pin of f.pins) steps.push(`git -C ${pin.path} push origin ${pin.pin}:refs/heads/main`);
-  }
-  steps.push(f.mode === "ordinary" ? `git tag ${f.tag} ${f.branch}` : `git tag -a ${f.tag} -m "[${f.mode}]" ${f.branch}`, `git push origin ${f.tag}`);
-  return steps;
+  if (f.mode === "lts") return [`git tag -a ${f.tag} -m "[lts]" ${f.branch}`, `git push origin ${f.tag}`];
+  return [
+    `gh pr create --repo ${REPO} --base main --head ${f.branch} --title ${f.tag} --body-file docs/releases/${f.tag}.md (or the one open)`,
+    `gh pr checks <n> --repo ${REPO}, until every check has ended, all green`,
+    `gh pr merge <n> --repo ${REPO} --merge`,
+    `git push origin --delete ${f.branch}`,
+    `gh workflow run ci.yml --repo ${REPO} --ref main, until its run on <merge> has ended green`,
+    ...f.pins.map((pin) => `git -C ${pin.path} push origin ${pin.pin}:refs/heads/main`),
+    tagLine(f, "<merge>"),
+    `git push origin ${f.tag}`,
+  ];
 }
+
+function tagLine(f: Pick<PublishFacts, "tag" | "mode">, at: string): string {
+  return f.mode === "ordinary" ? `git tag ${f.tag} ${at}` : `git tag -a ${f.tag} -m "[${f.mode}]" ${at}`;
+}
+
+/** How publishing reaches git, `gh` and the clock: the machine's own, or a test's stand-ins. */
+export interface PublishIo {
+  run: (cmd: string, args: string[]) => { ok: boolean; out: string };
+  sleep: (ms: number) => void;
+  say: (line: string) => void;
+}
+
+/**
+ * The checks of a pull request as `gh pr checks` prints them, a line each (`name<TAB>state<TAB>…`): green once every
+ * one has ended and none failed, red once one failed or was cancelled, null while any runs or none is listed yet (a
+ * pull request just opened has none for a few seconds). Pure.
+ */
+export function settledChecks(printed: string): "pass" | "fail" | null {
+  const states = printed.split("\n").map((line) => line.split("\t")[1]?.trim() ?? "").filter(Boolean);
+  if (states.some((state) => state === "fail" || state === "cancel")) return "fail";
+  if (states.length === 0 || states.some((state) => state === "pending")) return null;
+  return "pass";
+}
+
+/** The number at the end of a pull request's address, as `gh pr create` prints it. */
+function prNumber(out: string): string {
+  return /\/pull\/(\d+)\s*$/.exec(out.trim())?.[1] ?? "";
+}
+
+/**
+ * Publish an ordinary or quiet release through its pull request, or tag a long-term patch: the steps `plan` names, run.
+ * Stops at the first that fails, saying which; nothing after it runs. Returns the commit tagged, or null when it stopped.
+ */
+export function publish(f: PublishFacts, io: PublishIo): string | null {
+  const step = (cmd: string, ...args: string[]) => {
+    const done = io.run(cmd, args);
+    if (!done.ok) io.say(`✗ stopped at: ${[cmd, ...args].join(" ")}`);
+    return done;
+  };
+  if (f.mode === "lts") {
+    if (!step("git", "tag", "-a", f.tag, "-m", "[lts]", f.branch).ok || !step("git", "push", "origin", f.tag).ok) return null;
+    return f.head;
+  }
+
+  const open = io.run("gh", ["pr", "list", "--repo", REPO, "--base", "main", "--head", f.branch, "--state", "open", "--json", "number", "--jq", ".[0].number // empty"]);
+  let pr = open.ok ? open.out.trim() : "";
+  if (pr) io.say(`the pull request open for ${f.branch}: #${pr}`);
+  else {
+    const made = step("gh", "pr", "create", "--repo", REPO, "--base", "main", "--head", f.branch, "--title", f.tag, "--body-file", `docs/releases/${f.tag}.md`);
+    pr = made.ok ? prNumber(made.out) : "";
+    if (!pr) return null;
+    io.say(`opened #${pr}`);
+  }
+
+  // Up to three hours: the whole suite runs on the pull request, behind whatever else the runners have.
+  let checks: "pass" | "fail" | null = null;
+  for (let i = 0; i < 360 && checks === null; i++) {
+    if (i > 0) io.sleep(30_000);
+    checks = settledChecks(io.run("gh", ["pr", "checks", pr, "--repo", REPO]).out);
+  }
+  if (checks !== "pass") {
+    io.say(checks === "fail" ? `✗ a check of #${pr} failed: nothing is merged. Fix it with a new commit on ${f.branch}, then run this again.` : `✗ the checks of #${pr} never ended`);
+    return null;
+  }
+
+  if (!step("gh", "pr", "merge", pr, "--repo", REPO, "--merge").ok) return null;
+  const merge = io.run("gh", ["pr", "view", pr, "--repo", REPO, "--json", "mergeCommit", "--jq", ".mergeCommit.oid"]).out.trim();
+  if (!/^[0-9a-f]{40}$/.test(merge)) {
+    io.say(`✗ #${pr} was merged, and its merge commit could not be read: tag it by hand (the runbook's step 5)`);
+    return null;
+  }
+  // The repository does not delete a merged branch itself.
+  if (!step("git", "push", "origin", "--delete", f.branch).ok) return null;
+
+  // The merge commit is one no suite ran on: a tag pushed while that run works builds with its own and was red twice.
+  const since = isoNow();
+  if (!step("gh", "workflow", "run", "ci.yml", "--repo", REPO, "--ref", "main").ok) return null;
+  const suite = waitFor(io, REPO, "ci.yml", since, merge);
+  if (suite !== "success") {
+    io.say(`✗ ci.yml on the merge commit ${merge.slice(0, 8)}: ${suite}. Nothing is tagged.`);
+    return null;
+  }
+
+  step("git", "fetch", "-q", "origin");
+  for (const pin of f.pins) if (!step("git", "-C", pin.path, "push", "origin", `${pin.pin}:refs/heads/main`).ok) return null;
+  const tag = f.mode === "ordinary" ? ["tag", f.tag, merge] : ["tag", "-a", f.tag, "-m", `[${f.mode}]`, merge];
+  if (!step("git", ...tag).ok || !step("git", "push", "origin", f.tag).ok) return null;
+  return merge;
+}
+
+/** Now, as GitHub writes a run's `createdAt`. A function so a test can read the order of the calls rather than a time. */
+const isoNow = () => new Date().toISOString();
 
 /**
  * The paths `git status --porcelain` names in one tree, as `<tree>: <path>`, the submodules' own entries left to their
@@ -100,8 +200,13 @@ export function dirtyPaths(porcelain: string, tree: string): string[] {
     .map((path) => `${tree}: ${path}`);
 }
 
-function run(cmd: string, args: string[], cwd = ROOT): { ok: boolean; out: string } {
-  const result = spawnSync(cmd, args, { cwd, encoding: "utf8" });
+/**
+ * A command's answer, whole. The buffer is set: the default holds 1 MiB and a command past it reads as failed, which is
+ * how the public list of releases, 1.09 MB with thirty releases' notes in it, became "the mirror's page could not be
+ * read".
+ */
+export function run(cmd: string, args: string[], cwd = ROOT): { ok: boolean; out: string } {
+  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   return { ok: result.status === 0, out: (result.stdout ?? "").trimEnd() };
 }
 const git = (args: string[], cwd = ROOT) => run("git", args, cwd);
@@ -161,27 +266,33 @@ export function settledRun(view: string): "success" | "failure" | null {
 }
 
 /**
- * The newest run of a workflow for this tag, waited for: its conclusion, read from the run. A watch's own exit is not:
- * 0.8.18's publish said "release.yml: failure" because a TLS handshake to GitHub timed out under the watch, while the
- * run went on to build the release.
+ * The newest run of a workflow started since `since` (on `sha` when one is named), waited for: its conclusion, read
+ * from the run. A watch's own exit is not: 0.8.18's publish said "release.yml: failure" because a TLS handshake to
+ * GitHub timed out under the watch, while the run went on to build the release.
  */
-function waitFor(repo: string, workflow: string, since: string): string {
+function waitFor(io: PublishIo, repo: string, workflow: string, since: string, sha?: string): string {
+  const which = `[.[] | select(.createdAt >= "${since}")${sha ? ` | select(.headSha == "${sha}")` : ""}][0].databaseId // empty`;
   for (let i = 0; i < 360; i++) {
-    const found = run("gh", ["run", "list", "-R", repo, "--workflow", workflow, "--limit", "5", "--json", "databaseId,createdAt", "--jq", `[.[] | select(.createdAt >= "${since}")][0].databaseId // empty`]);
+    const found = io.run("gh", ["run", "list", "-R", repo, "--workflow", workflow, "--limit", "10", "--json", "databaseId,createdAt,headSha", "--jq", which]);
     if (found.ok && found.out) {
       for (let tries = 0; tries < 720; tries++) {
-        spawnSync("gh", ["run", "watch", found.out, "-R", repo, "--interval", "60"], { stdio: ["ignore", "ignore", "inherit"] });
-        const view = run("gh", ["run", "view", found.out, "-R", repo, "--json", "status,conclusion", "--jq", '.status + " " + .conclusion']);
+        const view = io.run("gh", ["run", "view", found.out, "-R", repo, "--json", "status,conclusion", "--jq", '.status + " " + .conclusion']);
         const settled = settledRun(view.ok ? view.out : "");
         if (settled) return settled;
-        spawnSync("sleep", ["10"]);
+        io.sleep(30_000);
       }
       return "never finished";
     }
-    spawnSync("sleep", ["10"]);
+    io.sleep(10_000);
   }
   return "never started";
 }
+
+const MACHINE: PublishIo = {
+  run: (cmd, args) => run(cmd, args),
+  sleep: (ms) => void spawnSync("sleep", [String(ms / 1000)]),
+  say: (line) => console.log(line),
+};
 
 if (import.meta.main) {
   const tag = process.argv[2] ?? "";
@@ -201,21 +312,15 @@ if (import.meta.main) {
   console.log(`${tag}, ${mode}: every check passed. ${process.argv.includes("--dry-run") ? "It would run:" : "Running:"}`);
   for (const step of steps) console.log(`  ${step}`);
   if (process.argv.includes("--dry-run")) process.exit(0);
-  const since = new Date().toISOString();
-  for (const step of steps) {
-    const [cmd, ...args] = step.match(/"[^"]*"|\S+/g)!.map((part) => part.replace(/^"|"$/g, ""));
-    if (!run(cmd!, args).ok) {
-      console.error(`✗ stopped at: ${step}`);
-      process.exit(1);
-    }
-  }
+  const since = isoNow();
+  if (publish(facts, MACHINE) === null) process.exit(1);
   console.log("waiting for the release run…");
-  const release = waitFor(REPO, "release.yml", since);
+  const release = waitFor(MACHINE, REPO, "release.yml", since);
   console.log(`release.yml: ${release}`);
-  const publicHalf = release === "success" ? waitFor(REPO, "public-release.yml", since) : "not started";
+  const publicHalf = release === "success" ? waitFor(MACHINE, REPO, "public-release.yml", since) : "not started";
   console.log(`the public half: ${publicHalf}`);
   // The Pro editions, their image and the boxes' update, in the private repository the release starts (2026-11-06).
-  const proHalf = release === "success" ? waitFor(PRO_REPO, "release.yml", since) : "not started";
+  const proHalf = release === "success" ? waitFor(MACHINE, PRO_REPO, "release.yml", since) : "not started";
   console.log(`the Pro half: ${proHalf}`);
   process.exit(release === "success" && publicHalf === "success" && proHalf === "success" ? 0 : 1);
 }

@@ -293,6 +293,8 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride mcp-server on|off
   nouride mcp-server token create --person <key> --agents <id,id> --label <client> [--scopes memory,memory:write,personas] [--ttl <days>]
   nouride mcp-server token list|revoke <id>
+  nouride auth device --name "<label>"   A sign-in for a Home app on this machine that does not expire:
+                                   printed once, traded for a session, revoked on the dashboard's Users page
   nouride sessions                 Stored conversations
   nouride turns [--agent <id>] [--limit N]   The newest turns, with what each cost
   nouride turns show <id>          One turn whole: every model call (tokens, cost, latency, retries),

@@ -40,16 +40,20 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   tetap.
 - **Mulai** dengan tombolnya, `/mission accept <id>`, tombol Start it di dashboard, atau dengan bilang ke agent untuk
   jalan; ia meneruskan kata-katamu, dan kata-kata itu disimpan bersama mulainya. **Drop it** membuangnya, beserta
-  foldernya.
-- **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa. Kalau
-  dimulai langsung karena kamu pergi ("kerjakan sekarang, aku mau tidur"), cek lalu pemeriksa. Itu bisa kamu ubah di
-  draft.
-- Draft yang tidak dimulai siapa pun tetap ada, tercantum di bagian butuh kamu, sampai ada yang memulai atau
-  membuangnya.
+  foldernya, begitu juga **Delete** di halamannya: draft langsung hilang, karena belum ada yang dijalankan.
+- **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa, seperti
+  yang ia lakukan kalau kamu pergi ("kerjakan ya, aku mau tidur"). Itu bisa kamu ubah di draft.
+- Draft yang tidak dimulai siapa pun tetap ada di Backlog papan, sampai ada yang memulai atau membuangnya, berapa pun
+  lamanya: draft tidak pernah kedaluwarsa. Ia tidak dihitung sebagai yang butuh kamu.
 
-Bilang "kerjain sekarang, gw tidur dulu"? Agent memulainya langsung, tanpa draft, dan notifikasi *mulai*-nya mengutip
-kata-katamu. Catatan yang sudah ia tulis tentang tugas itu, dan rencananya, ikut pindah; chat-nya menyisakan satu baris,
-`→ mission msn_3f2a91, running`, yang berubah jadi hasilnya waktu misi selesai.
+Bilang "kerjain sekarang, gw tidur dulu"? Setiap misi yang dimulai agent selalu jadi draft dulu (0.8.40): ia membuat
+draft-nya dan bilang begitu, lalu kamu yang memulainya, atau kamu suruh jalan dan ia memulai draft-nya atas kata-katamu.
+Catatan yang sudah ia tulis tentang tugas itu, dan rencananya, ikut pindah; chat-nya menyisakan satu baris,
+`→ mission msn_3f2a91, running`, yang berubah jadi hasilnya waktu misi selesai. `/mission <tujuan>` meminta agent yang
+kamu sapa membuat draft dari tujuan itu: ia membaca yang perlu, menulis brief dan cek-nya, atau bertanya dulu kalau
+tujuannya belum jelas. `/goal` adalah perintah yang sama. Misi yang kamu tulis di form dashboard, dan langkah misi di
+otomasi, tetap langsung jalan: yang pertama kamu sendiri yang menulis, dan yang kedua tidak ada orang yang bisa menekan
+Start.
 
 Untuk memulai sendiri:
 
@@ -57,8 +61,9 @@ Untuk memulai sendiri:
 /mission cek 52 dokumen yang di-link di KK 1.1, tandai masing-masing, lalu salin workbook-nya balik
 ```
 
-atau **Missions → New mission** di dashboard. Agent yang kamu sapa yang menjalankannya, atas nama kamu, dan ia melapor
-ke chat tempat kamu memulainya.
+atau **Missions → New mission** di dashboard: **Save to backlog** menyimpannya sebagai draft sampai kamu memulainya,
+dan **Start now** langsung menjalankannya. Agent yang kamu sapa yang menjalankannya, atas nama kamu, dan ia melapor ke
+chat tempat kamu memulainya.
 
 `/goal`, nama yang dipakai tool lain, juga memulai misi. Misi adalah tujuan yang disahkan pihak lain: ia selesai kalau
 cek-nya lulus dan pemeriksa setuju, bukan waktu agent bilang sudah selesai.
@@ -88,6 +93,10 @@ Hasil dan laporannya memakai bahasamu, ditulis formal seperti dokumen. Hasil yan
 bersama `report.md`-nya, supaya kamu membacanya dulu sebelum memutuskan, dan tidak dikirim lagi saat kamu menerimanya.
 Tidak ada yang kamu tulis dipotong di jalan: goal-nya, yang kamu sampaikan saat ia bekerja, dan yang ia laporkan.
 
+Laporan bukan cuma teks (0.8.40). Kalau pekerjaannya punya bentuk, agent menggambarnya, menyerahkan gambarnya di
+antara file hasil, sehingga chat menerimanya sebagai gambar, dan menyebutnya di laporan; halaman mission menggambarnya
+di sana, di tempatnya. Daftar hal beserta statusnya ditulis sebagai tabel.
+
 Notifikasi *mulai*, *butuh kamu*, dan *selesai* diakhiri link ke halaman misinya, di chat yang mendapat link:
 [Link dari chat](/id/docs/manual/dashboard/#link-dari-chat).
 
@@ -97,13 +106,33 @@ jam.
 
 ## Memantaunya
 
-**Missions** di dashboard menampilkan yang butuh kamu paling atas, lalu yang sedang jalan, lalu yang sudah selesai,
-masing-masing dengan progres checklist-nya: satu tab untuk tiap kelompok, pencarian di tujuan, laporan dan ID-nya,
-filter per agent, dan seberapa jauh ke belakang yang sudah selesai ditampilkan: 3, 7, 14 atau 30 hari terakhir (3 kalau
-tidak dipilih), tidak lebih. Misi yang masih terbuka selalu tampil, berapa pun umurnya.
+**Missions** di dashboard adalah sebuah papan (0.8.40). Tiga kolom berisi yang masih terbuka: **Backlog**,
+draft-draft; **Working**, yang mengantre, jalan atau sedang dicek; **Needs you**, pertanyaan, approval, batas atau
+hasil yang perlu diterima. Di bawahnya **Finished** mendaftar yang selesai, gagal atau dihentikan, satu baris
+masing-masing. Tiap kartu punya namanya, bar progres checklist-nya, satu baris yang penting (kapan draft dianggap
+selesai, langkah yang sedang dikerjakan, yang ditanyakan), kucing agent-nya dan waktunya; baris Finished menyebut
+kenapa gagal atau siapa yang menghentikan. Arahkan kursor ke waktunya, atau capai dengan keyboard, untuk melihat
+tanggal dan jam ia dibuat, dimulai dan selesai. **Start** di draft dan **Answer** di pertanyaan bisa langsung dari
+kartunya.
+
+Tiap kolom menampilkan lima yang terbaru, dengan **Show more** di bawahnya. Finished menampilkan 7, 14, 21 atau 30 hari
+terakhir (7 kalau tidak dipilih), dengan Done, Failed dan Stopped untuk menyaringnya; yang masih terbuka ditampilkan
+berapa pun umurnya. Kalau tidak ada yang terbuka, ketiga kolom jadi satu baris tipis dan Finished mengisi halamannya.
+Pencarian dan filter per agent berlaku untuk semua kolom. Di HP papannya jadi empat tab dengan jumlahnya, Finished yang
+keempat, terbuka di Needs you kalau ada isinya, dan tanggalnya tertulis di samping tiap waktu.
+
+Hal yang sama bisa ditanyakan ke agent di chat-nya: "apa saja yang ada di backlog kamu?" Ia menjawab untuk mission
+miliknya sendiri, yang ia kerjakan dan yang ia buatkan draft-nya untuk agent lain: semua yang masih terbuka berapa pun
+umurnya, draft disebut sebagai draft yang belum dimulai, dan dua puluh yang terakhir selesai.
+
+Halaman sebuah mission dimulai dengan apa yang sedang dikerjakannya dan sudah sejauh mana, lalu brief-nya dan hasilnya
+begitu ada, masing-masing selebar halaman, dan checklist-nya di atas turn-turn-nya, dengan foldernya, apa yang
+menentukan ia selesai dan kotak untuk memberi tahu sesuatu di sampingnya. Checklist yang panjang menampilkan lima
+langkah di sekitar yang sedang dikerjakan, dan turn-nya lima yang terbaru, sisanya tinggal ditekan. Halaman draft hanya
+berisi yang bisa kamu ubah sebelum ia dimulai.
 
 **Yang menunggu kamu bilang apa yang ditunggu** (0.8.39), di Home, di Work dan di daftar: pertanyaan dengan
-pertanyaannya, hasil yang perlu diterima, draft yang belum dimulai, batas yang tercapai. Misi yang bertanya sambil
+pertanyaannya, hasil yang perlu diterima, batas yang tercapai. Misi yang bertanya sambil
 lanjut bekerja ikut tampil di situ, ditandai **Working · asked a question**, dan halamannya memuat pertanyaannya dan
 kotak untuk menjawab.
 
@@ -301,7 +330,7 @@ itu, `isolated` ditolak.
 
 | Di chat | |
 |---|---|
-| `/mission <tujuan>` | mulai satu untuk agent yang kamu sapa |
+| `/mission <tujuan>` | agent yang kamu sapa membuat draft dari tujuanmu; jalan setelah kamu memulainya |
 | `/mission` | yang jalan dan menunggu di sini, yang butuh kamu paling atas |
 | `/mission stop <id>` | akhiri |
 | `/mission continue <id> [catatan]` | lanjut melewati batas, keluar dari macet, atau dengan apa yang kurang setelah dicek |

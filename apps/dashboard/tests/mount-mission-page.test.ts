@@ -241,6 +241,8 @@ test("a reviewer's brief naming a long path breaks it, rather than running out o
   missionTurns([missionTurn(1, {})], { "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, reviewOn: true, review } } } });
   let line: Element | undefined;
   await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => doneWhen(host) !== undefined, 2_000, "what decides it is done");
+    doneWhen(host)!.click();
     await eventually(() => (line = [...host.querySelectorAll("p")].find((p) => p.textContent?.startsWith("Reviewer · "))) !== undefined, 2_000, "the reviewer's line");
   });
   expect(line?.textContent).toBe(`Reviewer · ${review}`);
@@ -276,19 +278,39 @@ test("its actions keep one row beside its title from md: Accept, Continue, Stop 
   expect(actions?.className).toContain("md:flex-nowrap");
 });
 
-test("on a phone its Checklist comes before its turns; from lg, beside them (0.8.11)", async () => {
-  // "How far is it" was read past every turn below lg. happy-dom lays out nothing, so the classes that order the one
-  // column are what is asserted: the side column's cards are the grid's own items there, the Checklist the first.
+test("from the top: what it does now and how far it is, its brief across the page, then its checklist over its turns, and beside them its folder, what decides it is done, then the box to tell it", async () => {
+  // "Now" and the meters were under the brief, a scroll away. What decides it is done stood beside the brief for a
+  // moment, where it read as a second brief: it is beside the work, under the folder.
   missionTurns([missionTurn(1, {})]);
-  let checklist: HTMLElement | null = null;
+  answer({ "/missions/msn_1": detailOf({}, { brief: "The brief it works from.", briefPath: "/w/private/nova/missions/msn_1/BRIEF.md" }) });
+  const seen = { order: [] as string[], brief: "", main: [] as string[], side: [] as string[], phone: {} as Record<string, string | undefined> };
   await renderPage("/missions/msn_1", async (host) => {
-    await eventually(() => (checklist = [...host.querySelectorAll("section")].find((one) => one.querySelector("h2, h3")?.textContent === "Checklist") ?? null) !== null, 2_000, "the Checklist");
+    await eventually(() => host.querySelector("[data-work]") !== null && buttons(host).includes("Read it whole"), 2_000, "the page");
+    const titled = (root: Element) => [...root.querySelectorAll("h2, h3")].map((head) => head.textContent ?? "");
+    const cardOf = (title: string, root: Element = host) => [...root.querySelectorAll("section")].find((one) => one.querySelector("h2, h3")?.textContent === title);
+    const meters = host.querySelector('[aria-label="Progress and limits"]')!;
+    const brief = cardOf("Brief")!;
+    const work = host.querySelector("[data-work]")!;
+    const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    seen.order = [before(meters, brief) ? "meters, then the brief" : "the brief first", before(brief, work) ? "the brief, then the work" : "the work first"];
+    // Across the page: the page's own child, sharing its row with nothing.
+    seen.brief = brief.parentElement === work.parentElement ? "across the page" : "in a row with something";
+    const [main, side] = [...work.children] as [HTMLElement, HTMLElement];
+    seen.main = titled(main).filter((title) => ["Checklist", "Turns", "Done when"].includes(title));
+    const folder = side.querySelector("[data-folder]")!;
+    const done = cardOf("Done when", side)!;
+    const tell = side.querySelector("textarea")!;
+    seen.side = [side.tagName, before(folder, done) ? "its folder, then what decides it" : "what decides it first", before(done, tell) ? "then the box" : "the box first", titled(side).slice(0, 2).join(", ")];
+    // happy-dom lays out nothing, so the classes that order the one column on a phone are what is asserted.
+    const order = (el: Element | null | undefined) => el?.className.split(" ").find((name) => name.startsWith("max-lg:order-"));
+    seen.phone = { checklist: order(cardOf("Checklist", work)), folder: order(folder.closest("section")), done: order(done.closest("[class*='max-lg:order-']")), tell: order(tell.closest("[class*='max-lg:order-']")), turns: order(cardOf("Turns", work)), main: main.className.includes("max-lg:contents") ? "contents" : "a column" };
   });
-  const card = checklist as HTMLElement | null;
-  expect(card?.className).toContain("max-lg:order-first");
-  expect(card?.parentElement?.tagName).toBe("ASIDE");
-  expect(card?.parentElement?.className).toContain("max-lg:contents");
-  expect(card?.parentElement?.className).toContain("lg:space-y-5");
+  expect(seen.order).toEqual(["meters, then the brief", "the brief, then the work"]);
+  expect(seen.brief).toBe("across the page");
+  expect(seen.main).toEqual(["Checklist", "Turns"]);
+  // Each card of the side column says what it is: the folder was a bare path with no word over it.
+  expect(seen.side).toEqual(["ASIDE", "its folder, then what decides it", "then the box", "Folder, Done when"]);
+  expect(seen.phone).toEqual({ checklist: "max-lg:order-1", folder: "max-lg:order-2", done: "max-lg:order-3", tell: "max-lg:order-4", turns: "max-lg:order-6", main: "contents" });
 });
 
 /** The page's answer for msn_1 with the mission changed — a state the fixture's install does not hold. */
@@ -302,8 +324,12 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   let sent: { path: string; body: unknown }[] = [];
   let shown = "";
   let toast = "";
+  let there: boolean[] = [];
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
+    // Nothing of a draft has run: no meters, no checklist, no turns, no box to tell it something, and no "Needs you".
+    // As yes or no, not the elements themselves: a failure that prints a whole page's nodes never ends.
+    there = ['[aria-label="Progress and limits"]', "[data-work]", '[role="status"].alert'].map((what) => host.querySelector(what) !== null);
     // The brief folded until opened, then read in place.
     openBrief(host);
     await eventually(() => host.textContent?.includes("The owner's answers, first.") === true, 2_000, "the brief, opened");
@@ -328,7 +354,13 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
     record.restore();
     sent = record.posts;
   });
-  expect(shown).toContain("Nothing has run. Change it here, then start it, or drop it.");
+  expect(shown).toContain("Nothing has run. Change it here, then start it, or delete it.");
+  expect(there).toEqual([false, false, false]);
+  expect(shown).toContain("drafted");
+  // Its badge says Draft, as its card on the board does: a draft is no call on the reader.
+  expect(shown).toContain("Draft");
+  expect(shown).not.toContain("Needs you");
+  expect(shown).not.toContain("started");
   expect(shown).toContain("What to read");
   expect(shown).toContain("The owner's answers, first.");
   expect(sent).toEqual([{ path: "/missions/msn_1/edit", body: { checks: ["test -s RFC.md", "bun run check-paths"], accept: true } }]);
@@ -353,12 +385,186 @@ test("a mission at work has no draft form, and its brief is still shown — fold
   expect(page).not.toContain("Change the draft");
 });
 
+test("a mission's page: four meters against its limits, the checklist with each step's note, how it is judged done — and only Stop while it works", async () => {
+  const seen: { html?: string; buttons?: string[] } = {};
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.textContent?.includes("Checklist") === true, 2_000, "the page");
+    // How it is judged done is folded to its one line until opened.
+    [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"))!.click();
+    await eventually(() => host.querySelector("[data-done-when]") !== null, 2_000, "what decides it is done, opened");
+    seen.html = host.innerHTML;
+    seen.buttons = buttons(host);
+  });
+  for (const words of ["1 of 3", "0 of 50", "0m of 8h", "0 of 50M", "du in sizes.txt — build/ is 41 GB", "test -s report.md", "/srv/nouride/workspace/shared/report"]) {
+    expect(seen.html).toContain(words);
+  }
+  expect(seen.buttons).toContain("Stop");
+  expect(seen.buttons!.some((label) => /^(Continue|Accept|Answer)/.test(label))).toBe(false);
+});
+
+test("its turns are folded to the newest five, with the older ones a press away", async () => {
+  missionTurns(Array.from({ length: 8 }, (_, at) => missionTurn(at + 1, {})));
+  const seen = { folded: [] as string[], button: "", opened: 0, less: "", again: 0, short: "" };
+  const titles = (host: HTMLElement) => [...host.querySelectorAll("[data-turns] li")].map((one) => /Turn \d+/.exec(one.textContent ?? "")?.[0] ?? "");
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-turns] li") !== null, 2_000, "the turns");
+    seen.folded = titles(host);
+    seen.button = [...host.querySelectorAll("[data-turns] > button")].map((one) => one.textContent ?? "").join();
+    press(host.querySelector<HTMLElement>("[data-turns]")!, "Show 3 older turns");
+    await eventually(() => titles(host).length === 8, 2_000, "all eight");
+    seen.opened = titles(host).length;
+    seen.less = [...host.querySelectorAll("[data-turns] > button")].map((one) => one.textContent ?? "").join();
+    press(host.querySelector<HTMLElement>("[data-turns]")!, "Show less");
+    await eventually(() => titles(host).length === 5, 2_000, "folded again");
+    seen.again = titles(host).length;
+  });
+  expect(seen.folded).toEqual(["Turn 8", "Turn 7", "Turn 6", "Turn 5", "Turn 4"]);
+  expect(seen.button).toBe("Show 3 older turns");
+  expect([seen.opened, seen.less, seen.again]).toEqual([8, "Show less", 5]);
+  // Five turns are whole: nothing to press.
+  missionTurns(Array.from({ length: 5 }, (_, at) => missionTurn(at + 1, {})));
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-turns] li") !== null, 2_000, "the turns");
+    seen.short = `${titles(host).length} ${host.querySelectorAll("[data-turns] > button").length} ${host.querySelector<HTMLElement>("[data-turns]")!.dataset.turns}`;
+  });
+  expect(seen.short).toBe("5 0 whole");
+});
+
+test("a turn's long reply is cut to three lines, and the press for the rest starts at the reply's own edge", async () => {
+  missionTurns([missionTurn(1, { reply: Array.from({ length: 6 }, (_, at) => `line ${at + 1}`).join("\n\n") })]);
+  const seen = { classes: "", clamped: false, open: false };
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-turns] li") !== null, 2_000, "the turn");
+    const rest = () => [...host.querySelectorAll<HTMLButtonElement>("[data-turns] li button[aria-expanded]")].find((one) => /^(All of it|Less)$/.test(one.textContent ?? ""));
+    seen.classes = rest()?.className ?? "";
+    seen.clamped = host.querySelector("[data-turns] li .line-clamp-3") !== null;
+    rest()!.click();
+    await eventually(() => rest()?.textContent === "Less", 2_000, "the whole reply");
+    seen.open = host.querySelector("[data-turns] li .line-clamp-3") === null;
+  });
+  // Its padding is 6px: without the pull back its arrow sat 6px inside the reply's first letter.
+  expect(seen.classes.split(" ")).toEqual(expect.arrayContaining(["px-1.5", "-ml-1.5"]));
+  expect([seen.clamped, seen.open]).toEqual([true, true]);
+});
+
+test("its checklist is folded to the five steps around the one at work, with all of them a press away", async () => {
+  const steps = Array.from({ length: 12 }, (_, at) => ({ text: `step ${at + 1}`, state: at < 7 ? "done" : at === 7 ? "active" : "pending" }));
+  missionTurns([missionTurn(1, {})]);
+  answer({ "/missions/msn_1": detailOf({}, { plan: { steps } }) });
+  const seen = { folded: [] as string[], button: "", opened: 0, again: 0 };
+  const texts = (host: HTMLElement) => [...host.querySelectorAll("[data-checklist] li")].map((one) => (one.textContent ?? "").replace(/^.*?: /, "").replace(/^\d+\./, "").trim());
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("[data-checklist]") !== null, 2_000, "the checklist");
+    seen.folded = texts(host);
+    seen.button = [...host.querySelectorAll("[data-checklist] button")].map((one) => one.textContent ?? "").join();
+    press(host.querySelector<HTMLElement>("[data-checklist]")!, "Show all 12 steps");
+    await eventually(() => texts(host).length === 12, 2_000, "all twelve");
+    seen.opened = texts(host).length;
+    press(host.querySelector<HTMLElement>("[data-checklist]")!, "Show less");
+    await eventually(() => texts(host).length === 5, 2_000, "folded again");
+    seen.again = texts(host).length;
+  });
+  expect(seen.folded).toEqual(["step 6", "step 7", "step 8", "step 9", "step 10"]);
+  expect(seen.button).toBe("Show all 12 steps");
+  expect([seen.opened, seen.again]).toEqual([12, 5]);
+});
+
+test("a picture its report names among its own result files is drawn in place; any other name is its words, and one on the web still waits for a press", async () => {
+  const folder = "/srv/nouride/workspace/shared/report";
+  answer({
+    "/missions/msn_1": detailOf({
+      status: "done",
+      seen: "done",
+      workdir: folder,
+      report: "# What changed\n\n![How a message travels](flow.png)\n\n![The old layout](charts/before%20it.png)\n\n![Not handed back](elsewhere.png)\n\n![From the web](https://example.com/pic.png)",
+      files: [`${folder}/notes.md`, `${folder}/flow.png`, `${folder}/charts/before it.png`, `${folder}/drawing.svg`],
+    }),
+  });
+  const seen = { own: [] as (string | null)[][], words: false, web: [] as unknown[] };
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => host.querySelector("img[data-own-picture]") !== null, 2_000, "the report's picture");
+    seen.own = [...host.querySelectorAll<HTMLImageElement>("img[data-own-picture]")].map((img) => [img.getAttribute("src"), img.getAttribute("alt")]);
+    // A name the result does not hold is no picture: its words, and nothing asked of anywhere.
+    seen.words = (host.textContent ?? "").includes("Not handed back") && [...host.querySelectorAll("img")].every((img) => !(img.getAttribute("src") ?? "").includes("elsewhere"));
+    seen.web = [buttons(host).filter((label) => label.includes("Show picture")).length, [...host.querySelectorAll("img")].some((img) => (img.getAttribute("src") ?? "").startsWith("https://example.com"))];
+  });
+  // By its place among the files, the second and the third: the daemon serves nothing by a path.
+  expect(seen.own).toEqual([
+    ["/api/control/missions/msn_1/files/1", "How a message travels"],
+    ["/api/control/missions/msn_1/files/2", "The old layout"],
+  ]);
+  expect(seen.words).toBe(true);
+  expect(seen.web).toEqual([1, false]);
+});
+
+/** The Done when card's header, which opens and closes it. */
+function doneWhen(host: HTMLElement): HTMLButtonElement | undefined {
+  return [...host.querySelectorAll<HTMLButtonElement>("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Done when"));
+}
+
+test("what decides it is done is one line until opened, and open by itself once a check has failed", async () => {
+  // Ten commands open at the top of the page pushed the result down it (live).
+  const checks = Array.from({ length: 10 }, (_, at) => `test -s part-${at}.md`);
+  answer({ "/missions/msn_1": detailOf({ checks, accept: true, lastCheck: null }, { brief: "The brief it works from." }) });
+  const seen = { folded: [] as unknown[], opened: [] as unknown[], failed: [] as unknown[] };
+  const state = (host: HTMLElement) => [doneWhen(host)?.getAttribute("aria-expanded"), host.querySelector("[data-done-when]") !== null, host.textContent?.includes("test -s part-9.md") === true];
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => doneWhen(host) !== undefined, 2_000, "the card");
+    seen.folded = [...state(host), doneWhen(host)!.textContent?.includes("10 checks pass, then you accept.") === true];
+    doneWhen(host)!.click();
+    await eventually(() => host.querySelector("[data-done-when]") !== null, 2_000, "opened");
+    seen.opened = state(host);
+  });
+  answer({ "/missions/msn_1": detailOf({ checks, lastCheck: "part-3.md is empty" }) });
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => doneWhen(host) !== undefined, 2_000, "the card");
+    seen.failed = [...state(host), host.textContent?.includes("part-3.md is empty") === true];
+  });
+  expect(seen.folded).toEqual(["false", false, false, true]);
+  expect(seen.opened).toEqual(["true", true, true]);
+  expect(seen.failed).toEqual(["true", true, true, true]);
+});
+
 /** The Brief card's header, which opens and closes it. */
 function openBrief(host: HTMLElement): void {
   const header = [...host.querySelectorAll("button[aria-expanded]")].find((button) => button.textContent?.startsWith("Brief"));
   if (!header) throw new Error("no Brief card to open");
   (header as HTMLButtonElement).click();
 }
+
+test("a draft is deleted from its page at once: asked first with what goes, one request, then the list; it is not stopped on the way", async () => {
+  answer({ "/missions/msn_1": detailOf({ status: "waiting", seen: "needs_you", waitKind: "accept", startedAt: null }) });
+  const deletes: string[] = [];
+  const posts = recordPosts();
+  const spy = globalThis.fetch;
+  globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+    if (init?.method !== "DELETE") return (spy as typeof fetch)(input as RequestInfo, init);
+    const url = new URL(String(typeof input === "string" ? input : (input as Request).url), "http://localhost");
+    deletes.push(url.pathname.replace(/^\/api\/control/, "") + url.search);
+    return Promise.resolve(new Response(JSON.stringify({ ok: true, mission: "msn_1", turns: 0 }), { status: 200, headers: { "content-type": "application/json" } }));
+  }) as typeof fetch;
+  const seen = { actions: [] as string[], asked: "", landed: "" };
+  try {
+    await renderPage("/missions/msn_1", async (host, { location }) => {
+      await eventually(() => buttons(host).includes("Start it"), 2_000, "the draft's page");
+      seen.actions = buttons(host).filter((label) => ["Start it", "Drop it", "Stop", "Delete"].includes(label));
+      press(host, "Delete");
+      await eventually(() => buttons(host).includes("Delete it"), 2_000, "the ask");
+      seen.asked = host.textContent ?? "";
+      press(host, "Delete it");
+      await eventually(() => location() === "/missions", 2_000, "back on the list");
+      seen.landed = location();
+    });
+  } finally {
+    globalThis.fetch = spy;
+    posts.restore();
+  }
+  expect(seen.actions).toEqual(["Start it", "Delete"]);
+  expect(seen.asked).toContain("Nothing has run. Its brief and the folder Nouride made for it go with it, and it does not come back.");
+  expect(deletes).toEqual(["/missions/msn_1"]);
+  expect(posts.posts.filter((post) => post.path.endsWith("/stop"))).toEqual([]);
+  expect(seen.landed).toBe("/missions");
+});
 
 test("an ended one is deleted from its page (0.8.13): asked first, asked again over work nobody committed, then the list", async () => {
   // Test missions lingered on the live box: a mission went only with its conversation, from the chat list.

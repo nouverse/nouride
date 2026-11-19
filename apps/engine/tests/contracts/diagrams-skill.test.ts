@@ -10,6 +10,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { whichBinary } from "@nouride/runtime";
 
 const DIR = join(import.meta.dir, "../../../../content/skills/diagrams");
 const SCRIPT = join(DIR, "scripts/diagram.py");
@@ -29,6 +30,85 @@ describe("the skill", () => {
     expect(skill).toContain("**`read` the PNG** and look");
     expect(skill).toContain("**No online renderers**: Mermaid.ink, Kroki");
     expect(skill).toContain("`send_file` the PNG");
+  });
+});
+
+describe("two ways to draw, and the machine decides", () => {
+  test("a browser already set up means a page; none means Graphviz, and never a browser set up for a diagram", () => {
+    expect(skill).toContain('ls <private>/browser/node_modules/playwright-core >/dev/null 2>&1 && echo "browser: set up" || echo "browser: not set up"');
+    // Decided by the check and not by the kind of diagram: on the box an agent with a browser read "a real graph is
+    // still Graphviz's" and drew boxes and arrows with Graphviz, never running the check.
+    expect(skill).toContain("**Which one is decided by a check you run first, every time: not by the kind of diagram, and not by which you know better.**");
+    expect(skill).toContain("## 0. Which way: run this before anything else");
+    expect(skill).toContain("**`browser: set up`**: draw it as a page, §6, **whatever the diagram is, boxes and arrows included**.");
+    expect(skill.indexOf("## 0. Which way")).toBeLessThan(skill.indexOf("**With Graphviz** you write"));
+    expect(skill).toContain("**`browser: not set up`**: Graphviz, §1 to §5. **Do not set a browser up for a diagram**");
+    expect(skill).toContain("It exits 3 where no browser starts: that is Graphviz, §1 to §5, not a browser to install.");
+  });
+
+  test("as a page: the browser places things, an arrow is drawn, a real graph is still computed, and it is looked at", () => {
+    expect(skill).toContain("**The browser places things, you do not.**");
+    expect(skill).toContain("No `position: absolute`, no pixel coordinates, no hand-written `<svg>` of boxes");
+    expect(skill).toContain("**An arrow is drawn, not typed.**");
+    expect(skill).toContain("**Arrows that cross or branch are laid out by Graphviz, inside the page.**");
+    expect(skill).toContain("the picture you send is still the page's");
+    expect(skill).toContain('node PICTURE "$TMPDIR/flow.html" --browser-dir <private>/browser --out "$TMPDIR/flow.png"');
+    expect(skill).toContain("**Fix every finding and render again**, then **`read` the PNG** as in §3");
+  });
+
+  test("in a mission's report the picture is handed back and named where it belongs, and the report still reads without it", () => {
+    expect(skill).toContain("**hand the PNG back among the mission's files**");
+    expect(skill).toContain("**Name it in the report where it belongs**, by its file's name: `![How a message travels now](flow.png)`");
+    expect(skill).toContain("a report must still read without it");
+    expect(skill).toContain("A list of things with their state is a table, not a picture.");
+  });
+});
+
+describe("picture.mjs, run as an agent runs it", () => {
+  const PICTURE = join(DIR, "scripts/picture.mjs");
+  const PAGES = join(import.meta.dir, "fixtures/diagram-pages");
+  const runner = whichBinary("node") ?? process.execPath;
+  const run = (args: string[]) => {
+    const done = spawnSync(runner, [PICTURE, ...args], { encoding: "utf8", env: { ...process.env } });
+    return { code: done.status, out: done.stdout, err: done.stderr };
+  };
+
+  test("bad arguments exit 1, a page that is not there exits 2, and no browser to borrow exits 3 saying Graphviz, not an install", () => {
+    expect(run([])).toMatchObject({ code: 1 });
+    expect(run([join(PAGES, "good.html"), join(PAGES, "faults.html")]).err).toContain("one page at a time");
+    expect(run([join(PAGES, "good.html"), "--width", "90"]).err).toContain("--width is a whole number of pixels, 320 to 2400");
+    expect(run([join(PAGES, "not-there.html")])).toMatchObject({ code: 2 });
+    const none = run([join(PAGES, "good.html"), "--browser-dir", join(tmpdir(), "no-browser-here"), "--out", join(tmpdir(), "nouride-picture-none.png")]);
+    // 3 where this machine has no Playwright to find; where it has one, the page is drawn and that is not this case.
+    if (none.code === 3) {
+      expect(none.err).toContain("Draw it with Graphviz instead: this skill's steps 2 to 5.");
+      expect(none.err).not.toMatch(/install-browser|npm i/);
+    }
+  });
+
+  const BROWSER = process.env.NOURIDE_TEST_BROWSER_DIR;
+  const drawn = describe.skipIf(!BROWSER);
+  drawn("in a real browser (NOURIDE_TEST_BROWSER_DIR)", () => {
+    const out = mkdtempSync(join(tmpdir(), "nouride-picture-"));
+    const chromium = process.env.NOURIDE_TEST_CHROMIUM ? ["--chromium", process.env.NOURIDE_TEST_CHROMIUM] : [];
+    const draw = (page: string) => run([join(PAGES, page), "--browser-dir", BROWSER!, "--out", join(out, page.replace(".html", ".png")), ...chromium]);
+
+    test("a page laid out by the browser measures clean and is written at twice its size", () => {
+      const good = draw("good.html");
+      expect(good.code).toBe(0);
+      expect(good.out).toContain("nothing found. Now read the PNG and look");
+      const png = readFileSync(join(out, "good.png"));
+      // A PNG's width, from its header: the picture is 1200 wide, written at 2400.
+      expect(png.readUInt32BE(16)).toBe(2400);
+    });
+
+    test("each fault is found and named: cut, small, an arrow typed, contrast, past the edge, text over text", () => {
+      const faults = draw("faults.html");
+      expect(faults.code).toBe(4);
+      for (const kind of ["cut:", "small:", "typed:", "contrast:", "outside:", "overlap:"]) expect(faults.out).toContain(kind);
+      expect(faults.out).toContain('"Service one" is over "Service two"');
+      expect(readFileSync(join(out, "faults-check.png")).length).toBeGreaterThan(1000);
+    });
   });
 });
 

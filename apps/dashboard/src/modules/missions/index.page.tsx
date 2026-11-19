@@ -1,13 +1,12 @@
 /**
- * Missions (0.8.0): long work an agent finishes alone, listed the way a person acts on it — what needs you first, then
- * what is working, then what has finished. A list, not a board: a mission moves on its own, and there is nothing to drag.
- * Laid out as the other list pages are: a tab per group with its count, a search and an agent filter over the list, and
- * the list scrolling inside its card, so the tabs stay in reach however many have finished. What finished is the last 3,
- * 7, 14 or 30 days of it, 3 unless chosen — never all (0.8.8); what is still open is listed however old.
+ * Missions as a board: Backlog, Working, Needs you, Finished, read only, since a mission moves on its own.
+ * Four columns on a wide window and four tabs with their counts on a phone, opening on Needs you when it holds any. What
+ * is open is listed however old; Finished goes back its own span, 7, 14, 21 or 30 days, 7 unless chosen. A search, an
+ * agent and, for an admin, whose missions narrow every column.
  *
  * The list is the reader's own: what they started, and what reports to a chat of theirs. An admin picks whose beside
- * the search, as on Chats: everyone's, set apart by person with what is nobody's last, one person's, or nobody's alone.
- * Under an admin's own list a line says how many more there are, so a short list is not read as the rest being gone.
+ * the search, as on Chats; on a list that is not their own, each card says whose it is. Under an admin's own list a line
+ * says how many more there are, so a short list is not read as the rest being gone.
  *
  * Asked again every few seconds while anything can still change, and only as a slow net once nothing can; a hidden tab
  * asks for nothing, which is the query client's own rule for an interval.
@@ -18,23 +17,22 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Plus, SlidersHorizontal, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { MissionView } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { Elsewhere, elsewhereWords, ShowEveryone } from "@/commons/components/people/Elsewhere";
-import { ListCard } from "@/commons/components/ui/ListCard";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
-import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { Card, EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
 import { useWhose, type Whose } from "@/commons/hooks/use-whose";
-import { MissionFilters, type Span } from "./components/MissionFilters";
-import { MissionList, MissionsByPerson } from "./components/MissionList";
+import { useWide } from "@/commons/hooks/use-wide";
+import { MissionFilters } from "./components/MissionFilters";
+import { MissionBoard } from "./components/MissionBoard";
 import { MissionSettingsCard } from "./components/MissionSettingsCard";
 import { NewMissionForm } from "./components/NewMissionForm";
-import { anyOpen, searchedIn, tabsOf, type MissionTab } from "./lib/mission";
+import { anyOpen, searchedIn } from "./lib/mission";
+import { columnOf, COLUMNS, FINISHED_SPAN, fromLink, phoneOpening, type Column, type FinishedSpan, type Outcome } from "./lib/board";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
@@ -42,21 +40,12 @@ import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 const OPEN_MS = 5_000;
 const SETTLED_MS = 30_000;
 
-const TABS: { id: MissionTab; label: string; title: (n: number) => string; none: (days: Span) => string }[] = [
-  { id: "all", label: "All", title: (n) => `${n} mission${n === 1 ? "" : "s"}`, none: () => "No missions yet" },
-  { id: "needs_you", label: "Needs you", title: (n) => `${n} need${n === 1 ? "s" : ""} you`, none: () => "Nothing needs you" },
-  { id: "working", label: "Working", title: (n) => `${n} working`, none: () => "Nothing is working" },
-  { id: "done", label: "Done", title: (n) => `${n} done`, none: (days) => `Nothing done in the last ${days} days` },
-  { id: "failed", label: "Failed", title: (n) => `${n} failed`, none: (days) => `Nothing failed in the last ${days} days` },
-  { id: "stopped", label: "Stopped", title: (n) => `${n} stopped`, none: (days) => `Nothing stopped in the last ${days} days` },
-];
-
 /**
- * What a list with no missions says. The reader's own: how one is started; with others' left out of it (`elsewhere`),
+ * What a page with no missions says. The reader's own: how one is started; with others' left out of it (`elsewhere`),
  * how many, and the press that lists them, so an empty page is not read as everything gone. Where an admin looked at
  * someone else's: whose was looked at, not how to start one.
  */
-function noMissions({ whose, days, agent, elsewhere, onEveryone }: { whose: Whose; days: Span; agent: string | undefined; elsewhere: number; onEveryone: () => void }): ReactNode {
+function noMissions({ whose, days, agent, elsewhere, onEveryone }: { whose: Whose; days: number; agent: string | undefined; elsewhere: number; onEveryone: () => void }): ReactNode {
   if (elsewhere > 0) {
     const title = agent ? `${agent} has no missions of yours in the last ${days} days` : `No missions of yours in the last ${days} days`;
     return <EmptyState pose="sleeping" title={title} description={elsewhereWords(elsewhere)} action={<ShowEveryone onPress={onEveryone} />} />;
@@ -68,20 +57,23 @@ function noMissions({ whose, days, agent, elsewhere, onEveryone }: { whose: Whos
     <EmptyState
       pose="sleeping"
       title={agent ? `${agent} has no missions in the last ${days} days` : `No missions in the last ${days} days`}
-      description="Start one here, or send /mission and a goal in a chat. An agent also starts one when a piece of work needs hours rather than a reply."
+      description="Write one here, or ask an agent for one in a chat: either is a draft in the backlog, which runs once you start it."
     />
   );
 }
 
-export default function MissionsPage({ agent }: { agent?: string }) {
+export default function MissionsPage({ agent, tab }: { agent?: string; tab?: string }) {
   const me = useMe();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [limitsOpen, setLimitsOpen] = useState(false);
-  const [tab, setTab] = useState<MissionTab>("all");
   const [filter, setFilter] = useState("");
-  const [days, setDays] = useState<Span>(3);
+  const linked = fromLink(tab);
+  const [days, setDays] = useState<FinishedSpan>(FINISHED_SPAN);
+  const [outcome, setOutcome] = useState<Outcome | null>(linked?.outcome ?? null);
+  // The phone's column: the one a link named, else picked once the list is read (`phoneOpening`), then the person's.
+  const [picked, setColumn] = useState<Column | null>(linked?.column ?? null);
   // An admin reads their own unless they pick otherwise beside the search; anyone else has their own, and no choice.
   const { whose, setWhose, canPick } = useWhose("missions");
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
@@ -93,15 +85,16 @@ export default function MissionsPage({ agent }: { agent?: string }) {
     placeholderData: keepPreviousData,
     retry: false,
   });
-  // Who the reader is in People: theirs come first where the list is set apart by person.
-  const self = useQuery({ queryKey: ["people-me"], queryFn: api.peopleMe, staleTime: 60_000, enabled: canPick });
   const writable = canWrite(me.data ?? null);
+  // On a phone "+ New" stands beside the title, as the mockup the owner signed off draws it.
+  const wide = useWide();
   const agents = useOrchestratorFirst(status.data?.agents ?? [], (entry) => entry.id);
   // What the page holds: the list asked for, or the one before it while that is on its way, which is not drawn.
   const held = list.data?.missions ?? [];
   const arriving = list.isPlaceholderData;
   const missions = arriving ? [] : held;
   const found = useTextFilter(missions, filter, searchedIn);
+  const matched = new Set(found);
 
   if (list.isLoading) {
     return <ListLoading shape="cards" />;
@@ -118,63 +111,52 @@ export default function MissionsPage({ agent }: { agent?: string }) {
     );
   }
 
-  const counts: Record<MissionTab, number> = { all: held.length, needs_you: 0, working: 0, done: 0, failed: 0, stopped: 0 };
-  for (const mission of held) for (const under of tabsOf(mission)) counts[under] += 1;
-  const current = TABS.find((entry) => entry.id === tab)!;
-  const matched = new Set(found);
-  const shown = (mission: MissionView) => matched.has(mission);
+  const counts = Object.fromEntries(COLUMNS.map((column) => [column.id, 0])) as Record<Column, number>;
+  for (const mission of held) counts[columnOf(mission)] += 1;
   // How many more an admin's own list leaves out: the daemon's count, and only of the list now on the page.
   const elsewhere = !failed && !arriving ? (list.data?.elsewhere ?? 0) : 0;
   const everyone = () => setWhose("everyone");
-  const listed = {
-    missions,
-    tab,
-    shown,
-    empty:
-      missions.length === 0 && tab === "all" ? (
-        noMissions({ whose, days, agent, elsewhere, onEveryone: everyone })
-      ) : counts[tab] === 0 ? (
-        <EmptyState pose="sleeping" title={current.none(days)} />
-      ) : (
-        <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{filter}”.</p>
-      ),
-  };
+  const newMission = (
+    <button
+      type="button"
+      className="btn btn-primary btn-sm min-h-11 gap-2 rounded-xl shadow-xs transition-all active:scale-95 sm:min-h-8"
+      disabled={!writable}
+      onClick={() => setCreating((open) => !open)}
+    >
+      {creating ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+      {creating ? "Close" : wide ? "New mission" : "New"}
+    </button>
+  );
 
   return (
     <div className="space-y-6 *:animate-fade">
-      <PageHeader
-        ask={PAGE_ASKS.missions}
-        title="Missions"
-        description="Long work an agent finishes alone. It reports to the chat it began in, and stops to ask when it needs you."
-        actions={
-          <>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm gap-2 rounded-xl"
-              aria-expanded={limitsOpen}
-              onClick={() => setLimitsOpen((open) => !open)}
-            >
-              {limitsOpen ? <X size={15} aria-hidden="true" /> : <SlidersHorizontal size={15} aria-hidden="true" />}
-              {limitsOpen ? "Close limits" : "Limits"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary btn-sm gap-2 rounded-xl shadow-xs transition-all active:scale-95"
-              disabled={!writable}
-              onClick={() => setCreating((open) => !open)}
-            >
-              {creating ? <X size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-              {creating ? "Close" : "New mission"}
-            </button>
-          </>
-        }
-      />
+      <div className="flex items-start justify-between gap-3">
+        {/* No line of counts under the title: each column's head carries its own. */}
+        <PageHeader ask={PAGE_ASKS.missions} title="Missions" className="min-w-0 flex-1" />
+        <div className="flex shrink-0 items-center gap-2 pt-1">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm min-h-11 gap-2 rounded-xl max-sm:hidden sm:min-h-8"
+            aria-expanded={limitsOpen}
+            onClick={() => setLimitsOpen((open) => !open)}
+          >
+            {limitsOpen ? <X size={15} aria-hidden="true" /> : <SlidersHorizontal size={15} aria-hidden="true" />}
+            {limitsOpen ? "Close limits" : "Limits"}
+          </button>
+          {newMission}
+        </div>
+      </div>
 
       {creating && (
-        <Card title="Start a mission" className="border-primary/30 shadow-lg">
+        <Card title="New mission" description="Saved, it waits in the backlog until you start it. Nothing runs before that." className="border-primary/30 shadow-lg">
           <NewMissionForm
             agents={status.data?.agents ?? []}
             onCancel={() => setCreating(false)}
+            // Saved to the backlog, the page stays where it is and the draft enters its column; started, its own page opens.
+            onSaved={() => {
+              setCreating(false);
+              void queryClient.invalidateQueries({ queryKey: ["missions"] });
+            }}
             onStarted={(mission) => {
               setCreating(false);
               void queryClient.invalidateQueries({ queryKey: ["missions"] });
@@ -186,46 +168,33 @@ export default function MissionsPage({ agent }: { agent?: string }) {
 
       {limitsOpen && <MissionSettingsCard />}
 
-      {/* The tabs, the filters and the search stay at the top of the window while the list scrolls under them. */}
+      {/* The search and the filters stay at the top of the window while the board scrolls under them. */}
       <StickyBar
         label="Which missions"
         tools={
           <>
-            {held.length > 0 ? <SearchInput value={filter} onChange={setFilter} placeholder="Search missions" className="w-48" /> : null}
-            <MissionFilters picker={canPick ? { whose, setWhose } : null} days={days} onDays={setDays} agent={agent} agents={agents.map((entry) => entry.id)} />
+            <SearchInput value={filter} onChange={setFilter} placeholder="Search missions" className="w-full max-sm:h-11 sm:w-64" />
+            <MissionFilters picker={canPick ? { whose, setWhose } : null} agent={agent} agents={agents.map((entry) => entry.id)} />
           </>
         }
-      >
-        <SegmentedTabs
-          tabs={TABS.map((entry) => ({
-            value: entry.id,
-            label: entry.label,
-            // The one count coloured: it is the one that means somebody has to do something.
-            after: <Count n={counts[entry.id]} highlight={entry.id === "needs_you" && counts.needs_you > 0} />,
-          }))}
-          value={tab}
-          onChange={setTab}
-        />
-      </StickyBar>
+      />
 
-      {/* Keyed by the tab, so the list it filters is drawn anew and fades in. */}
-      <ListCard key={tab} title={current.title(counts[tab])}>
-        {failed ? (
-          <ErrorNote error={failed} />
-        ) : arriving ? (
-          <ListLoading shape="cards" />
-        ) : whose === "mine" ? (
-          <MissionList {...listed} />
-        ) : (
-          // Set apart by person wherever it is not the reader's own list: the person looked at first, or the reader.
-          <MissionsByPerson {...listed} first={whose.startsWith("person:") ? whose.slice("person:".length) : self.data?.person?.key} />
-        )}
-        {elsewhere > 0 && held.length > 0 ? (
-          <div className="pt-5">
-            <Elsewhere count={elsewhere} onEveryone={everyone} />
-          </div>
-        ) : null}
-      </ListCard>
+      {failed ? (
+        <ErrorNote error={failed} />
+      ) : arriving ? (
+        <ListLoading shape="cards" />
+      ) : (
+        <MissionBoard
+          empty={held.length === 0 && !filter ? noMissions({ whose, days, agent, elsewhere, onEveryone: everyone }) : undefined}
+          missions={missions}
+          shown={(mission) => matched.has(mission)}
+          counts={counts}
+          writable={writable}
+          showWhose={whose !== "mine"}
+          state={{ column: picked ?? phoneOpening(counts), setColumn, days, setDays, outcome, setOutcome }}
+        />
+      )}
+      {elsewhere > 0 && held.length > 0 ? <Elsewhere count={elsewhere} onEveryone={everyone} /> : null}
     </div>
   );
 }

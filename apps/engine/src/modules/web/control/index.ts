@@ -31,7 +31,8 @@ import { registerChatChoiceRoutes } from "./routes/chat-choices.ts";
 import { registerNotesRoutes } from "./routes/notes.ts";
 import { registerMissionRoutes } from "./routes/missions.ts";
 import { registerRoomRoutes } from "./routes/rooms.ts";
-import { registerAuthRoutes } from "./routes/auth.ts";
+import { registerAuthRoutes, signInLimits } from "./routes/auth.ts";
+import { registerDeviceRoutes } from "./routes/devices.ts";
 import { registerGatewayRoutes } from "./routes/gateways.ts";
 import { registerProviderRoutes } from "./routes/providers.ts";
 import { registerSecretRoutes } from "./routes/secrets.ts";
@@ -45,6 +46,7 @@ import { registerMissionSettingsRoutes } from "./routes/mission-settings.ts";
 import { registerTierRoutes } from "./routes/tiers.ts";
 import { registerDelegateRoutes } from "./routes/delegate.ts";
 import { registerMentionRoutes } from "./routes/mentions.ts";
+import { registerSteeringRoutes } from "./routes/steering.ts";
 import { registerWebSearchRoutes } from "./routes/web-search.ts";
 import { registerPeopleRoutes } from "./routes/people.ts";
 import { registerGroupRoutes } from "./routes/groups.ts";
@@ -103,7 +105,10 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerNotesRoutes(control, deps);
   registerMissionRoutes(control, deps);
   registerRoomRoutes(control, deps);
-  registerAuthRoutes(control, deps);
+  // A device token's trade spends the password's allowance per address: a guessed token is a guessed password.
+  const limits = signInLimits();
+  registerAuthRoutes(control, deps, limits);
+  registerDeviceRoutes(control, deps, limits);
   registerGatewayRoutes(control, deps);
   registerProviderRoutes(control, deps);
   registerSecretRoutes(control, deps);
@@ -119,6 +124,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   // Before the agent module, for its `/agents/:id/delegate` — the agent module ends in `POST /agents/:id/:action`.
   registerDelegateRoutes(control, deps);
   registerMentionRoutes(control, deps);
+  registerSteeringRoutes(control, deps);
   registerWebSearchRoutes(control, deps);
   registerPeopleRoutes(control, deps);
   registerGroupRoutes(control, deps);

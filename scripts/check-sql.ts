@@ -249,6 +249,7 @@ export const INTERPOLATIONS: Record<string, { why: string; planAs?: string }> = 
 /** Tables a full scan of is the point, and why (P1). */
 export const SCANS_ALLOWED: Record<string, string> = {
   memory_tag_aliases: "`aliases()` reads it whole — a handful of rows",
+  device_tokens: "one row per Home app signed in on this machine, listed whole on the Users page; a trade finds its row by the hash's unique index",
   memory_vectors: "a catch-up's `pruneGone` reads every item once, to drop the vectors of what is gone — every other read is by model or by item, through an index",
   memory_episode_agents: "the facet counts read every row by design — the counts are the question",
   memory_files: "`signature()` sums every file's size and mtime — one row per vault file, read whole on purpose",

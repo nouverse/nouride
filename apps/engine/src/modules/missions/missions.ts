@@ -27,7 +27,7 @@ import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice } from "./notices.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
-import { briefPath, type DraftChange, type DraftEditor } from "./drafts.ts";
+import { briefPath, isDraft, type DraftChange, type DraftEditor } from "./drafts.ts";
 import { sendReport, tellEnded } from "./results.ts";
 import { limitsLine, missionPage, shortId, type LimitsShown } from "./page.ts";
 import { MissionCounts } from "./counts.ts";
@@ -80,8 +80,6 @@ export class Missions implements TurnShaper {
    * read. In memory: after a restart, going on reads them again.
    */
   private readonly stoppedAt = new Map<string, MissionLimit[]>();
-  /** The person's words a mission started at once on (`now` with `said`, 0.8.11), quoted in its *started*. In memory. */
-  private readonly saidFor = new Map<string, string>();
 
   constructor(private readonly deps: MissionsDeps) {
     this.timers = new MissionTimers(this, deps);
@@ -111,6 +109,12 @@ export class Missions implements TurnShaper {
   /** The newest first — `agentId` narrows to one agent's. */
   recent(limit: number, agentId?: string): Mission[] {
     return this.deps.store.recent(limit, agentId);
+  }
+
+  /** Every one that has not ended, however old and however many — `agentId` narrows to one agent's. */
+  stillOpen(agentId?: string): Mission[] {
+    const open = this.deps.store.open();
+    return agentId ? open.filter((mission) => mission.agentId === agentId) : open;
   }
 
   /** An agent's own: those it works and those it started — what its `work` tool reaches, and nothing else. */
@@ -164,7 +168,8 @@ export class Missions implements TurnShaper {
     let atWork = 0;
     let waiting = 0;
     for (const mission of this.deps.store.open()) {
-      if (mission.agentId !== agentId || mission.waitKind === "approval") continue;
+      // A draft waits for someone to start it, not on anyone: it is neither at work nor something a person owes.
+      if (mission.agentId !== agentId || mission.waitKind === "approval" || isDraft(mission)) continue;
       if (seenAs(mission.status) === "working" || mission.waitKind === "retry") atWork += 1;
       else waiting += 1;
     }
@@ -226,7 +231,6 @@ export class Missions implements TurnShaper {
       const drafted = announceDraft(this.deps, mission, request.brief);
       return { mission, drafted };
     }
-    if (request.said?.trim()) this.saidFor.set(id, request.said.trim());
     this.schedule();
     const queued = this.toldQueued.get(id);
     return { mission: this.deps.store.get(id) ?? mission, ...(queued ? { queued } : {}) };
@@ -281,8 +285,7 @@ export class Missions implements TurnShaper {
     }
     log.info("mission started", { mission: mission.id, agent_id: mission.agentId, job: mission.jobId });
     // A job's run starts on its schedule, which its chat already knows: it is told when it is done or needs someone.
-    if (!mission.jobId) void this.deps.tell(mission, paged(startedNotice(mission, this.saidFor.get(mission.id)), this.deps.pageOf?.(mission)));
-    this.saidFor.delete(mission.id);
+    if (!mission.jobId) void this.deps.tell(mission, paged(startedNotice(mission), this.deps.pageOf?.(mission)));
     this.queueTurn(mission, "the mission starts. Write the checklist with `plan` first, then begin.");
   }
 
@@ -692,7 +695,6 @@ export class Missions implements TurnShaper {
     this.stoppedAt.delete(mission.id);
     this.timers.forget(mission.id);
     this.toldQueued.delete(mission.id);
-    this.saidFor.delete(mission.id);
     this.checking.forget(mission.id);
     this.asking.forget(mission.id);
     // A draft dropped — never started — takes its folder with it: its brief, and nothing else was ever written there.
@@ -701,7 +703,9 @@ export class Missions implements TurnShaper {
     tellEnded(this.deps, mission, { why, accepted, reportShown });
     if (this.deps.notes) void carryBack(this.deps.notes, mission).catch((err: unknown) => log.warn("a chat's line for its mission could not be updated", { mission: mission.id, error: String(err) }));
     if (this.deps.notes) void closePlan(this.deps.notes, mission).catch((err: unknown) => log.warn("a done mission's checklist could not be closed", { mission: mission.id, error: String(err) }));
-    void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));
+    // One that never started did no work to remember: a draft dropped or deleted left "Mission stopped" in its person's
+    // memory, for a mission that never ran.
+    if (mission.startedAt !== null) void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));
     this.deps.helped?.(mission);
     this.tellParent(mission);
     this.tidy(mission);

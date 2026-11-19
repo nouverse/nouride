@@ -235,6 +235,20 @@ start creates the first admin again and prints its password, or takes `INITIAL_A
 a daemon runs on this data directory.
 [FAQ: I missed the first-run password →](/en/docs/reference/faq/)
 
+## A Home app that stays signed in
+
+```bash
+nouride auth device --name "Nouride Home"   # a device token, printed once
+```
+
+Since 0.8.40. For Nouride Home on the machine the daemon runs on: the daemon makes the token only for
+the CLI, whose control token is in the data folder, and binds it to the first admin account. The token
+does not expire; the app trades it for an ordinary dashboard session (`POST /api/control/auth/device`)
+whenever it is signed out, and a failed trade counts against the same sign-in limit as a wrong
+password. An admin sees each one on the dashboard's Users page and takes it off there, which also ends
+the session the app is using. `nouride users reset` removes them with the accounts; changing a password
+leaves them.
+
 ## Providers and secrets
 
 ```bash

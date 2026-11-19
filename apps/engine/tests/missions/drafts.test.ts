@@ -88,7 +88,7 @@ describe("D1 — a chat's mission is a draft", () => {
     expect(h.told.at(-1)!.text).toContain("signed off by: the reviewer, then you");
   });
 
-  test("named by nobody, a draft is the person's after its checks — named, as named; started at once, the reviewer's", async () => {
+  test("named by nobody, a draft is the person's after its checks — named, as named", async () => {
     // Nouva on Gemini Flash filled no optional field: every long job it drafted for the person in the chat went to the
     // reviewer, the rule in front of it.
     const { draft } = await setup();
@@ -98,7 +98,6 @@ describe("D1 — a chat's mission is a draft", () => {
     expect((await draft({ review: "Each page reads as Javanese." })).mission).toMatchObject({ accept: false, reviewOn: true });
     expect((await draft({ accept: false })).mission).toMatchObject({ accept: false, reviewOn: true });
     expect((await draft({ no_review: false })).mission).toMatchObject({ accept: false, reviewOn: true });
-    expect((await draft({ now: true, said: "do it now, I'm off to sleep" })).mission).toMatchObject({ status: "running", accept: false, reviewOn: true });
   });
 
   test("the fields it is chosen with say the rule: no reviewer where the person following it accepts, not only where checks are the whole answer", async () => {
@@ -111,29 +110,25 @@ describe("D1 — a chat's mission is a draft", () => {
   });
 });
 
-describe("D2 — at once only on the person's own words", () => {
-  test("`now` without `said` is refused, and nothing is made", async () => {
+describe("every mission an agent starts is a draft first", () => {
+  test("asked to start one at once, with `now` or `said`, the tool refuses, and nothing is made", async () => {
     const { h, draft } = await setup();
-    const { answer, mission } = await draft({ now: true });
-    expect(answer).toMatchObject({ isError: true, content: "`now` needs `said`: the person's own words asking for it to run now, as they wrote them. Without them it is a draft they start." });
-    expect(mission).toBeNull();
+    for (const asked of [{ now: true }, { now: true, said: "do it now, I'm off to sleep" }, { said: "go" }]) {
+      const { answer, mission } = await draft(asked);
+      expect(answer).toMatchObject({ isError: true, content: expect.stringContaining("A mission you start is always a draft, which runs once the person starts it") });
+      expect(mission).toBeNull();
+    }
     expect(h.store.recent(5)).toHaveLength(0);
   });
 
-  test("with `said` it starts at once: the words in *started* and on the audit row", async () => {
-    const { h, draft, audited } = await setup();
-    const { mission } = await draft({ now: true, said: "do it, I'm off to sleep" });
-    expect(mission!.status).toBe("running");
-    expect(h.told.at(-1)!.text).toContain(`\nStarted at once, as asked: "do it, I'm off to sleep"`);
-    expect(audited).toEqual([{ action: "mission_started", actor: "agent nova", agentId: "nova", details: { mission: mission!.id, said: "do it, I'm off to sleep" } }]);
-  });
-
-  test("not from a turn nobody typed, another agent's ask or a run nobody watches; and a brief goes with a draft", async () => {
-    const { draft } = await setup();
-    for (const ctx of [person({ senderId: SYSTEM_SENDER }), person({ askedBy: "nox" }), person({ unattended: { goal: "x", level: "balanced" } as never })]) {
-      expect((await draft({ now: true, said: "go" }, ctx)).answer.isError).toBe(true);
-    }
-    expect((await draft({ now: true, said: "go", brief: "All of it." })).answer.content).toStartWith("A brief goes with a draft.");
+  test("the tool offers no way to start one at once: no `now`, no `said`, and no word of it in what the agent reads", async () => {
+    const { tools } = await setup();
+    const definition = tools.chat.definition as unknown as { description: string; parameters: { properties: Record<string, { description: string }> } };
+    expect(Object.keys(definition.parameters.properties)).not.toContain("now");
+    expect(Object.keys(definition.parameters.properties)).not.toContain("said");
+    const read = [definition.description, ...Object.values(definition.parameters.properties).map((field) => field.description)].join(" ");
+    expect(read).not.toMatch(/at once|`said`|run now/);
+    expect(read).toContain("makes a draft, which runs once the person starts it");
   });
 
   test("a turn nobody typed proposes, as before — as a draft", async () => {
@@ -398,4 +393,15 @@ describe("where a mission works — a worktree is code's (0.8.11)", () => {
     expect(checks).toContain("Prove what the work leaves (the file holds what it should, or in a repository a commit on its branch), never outside state that can change");
     expect(checks).not.toContain("a commit is on a local branch");
   });
+});
+
+test("a draft that is dropped or deleted leaves no episode: nothing of it ran", async () => {
+  const h = await missionsHarness();
+  const dropped = await h.start("an idea", { startedBy: "nouride:system", byAgent: "nova", proposed: true });
+  h.missions.stop(dropped.id, "Gading");
+  const deleted = await h.start("another idea", { startedBy: "nouride:system", byAgent: "nova", proposed: true });
+  await h.missions.delete(deleted.id, "Gading");
+  await h.settle();
+  expect(h.store.get(deleted.id)).toBeNull();
+  expect(h.remembered).toEqual([]);
 });

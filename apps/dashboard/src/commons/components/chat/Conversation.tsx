@@ -402,7 +402,7 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
               <ChatLoading />
             ) : empty ? (
               <EmptyState
-                agentName={currentAgent?.displayName}
+                agent={currentAgent}
                 look={currentAgent ? looks.get(currentAgent.id) : undefined}
                 room={room}
                 senderName={senderName}

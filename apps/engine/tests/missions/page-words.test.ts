@@ -15,3 +15,13 @@ describe("how a mission reaches its person, as its page says it", () => {
     );
   });
 });
+
+describe("how a mission writes its report, as its page says it", () => {
+  test("what came of it first, a table for a list, and a picture handed back and named where it belongs", async () => {
+    const h = await missionsHarness();
+    const page = h.turn(await h.start())!.text;
+    expect(page).toContain("- The report is read on the mission's page. Lead with what came of it; a list of things with their state is a table;");
+    expect(page).toContain("draw it with the `diagrams` skill where you carry it, hand the picture back among the files, and name it in the report where it belongs, `![what it shows](its file name)`: the page draws it there.");
+    expect(page).toContain("One or two pictures, and the report still reads without them.");
+  });
+});

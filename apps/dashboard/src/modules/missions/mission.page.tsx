@@ -1,8 +1,10 @@
 /**
  * One mission, working: how far it is against each limit, what it is doing this moment, its checklist, what waits on
  * you, the questions it asked, its result, and its turns — with what a person says to it, each only when it applies,
- * and (0.8.10) a box to tell it something while it works. Laid out (0.8.8) as its result across the page once it has one, its turns as a timeline, and beside them
- * its checklist and what decides it is done.
+ * and (0.8.10) a box to tell it something while it works. Laid out from the top as a person asks of it: what it does
+ * now and how far it is, its brief beside what decides it is done, its result once it has one, then its checklist and
+ * its turns, with its folder and the box to tell it something beside them. A draft shows none of what only work
+ * makes: no meters, no checklist, no turns.
  *
  * Two sources. The record (`/missions/:id`), asked again every few seconds while it can change and as a slow net once it
  * cannot — a hidden tab asks for none of it, the query client's rule for an interval. And its conversation, read
@@ -13,10 +15,9 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, FolderOpen, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { api } from "@/commons/lib/api";
-import type { MissionDetail } from "@nouride/wire";
 import { ApiError } from "@/commons/lib/api.client";
 import { ApprovalCard } from "@/commons/components/approvals/ApprovalCard";
 import { ReadOnlyNote } from "@/commons/components/people/ReadOnlyNote";
@@ -25,19 +26,16 @@ import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { useConversation } from "@/commons/hooks/use-conversation";
 import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { readsOnly } from "@/commons/lib/by-person";
-import { ago } from "@/commons/lib/format";
 import { canWrite, useMe } from "@/commons/lib/session";
-import { Checklist } from "./components/Checklist";
 import { Meters } from "./components/Meters";
 import { MissionActions } from "./components/MissionActions";
-import { FilePath } from "@/commons/components/ui/FilePath";
 import { MissionResult } from "./components/MissionResult";
 import { BriefCard } from "./components/BriefCard";
-import { MissionTimeline } from "./components/MissionTimeline";
+import { MissionWork } from "./components/MissionWork";
 import { NowLine } from "./components/NowLine";
-import { AnswerBox, Questions } from "./components/Questions";
-import { TellCard } from "./components/Told";
+import { AnswerBox } from "./components/Questions";
 import { SeenBadge } from "./components/SeenBadge";
+import { WhenLine } from "./components/WhenLine";
 import { useMissionAct } from "./hooks/use-mission-act";
 import { useMissionDelete } from "./hooks/use-mission-delete";
 import { Goal } from "./components/Goal";
@@ -51,46 +49,6 @@ const OPEN_MS = 5_000;
 const SETTLED_MS = 60_000;
 
 const noSession = () => {};
-
-/** How it is judged done, in the words the daemon's start notice uses: its checks, then the reviewer, then a person. */
-function JudgedBy({ detail }: { detail: MissionDetail }) {
-  const { mission } = detail;
-  return (
-    <div className="space-y-3 text-sm">
-      {mission.checks.length > 0 && (
-        <div className="space-y-1">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-base-content/65">Checks that must pass</p>
-          <ul className="space-y-1">
-            {mission.checks.map((check) => (
-              <li key={check} className="rounded-lg bg-base-200/70 px-2.5 py-1 font-mono text-xs break-all">
-                {check}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {/* A reviewer's brief names paths with no place to break: one ran 140 px out of this card (live, 2026-10-31). */}
-      <p className="text-base-content/80 [overflow-wrap:anywhere]">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-base-content/65">Reviewer · </span>
-        {mission.reviewOn ? (mission.review ?? "checks the result against the goal") : "none"}
-      </p>
-      {(mission.accept || mission.checks.length === 0) && <p className="text-base-content/80">A person accepts the result before it is done.</p>}
-      {mission.lastCheck && (
-        <div className="space-y-1">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-error">Last check failed</p>
-          <pre className="max-h-48 overflow-auto rounded-lg bg-base-200/70 p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all">{mission.lastCheck}</pre>
-        </div>
-      )}
-      <p className="flex items-start gap-1.5 font-mono text-xs text-base-content/70 break-all">
-        <FolderOpen size={13} className="mt-0.5 shrink-0" aria-hidden="true" />
-        {/* The folder it works in: for an admin, a way to it in Files, where its files can be read and cleared. */}
-        <span className="min-w-0">
-          <FilePath text={mission.workdir} link="text-primary hover:underline" />
-        </span>
-      </p>
-    </div>
-  );
-}
 
 export default function MissionPage({ missionId }: { missionId: string }) {
   const me = useMe();
@@ -155,10 +113,12 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <SeenBadge mission={mission} />
           <span className="font-mono text-[11px] text-base-content/65">
-            {mission.agentId} · {shortId(mission.id)} · started {ago(mission.startedAt ?? mission.createdAt)}
+            {mission.agentId} · {shortId(mission.id)}
             {mission.byAgent ? ` · by ${mission.byAgent}` : ""}
             {mission.jobId ? ` · a run of job ${detail.jobName ?? mission.jobId}` : ""}
           </span>
+          {/* When, as its card on the board says it, the day and the minute a hover away: a draft never "started". */}
+          <WhenLine mission={mission} side="under" />
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <h1 className="min-w-0 text-lg font-semibold leading-snug tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-xl">{missionName(mission)}</h1>
@@ -175,7 +135,8 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         {only && <ReadOnlyNote thing={mission} />}
       </header>
 
-      {(mission.seen === "needs_you" || asking) && !only && (
+      {/* Not over a draft: it waits to be started, which its own card says, and asks nothing of anybody. */}
+      {(mission.seen === "needs_you" || asking) && !only && !draft && (
         <div role="status" className="alert alert-soft alert-warning grid-cols-[auto_minmax(0,1fr)] items-start rounded-2xl">
           <Mascot pose="waiting" decorative className="w-12 sm:w-14" />
           <div className="w-full min-w-0 space-y-3">
@@ -193,13 +154,19 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         </div>
       )}
 
+      {/* What it does this moment and how far it is, straight under its name: both were below the brief, a scroll away. */}
+      {mission.seen === "working" && <NowLine mission={mission} live={live?.status === "running" ? live : undefined} jobs={conversation.jobs} {...(detail.reviewing ? { reviewing: detail.reviewing } : {})} />}
+      {!draft && <Meters meters={meters(mission, plan, detail.steps)} />}
+
       {/* A draft (0.8.11): nothing has run; what it will do, how it is judged and its brief are changed here before it starts. */}
       {draft && (
-        <Card title="Draft" description="Nothing has run. Change it here, then start it, or drop it.">
+        <Card title="Draft" description="Nothing has run. Change it here, then start it, or delete it.">
           <DraftForm key={mission.updatedAt} mission={mission} brief={detail.brief ?? null} ownFolder={mission.workdir.endsWith(`/missions/${mission.id}`)} writable={writable} />
         </Card>
       )}
 
+      {/* Its brief across the page, as its result is under it. What decides it is done is beside the work, under its
+          folder: side by side with the brief it read as a second, lesser brief. */}
       {detail.brief && <BriefCard brief={detail.brief} shown={briefShown(detail.briefPath, mission.id)} />}
 
       {/* Parked while it works on what does not depend on them — a mission waits only once nothing else moves. */}
@@ -221,57 +188,18 @@ export default function MissionPage({ missionId }: { missionId: string }) {
         </section>
       )}
 
-      <Meters meters={meters(mission, plan, detail.steps)} />
-
-      {mission.seen === "working" && <NowLine mission={mission} live={live?.status === "running" ? live : undefined} jobs={conversation.jobs} {...(detail.reviewing ? { reviewing: detail.reviewing } : {})} />}
-
       {(mission.report || mission.files.length > 0) && (
         <Card
           title="Result"
           description={mission.seen === "done" ? "What it handed back." : "What it handed back so far."}
           {...(mission.seen === "done" ? { actions: <Mascot pose="trophy" decorative className="-my-3 w-16" /> } : {})}
         >
-          <MissionResult report={mission.report} files={mission.files} workdir={mission.workdir} />
+          <MissionResult missionId={mission.id} report={mission.report} files={mission.files} workdir={mission.workdir} />
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <Card title="Turns" description="Newest first, each from the mission's page. Open a turn's steps to see what it did." className="min-w-0">
-          <MissionTimeline turns={conversation.turns} live={live} />
-        </Card>
-
-        {/* Below lg one column, and its cards items of the grid (`contents`), so the Checklist can come before the Turns:
-            "how far is it" was read past every turn on a phone (0.8.11). From lg, the column beside them. */}
-        <aside className="min-w-0 max-lg:contents max-lg:[&>*]:min-w-0 lg:space-y-5">
-          <TellCard
-            mission={mission}
-            writable={writable}
-            pending={act.isPending}
-            onTell={(text, done) => act.mutate({ verb: "tell", text }, { onSuccess: done })}
-          />
-          <Card title="Checklist" description="Kept by the agent; every turn starts from it." className="max-lg:order-first">
-            <Checklist plan={plan} />
-          </Card>
-          {mission.answers.length > 0 && (
-            <Card title="Questions">
-              <div className="space-y-3">
-                <Questions answers={mission.answers} />
-              </div>
-            </Card>
-          )}
-          <Card title="Done when">
-            <JudgedBy detail={detail} />
-          </Card>
-          {mission.seen === "ended" && mission.reason && (
-            <Card title="Why it ended">
-              <p className="flex items-center gap-3 text-sm text-base-content/80 [overflow-wrap:anywhere]">
-                <Mascot pose="stuck" decorative className="w-14" />
-                <span className="min-w-0">{mission.reason}</span>
-              </p>
-            </Card>
-          )}
-        </aside>
-      </div>
+      {/* Nothing of a draft has run: no checklist, no turns, nothing to tell. All of it shows once it starts. */}
+      {!draft && <MissionWork mission={mission} plan={plan} turns={conversation.turns} live={live} writable={writable} pending={act.isPending} onTell={(text, done) => act.mutate({ verb: "tell", text }, { onSuccess: done })} />}
     </div>
   );
 }

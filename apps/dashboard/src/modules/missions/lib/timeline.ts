@@ -83,3 +83,17 @@ export function timelineOf(turns: readonly ChatTurn[]): TimelineEntry[] {
   }
   return entries.reverse();
 }
+
+/** How many entries show before "Show older turns": a mission of forty turns ran the page forty cards long. */
+const TURNS_SHOWN = 5;
+
+/**
+ * Which entries show while the turns are folded: the newest few, which is where a mission is. `older` is how many
+ * turns the fold holds back, each of a run of failures counted, since that is what the button says.
+ */
+export function turnsShown(entries: readonly TimelineEntry[], open: boolean): { entries: readonly TimelineEntry[]; older: number; folds: boolean } {
+  if (entries.length <= TURNS_SHOWN) return { entries, older: 0, folds: false };
+  if (open) return { entries, older: 0, folds: true };
+  const older = entries.slice(TURNS_SHOWN).reduce((sum, entry) => sum + (entry.kind === "repeat" ? entry.turns.length : 1), 0);
+  return { entries: entries.slice(0, TURNS_SHOWN), older, folds: true };
+}

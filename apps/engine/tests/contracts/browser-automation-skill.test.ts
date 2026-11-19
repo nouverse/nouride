@@ -81,6 +81,29 @@ describe("set up as written, it runs where Nouride runs", () => {
   });
 });
 
+describe("on musl, which Nouride's own Docker image is", () => {
+  // An agent in the image fell back to search snippets in silence: Playwright's own Chromium is built for glibc, and
+  // the skill's way out was `apk add chromium`, which the daemon's user cannot run there.
+  test("the system's Chromium is installed the way the agent's instructions say, never by a package manager's name", () => {
+    expect(skill).toContain("Install the system's Chromium, the package `chromium`, the way your instructions say a system package is installed here");
+    expect(skill).not.toContain("apk add chromium");
+    expect(skill).toMatch(/`NO NODE`: install `nodejs` and `npm` the way your instructions say/);
+  });
+
+  test("its setup skips install-browser and writes the config from where that Chromium is", () => {
+    const musl = source.slice(source.indexOf("**On musl**"), source.indexOf("The helpers in `scripts/`"));
+    expect(musl).toContain("npm i --save-exact @playwright/cli@0.1.23");
+    expect(musl).not.toContain("install-browser chromium");
+    expect(musl).toContain('\\"executablePath\\": \\"$(command -v chromium-browser || command -v chromium)\\"');
+  });
+
+  test("going without a browser is said first, never in silence", () => {
+    expect(skill).toContain("**Never go without one in silence.**");
+    expect(skill).toMatch(/say so before anything else in your answer: what failed, in its own\s+words, and what would fix it/);
+    expect(skill).toMatch(/tell the person what fell short, before you do the task any other way/);
+  });
+});
+
 test("what happened is read off the screenshot before it is said", () => {
   // Nestor reported a login form that "did nothing" from the page's code; the screenshot he had sent showed its
   // "Verify you are human" box and a pale, disabled button.

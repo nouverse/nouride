@@ -5,6 +5,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Hono } from "hono";
 import { sessionIdFor } from "@nouride/shared";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -33,7 +36,8 @@ async function app(role: "admin" | "operator" | "viewer" = "operator", extra: Re
   const get = async (path: string) => (await control.request(path)).json();
   const post = (path: string, body: unknown) => control.request(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const del = (path: string) => control.request(path, { method: "DELETE" });
-  return { h, get, post, del };
+  const open = (path: string) => control.request(path);
+  return { h, get, post, del, open };
 }
 
 describe("the list", () => {
@@ -88,6 +92,19 @@ describe("the list", () => {
     // Past a month the page cannot ask: 90 days reads as 30, and both ended more than 30 days back by now.
     h.tick(31 * 24 * 60 * 60_000);
     expect(await ids("/missions?days=90")).toEqual([open.id]);
+  });
+
+  test("a draft stays listed however many missions were started after it: the open ones are not cut to the newest", async () => {
+    const { h, get } = await app();
+    const draft = await h.start("an idea for later", { agentId: "nox", startedBy: "nouride:system", byAgent: "nox", proposed: true });
+    for (const goal of ["one", "two", "three"]) {
+      h.tick(60_000);
+      h.missions.stop((await h.start(goal)).id, "Gading");
+    }
+    // Two rows asked for, the three newest all ended: the draft is older than every one of them, and still open.
+    const { missions } = (await get("/missions?limit=2")) as { missions: { id: string; seen: string }[] };
+    expect(missions[0]).toMatchObject({ id: draft.id, seen: "needs_you" });
+    expect(missions.filter((m) => m.seen === "ended")).toHaveLength(2);
   });
 
   test("one agent's, when the page asks for it", async () => {
@@ -167,6 +184,71 @@ describe("acting on one", () => {
  * live box. Only once it has ended; never over work nobody committed in its folder unless forced; its conversation ends
  * as deleting one ends it.
  */
+describe("saved to the backlog", () => {
+  test("the form's draft waits unstarted, is nobody's proposal, and is recorded as drafted; without the word it starts", async () => {
+    const audit: { action: string }[] = [];
+    const { h, post } = await app("operator", { audit: { record: (row: { action: string }) => void audit.push(row) } });
+    const saved = await post("/missions", { agent: "nova", goal: "sweep the tests", draft: true });
+    expect(saved.status).toBe(201);
+    const draft = ((await saved.json()) as { mission: { id: string } }).mission;
+    expect(h.store.get(draft.id)).toMatchObject({ status: "waiting", waitKind: "accept", startedAt: null, reason: "a draft, not started", turnsUsed: 0 });
+    expect(audit.map((row) => row.action)).toEqual(["mission_drafted"]);
+    const started = await post("/missions", { agent: "nox", goal: "tidy the notes" });
+    expect(h.store.get(((await started.json()) as { mission: { id: string } }).mission.id)!.status).not.toBe("waiting");
+    expect(audit.map((row) => row.action)).toEqual(["mission_drafted", "mission_started"]);
+  });
+});
+
+describe("a picture of its result", () => {
+  // The smallest PNG there is: its eight bytes of signature are what makes it one.
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+  async function withResult(role: "operator" | "viewer" = "operator", extra: Record<string, unknown> = {}) {
+    const dir = mkdtempSync(join(tmpdir(), "nr-result-"));
+    writeFileSync(join(dir, "flow.png"), PNG);
+    writeFileSync(join(dir, "notes.md"), "# notes");
+    writeFileSync(join(dir, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>");
+    const made = await app(role, extra);
+    const mission = await made.h.start("draws a flow");
+    const kept = made.h.store.get(mission.id)!;
+    kept.files = [join(dir, "flow.png"), join(dir, "notes.md"), join(dir, "logo.svg"), join(dir, "gone.png")];
+    made.h.store.save(kept);
+    return { ...made, id: mission.id };
+  }
+
+  test("is served by its place among the result's files, as a picture drawn in the page", async () => {
+    const { open, id } = await withResult();
+    const res = await open(`/missions/${id}/files/0`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("content-disposition")).toBe('inline; filename="flow.png"');
+    expect(res.headers.get("cache-control")).toBe("private, max-age=300");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(PNG);
+  });
+
+  test("only a picture, only one the result names, and never an SVG, which opened by its address would run as the dashboard", async () => {
+    const { open, id } = await withResult();
+    expect((await open(`/missions/${id}/files/1`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/2`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/9`)).status).toBe(404);
+    // By its place, a whole number: nothing that reads as a path or as another number.
+    expect((await open(`/missions/${id}/files/0x1`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/-1`)).status).toBe(404);
+    expect((await open(`/missions/${id}/files/..%2Fflow.png`)).status).toBe(404);
+    // Named by the result and no longer on disk: said as that, not as a broken picture.
+    expect((await open(`/missions/${id}/files/3`)).status).toBe(410);
+    expect((await open("/missions/msn_nothinghere/files/0")).status).toBe(404);
+  });
+
+  test("to whoever may see the mission, and to nobody else", async () => {
+    // The same mission, asked for by an operator it is not known to: it reports to a chat that is not theirs.
+    const stranger = await withResult("operator", { ctx: { config: { people: [{ key: "other", name: "Other", ids: ["web:usr_someone"] }] } } });
+    expect((await stranger.get(`/missions/${stranger.id}`) as { error?: string }).error).toBe("no such mission");
+    expect((await stranger.open(`/missions/${stranger.id}/files/0`)).status).toBe(404);
+    const viewer = await withResult("viewer");
+    expect((await viewer.open(`/missions/${viewer.id}/files/0`)).status).toBe(200);
+  });
+});
+
 describe("deleting one", () => {
   function recorded() {
     const ended: { key: unknown; mode: string }[] = [];
@@ -211,6 +293,21 @@ describe("deleting one", () => {
     viewer.h.missions.stop(ended.id, "Gading");
     expect((await viewer.del(`/missions/${ended.id}`)).status).toBe(403);
     expect(viewer.h.store.get(ended.id)).not.toBeNull();
+  });
+
+  test("a draft goes at once: nothing of it has run, so there is nothing to stop first", async () => {
+    const seen = recorded();
+    const { h, del } = await app("operator", seen.extra);
+    const draft = await h.start("an idea for later", { agentId: "nox", startedBy: "nouride:system", byAgent: "nox", proposed: true });
+    const res = await del(`/missions/${draft.id}`);
+    expect(res.status).toBe(200);
+    expect(h.store.get(draft.id)).toBeNull();
+    expect(seen.audit).toContainEqual(expect.objectContaining({ action: "mission_deleted" }));
+    // One that waits for anything else is still open work: an answer, a limit, a result to accept.
+    const asked = await h.start("asks something");
+    h.missions.ask(asked.id, { question: "Which folder?" });
+    expect((await del(`/missions/${asked.id}`)).status).toBe(409);
+    expect(h.store.get(asked.id)).not.toBeNull();
   });
 
   test("work nobody committed in its folder refuses it by name, with the note that gets past it; force deletes", async () => {

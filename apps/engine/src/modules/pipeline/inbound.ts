@@ -580,8 +580,9 @@ export class InboundRouter {
       chatId: envelope.chatId,
       gatewayId: envelope.gatewayId,
     };
-    const noteToChat = (prompt: string, reply: string) =>
-      this.ctx.deps.turns?.note({
+    const noteToChat = (prompt: string, reply: string) => {
+      if (!this.ctx.deps.turns) return;
+      this.ctx.deps.turns.note({
         sessionId: sessionIdFor(key),
         agentId: agent.config.id,
         gatewayId: envelope.gatewayId,
@@ -591,6 +592,9 @@ export class InboundRouter {
         prompt,
         reply,
       });
+      // The answer makes the conversation when there is none yet, so it is listed and deleted with it.
+      this.ctx.deps.sessions.keepAnswered(key);
+    };
 
     /**
      * Where ids are per connection, the agent's own connection is the only one that can answer.
@@ -684,8 +688,11 @@ export class InboundRouter {
 
     // An edit is words, never a command (`edits.ts`): arrival stops one that reads as a command, and so does this.
     const command = isEdit(envelope) ? null : parseCommand(text);
+    // What the turn is asked: the message, or the words a command that falls through hands the agent instead.
+    let asked = text;
     if (command && this.hooks.has(command.command)) {
       const result = await this.hooks.run(command.command, command.args, agent, envelope);
+      if (!result.handled && result.prompt) asked = result.prompt;
       if (result.reply) {
         await this.ctx.voice.reply(envelope, result.reply);
         /**
@@ -696,16 +703,7 @@ export class InboundRouter {
          * nothing under it. Recorded after the send, so a command whose reply never left is not
          * remembered as answered.
          */
-        this.ctx.deps.turns?.note({
-          sessionId: sessionIdFor(key),
-          agentId: agent.config.id,
-          gatewayId: envelope.gatewayId,
-          chatId: envelope.chatId,
-          messageId: envelope.id,
-          senderId: envelope.senderId,
-          prompt: text.trim() || command.command,
-          reply: result.reply,
-        });
+        noteToChat(text.trim() || command.command, result.reply);
       }
       if (result.handled) return;
     }
@@ -797,7 +795,7 @@ export class InboundRouter {
     // model. Everything above reads `envelope.text`, so a quote folded into it earlier turned a
     // replied-to `/approve` into ordinary chat and let a quoted `@othername` reroute the message. See
     // `MessageEnvelope.quotedText`.
-    await this.turns.runTurn(agent, envelope, key, withQuotedContext(envelope, text));
+    await this.turns.runTurn(agent, envelope, key, withQuotedContext(envelope, asked));
   }
 }
 

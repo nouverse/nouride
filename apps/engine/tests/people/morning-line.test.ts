@@ -168,6 +168,9 @@ describe("whose news it is", () => {
       missions.save({ ...one, status, reason, waitKind: status === "waiting" ? "input" : null, endedAt: status === "done" ? Date.now() - 1000 : null });
     };
     mission("Mira's question", "555", "waiting", "Which disk?");
+    // A draft of hers: it waits for someone to start it, which is no question she owes.
+    const draft = newMission({ agentId: "nouva", goal: "Mira's draft", startedBy: "555", gatewayId: "telegram:nouva", chatId: "555" }, { id: MissionStore.newId(), settings: DEFAULT_CONFIG.missions as never, privateDir: "/p", now: Date.now() });
+    missions.save({ ...draft, status: "waiting", waitKind: "accept", startedAt: null });
     mission("Mira's done work", "555", "done");
     mission("Someone else's work", "777", "done");
     const approvals: ApprovalRequest[] = [

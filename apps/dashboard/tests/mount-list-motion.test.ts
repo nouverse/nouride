@@ -1,5 +1,5 @@
 /**
- * Lists on the real pages move where they change: a mission that changes state leaves its group and enters the next,
+ * Lists on the real pages move where they change: a mission that changes state leaves its column and enters the next,
  * lit as it arrives; a new answer in a chat moves in, not the question already drawn above it nor what the conversation
  * opened on; a document added enters at the top of its collection. The daemon's answers are the engine's own
  * (`fixtures/wire.json`), changed as a later poll would find them.
@@ -14,12 +14,12 @@ useMountHarness();
 const classes = (element: Element | null | undefined) => (element?.getAttribute("class") ?? "").split(/\s+/);
 
 describe("Missions", () => {
-  test("one that changes state leaves its group, out of reach, and enters the next, lit; the one that did not stays still", async () => {
+  test("one that changes state leaves its column, out of reach, and enters the next, lit; the one that did not stays still", async () => {
     const wire = WIRE["/missions"] as { missions: Record<string, unknown>[] };
     const ended = wire.missions.find((mission) => mission.id === "msn_2")!;
-    let seen = { leaving: [] as string[], entering: [] as string[], lit: false, still: [] as string[], working: true };
+    let seen = { leaving: [] as string[], entering: [] as string[], lit: false, still: [] as string[], working: true, stays: false };
     await renderPage("/missions", async (host, app) => {
-      const cardIn = (group: string, id: string) => host.querySelector(`section[aria-label="${group}"] a[href$="/missions/${id}"]`);
+      const cardIn = (group: string, id: string) => host.querySelector(`section[aria-label="${group}"] [data-mission="${id}"]`);
       await eventually(() => cardIn("Working", "msn_1") !== null, 4_000, "msn_1 working");
       answer({
         "/missions": {
@@ -35,8 +35,12 @@ describe("Missions", () => {
         lit: cardIn("Finished", "msn_1")?.querySelector(".animate-lit") !== null,
         still: classes(cardIn("Finished", "msn_2")),
         working: true,
+        stays: false,
       };
-      await eventually(() => host.querySelector('section[aria-label="Working"]') === null, 2_000, "the Working group to go with its last card");
+      // The columns stay while it leaves, so it is seen going; it was the last one open, so once it has gone the three
+      // columns are the one thin strip.
+      seen.stays = cardIn("Working", "msn_1") !== null && host.querySelector("[data-board-strip]") === null;
+      await eventually(() => cardIn("Working", "msn_1") === null && host.querySelector("[data-board-strip]") !== null, 2_000, "nothing open, the strip");
       seen.working = false;
     });
     expect(seen.leaving).toEqual(expect.arrayContaining(["animate-leave", "pointer-events-none"]));
@@ -44,13 +48,14 @@ describe("Missions", () => {
     expect(seen.lit).toBe(true);
     expect(seen.still).not.toContain("animate-enter");
     expect(seen.still).not.toContain("animate-leave");
+    expect(seen.stays).toBe(true);
     expect(seen.working).toBe(false);
   });
 
   test("one the search hides neither leaves nor enters when it shows again: typing moves nothing", async () => {
     let shown: string[] = [];
     await renderPage("/missions", async (host) => {
-      const card = (id: string) => host.querySelector(`a[href$="/missions/${id}"]`);
+      const card = (id: string) => host.querySelector(`[data-mission="${id}"]`);
       await eventually(() => card("msn_2") !== null, 4_000, "msn_2");
       const search = host.querySelector<HTMLInputElement>('input[placeholder="Search missions"]')!;
       const type = (text: string) => {
@@ -151,8 +156,8 @@ describe("the first one in an empty list", () => {
       await eventually(() => host.textContent?.includes("No missions in the last") ?? false, 4_000, "no missions");
       answer({ "/missions": { status: 200, body: { ...wire, missions: [wire.missions[0]] } } });
       await app.queryClient.invalidateQueries({ queryKey: ["missions"] });
-      await eventually(() => host.querySelector('a[href$="/missions/msn_1"]') !== null, 4_000, "the first mission");
-      card = classes(host.querySelector('a[href$="/missions/msn_1"]'));
+      await eventually(() => host.querySelector('[data-mission="msn_1"]') !== null, 4_000, "the first mission");
+      card = classes(host.querySelector('[data-mission="msn_1"]'))
     });
     expect(card).toContain("animate-enter");
   });

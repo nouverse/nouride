@@ -63,6 +63,7 @@ import { ensureInitialAdmin, firstRunBanner } from "@/modules/users/bootstrap.ts
 import { personForEachAccount } from "./account-people.ts";
 import type { GatewayPort } from "@/boot/gateway-switch.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
+import { DeviceTokenStore } from "@/modules/users/devices.store.ts";
 import { ensureControlToken, mountControlRoutes } from "@/modules/web/control/index.ts";
 import { resolveOauthSupport } from "@/modules/users/oidc.ts";
 import { mountHooks } from "@/modules/web/hooks.ts";
@@ -401,7 +402,7 @@ export async function startControlPlane(deps: {
               ...(config.cron.enabled
                 ? { cron: { store: cron, scheduler, timezone: config.daemon.timezone, tests: hookTests, ...(proposals ? { proposals } : {}) } }
                 : {}),
-              ...(users ? { users } : {}),
+              ...(users ? { users, devices: new DeviceTokenStore(db) } : {}),
               ...(setup ? { setup } : {}),
               ...(files ? { files } : {}),
               sessions,

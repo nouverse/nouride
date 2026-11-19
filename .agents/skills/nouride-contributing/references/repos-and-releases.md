@@ -56,6 +56,8 @@ The order, since 0.8.36:
    (`gh workflow run ci.yml --ref main`) and wait for it to end green. Move the private repository's `main` to the pin
    `main` carries (it moves only forward). Then `git tag vX.Y.Z <merge commit>` and push the tag: `release.yml` builds,
    signs and publishes, and starts the public half (`public-release.yml`).
+   `bun run scripts/release/publish.ts vX.Y.Z` runs steps 2 to 4 in this order, once its checks pass (`--dry-run`
+   says what it would run); a red check of the pull request stops it before the merge.
 5. **After the tag:** a fresh install from the public address and the last release's own `nouride update` to the new
    one, then the installs the maintainers run.
 

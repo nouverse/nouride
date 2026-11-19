@@ -10,7 +10,6 @@
 
 import { resolveWithin, statFile } from "@nouride/runtime";
 import { createLogger, MISSION_TITLE_MAX, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
-import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { isMissionChat } from "@/modules/missions/gateway.ts";
@@ -45,10 +44,13 @@ export const MISSION_IS_FOR =
   "command, or work that should go on while the person is away. A mission keeps this chat free, survives restarts, keeps " +
   "going on its own (it works around what fails and proves itself done with checks) and is signed off.";
 
-/** How one starts from a chat: a draft the person starts, at once only on their word. */
+/**
+ * How one starts from a chat: always a draft the person starts. An agent never starts one itself; asked to "just run
+ * it", it drafts and says the person's Start runs it, or starts its own draft with `work` on the person's word.
+ */
 export const MISSION_DRAFT =
-  "From a chat, `mission` makes a draft the person starts; say what it will do and how it will be judged done. Start it " +
-  "at once only when the person asked for that, with their words in `said`. What other harnesses call `/goal` is a mission here.";
+  "From a chat, `mission` makes a draft, which runs once the person starts it; say what it will do and how it will be " +
+  "judged done. What other harnesses call `/goal` is a mission here.";
 
 /** The whole rule, where it is read alone: the tool's description and a coding CLI's instructions. */
 export const WHEN_TO_START =
@@ -92,11 +94,9 @@ const START_FIELDS = {
   branch: { type: "string", description: "Its worktree's new branch: code in a git `workdir` only. Default: mission/<id>." },
 } as const;
 
-/** A chat's own fields (0.8.11): a draft's brief and how it starts at once; `edit`'s id. */
+/** A chat's own fields (0.8.11): a draft's brief, and `edit`'s id. */
 const CHAT_FIELDS = {
   brief: { type: "string", description: "start, edit: the mission's brief, written to BRIEF.md in its folder (what the work is, why, what to read, what done means), in English. Each turn names it. Change it later with `edit` or your file tools." },
-  now: { type: "boolean", description: "start: run at once, no draft, only when the person asked for that; needs `said`." },
-  said: { type: "string", description: "start with `now`: the person's own words asking for it to run now, quoted as they wrote them." },
   id: { type: "string", description: "edit: your draft's id." },
 } as const;
 
@@ -271,13 +271,11 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
   async function startOrEdit(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult> {
     if (args.action === "edit") return await editOwn(missions, args, ctx);
     if (args.action !== "start") return refused('In a chat, `mission` drafts one (action "start") or changes your draft ("edit").');
-    // A draft unless the person asked for it to run now, in words of their own in this turn.
-    // A turn nobody typed — a job's end, a schedule — proposes, as it always has.
-    const said = text(args.said);
-    const now = args.now === true;
-    if (now && !said) return refused("`now` needs `said`: the person's own words asking for it to run now, as they wrote them. Without them it is a draft they start.");
-    if (now && (ctx.senderId === SYSTEM_SENDER || ctx.askedBy || ctx.unattended)) return refused("`now` starts work on a person's own word, in the turn their message started, and this turn is not one. Draft it instead.");
-    if (now && typeof args.brief === "string") return refused("A brief goes with a draft. Started at once, the goal says what the work is, or names a brief file by its absolute path.");
+    // Always a draft: the person's Start runs it. A model that still asks to run it at once is told so, rather than
+    // having the word dropped and believing it started.
+    if (args.now !== undefined || args.said !== undefined) {
+      return refused("A mission you start is always a draft, which runs once the person starts it: call it again without `now` and `said`. If they asked for it to run now, say so: they press Start, or tell you in the chat and you start your draft with `work`.");
+    }
     // The chat's task goes with it — its notes and its plan, the ones this turn wrote (`missions/carry.ts`).
     const from = { agentId: ctx.agentId, gatewayId: ctx.gatewayId, chatId: ctx.chatId, ...(ctx.turnId ? { turnId: ctx.turnId } : {}) };
     // A draft whose call names nobody to sign it off is the person's, after its checks — `WHO_SIGNS`'s own answer, as a
@@ -291,12 +289,11 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
       gatewayId: ctx.gatewayId,
       chatId: ctx.chatId,
       from,
-      ...(now ? { said } : { proposed: true, ...(named ? {} : { review: false as const, accept: true }) }),
+      proposed: true,
+      ...(named ? {} : { review: false as const, accept: true }),
       ...(typeof args.brief === "string" && args.brief.trim() ? { brief: args.brief.trim() } : {}),
     };
     const { answer, mission } = await startChecked(missions, request, (id) => options.linkFor?.(ctx, { kind: "mission", id }) ?? null);
-    // Started without a draft: the words it rests on are on the record, as a person's start is.
-    if (now && mission) options.audit?.record({ action: "mission_started", actor: `agent ${ctx.agentId}`, agentId: mission.agentId, details: { mission: mission.id, said } });
     return mission ? { ...answer, page: pagePath({ kind: "mission", id: mission.id }) } : answer;
   }
 

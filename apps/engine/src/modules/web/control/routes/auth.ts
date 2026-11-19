@@ -8,7 +8,7 @@
  */
 
 import type { Principal, User } from "@nouride/wire";
-import { createLogger, rateLimit } from "@nouride/shared";
+import { createLogger, rateLimit, type RateLimiter } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import {
   loadOauth,
@@ -74,21 +74,16 @@ function loginAgain(error: string, next: string | null): string {
   return `/dashboard/login?error=${error}${next ? `&next=${encodeURIComponent(next)}` : ""}`;
 }
 
-export function registerAuthRoutes(control: ControlApp, deps: ControlDeps): void {
-  // Per registration rather than per module, so a test that exhausts a limit does not hand its
-  // exhausted bucket to the next test in the file.
-  const byAddress = rateLimit({
-    name: "login",
-    by: "ip",
-    limit: ATTEMPTS_PER_ADDRESS,
-    window: ATTEMPT_WINDOW,
-  });
-  const byAccount = rateLimit({
-    name: "login",
-    by: "account",
-    limit: ATTEMPTS_PER_ACCOUNT,
-    window: ATTEMPT_WINDOW,
-  });
+/** The sign-in's two allowances (the rules above), made per registration: a test that spends one does not hand it on. */
+export function signInLimits(): { byAddress: RateLimiter; byAccount: RateLimiter } {
+  return {
+    byAddress: rateLimit({ name: "login", by: "ip", limit: ATTEMPTS_PER_ADDRESS, window: ATTEMPT_WINDOW }),
+    byAccount: rateLimit({ name: "login", by: "account", limit: ATTEMPTS_PER_ACCOUNT, window: ATTEMPT_WINDOW }),
+  };
+}
+
+export function registerAuthRoutes(control: ControlApp, deps: ControlDeps, limits: ReturnType<typeof signInLimits>): void {
+  const { byAddress, byAccount } = limits;
 
   /**
    * Sign in.

@@ -60,8 +60,13 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
 /**
  * What scrolls a page, below the header's place: the header first in it, so a scroll down takes the header up with the
  * page, then the page itself (`<main>`), which holds the page alone.
+ *
+ * Positioned (`relative`), so what a page places absolutely with nothing positioned around it (a `sr-only` word is
+ * one) is placed in here and scrolls with the page. Placed against the document instead, such a word below the
+ * window's foot made the document itself taller than the window: the wheel at a page's end scrolled the whole shell
+ * up and left a blank band under it (a mission's page, its checklist's words for a screen reader).
  */
-const SCROLLS = "min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
+const SCROLLS = "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
 
 /**
  * The way back to Nouride Home's own screen, inside its app (`home-app.ts`). One button for both places it stands: a

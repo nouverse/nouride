@@ -33,7 +33,8 @@ describe("how a page scrolls", () => {
       });
       return found;
     };
-    expect(await bar("/missions")).toEqual({ tabs: true, search: true, sticky: true });
+    // Missions is a board: its columns are its own, and only a phone draws them as tabs, under the row.
+    expect(await bar("/missions")).toEqual({ tabs: false, search: true, sticky: true });
     expect(await bar("/jobs")).toMatchObject({ tabs: true, sticky: true });
     expect(await bar("/access")).toEqual({ tabs: true, search: true, sticky: true });
     expect(await bar("/models")).toMatchObject({ tabs: true, sticky: true });

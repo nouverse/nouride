@@ -30,11 +30,13 @@ export function asksWhileWorking(mission: Asking): boolean {
 /**
  * Whether it waits for the reader. One at work with a question open does. An approval is counted and answered as one,
  * and a mission paused because its model could not answer tries again by itself: neither is a card. Nor is one the
- * reader only reads, which waits for its own person.
+ * reader only reads, which waits for its own person, nor a draft: it is in the Missions board's backlog until
+ * someone starts it, and its chat notice offers Start and Drop.
  */
-export function waitsForReader(mission: Asking & Pick<MissionView, "seen" | "changeable">): boolean {
+export function waitsForReader(mission: Asking & Pick<MissionView, "seen" | "changeable" | "startedAt">): boolean {
   if (mission.changeable === false) return false;
   if (asksWhileWorking(mission)) return true;
+  if (mission.waitKind === "accept" && mission.startedAt === null) return false;
   return mission.seen === "needs_you" && mission.waitKind !== "approval" && mission.waitKind !== "retry";
 }
 
@@ -44,14 +46,14 @@ function onOneLine(question: string): string {
 }
 
 /** What it waits for, as its card says it: the question where it asked one, else the wait in its own words. */
-export function waitingLine(mission: Asking & Pick<MissionView, "startedAt">): string {
+export function waitingLine(mission: Asking): string {
   const open = openQuestion(mission);
   if (asksWhileWorking(mission) && open) return `Asks, and works on meanwhile: ${onOneLine(open.question)}`;
   switch (mission.waitKind) {
     case "input":
       return open ? `Waiting for your answer: ${onOneLine(open.question)}` : "Waiting for your answer";
     case "accept":
-      return mission.startedAt === null ? "A draft, not started yet. Start it or drop it" : "Its result is ready. Accept it or send it back";
+      return "Its result is ready. Accept it or send it back";
     case "limit":
       return "Stopped at a limit. Let it go on or end it";
     case "stuck":

@@ -6,14 +6,19 @@
  * between the scroll container and the transcript, which is how a page stops being readable.
  */
 
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import type { Room } from "@nouride/wire";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { CatPortrait } from "@/commons/cat/CatPortrait";
 import type { Look } from "@/commons/cat/look";
+import { api } from "@/commons/lib/api";
+import { openers, type CarriedSkill } from "./openers";
 
 export interface EmptyStateProps {
-  agentName: string | undefined;
+  /** The agent the chat is with: its name in the greeting, its skills for the openers (read while this is shown). */
+  agent: { id: string; displayName?: string | undefined } | undefined;
   /** The agent's cat as the Office draws it; a room, or a chat with no agent yet, shows Nouride's own. */
   look?: Look | undefined;
   /** Suggestions are for a one-to-one chat: a room has no single agent to introduce. */
@@ -25,37 +30,22 @@ export interface EmptyStateProps {
    * around a smaller cat, so all of it is seen in the panel's height without scrolling.
    */
   narrow?: boolean;
+  /** The skills themselves, given rather than read; none until they are read. */
+  skills?: readonly CarriedSkill[];
+  /** Which of them this chat offers first (`openers`): a new pair each time a chat opens, unless given. */
+  seed?: number;
   onPick: (prompt: string) => void;
-}
-
-/**
- * The four openers offered in a fresh chat: who the agent is, two kinds of work it does from a skill it already
- * has, and how a chat app is connected to it. A press puts one in the message box and sends nothing, so one that
- * ends at a colon is for the person to finish, with their own writing pasted in or their own subject named: it is
- * shown with `…` after it, which is not part of what goes in the box.
- *
- * The last names its three chat apps in as few words as say it: "How do I connect Telegram, Discord or WhatsApp?"
- * is 328 px wide at an opener's size, and an opener has 303 in the floating panel and 281 on a small phone. A second
- * opener on two lines is 20 px the panel does not have.
- *
- * In English, deliberately. They were written in Indonesian — the language this daemon's operator
- * speaks — and baked into the component, so the first thing any other user saw was a language they
- * may not read. A default in the interface language, translated properly if this ever grows one.
- */
-function openers(agentName: string): string[] {
-  return [
-    `Hi ${agentName}, introduce yourself and tell me what you can do.`,
-    "Make a carousel from this writing: ",
-    "Design a mockup of a landing page for: ",
-    "Connect Telegram, Discord or WhatsApp?",
-  ];
 }
 
 /** An opener as its button reads: one left for the person to finish says so. */
 const shown = (prompt: string) => (prompt.endsWith(": ") ? `${prompt}…` : prompt);
 
-export function EmptyState({ agentName, look, room, senderName, narrow = false, onPick }: EmptyStateProps) {
-  const prompts = openers(agentName || "Agent");
+export function EmptyState({ agent, look, room, senderName, narrow = false, skills, seed, onPick }: EmptyStateProps) {
+  const agentName = agent?.displayName;
+  const reading = !skills && !room ? agent?.id : undefined;
+  const carried = useQuery({ queryKey: ["agent-skills", reading], queryFn: () => api.agentSkills(reading!), enabled: Boolean(reading), retry: false, staleTime: 60_000 });
+  const [drawn] = useState(() => Math.floor(Math.random() * 1_000));
+  const prompts = openers(agentName || "Agent", skills ?? carried.data?.skills ?? [], seed ?? drawn);
   return (
       // The air around it, measured in a browser with four openers: at the spacing three had, the floating panel's
       // 443 px held 452, and a phone 640 px tall scrolled 63 px on the Chats page. A wide page keeps its own.

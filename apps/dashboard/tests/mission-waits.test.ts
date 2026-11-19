@@ -58,9 +58,8 @@ describe("the card's line", () => {
     expect(waitingLine(waiting("unknown_outcome"))).toBe("Cut off by a restart. Check it, then let it go on");
   });
 
-  test("a draft is never called an answer", () => {
-    const line = waitingLine(waiting("accept", { startedAt: null }));
-    expect(line).toBe("A draft, not started yet. Start it or drop it");
-    expect(line.toLowerCase()).not.toContain("answer");
+  test("a draft does not wait for the reader: it is in the board's backlog, not among what needs them", () => {
+    expect(waitsForReader(waiting("accept", { startedAt: null }))).toBe(false);
+    expect(waitsForReader(waiting("accept", { startedAt: 1 }))).toBe(true);
   });
 });

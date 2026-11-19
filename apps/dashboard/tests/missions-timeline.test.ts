@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { ChatTurn } from "@nouride/wire";
-import { reasonOf, timelineOf } from "@/modules/missions/lib/timeline";
+import { reasonOf, timelineOf, turnsShown } from "@/modules/missions/lib/timeline";
 
 /** A mission turn's prompt: its page, with the "Why this turn:" the daemon wrote, then the checklist's line. */
 const page = (why: string) => `MISSION msn_1 — turn 2 · 5m of 8h · 1M of 100M tokens\nGoal: fix it\nDone when: a person accepts.\nWhy this turn: ${why}\nChecklist: 1 of 3 steps done`;
@@ -94,3 +94,37 @@ describe("the turns, as entries", () => {
     expect(waits).toEqual([37 * 60_000 + 30_000, null, null]);
   });
 });
+
+// A mission of forty turns drew forty cards down its page, under a checklist and a result that fold.
+describe("the turns that show while they are folded", () => {
+  const numbers = (entries: ReturnType<typeof timelineOf>, open = false) => turnsShown(entries, open).entries.map((entry) => (entry.kind === "turn" ? entry.number : `${entry.from}-${entry.to}`));
+
+  test("the newest five, and how many older ones a press shows", () => {
+    const entries = timelineOf(Array.from({ length: 8 }, (_, at) => turn(at + 1)));
+    expect(numbers(entries)).toEqual([8, 7, 6, 5, 4]);
+    expect(turnsShown(entries, false)).toMatchObject({ older: 3, folds: true });
+  });
+
+  test("opened, all of them, still with a way to fold them", () => {
+    const entries = timelineOf(Array.from({ length: 8 }, (_, at) => turn(at + 1)));
+    expect(numbers(entries, true)).toEqual([8, 7, 6, 5, 4, 3, 2, 1]);
+    expect(turnsShown(entries, true)).toMatchObject({ older: 0, folds: true });
+  });
+
+  test("five and fewer are whole, with nothing to press", () => {
+    for (const count of [1, 5]) {
+      const entries = timelineOf(Array.from({ length: count }, (_, at) => turn(at + 1)));
+      expect(turnsShown(entries, false)).toMatchObject({ older: 0, folds: false });
+      expect(numbers(entries).length).toBe(count);
+    }
+  });
+
+  test("a run of failures held back counts each of its turns", () => {
+    const limit = "the model is overloaded";
+    // Turns 1 to 3 fail the same way and are one entry, the oldest: with five newer turns it is the one held back.
+    const entries = timelineOf([...[1, 2, 3].map((n) => turn(n, { status: "failed", error: limit })), ...[4, 5, 6, 7, 8].map((n) => turn(n))]);
+    expect(numbers(entries)).toEqual([8, 7, 6, 5, 4]);
+    expect(turnsShown(entries, false).older).toBe(3);
+  });
+});
+

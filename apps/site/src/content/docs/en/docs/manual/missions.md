@@ -38,14 +38,20 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   sends the draft again with the change named; or change it on the mission's page in the dashboard. Once it runs, its
   goal and checks stay as they are.
 - **Start it** with the button, `/mission accept <id>`, the dashboard's Start it, or by telling the agent to go: it
-  passes your words on, and they are kept with the start. **Drop it** removes it, with its folder.
-- **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it. Started at
-  once because you are away ("do it now, I'm off to sleep"), the checks and a reviewer. You can change it in the draft.
-- A draft nobody starts stays, listed under needs you, until someone starts or drops it.
+  passes your words on, and they are kept with the start. **Drop it** removes it, with its folder, and so does
+  **Delete** on its page: a draft goes at once, since nothing of it has run.
+- **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it, as it does
+  when you are away ("do it, I'm off to sleep"). You can change it in the draft.
+- A draft nobody starts stays in the board's Backlog until someone starts or drops it, however long that is: a draft
+  never expires. It is not counted among what needs you.
 
-Said "do it now, I'm off to sleep"? Then the agent starts it at once, without a draft, and its *started* notice quotes
-your words. What it had written down about the task, and its plan, go with it; the chat keeps one line,
-`→ mission msn_3f2a91, running`, which becomes the outcome when it ends.
+Said "do it now, I'm off to sleep"? Every mission an agent starts is a draft first (0.8.40): it drafts it and says so,
+and you start it, or tell it to go and it starts its draft on your word. What it had written down about the task, and
+its plan, go with it; the chat keeps one line, `→ mission msn_3f2a91, running`, which becomes the outcome when it ends.
+`/mission <goal>` asks the agent you address for a draft of that goal: it reads what it needs, writes the brief and
+checks, or asks you first when the goal is unclear. `/goal` is the same command. A mission you write on the dashboard's
+form, and an automation's mission step, still start at once: you wrote the first, and nobody is there to press Start
+for the second.
 
 To start one yourself:
 
@@ -53,8 +59,8 @@ To start one yourself:
 /mission check the 52 linked documents in KK 1.1, mark each, and copy the workbook back
 ```
 
-or **Missions → New mission** in the dashboard. The agent you address runs it, as you, and it reports to the chat you
-started it in.
+or **Missions → New mission** in the dashboard, where **Save to backlog** keeps it as a draft until you start it and
+**Start now** starts it at once. The agent you address runs it, as you, and it reports to the chat you started it in.
 
 `/goal`, as other tools name it, starts one too. A mission is a goal someone else signs off: it ends when its checks
 pass and a reviewer agrees, not when the agent says it is done.
@@ -83,6 +89,10 @@ The result and the report are in your language, written formally, as a document 
 comes with its `report.md`, so you read it before you decide, and it is not sent again when you accept. Nothing you
 wrote is cut on the way: the goal, what you told it while it worked, what it reports.
 
+A report is not only text (0.8.40). Where the work has a shape, the agent draws it, hands the picture back among the
+files, so the chat receives it as a picture, and names it in the report; the mission's page draws it there, in place.
+A list of things with their state is a table.
+
 *Started*, *needs you* and *done* end with the mission's page, as a link, where the chat gets one:
 [Links from a chat](/en/docs/manual/dashboard/#links-from-a-chat).
 
@@ -91,12 +101,31 @@ when a step finished. A wait on you is named again once, after four hours.
 
 ## Watching it
 
-**Missions** in the dashboard lists what needs you first, then what is working, then what finished, each with its
-checklist's progress. It has a tab for each, a search over the goals, reports and ids, a filter by agent, and a choice
-of how far back the finished ones go: the last 3, 7, 14 or 30 days (3 unless you choose, never further). One still open is listed however old.
+**Missions** in the dashboard is a board (0.8.40). Three columns hold what is still open: **Backlog**, the drafts;
+**Working**, what is queued, running or being checked; **Needs you**, a question, approvals, a limit or a result to
+accept. Under them **Finished** lists what is done, failed or stopped, a row each. Each card has its name, a bar of its
+checklist's progress, the line that matters (when a draft is done, the step it is on, what it asks), the agent's cat
+and when; a finished row says why it failed or who stopped it. Hover a time, or reach it with the keyboard, for the day
+and the minute it was made, started and ended. **Start** on a draft and **Answer** on a question work from the card.
+
+Every column shows its newest five, with **Show more** under them. Finished goes back the last 7, 14, 21 or 30 days (7
+unless you choose), with Done, Failed and Stopped to narrow it; what is open is listed however old. With nothing open,
+the three columns are one thin line and Finished has the page. A search and a filter by agent narrow every column. On a
+phone the board is four tabs with their counts, Finished the fourth, opening on Needs you when anything is there, and
+the day stands beside each time.
+
+An agent can be asked the same in its chat: "what is in your backlog?" It answers for its own missions, the ones it
+works and the ones it drafted for another agent: every one still open however old, a draft named as a draft that has
+not started, and the last twenty that ended.
+
+A mission's own page starts with what it does now and how far it is, then its brief and its result once it has one,
+each across the page, and its checklist over its turns, with its folder, what decides it is done and the box to tell it
+something beside them. A long checklist shows the five steps around the one at work, and the turns their newest five,
+with the rest a press away.
+A draft's page has only what you can change before it starts.
 
 **What waits for you says what it waits for** (0.8.39), on Home, on Work and in the list: a question with the question,
-a result to accept, a draft that has not started, a limit reached. A mission that asked and works on meanwhile is among
+a result to accept, a limit reached. A mission that asked and works on meanwhile is among
 them, marked **Working · asked a question**, and its page has the question and the box to answer it.
 
 **A mission at work shows it is alive** (0.8.39). A mission a coding CLI works on (Claude Code, Codex) is often one turn
@@ -282,7 +311,7 @@ branch of its own, `mission/<id>-helper-<n>`; the result names the branches, for
 
 | In a chat | |
 |---|---|
-| `/mission <goal>` | start one for the agent you address |
+| `/mission <goal>` | the agent you address drafts one from your goal; it runs once you start it |
 | `/mission` | what runs and waits here, needs-you first |
 | `/mission stop <id>` | end it |
 | `/mission continue <id> [note]` | go on past a limit, out of being stuck, or with what an accept found missing |

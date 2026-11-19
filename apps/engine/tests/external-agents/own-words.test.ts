@@ -43,21 +43,43 @@ describe("what a CLI says by itself", () => {
     expect(own.take("s1")).toEqual([words("Done.")]);
   });
 
-  test("is followed while a step is open, however quiet, and to the end of the quiet after it", async () => {
-    const own = new OwnWords(() => {}, 40);
+  test("is followed while a step is open, however quiet, past a silent step's limit while it says something, and to the end of the quiet after it", async () => {
+    const own = new OwnWords(() => {}, 40, 120);
     own.answers("s1", chat);
     own.heard("s1", step("t1", "in_progress"));
     const read = reader();
     let ended = false;
     const following = own.follow("s1", read, { gone: () => false }).then(() => void (ended = true));
-    // That it did not end is said only by waiting: past three of its quiet spells, with the step still open.
-    await sleep(150);
+    // That it did not end is said only by waiting: past its quiet spells and a silent step's limit, the step still open
+    // and still saying something.
+    for (let i = 0; i < 4; i++) {
+      await sleep(60);
+      own.heard("s1", { sessionUpdate: "tool_call_update", toolCallId: "t1", status: "in_progress" });
+    }
     expect(ended).toBe(false);
     own.heard("s1", step("t1", "completed"));
     own.heard("s1", words("All green."));
     await following;
     expect(read.text).toBe("All green.");
     expect(read.steps).toEqual([{ name: "execute", ok: true }]);
+  });
+
+  test("stops waiting for a step the CLI never ends, says it did not fail, and the CLI's next words wake the chat again", async () => {
+    // Live: Nix's step stayed open for an hour, its CLI kept up by a mission, and the chat showed it typing.
+    const woken: OwnChat[] = [];
+    const own = new OwnWords((to) => void woken.push(to), 20, 120);
+    own.answers("s1", chat);
+    own.heard("s1", words("Watching the build."));
+    own.heard("s1", step("t1", "in_progress"));
+    const read = reader();
+    const started = Date.now();
+    await own.follow("s1", read, { gone: () => false });
+    expect(Date.now() - started).toBeGreaterThanOrEqual(120);
+    read.end();
+    expect(read.steps).toEqual([]);
+    expect(read.text).toBe("Watching the build.");
+    own.heard("s1", words("Build done."));
+    expect(woken).toEqual([chat, chat]);
   });
 
   test("ends at once on a stop, or once the CLI is gone, and is nothing where nothing was kept", async () => {

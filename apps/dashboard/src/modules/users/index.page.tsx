@@ -16,6 +16,7 @@ import { useConfirm } from "@/commons/components/ui/confirm";
 import { PersonPicker } from "@/commons/components/people/PersonPicker";
 import type { PersonRecord } from "@nouride/wire";
 import { SignInMethods } from "./components/SignInMethods";
+import { DeviceTokens } from "./components/DeviceTokens";
 import { useMe } from "@/commons/lib/session";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 import { ListLoading } from "@/commons/components/ui/Spinner";
@@ -105,6 +106,7 @@ export default function UsersPage() {
       )}
 
       <SignInMethods />
+      <DeviceTokens />
 
       {multiUser && adding && (
         <NewUserForm

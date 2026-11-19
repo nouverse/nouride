@@ -1326,7 +1326,7 @@ describe("a failed load is not an empty or healthy page", () => {
  */
 describe("which pages own the viewport", () => {
   // What scrolls the page: the phone's header first in it, then the page's own `<main>`.
-  const SCROLLS = '<div class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
+  const SCROLLS = '<div class="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto">';
   // Above the phone's tab bar, where a chat's composer sits (0.8.24).
   const FILLS = '<main class="flex min-h-0 flex-1 flex-col overflow-hidden *:animate-fade max-lg:pb-[calc(4.75rem+env(safe-area-inset-bottom))]">';
   const agent = (id: string) => ({ id, displayName: id, enabled: true, state: "running", provider: "p", model: "m", tools: [], approvals: "careful" });
@@ -1658,49 +1658,34 @@ describe("missions", () => {
     status: 200,
     body: { ...(WIRE["/missions/msn_1"] as object), mission: { ...MISSION, ...mission }, ...extra },
   });
-  test("the list: working before finished, each with its checklist's count and the step it is on — or how it ended", async () => {
+  test("the board: what works in Working, what ended in Finished, each with its checklist's count and the line that matters", async () => {
     const html = await renderPage("/missions");
-    expect(html.indexOf('aria-label="Working"')).toBeGreaterThan(-1);
-    expect(html.indexOf('aria-label="Working"')).toBeLessThan(html.indexOf('aria-label="Finished"'));
-    expect(html).not.toContain('aria-label="Needs you"');
-    for (const words of ["Write a report on the disk usage of the build box", "1 of 3 steps", "Write report.md", "Tidy the old logs", "Ended · stopped", "stopped by tester"]) {
-      expect(html).toContain(words);
-    }
-    expect(html).toContain('href="/dashboard/missions/msn_1"');
+    expect(html.indexOf('data-board-column="working"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-board-column="working"')).toBeLessThan(html.indexOf('data-board-column="finished"'));
+    const inColumn = (id: string) => html.slice(html.indexOf(`data-board-column="${id}"`), html.indexOf("</section>", html.indexOf(`data-board-column="${id}"`)));
+    for (const words of ["1 of 3 steps", "Write report.md", 'href="/dashboard/missions/msn_1"']) expect(inColumn("working")).toContain(words);
+    for (const words of ["Tidy the old logs", "Stopped", "tester"]) expect(inColumn("finished")).toContain(words);
+    expect(inColumn("needs")).toContain("Nothing needs you.");
   });
 
-  test("the list's tabs count each group and the search narrows it, both in the row that stays", async () => {
+  test("the search narrows every column, in the row that stays at the top of the window", async () => {
     const seen: Record<string, string> = {};
     await renderPage("/missions", async (host) => {
-      const tabs = () => [...host.querySelectorAll('[role="tab"]')] as HTMLElement[];
-      const tab = (label: string) => tabs().find((el) => el.textContent?.startsWith(label))!;
-      seen.tabs = tabs().map((el) => el.textContent?.trim()).join(" | ");
       seen.all = host.innerHTML;
-      // How it finished, a tab each (0.8.0): the stopped one under Stopped, and nothing under Done.
-      tab("Done").click();
-      await eventually(() => host.textContent?.includes("Nothing done in the last 3 days") === true, 2_000, "the done tab");
-      tab("Stopped").click();
-      await eventually(() => host.textContent?.includes("1 stopped") === true, 2_000, "the stopped tab");
-      seen.finished = host.textContent ?? "";
-      tab("Needs you").click();
-      await eventually(() => host.textContent?.includes("Nothing needs you") === true, 2_000, "the needs-you tab");
-      tab("All").click();
-      // The words of why it ended, as its row shows them.
+      // The words of why it ended, as its card shows them.
       type(host.querySelector('input[type="search"]') as HTMLInputElement, "tester");
       await eventually(() => !host.textContent?.includes("Write a report on the disk usage"), 2_000, "the search");
       seen.searched = host.textContent ?? "";
       type(host.querySelector('input[type="search"]') as HTMLInputElement, "no such words");
-      await eventually(() => host.textContent?.includes("Nothing matches") === true, 2_000, "no match");
+      await eventually(() => host.textContent?.includes("Nothing at work.") === true, 2_000, "no match");
+      seen.none = host.textContent ?? "";
     });
-    expect(seen.tabs).toBe("All2 | Needs you0 | Working1 | Done0 | Failed0 | Stopped1");
-    // The page scrolls as a page, and the tabs stay in the row at the top of the window, the filters and the search
-    // at its end: they wrap under the tabs on a narrow window rather than run past its edge.
+    // The page scrolls as a page, and the search stays in the row at the top of the window, the filters at its end.
     expect(seen.all).not.toContain("lg:h-full lg:p-8");
     expect(seen.all).not.toMatch(/lg:overflow-y-auto/);
-    expect(seen.all).toMatch(/data-sticky-bar[^>]*>.*role="tablist".*<div class="ml-auto flex min-w-0 flex-wrap items-center gap-2">/s);
-    expect(seen.finished).toContain("Tidy the old logs");
-    expect(seen.finished).not.toContain("Write a report on the disk usage");
+    expect(seen.all).toMatch(/data-sticky-bar[^>]*>.*<div class="ml-auto flex min-w-0 flex-wrap items-center gap-2">.*type="search"/s);
     expect(seen.searched).toContain("Tidy the old logs");
+    expect(seen.none).toContain("Nothing finished in the last 7 days.");
   });
 
   test("the agent filter is the address's ?agent=: that agent's list, and Every agent asks for all of them again", async () => {
@@ -1717,29 +1702,15 @@ describe("missions", () => {
         const agent = dropdown(host, "Agent");
         chosen = agent.holds() ?? "";
         await agent.pick("Every agent");
-        // With the 3 days the list shows of what finished unless chosen (0.8.8): `days` goes with every ask.
-        await eventually(() => asked.includes("?days=3"), 2_000, "every agent's list");
+        // With the week Finished shows unless chosen: `days` goes with every ask.
+        await eventually(() => asked.includes("?days=7"), 2_000, "every agent's list");
       });
     } finally {
       globalThis.fetch = spy;
     }
     expect(chosen).toBe("nouva");
     // The page's own asks: the menu's count reads the week's missions on every page, with no filter of its own (0.8.24).
-    expect(asked.filter((search) => search !== "")[0]).toBe("?agent=nouva&days=3");
-  });
-
-  test("a mission's page: four meters against its limits, the checklist with each step's note, how it is judged done — and only Stop while it works", async () => {
-    const seen: { html?: string; buttons?: string[] } = {};
-    await renderPage("/missions/msn_1", async (host) => {
-      await eventually(() => host.textContent?.includes("Checklist") === true, 2_000, "the page");
-      seen.html = host.innerHTML;
-      seen.buttons = buttons(host);
-    });
-    for (const words of ["1 of 3", "0 of 50", "0m of 8h", "0 of 50M", "du in sizes.txt — build/ is 41 GB", "test -s report.md", "/srv/nouride/workspace/shared/report"]) {
-      expect(seen.html).toContain(words);
-    }
-    expect(seen.buttons).toContain("Stop");
-    expect(seen.buttons!.some((label) => /^(Continue|Accept|Answer)/.test(label))).toBe(false);
+    expect(asked.filter((search) => search !== "")[0]).toBe("?agent=nouva&days=7");
   });
 
   test("now: the call running this moment, read from the conversation's live feed — and its turn, headed by why it started", async () => {
@@ -1819,26 +1790,6 @@ describe("missions", () => {
       sent = record.posts;
     });
     expect(sent.map((post) => post.path)).toEqual(["/approvals/apr_m1/deny"]);
-  });
-
-  test("New mission sends the agent and the goal, and opens the mission it started", async () => {
-    let sent: { path: string; body: unknown }[] = [];
-    let landed = "";
-    await renderPage("/missions", async (host, app) => {
-      press(host, "New mission");
-      await eventually(() => buttons(host).includes("Start mission"), 2_000, "the form");
-      const record = recordPosts({ "/missions": { status: 201, body: { mission: MISSION } } });
-      type(host.querySelector('textarea[placeholder^="Upgrade the API"]') as HTMLTextAreaElement, "Summarise last week's logs");
-      await enabled(host, "Start mission");
-      press(host, "Start mission");
-      await eventually(() => app.location() === "/missions/msn_1", 2_000, "the mission's page");
-      landed = app.location();
-      record.restore();
-      sent = record.posts;
-    });
-    expect(sent).toEqual([{ path: "/missions", body: { agent: "nouva", goal: "Summarise last week's logs" } }]);
-    expect(landed).toBe("/missions/msn_1");
-    expect(errors.filter((line) => /Error|Cannot read/.test(line))).toEqual([]);
   });
 
   test("the limits show their bounds and save only what changed", async () => {

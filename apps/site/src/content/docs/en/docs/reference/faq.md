@@ -126,7 +126,10 @@ to a model, if `read_images` and `read_audio` are on.
 It can search and fetch pages, and the built-in **browser-automation** skill drives a real browser:
 log in, click through a site, fill in a form. The browser is Playwright, installed by the agent and
 run through `exec`, so every step meets the same approval gate as any other command. It needs Node
-and about a gigabyte of free memory, and it is not part of the daemon.
+and about a gigabyte of free memory, and it is not part of the daemon. In the Docker image, which is
+Alpine, the agent installs the system's Chromium and Node as system packages (about 300 MB for
+Chromium), and they are there again after the container is recreated. Where it cannot get a browser
+it says so first, instead of answering from search results alone.
 [Built-in skills →](/en/docs/manual/skills/#built-in)
 
 **Can an agent install a program?**

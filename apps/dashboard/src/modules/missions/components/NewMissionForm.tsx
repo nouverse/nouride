@@ -1,6 +1,7 @@
 /**
- * Starting a mission from the dashboard: who does it, what it is, and how it is judged done — commands that must pass,
- * a reviewer's criteria, a person's accept. It reports to the dashboard's own chat; nothing here parses a goal or a
+ * A new mission from the dashboard: who does it, what it is, and how it is judged done — commands that must pass,
+ * a reviewer's criteria, a person's accept. Saved to the backlog it is a draft that waits to be started, as an agent's
+ * is; "Start now" starts it at once. It reports to the dashboard's own chat; nothing here parses a goal or a
  * check, and a refusal (no such agent, a folder that is not an absolute path) is the daemon's sentence, shown under it.
  */
 
@@ -35,7 +36,18 @@ export function startInput(draft: {
   };
 }
 
-export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentSummary[]; onStarted: (mission: MissionView) => void; onCancel: () => void }) {
+export function NewMissionForm({
+  agents,
+  onSaved,
+  onStarted,
+  onCancel,
+}: {
+  agents: AgentSummary[];
+  /** Saved to the backlog: a draft, not started. */
+  onSaved: (mission: MissionView) => void;
+  onStarted: (mission: MissionView) => void;
+  onCancel: () => void;
+}) {
   const orchestrator = useOrchestrator();
   const ordered = useOrchestratorFirst(agents.filter((agent) => agent.enabled), (agent) => agent.id);
   const [agent, setAgent] = useState("");
@@ -48,9 +60,11 @@ export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentS
   const [workdir, setWorkdir] = useState("");
   const chosen = agent || orchestrator || ordered[0]?.id || "";
 
+  // One form, two ends: saved to the backlog as a draft (the form's own button, as an agent's mission is one first),
+  // or started now. Which was pressed goes with the request, so the answer is handed to the right end.
   const start = useMutation({
-    mutationFn: () => api.startMission(startInput({ agent: chosen, title, goal, checks, review, noReview, accept, workdir })),
-    onSuccess: ({ mission }) => onStarted(mission),
+    mutationFn: (draft: boolean) => api.startMission({ ...startInput({ agent: chosen, title, goal, checks, review, noReview, accept, workdir }), ...(draft ? { draft: true } : {}) }),
+    onSuccess: ({ mission }, draft) => (draft ? onSaved(mission) : onStarted(mission)),
   });
   const ready = Boolean(chosen && goal.trim());
 
@@ -59,7 +73,7 @@ export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentS
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        if (ready) start.mutate();
+        if (ready) start.mutate(true);
       }}
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,14rem)_1fr]">
@@ -132,9 +146,12 @@ export function NewMissionForm({ agents, onStarted, onCancel }: { agents: AgentS
       <ErrorNote error={start.error} />
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" className="btn btn-primary btn-sm rounded-xl shadow-xs transition-all active:scale-95" disabled={!ready || start.isPending}>
+        <button type="submit" className="btn btn-primary btn-sm min-h-11 rounded-xl shadow-xs transition-all active:scale-95 sm:min-h-8" disabled={!ready || start.isPending}>
           {start.isPending ? <span className="loading loading-spinner loading-xs" /> : null}
-          Start mission
+          Save to backlog
+        </button>
+        <button type="button" className="btn btn-sm min-h-11 rounded-xl border-base-content/15 sm:min-h-8" disabled={!ready || start.isPending} onClick={() => start.mutate(false)}>
+          Start now
         </button>
         <button type="button" className="btn btn-ghost btn-sm rounded-xl" onClick={onCancel}>
           Cancel

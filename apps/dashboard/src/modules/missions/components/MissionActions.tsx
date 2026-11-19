@@ -1,6 +1,6 @@
 /**
  * Stop, Continue and Accept, beside the mission's goal — each only when it applies (`actionsFor`) — and Delete once it
- * has ended (0.8.13). Answer is not here: it is a box under the question it answers. Stop, Accept as it is and Delete
+ * has ended (0.8.13), or while it is still a draft, which goes at once. Answer is not here: it is a box under the question it answers. Stop, Accept as it is and Delete
  * ask first, since what they end does not come back. None of them on a mission the reader only reads: it is another
  * person's to stop, continue and accept.
  */
@@ -93,22 +93,31 @@ export function MissionActions({
           <Check size={14} aria-hidden="true" /> Accept as it is
         </button>
       )}
-      {actions.includes("stop") && (
+      {actions.includes("stop") && !proposal && (
         <button
           type="button"
           className="btn btn-ghost btn-sm gap-1.5 rounded-xl text-error hover:bg-error/10"
           disabled={!writable || pending}
           onClick={async () => {
-            // A draft has run nothing (0.8.11): dropped, its folder and brief go with it — the chat's button says "Drop it".
-            const yes = await ask(
-              proposal
-                ? { title: `Drop draft ${shortId(mission.id)}?`, body: "Nothing has run. It ends as stopped, and its folder and brief go with it.", confirmLabel: "Drop it" }
-                : { title: `Stop mission ${shortId(mission.id)}?`, body: "Its turn at work is cut off and it ends as stopped. What it wrote in its folder stays; it does not start again.", confirmLabel: "Stop it" },
-            );
+            const yes = await ask({ title: `Stop mission ${shortId(mission.id)}?`, body: "Its turn at work is cut off and it ends as stopped. What it wrote in its folder stays; it does not start again.", confirmLabel: "Stop it" });
             if (yes) onAct("stop");
           }}
         >
-          <Square size={12} className="fill-current" aria-hidden="true" /> {proposal ? "Drop it" : "Stop"}
+          <Square size={12} className="fill-current" aria-hidden="true" /> Stop
+        </button>
+      )}
+      {/* A draft has run nothing: deleted, it is gone at once with its folder and brief, and is in no list after. */}
+      {proposal && onDelete && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm gap-1.5 rounded-xl text-error hover:bg-error/10"
+          disabled={!writable || pending}
+          onClick={async () => {
+            const yes = await ask({ title: `Delete draft ${shortId(mission.id)}?`, body: "Nothing has run. Its brief and the folder Nouride made for it go with it, and it does not come back.", confirmLabel: "Delete it" });
+            if (yes) await onDelete(false).catch((error: unknown) => toast.error("Could not delete it", error));
+          }}
+        >
+          <Trash2 size={13} aria-hidden="true" /> Delete
         </button>
       )}
       {actions.includes("delete") && onDelete && (
