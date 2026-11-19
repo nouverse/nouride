@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { dirtyPaths, plan, publish, refusals, settledChecks, settledRun, type PublishFacts, type PublishIo } from "../../../../scripts/release/publish.ts";
+import { dirtyPaths, plan, publish, refusals, run, settledChecks, settledRun, type PublishFacts, type PublishIo } from "../../../../scripts/release/publish.ts";
 
 const PIN = (path: string, pin: string) => ({ path, pin, onRemote: true, mainFastForwards: true });
 const READY: PublishFacts = {
@@ -198,6 +198,15 @@ describe("publishing through the release's pull request, gh stood in for", () =>
     const lts = stood([]);
     expect(publish({ ...READY, tag: "v1.0.8", mode: "lts", branch: "lts/1.0" }, lts.io)).toBe(READY.head);
     expect(lts.calls).toEqual(["git tag -a v1.0.8 -m [lts] lts/1.0", "git push origin v1.0.8"]);
+  });
+});
+
+describe("what a command answers", () => {
+  // The public list of releases grew past 1 MiB with thirty releases' notes in it, and the read was taken as a failure.
+  test("is read whole past a megabyte, and still says a command that failed", () => {
+    const long = run(process.execPath, ["-e", "process.stdout.write('x'.repeat(2_000_000))"]);
+    expect([long.ok, long.out.length]).toEqual([true, 2_000_000]);
+    expect(run(process.execPath, ["-e", "process.exit(3)"]).ok).toBe(false);
   });
 });
 

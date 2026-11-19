@@ -200,8 +200,13 @@ export function dirtyPaths(porcelain: string, tree: string): string[] {
     .map((path) => `${tree}: ${path}`);
 }
 
-function run(cmd: string, args: string[], cwd = ROOT): { ok: boolean; out: string } {
-  const result = spawnSync(cmd, args, { cwd, encoding: "utf8" });
+/**
+ * A command's answer, whole. The buffer is set: the default holds 1 MiB and a command past it reads as failed, which is
+ * how the public list of releases, 1.09 MB with thirty releases' notes in it, became "the mirror's page could not be
+ * read".
+ */
+export function run(cmd: string, args: string[], cwd = ROOT): { ok: boolean; out: string } {
+  const result = spawnSync(cmd, args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   return { ok: result.status === 0, out: (result.stdout ?? "").trimEnd() };
 }
 const git = (args: string[], cwd = ROOT) => run("git", args, cwd);
