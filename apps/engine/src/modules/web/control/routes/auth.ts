@@ -312,7 +312,7 @@ export function registerAuthRoutes(control: ControlApp, deps: ControlDeps, limit
     return c.json({ ok: true } satisfies { ok: true });
   });
 
-  control.get("/auth/me", (c) => c.json(whoAsks(c.get("principal"))));
+  control.get("/auth/me", (c) => c.json(whoAsks(c.get("principal")) satisfies Principal));
 
   /**
    * Change your own password.
