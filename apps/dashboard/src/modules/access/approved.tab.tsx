@@ -13,7 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Ban, ShieldCheck, Users, UserX } from "lucide-react";
+import { Ban, Search, ShieldCheck, Users, UserX } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { PersonRecord, SenderAnswer, SenderRecord } from "@nouride/wire";
 import { canWrite, useMe } from "@/commons/lib/session";
@@ -65,13 +65,46 @@ function PersonTag({ name }: { name: string | undefined }) {
 /** Does a config id name this sender — the bare id, or the id on this connection? As the daemon reads it. */
 const covers = (entry: string, sender: SenderRecord) => entry === sender.senderId || entry === `${sender.gatewayId}:${sender.senderId}`;
 
+/**
+ * More approved than the page was sent, or a search among all of them: said, with the way to the rest. A list let in
+ * from a file may be thousands, and the page holds the newest of them.
+ */
+function MoreApproved({ shown, total, found, typed, onFind }: { shown: number; total: number; found: string; typed: string; onFind: (text: string) => void }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-base-content/[0.04] px-3 py-2 text-xs text-base-content/75" data-approved-more>
+      <span>
+        {found
+          ? `Everyone approved whose id or name holds “${found}”.`
+          : `The newest ${shown.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} are listed. To find another, type an id or a name in the filter, then search everyone.`}
+      </span>
+      {found ? (
+        <button type="button" className={BUTTON.plain} onClick={() => onFind("")}>
+          Show the newest
+        </button>
+      ) : (
+        <button type="button" className={BUTTON.primary} disabled={!typed.trim()} onClick={() => onFind(typed.trim())}>
+          <Search size={12} /> Search everyone
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ApprovedTab({
   senders,
   allowlist,
   blocked,
   agentOf,
+  total = senders.length,
+  found = "",
+  onFind,
 }: {
   senders: SenderRecord[];
+  /** How many are approved in all: more than `senders` once a list was let in from a file. */
+  total?: number;
+  /** What everyone approved was last searched for, and the way to search again or to stop. */
+  found?: string;
+  onFind?: (text: string) => void;
   /** `[security.access] allowlist`, as the daemon reports it. */
   allowlist: string[];
   /** Blocked senders: a block beats the config's list, and its chip says so. */
@@ -100,15 +133,16 @@ export function ApprovedTab({
     <div className="space-y-6">
       {dialog}
       <ListCard
-        title={`Approved (${senders.length})`}
+        title={`Approved (${total.toLocaleString("en-US")})`}
         // Another card stands under this one: a long list is cut short, and opens in full with one press.
         maxHeight="max-h-[32rem]"
         description="Answered by the agent whose connection they wrote to. Each account says which person in People it is."
         {...search}
       >
         <ErrorNote error={answer.error} />
+        {onFind && (found || total > senders.length) ? <MoreApproved shown={senders.length} total={total} found={found} typed={query} onFind={onFind} /> : null}
         {senders.length === 0 ? (
-          <EmptyState pose="security" title="Nobody approved yet" />
+          <EmptyState pose="security" title={found ? "Nobody approved matches that" : "Nobody approved yet"} />
         ) : visible.length === 0 ? (
           <NoMatch query={query} />
         ) : (

@@ -47,7 +47,7 @@ export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" 
 
 export function useNeedsYou(): NeedsYou {
   const approvals = useQuery({ queryKey: ["approvals"], queryFn: api.approvals, refetchInterval: 5_000, retry: false });
-  const access = useQuery({ queryKey: ["access"], queryFn: api.access, refetchInterval: 15_000, retry: false });
+  const access = useQuery({ queryKey: ["access"], queryFn: () => api.access(), refetchInterval: 15_000, retry: false });
   const drafts = useQuery({ queryKey: ["skill-drafts"], queryFn: api.skillDrafts, refetchInterval: 30_000, retry: false });
   const waitingSteps = useWaitingSteps();
   const missions = useQuery({ queryKey: MOVING_MISSIONS, queryFn: () => api.missions(), refetchInterval: 15_000, retry: false });

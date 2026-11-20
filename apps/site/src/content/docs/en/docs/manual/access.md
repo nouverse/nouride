@@ -138,6 +138,48 @@ nouride access allow telegram:nouva:123456789 --name "Sam"
 They land under **Approved** as if they had paired: Revoke and Block reach them, and History says who
 let them in. Pairing is per connection, so somebody on three bots is three lines.
 
+### A whole list of them
+
+Since 0.8.41 a list goes in at once, from a file with one person a line:
+
+```bash
+nouride access allow --from contacts.txt --gateway whatsapp:main --dry-run   # counts, and writes nothing
+nouride access allow --from contacts.txt --gateway whatsapp:main
+```
+
+```text
+# contacts.txt: one a line, and a name after a comma if you have one
++62 812-3456-7890, Bu Rina
+62 813 0000 0001
+```
+
+What a line holds depends on where the connection is:
+
+| Connection | A line is | Not |
+|---|---|---|
+| WhatsApp | a phone number with its country code, written however you like (`+62 812-3456-7890`) | a number the local way, from 0: which country it is in is not guessed |
+| Telegram | an account's id, or its username (`@sam_lee`, `t.me/sam_lee`) | a phone number: Telegram shows a bot nobody's |
+| Discord | an account's id, or its username (`sam.lee`) | an old `name#1234` name, which several accounts can share |
+
+The command says how many are new, how many were in already, how many are blocked and stay out, how
+many were said twice, and which lines it could not read. Up to 50,000 lines a run. The whole list is
+one line in History. A file the command may not read (on a server it runs as Nouride's own account,
+whoever types it) is handed over on standard input: `--from - < contacts.txt`.
+
+On WhatsApp a person usually writes to you under a hidden id, not their number. Nouride is told the
+number beside it and lets them in by either, so a list of numbers works. On Telegram and Discord
+somebody let in by username is known by that username: if they give it up and somebody else takes it,
+that somebody is let in. Use ids where that matters.
+
+Once thousands are approved, the Approved tab lists the newest 500 and says how many there are. To
+reach one beyond them, type their id or name in the filter and press **Search everyone**; from a
+terminal, `nouride access approved --find <id or name>`.
+
+This is how to answer the replies of a contact list without `open`, which the daemon refuses while
+any agent can run commands. Note that WhatsApp here is not the official Business API: it links a
+number as WhatsApp Web does, and WhatsApp can restrict or ban a number that sends in bulk to people
+who have not written to it first.
+
 The config can do the same, for an install set up from files rather than from the dashboard:
 
 ```toml

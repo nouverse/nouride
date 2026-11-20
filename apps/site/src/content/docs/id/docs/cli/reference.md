@@ -348,6 +348,8 @@ ditanya; atau selain itu, ditanya sekali di `careful`.
 nouride access [pending|approved|denied|blocked]  # siapa yang boleh bicara dengan para agent
 nouride access approve <kode> [--me | --as <key> | --new "<nama>"]
 nouride access allow <gateway:sender> [--name "<nama>"]  # masuk sebelum minta, tampil di Approved
+nouride access allow --from <file|-> --gateway <koneksi> [--dry-run]   # satu daftar sekaligus, satu per baris
+nouride access approved --find <id atau nama>    # satu di antara banyak: daftarnya memuat 500 terbaru
 nouride access deny|block <gateway:sender>       # tidak selama sehari · tidak sampai di-unblock
 nouride access revoke|reset|unblock <gateway:sender>
 nouride access mode [open|allowlist|pair]      # lihat atau ganti, tanpa restart

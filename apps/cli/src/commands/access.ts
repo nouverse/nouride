@@ -1,6 +1,7 @@
 import type { AckResponse, SenderRow, Client } from "@nouride/cli-kit";
 import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, YELLOW, flagValue, hasFlag, knownAction } from "@nouride/cli-kit";
 import { saidSaved } from "../saved.ts";
+import { allowFrom } from "./access-list.ts";
 
 /**
  * `nouride access` — who may talk to the agents.
@@ -50,6 +51,9 @@ export async function access(client: Client, args: string[]): Promise<void> {
    * Block reach it.
    */
   if (action === "allow") {
+    // A whole list of them, from a file (`access-list.ts`).
+    const from = flagValue(args, "--from");
+    if (from !== undefined || hasFlag(args, "--from")) return allowFrom(client, { from, gateway: flagValue(args, "--gateway"), dryRun: hasFlag(args, "--dry-run") });
     if (!target || !target.includes(":")) {
       usageLines(`nouride access allow <gateway:sender> [--name "<name>"]\ne.g. telegram:nouva:123456789`);
     }
@@ -74,8 +78,10 @@ export async function access(client: Client, args: string[]): Promise<void> {
   }
 
   const status = action && ["pending", "approved", "denied", "blocked"].includes(action) ? action : "";
-  const { senders } = await client.get<{ senders: SenderRow[] }>(`/access${status ? `?status=${status}` : ""}`);
-  if (!senders || senders.length === 0) return say(`${DIM}nobody has asked, and nobody is paired${RESET}`);
+  const find = flagValue(args, "--find");
+  const query = new URLSearchParams({ ...(status ? { status } : {}), ...(find ? { q: find } : {}) }).toString();
+  const { senders, approvedTotal } = await client.get<{ senders: SenderRow[]; approvedTotal?: number }>(`/access${query ? `?${query}` : ""}`);
+  if (!senders || senders.length === 0) return say(`${DIM}${find ? `nobody approved matches "${find}"` : "nobody has asked, and nobody is paired"}${RESET}`);
 
   for (const sender of senders) {
     const mark = MARK[sender.status];
@@ -89,9 +95,15 @@ export async function access(client: Client, args: string[]): Promise<void> {
       say(`    ${DIM}denied · may ask again in ${Math.ceil(left / 3_600_000)}h · nouride access reset ${sender.gatewayId}:${sender.senderId}${RESET}`);
     }
   }
+  // A list let in from a file may be thousands: the newest are listed, and one beyond them is found by its id or name.
+  const shown = senders.filter((sender) => sender.status === "approved").length;
+  if (!find && approvedTotal !== undefined && approvedTotal > shown && status !== "pending" && status !== "denied" && status !== "blocked") {
+    say(`${DIM}the newest ${shown} of ${approvedTotal.toLocaleString("en-US")} approved are listed · nouride access approved --find <id or name>${RESET}`);
+  }
   say();
   say(`${DIM}nouride access approve <code> [--me | --as <key> | --new "<name>"]${RESET}`);
   say(`${DIM}nouride access allow <gateway:sender> [--name "<name>"]${RESET}`);
+  say(`${DIM}nouride access allow --from <file> --gateway <connection> [--dry-run]${RESET}`);
   say(`${DIM}nouride access deny|block|revoke|reset|unblock <gateway:sender>${RESET}`);
   say(`${DIM}nouride access mode [open|allowlist|pair]${RESET}`);
 }

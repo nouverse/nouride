@@ -79,8 +79,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the missions' one service (start, the dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, the slots, its jobs) over state this class alone holds",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
-    lines: 431,
-    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits and the one-message limit (both declared), files as a set, buttons, presence, reconnect and the command menu",
+    lines: 433,
+    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id (declared), files as a set, buttons, presence, reconnect, the command menu",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {
     lines: 409,
@@ -95,8 +95,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses and registry names it lets through; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 417,
-    why: "the WhatsApp adapter's one state machine (bridge reachable, number linked, sends held) that every bridge event's handler reads and writes; moving the link state out would split it in two",
+    lines: 418,
+    why: "the WhatsApp adapter's one state machine (bridge reachable, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
   },
 };
 

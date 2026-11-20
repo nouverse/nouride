@@ -12,20 +12,14 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { AccessEvent, AccessMode, SenderAnswer, SenderRecord } from "@nouride/wire";
+import type { AccessEvent, AccessListing, AccessMode, SenderAnswer } from "@nouride/wire";
 
 const senderQuery = (gatewayId: string, senderId: string) =>
   `gateway=${encodeURIComponent(gatewayId)}&sender=${encodeURIComponent(senderId)}`;
 
 export const accessApi = {
-  access: () =>
-    request<{
-      mode: AccessMode;
-      /** False when the daemon runs on built-in defaults: there is no file to write the mode to. */
-      editable?: boolean;
-      allowlist: string[];
-      senders: SenderRecord[];
-    }>(`${control}/access`),
+  /** `find`: the approved whose id or name holds it, where more are approved than a listing holds. */
+  access: (find?: string) => request<AccessListing>(`${control}/access${find ? `?q=${encodeURIComponent(find)}` : ""}`),
   /** Turn pairing on or off. Live — the next inbound message is judged by the new mode, no restart. */
   setAccessMode: (mode: AccessMode) => post<{ ok: true; mode: AccessMode }>(`${control}/access/mode`, { mode }),
   /** An admin's: it hands them every agent, and "who they are" can hand them somebody's memory. */

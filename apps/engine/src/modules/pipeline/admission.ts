@@ -184,6 +184,7 @@ export class Admission {
       // handed the same message and answer it as the allowlist would: no code, no request, no alert.
       mode: mode === "pair" && !this.addressedHere(envelope) ? "allowlist" : mode,
       staticAllowlist,
+      ...(envelope.senderAlso ? { alsoKnownAs: envelope.senderAlso } : {}),
     });
 
     if (decision.action === "allow") return true;
@@ -362,7 +363,7 @@ export class Admission {
     if (envelope.senderVerified === true) return true;
     const { gatewayId, senderId, chatId } = envelope;
     const staticAllowlist = this.deps.config.security.access.allowlist;
-    return this.deps.access.check({ gatewayId, senderId, chatId, mode: "allowlist", staticAllowlist }).action === "allow";
+    return this.deps.access.check({ gatewayId, senderId, chatId, mode: "allowlist", staticAllowlist, ...(envelope.senderAlso ? { alsoKnownAs: envelope.senderAlso } : {}) }).action === "allow";
   }
 
   /**

@@ -26,7 +26,7 @@ import {
 import { parseMarkdown } from "../../commons/markdown.ts";
 import { chunkRendered, sendsText } from "../../commons/text.ts";
 import { BaseGateway, type GatewayIdentity, deliverInParts, UndeliverableError } from "../../commons/resilience.ts";
-import { whatsappEnvelope } from "./envelope.ts";
+import { whatsappEnvelope, whatsappSenderId } from "./envelope.ts";
 import { toWhatsAppText } from "./format.ts";
 
 /**
@@ -143,6 +143,9 @@ export class WhatsAppGateway extends BaseGateway {
    * line at the end still shows the work.
    */
   readonly progressStyle = "summary" as const;
+
+  /** A number as a person writes it, as WhatsApp addresses it (`whatsappSenderId`). */
+  senderIdOf = whatsappSenderId;
 
   private channel: BridgeChannel | null = null;
   private readonly pending = new Map<string, Pending>();

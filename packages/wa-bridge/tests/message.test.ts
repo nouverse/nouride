@@ -174,6 +174,35 @@ describe("selfIdsOf", () => {
   });
 });
 
+describe("the sender's other address", () => {
+  // WhatsApp delivers most people under a hidden id and names the number beside it. A list of numbers let in ahead
+  // matched nobody until the number came along with the message.
+  const LID = "100000000000001@lid";
+  const also = (m: WAMessage, phoneOf?: (lid: string) => string | null) => messageEvent(m, incoming(m)!, [], undefined, phoneOf).senderAlso;
+
+  test("a DM under a hidden id carries the number the message names, without its device", () => {
+    expect(also(message({ conversation: "hi" }, { remoteJid: LID, remoteJidAlt: "628111111111:12@s.whatsapp.net" } as never))).toEqual(["628111111111@s.whatsapp.net"]);
+  });
+
+  test("in a group it is the participant's, not the chat's", () => {
+    const m = message({ conversation: "hi" }, { remoteJid: GROUP, participant: LID, participantAlt: "628222222222@s.whatsapp.net", remoteJidAlt: "628999999999@s.whatsapp.net" } as never);
+    expect(also(m)).toEqual(["628222222222@s.whatsapp.net"]);
+  });
+
+  test("where the message names none, the session is asked for the number behind a hidden id, and only for one", () => {
+    const asked: string[] = [];
+    const phoneOf = (lid: string) => (asked.push(lid), "628333333333@s.whatsapp.net");
+    expect(also(message({ conversation: "hi" }, { remoteJid: LID }), phoneOf)).toEqual(["628333333333@s.whatsapp.net"]);
+    expect(also(message({ conversation: "hi" }), phoneOf)).toBeUndefined();
+    expect(asked).toEqual([LID]);
+  });
+
+  test("nothing where none is known, or where it is the address the message already has", () => {
+    expect(also(message({ conversation: "hi" }, { remoteJid: LID }), () => null)).toBeUndefined();
+    expect(also(message({ conversation: "hi" }, { remoteJid: DM, remoteJidAlt: DM } as never))).toBeUndefined();
+  });
+});
+
 describe("messageEvent", () => {
   test("a DM: the chat is the sender, and nothing optional is invented", () => {
     const m = message({ conversation: "hi" });

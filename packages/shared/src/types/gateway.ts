@@ -269,6 +269,13 @@ export interface Gateway {
   readonly maxMessageChars?: number;
 
   /**
+   * A sender's id as a person writes one down, in the form this connection's messages carry: a phone number with its
+   * country code as WhatsApp's address of it. Null where what was written cannot be a sender here. Absent where an
+   * id is written as it arrives. What a list of people let in ahead is read by (`POST /access/import`).
+   */
+  senderIdOf?(written: string): string | null;
+
+  /**
    * How much of a turn's working-out this platform should carry.
    *
    * `"live"` is the edited bubble that tracks each tool as it runs — right for a channel that exists

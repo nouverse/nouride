@@ -25,7 +25,7 @@ export function AccessModeSwitch() {
   const me = useMe();
   const access = useQuery({
     queryKey: ["access"],
-    queryFn: api.access,
+    queryFn: () => api.access(),
     refetchInterval: 15_000,
     retry: false,
   });

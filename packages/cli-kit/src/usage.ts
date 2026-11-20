@@ -232,10 +232,13 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride turn-budget <seconds>    Set the daemon default
   nouride turn-budget --agent <id> <seconds|follow>
   nouride access [list|pending|approved|denied|blocked]   Who may talk to the agents
+  nouride access approved --find <id or name>   One among many approved: the list holds the newest 500
   nouride access mode [open|allowlist|pair]   What happens to somebody new; no word says which is in force
   nouride access approve <code> [--me | --as <person key> | --new "<name>"]
                                    Approve a pairing request, and say who they are
   nouride access allow <gateway:sender> [--name <name>]   Let somebody in before they ask
+  nouride access allow --from <file|-> --gateway <connection> [--dry-run]
+                                   A whole list of them, one a line (a phone number for WhatsApp)
   nouride access deny|block <gateway:sender>
   nouride access revoke|reset|unblock <gateway:sender>
   nouride people [list]            Who the agents know, from config and from conversations

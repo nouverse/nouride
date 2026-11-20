@@ -148,6 +148,49 @@ Dia masuk ke **Approved** seolah-olah sudah pairing: Revoke dan Block berlaku un
 mencatat siapa yang memasukkannya. Pairing berlaku per koneksi, jadi orang di tiga bot berarti tiga
 baris.
 
+### Sekaligus satu daftar
+
+Sejak 0.8.41 satu daftar bisa dimasukkan sekaligus, dari file berisi satu orang per baris:
+
+```bash
+nouride access allow --from contacts.txt --gateway whatsapp:main --dry-run   # menghitung, gak menulis apa-apa
+nouride access allow --from contacts.txt --gateway whatsapp:main
+```
+
+```text
+# contacts.txt: satu per baris, dan nama setelah koma kalau ada
++62 812-3456-7890, Bu Rina
+62 813 0000 0001
+```
+
+Isi satu baris tergantung koneksinya di mana:
+
+| Koneksi | Satu baris berisi | Bukan |
+|---|---|---|
+| WhatsApp | nomor telepon dengan kode negaranya, ditulis bagaimana pun (`+62 812-3456-7890`) | nomor cara lokal, dari 0: negaranya gak ditebak |
+| Telegram | id akun, atau username-nya (`@sam_lee`, `t.me/sam_lee`) | nomor telepon: Telegram gak memperlihatkan nomor siapa pun ke bot |
+| Discord | id akun, atau username-nya (`sam.lee`) | nama lama `name#1234`, yang bisa dipakai beberapa akun |
+
+Perintah ini bilang berapa yang baru, berapa yang sudah masuk, berapa yang diblokir dan tetap di luar,
+berapa yang disebut dua kali, dan baris mana yang gak terbaca. Sampai 50.000 baris sekali jalan.
+Seluruh daftar jadi satu baris di History. File yang gak boleh dibaca perintahnya (di server ia jalan
+sebagai akun Nouride sendiri, siapa pun yang mengetiknya) diberikan lewat standard input:
+`--from - < contacts.txt`.
+
+Di WhatsApp orang biasanya menulis ke kamu dengan id tersembunyi, bukan nomornya. Nouride diberi tahu
+nomor di baliknya dan memasukkan dia lewat yang mana pun, jadi daftar nomor tetap jalan. Di Telegram
+dan Discord, orang yang dimasukkan lewat username dikenal lewat username itu: kalau ia melepasnya dan
+orang lain mengambilnya, orang lain itu yang masuk. Pakai id kalau itu penting.
+
+Begitu ribuan orang di-approve, tab Approved menampilkan 500 yang terbaru dan bilang jumlah semuanya.
+Untuk menjangkau yang di luar itu, ketik id atau namanya di filter lalu tekan **Search everyone**; dari
+terminal, `nouride access approved --find <id atau nama>`.
+
+Ini cara menjawab balasan dari satu daftar kontak tanpa `open`, yang ditolak daemon selama ada agent
+yang bisa menjalankan perintah. Catatan: WhatsApp di sini bukan Business API resmi: ia menautkan nomor
+seperti WhatsApp Web, dan WhatsApp bisa membatasi atau memblokir nomor yang mengirim massal ke orang
+yang belum pernah menulis ke nomor itu.
+
 Config juga bisa melakukannya, untuk instalasi yang diatur lewat file, bukan lewat dashboard:
 
 ```toml

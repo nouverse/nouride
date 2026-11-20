@@ -2,7 +2,7 @@
  * Whose messages are answered, and how much of a group an agent reads.
  */
 
-import type { AccessEvent, AccessMode, SenderRecord } from "@nouride/wire";
+import type { AccessEvent, AccessImported, AccessListing, AccessMode } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import { ACCESS_ACTIONS } from "@/modules/access/access.store.ts";
 import { accountIdentity, personOf, type LinkTarget } from "@/modules/config/settings/identities.ts";
@@ -48,6 +48,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
     const status = c.req.query("status");
     // Before reading: a code that ran out is not waiting, and a denial whose day is over is not denied.
     deps.access.tidy();
+    const listed = deps.access.listed(status === "pending" || status === "approved" || status === "denied" || status === "blocked" ? status : undefined, c.req.query("q"));
     return c.json({
       mode: deps.ctx.config.security.access.mode,
       // Whether the mode can be changed from here at all. A daemon running on built-in defaults has no
@@ -56,10 +57,9 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       // `[security.access] allowlist`: bare or gateway-scoped (`telegram:bot:5550001111`). Admits without pairing in
       // `pair` and `allowlist` mode, which is why it is shown alongside rather than folded into the sender list.
       allowlist: deps.ctx.config.security.access.allowlist,
-      senders: deps.access.list(
-        status === "pending" || status === "approved" || status === "denied" || status === "blocked" ? status : undefined,
-      ),
-    } satisfies { mode: AccessMode; editable?: boolean; allowlist: string[]; senders: SenderRecord[] });
+      senders: listed.senders,
+      approvedTotal: listed.approvedTotal,
+    } satisfies AccessListing);
   });
 
   /**
@@ -130,6 +130,41 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
     });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
     return c.json({ ok: true, mode: deps.ctx.config.security.access.mode } satisfies { ok: true; mode: AccessMode });
+  });
+
+  /**
+   * A list of senders let in ahead, at once (`nouride access allow --from`). Registered before `/access/:action`, as
+   * `mode` is. Each line is read as the connection reads a written id (`Gateway.senderIdOf`: a phone number as
+   * WhatsApp's address of it), so what is kept is what a message from them will carry. `dryRun` writes nothing.
+   */
+  control.post("/access/import", async (c) => {
+    if (!deps.access) return c.json({ error: "access control is not enabled" }, 501);
+    const principal = c.get("principal");
+    if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
+    const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
+    const gatewayId = typeof body.gateway === "string" ? body.gateway.trim() : "";
+    const gateway = deps.ctx.gateways.get(gatewayId);
+    if (!gateway || gateway.internal) {
+      return c.json({ error: `no connection ${JSON.stringify(gatewayId)}`, plain: "There is no connection of that name. Check its name under Connections." }, 404);
+    }
+    if (!Array.isArray(body.senders) || body.senders.length === 0) return c.json({ error: "senders is a list of at least one id", plain: "The list names nobody. Check the file, and send it again." }, 400);
+    if (body.senders.length > IMPORT_MAX) return c.json({ error: `a list is at most ${IMPORT_MAX} senders`, plain: "A list holds at most 50,000 people. Send it in parts." }, 400);
+
+    const senders = new Map<string, { senderId: string; name?: string }>();
+    const invalid: string[] = [];
+    let duplicates = 0;
+    for (const line of body.senders as unknown[]) {
+      const written = typeof line === "string" ? line : typeof (line as { id?: unknown })?.id === "string" ? (line as { id: string }).id : "";
+      const name = typeof (line as { name?: unknown })?.name === "string" ? (line as { name: string }).name.trim() : "";
+      // As this connection writes a sender: its own reading where it has one, else the id as written, whole.
+      const senderId = gateway.senderIdOf ? gateway.senderIdOf(written) : /^\S+$/.test(written.trim()) ? written.trim() : null;
+      if (!senderId) invalid.push(written.slice(0, 60));
+      else if (senders.has(senderId)) duplicates += 1;
+      else senders.set(senderId, { senderId, ...(name ? { name } : {}) });
+    }
+    const dryRun = body.dryRun === true;
+    const counts = deps.access.allowMany(gatewayId, [...senders.values()], principal.actor, dryRun);
+    return c.json({ gateway: gatewayId, dryRun, read: body.senders.length, ...counts, duplicates, invalid: { count: invalid.length, examples: invalid.slice(0, 10) } } satisfies AccessImported);
   });
 
   control.post("/access/:action", async (c) => {
@@ -218,4 +253,10 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
  * them lets anybody in — a reset or an unblock only lets them *ask* again.
  */
 const ANSWERS = ["deny", "block", "revoke", "reset", "unblock"] as const;
+
+/**
+ * Senders in one list let in at once: enough for a business's whole contact list, and a body the route still reads
+ * whole. The refusal's words say this number.
+ */
+const IMPORT_MAX = 50_000;
 const isAnswer = (action: string | undefined): action is (typeof ANSWERS)[number] => ANSWERS.includes(action as never);

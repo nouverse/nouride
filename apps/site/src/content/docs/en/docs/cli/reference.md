@@ -339,6 +339,8 @@ level without asking; or anything else, asked once under `careful`.
 nouride access [pending|approved|denied|blocked]  # who may talk to the agents
 nouride access approve <code> [--me | --as <key> | --new "<name>"]
 nouride access allow <gateway:sender> [--name "<name>"]  # in before they ask, under Approved
+nouride access allow --from <file|-> --gateway <connection> [--dry-run]   # a whole list, one a line
+nouride access approved --find <id or name>      # one among many: the list holds the newest 500
 nouride access deny|block <gateway:sender>       # no for a day · no until unblocked
 nouride access revoke|reset|unblock <gateway:sender>
 nouride access mode [open|allowlist|pair]      # show or switch, no restart

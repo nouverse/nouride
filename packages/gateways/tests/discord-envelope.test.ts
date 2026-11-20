@@ -49,6 +49,7 @@ describe("a Discord message, as an envelope", () => {
       chatId: "300",
       chatType: "channel",
       senderId: "5",
+      senderAlso: ["@ann"],
       senderName: "Ann",
       text: "halo",
       mentions: [],

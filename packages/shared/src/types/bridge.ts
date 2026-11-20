@@ -48,6 +48,11 @@ export type BridgeEvent =
       quotedText?: string;
       /** Who wrote the quoted message. */
       quotedSender?: string;
+      /**
+       * The sender's other address, where WhatsApp gave one: the phone number's behind a hidden id (`…@lid`), or
+       * the hidden id behind a number. Access is asked about each.
+       */
+      senderAlso?: string[];
       /** Our own address on this account, so the engine can tell whether the mention was for us. */
       selfIds?: string[];
       /** `fileName`: a document's name as it was sent (0.7.27). */
