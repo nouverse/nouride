@@ -371,7 +371,7 @@ export async function runDaemon(): Promise<void> {
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
     grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
-    supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state,
+    supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state, agentAccounts: agentUsers,
     builtinTools: tools,
   });
   const { server, streams } = controlPlane;

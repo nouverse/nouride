@@ -1,9 +1,10 @@
 /**
- * The chat list's three kinds of row, each a `ConversationRow`: an agent (its cat, its newest conversation here), a
- * room (its members stacked), a group from a chat app (its initials, its app's mark, the agents in it).
+ * The chat list's kinds of row, each a `ConversationRow`: an agent (its cat, its newest conversation here), a room (its
+ * members stacked), a group from a chat app (its initials, its app's mark, the agents in it), and an agent that was
+ * deleted (its id, its newest conversation kept).
  */
 
-import type { ChatListGroup, ChatListLine, ChatListRoom } from "@nouride/wire";
+import type { ChatListGone, ChatListGroup, ChatListLine, ChatListRoom } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { GroupAvatar, MiniAvatars, StackedAvatars } from "@/commons/components/chat/Avatars";
 import { ConversationRow, RowTag } from "@/commons/components/chat/ConversationRow";
@@ -74,9 +75,27 @@ function GroupRow({ group, data, current, unread }: { group: ChatListGroup; data
   );
 }
 
+/** A deleted agent: named by its id, which is all that is left of it, and opening the newest of its chats to read. */
+function GoneRow({ gone, current }: { gone: ChatListGone; current: boolean }) {
+  return (
+    <ConversationRow
+      link={{ to: "/chat/$sessionId", params: { sessionId: gone.sessionId } }}
+      avatar={<GroupAvatar name={gone.agentId} />}
+      name={gone.agentId}
+      tag={<RowTag>Deleted</RowTag>}
+      time={shortWhen(gone.at)}
+      line={gone.last?.text ?? "Its chats are kept to read"}
+      tone={gone.last ? "said" : "quiet"}
+      unread={false}
+      current={current}
+    />
+  );
+}
+
 /** Any row of Chats, by its kind. */
 export function ChatsRow({ row, data, current, unread }: { row: ChatRow; data: ChatListData; current: boolean; unread: boolean }) {
   if (row.kind === "agent") return <AgentRow row={row} data={data} current={current} unread={unread} />;
   if (row.kind === "room") return <RoomRow room={row.room} data={data} current={current} unread={unread} />;
+  if (row.kind === "gone") return <GoneRow gone={row.gone} current={current} />;
   return <GroupRow group={row.group} data={data} current={current} unread={unread} />;
 }

@@ -467,6 +467,24 @@ failed to load, or a model provider with no credential. `/status` in chat and th
 An external agent (`docs/SPEC.md` §4.4) is unavailable for its CLI's reasons instead: not installed, not signed in,
 failing to start, or a new version that did not answer its check.
 
+### `nouride agent delete <id>`
+
+```bash
+nouride agent delete coder          # says what goes, asks for the id typed, then deletes
+echo coder | nouride agent delete coder   # a script answers the question on stdin
+```
+
+For good, and an admin's (0.8.41). Everything that makes the agent run goes: its pack, its private folder with its
+coding CLI's sign-ins, its automations, its grants and stored sign-ins, the connections only it answers, its seat in
+rooms, its background jobs, and its Linux user where agents have one; its open missions are stopped first. Another
+agent's automation with a step given to it is turned off, with why. A connection's token stays in Secrets. Its chats,
+what it remembered, its missions' records, the audit log and usage are kept, and an agent made later with the same id
+is joined to them. The orchestrator is refused: make another agent the orchestrator first. The dashboard asks the
+same on the agent's Settings tab, with ten seconds counted down after the id; the terminal has no countdown.
+
+Where the helper that runs agents as their own users was installed by a release before this one, the agent is still
+deleted and the command says its account, `nr-<id>`, is left: running `install.sh` again brings the helper up to date.
+
 ### `nouride agent external <id> <cli>` · `nouride agent internal <id>`
 
 ```bash

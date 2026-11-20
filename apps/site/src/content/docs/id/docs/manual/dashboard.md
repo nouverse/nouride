@@ -268,6 +268,25 @@ kerja.
 
 ![Para agent sebagai baris di bawah Office, dengan baris Wren terbuka: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
+### Menghapus agent
+
+Admin menghapus agent di bagian bawah tab **Settings**-nya (0.8.41), atau dengan `nouride agent delete <id>`. Ini
+permanen. Semua yang membuat agent itu jalan ikut hilang: file dan folder pribadinya beserta sign-in CLI coding-nya,
+automation-nya, izin tetap dan sign-in ke connector-nya, koneksi yang cuma dia yang menjawab, kursinya di room, job
+latar belakangnya, dan user-nya sendiri di mesin kalau agent punya user sendiri. Misi yang masih terbuka dihentikan
+dulu. Automation agent lain yang salah satu langkahnya diberikan ke dia dimatikan, dengan alasannya tertulis. Token
+sebuah koneksi tetap ada di Secrets, bisa kamu hapus atau pakai lagi.
+
+Yang sudah terjadi tetap disimpan: chat-nya, yang dia ingat, catatan misinya, audit log, dan pemakaian. Chat-nya
+muncul di bagian paling bawah **Chats**, di bawah **Deleted agents**, dengan id agent-nya: bisa dibaca, tapi gak bisa
+ditulisi lagi. Kalau nanti kamu membuat agent dengan id yang sama, agent baru itu tersambung ke chat dan memori
+tersebut, apa pun tujuan agent barunya, dan chat-nya bisa ditulisi lagi.
+
+Pertanyaannya berlapis, karena gak ada yang bisa dikembalikan: daftar yang akan hilang, dengan jumlah dan besar
+foldernya; id agent yang harus diketik; lalu hitungan mundur sepuluh detik di tombolnya sebelum bisa ditekan. Di
+terminal cuma id yang diminta, tanpa hitungan mundur. Orchestrator gak bisa dihapus: jadikan agent lain orchestrator
+dulu. Gak ada agent yang bisa menghapus agent.
+
 ### Model versus Models
 
 Perbedaan yang nyata, bukan kebetulan penamaan. **Profil** adalah infrastruktur, endpoint, wire

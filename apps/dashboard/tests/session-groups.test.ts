@@ -67,6 +67,7 @@ describe("the grouping itself", () => {
 describe("an agent's own conversations", () => {
   const list: ChatListPayload = {
     agents: [],
+    gone: [],
     rooms: [{ chatId: "room-1", members: ["nouva", "nix"], at: 1, working: false }],
     groups: [{ platform: "telegram", chatId: "-100", agents: ["nouva"], sessions: [{ agentId: "nouva", sessionId: "s-group", gatewayId: "telegram:nouva" }], at: 1, working: false, people: 2 }],
   };

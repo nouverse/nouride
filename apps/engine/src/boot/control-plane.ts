@@ -80,6 +80,7 @@ import type { SupervisorInfo } from "@/service/supervisor.ts";
 import { join, localIPv4Addresses } from "@nouride/runtime";
 import { TurnInspector } from "@/modules/turns/inspection.store.ts";
 import { OpenStreams } from "@/modules/web/control/streams.ts";
+import type { AgentUsersBoot } from "@/boot/agent-users.ts";
 
 const log = createLogger("daemon");
 
@@ -147,6 +148,8 @@ export async function startControlPlane(deps: {
   missions?: Missions;
   /** External agents' CLIs, for an agent's Brain tab and `nouride agents scan|login`. */
   externalAgents?: ExternalAgents;
+  /** The agents' users on the machine, for deleting an agent (`web/control/agent-delete.ts`). */
+  agentAccounts?: Pick<AgentUsersBoot, "remove" | "own">;
   /** When each agent was first seen (0.8.1): `/status` carries it, for Nouride Office's order. */
   agentsSeen?: Pick<AgentsSeen, "since">;
   /** The daemon's own state rows (0.8.18): what the last boot advised, which the Overview lists. */
@@ -394,6 +397,7 @@ export async function startControlPlane(deps: {
               reach,
               projectSkills,
               skillRoots: deps.skillRoots,
+              agentAccounts: deps.agentAccounts,
               reflection,
               skillHub: createSkillHub({ config, secrets, reflection, builtinSkillsDir, catalog: deps.skillsCatalog }),
               ...(deps.mcpCatalog ? { mcpCatalog: deps.mcpCatalog } : {}),

@@ -163,6 +163,7 @@ nouride agent enable  <id>        # ditulis ke config.toml, jadi bertahan setela
 nouride agent disable <id>
 nouride agent external <id> <cli> [--profile <nama>]   # CLI coding yang menjawabnya, bukan model-nya
 nouride agent internal <id>       # model-nya menjawab lagi
+nouride agent delete <id>         # permanen, setelah id-nya diketik: yang membuatnya jalan hilang, chat dan memorinya tetap
 nouride agent skill-root add <id> <path>   # dia mengambil skill di .agents/skills project itu sebagai miliknya
 nouride agent skill-root rm  <id> <path>
 nouride acp [--agent <id>]        # agent di Zed atau editor ACP lain; editor yang menjalankan ini

@@ -259,6 +259,25 @@ the agents that are active, idle, asleep or unavailable.
 
 ![The agents as rows under the Office, with Wren's row opened: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
+### Deleting an agent
+
+An admin deletes an agent at the foot of its **Settings** tab (0.8.41), or with `nouride agent delete <id>`. It is for
+good. Everything that makes the agent run goes: its files and private folder with its coding CLI's sign-ins, its
+automations, its standing permissions and sign-ins to connectors, the connections only it answers, its seat in rooms,
+its background jobs, and its own user on the machine where agents have one. Missions it still has open are stopped
+first. An automation of another agent with a step given to it is turned off and says why. A connection's token stays
+in Secrets, where you can delete it or use it again.
+
+What happened is kept: its chats, what it remembered, the records of its missions, the audit log and usage. Its chats
+are listed at the end of **Chats** under **Deleted agents**, by the agent's id: they can be read, and nothing more can
+be written in them. If you later make an agent with the same id, it is joined to those chats and memories, whatever
+the new agent is for, and its chats can be written in again.
+
+The question comes in layers, since none of it can be taken back: a list of what goes, with counts and how much its
+folders hold; the agent's id, typed; then ten seconds counted down on the button before it can be pressed. The
+terminal asks for the id and has no countdown. The orchestrator cannot be deleted: make another agent the
+orchestrator first. No agent can delete an agent.
+
 ### Model versus Models
 
 A real distinction, not a naming accident. A **profile** is infrastructure, an endpoint, a wire

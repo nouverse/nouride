@@ -30,6 +30,7 @@ export function AgentHeader({
   status,
   sessionId,
   readOnly,
+  gone,
   history,
   notes,
   choice,
@@ -44,6 +45,8 @@ export function AgentHeader({
   sessionId: string | undefined;
   /** A private chat on a chat app: read here, answered there. */
   readOnly?: { platform: string };
+  /** The agent was deleted: its chats are read, and no new one is begun. */
+  gone?: boolean;
   /** History's drawer, drawn by the conversation's pane under this bar; its toggle is here. */
   history: { open: boolean; toggle: () => void };
   /** The work notes drawer's toggle; absent where there are none to show. */
@@ -70,7 +73,11 @@ export function AgentHeader({
           <h2 className="min-w-0 truncate font-display text-lg font-medium tracking-tight text-base-content" title={name}>
             {name}
           </h2>
-          {readOnly ? (
+          {gone ? (
+            <span className="hidden shrink-0 items-center gap-1.5 sm:flex">
+              <PlatformTag>Read-only</PlatformTag>
+            </span>
+          ) : readOnly ? (
             <span className="hidden shrink-0 items-center gap-1.5 sm:flex">
               <PlatformTag platform={readOnly.platform}>{`${platformName(readOnly.platform)} chat`}</PlatformTag>
               <PlatformTag>Read-only</PlatformTag>
@@ -78,23 +85,25 @@ export function AgentHeader({
           ) : null}
         </div>
         <p className={cn("truncate text-xs font-semibold", STATUS_TONES[status.tone])} title={`${status.words}${status.more ?? ""}`}>
-          {readOnly ? <span className="sm:hidden">Read-only · {platformName(readOnly.platform)}</span> : null}
-          <span className={readOnly ? "max-sm:hidden" : undefined}>
+          {gone ? <span className="sm:hidden">Read-only · </span> : readOnly ? <span className="sm:hidden">Read-only · {platformName(readOnly.platform)}</span> : null}
+          <span className={readOnly && !gone ? "max-sm:hidden" : undefined}>
             {status.words}
             {status.more ? <span className="max-sm:hidden">{status.more}</span> : null}
           </span>
         </p>
       </div>
 
-      {choice && !readOnly ? <ChatChoice agentId={agentId} name={name} sessionId={sessionId} first={choice.first} onFirst={choice.onFirst} buttonClassName={HEADER_BUTTON} /> : null}
+      {choice && !readOnly && !gone ? <ChatChoice agentId={agentId} name={name} sessionId={sessionId} first={choice.first} onFirst={choice.onFirst} buttonClassName={HEADER_BUTTON} /> : null}
       <button type="button" className={cn(HEADER_BUTTON, history.open && "bg-secondary/10 text-secondary")} aria-expanded={history.open} aria-label={`${name}'s conversations`} onClick={history.toggle}>
         <History size={17} aria-hidden="true" />
         <span className="max-sm:hidden">History</span>
       </button>
-      <Link to="/chat" search={{ agent: agentId }} className={HEADER_BUTTON} aria-label={`New chat with ${name}`}>
-        <Plus size={17} aria-hidden="true" />
-        <span className="max-sm:hidden">New chat</span>
-      </Link>
+      {gone ? null : (
+        <Link to="/chat" search={{ agent: agentId }} className={HEADER_BUTTON} aria-label={`New chat with ${name}`}>
+          <Plus size={17} aria-hidden="true" />
+          <span className="max-sm:hidden">New chat</span>
+        </Link>
+      )}
       {notes || sessionId ? (
         <DropdownMenu
           trigger={<Ellipsis size={17} aria-hidden="true" />}

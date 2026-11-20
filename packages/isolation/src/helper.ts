@@ -78,6 +78,30 @@ export function groupsCommand(users: AgentUsers, agent: string, groups: readonly
   return [users.binary, "groups", ...where(users), "--agent", agent, ...groups.flatMap((group) => ["--group", group])];
 }
 
+/** The command that removes a deleted agent's user (`op: remove`): prints `absent` or `removed left=<n>`. */
+export function removeCommand(users: AgentUsers, agent: string): string[] {
+  return [users.binary, "remove", ...where(users), "--agent", agent];
+}
+
+/**
+ * What the helper answered to `remove`. `removed`: the user is gone; `absent`: it never had one. `old`: this helper
+ * does not know the operation, so it was installed by an earlier release and the user is left; `refused`: it would
+ * not, with why.
+ */
+export type AccountRemoval = { how: "removed"; left: number } | { how: "absent" } | { how: "old" } | { how: "refused"; why: string };
+
+/** The helper's answer read: its exit, what it printed, and what it said on a refusal. */
+export function removalOf(answer: { exitCode: number | null; stdout: string; stderr: string }): AccountRemoval {
+  const said = answer.stdout.trim();
+  if (answer.exitCode === 0 && said === "absent") return { how: "absent" };
+  const removed = /^removed left=(\d+)$/.exec(said);
+  if (answer.exitCode === 0 && removed) return { how: "removed", left: Number(removed[1]) };
+  const why = answer.stderr.trim().replace(/^nouride-run:\s*/, "");
+  // An earlier release's helper says the operation by name; its client, older still, prints its usage and exits 2.
+  if (/no such operation/.test(why) || answer.exitCode === 2) return { how: "old" };
+  return { how: "refused", why: why || said || `exit ${answer.exitCode}` };
+}
+
 export interface HelperInfo {
   version: string;
   protocol: string;

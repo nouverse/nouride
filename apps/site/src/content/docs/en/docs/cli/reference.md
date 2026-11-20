@@ -159,6 +159,7 @@ nouride agent enable  <id>        # written to config.toml, so it survives a res
 nouride agent disable <id>
 nouride agent external <id> <cli> [--profile <name>]   # a coding CLI answers it instead of its model
 nouride agent internal <id>       # its model answers it again
+nouride agent delete <id>         # for good, after its id is typed: what makes it run goes, its chats and memories stay
 nouride agent skill-root add <id> <path>   # it takes the skills in that project's .agents/skills as its own
 nouride agent skill-root rm  <id> <path>
 nouride acp [--agent <id>]        # an agent in Zed or another ACP editor; the editor runs this

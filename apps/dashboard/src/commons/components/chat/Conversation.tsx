@@ -18,7 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ChatTurn, LiveTurn, OpenPage, Room, SlashCommand } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { PersonMessage } from "@/commons/components/chat/PersonMessage";
-import { ReadOnlyNote } from "@/commons/components/chat/ReadOnlyNote";
+import { NothingWritten } from "@/commons/components/chat/ReadOnlyNote";
 import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";
 import { useAnswerApproval } from "@/commons/hooks/use-answer-approval";
 import { useAttachments } from "@/commons/hooks/use-attachments";
@@ -69,6 +69,8 @@ export interface ConversationNow {
   room: Room | null;
   /** The chat app a private chat lives on: read here, answered there. */
   elsewhere: string | undefined;
+  /** Its agent was deleted: the chat is kept to read, and nothing is written in it while no agent has the id. */
+  gone: boolean;
 }
 
 export interface ConversationProps {
@@ -145,7 +147,10 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
    */
   const sessionAgent = conversation.session?.agentId ?? conversation.liveTurns[0]?.agentId;
   const selectedAgent = sessionAgent || chosenAgent || orchestrator || agents[0]?.id || "";
-  const currentAgent = agents.find((a) => a.id === selectedAgent) ?? agents[0];
+  // A conversation whose agent is not among the agents there are: it was deleted, and its chats were kept. Named by
+  // its id and not as the first agent of the list, which it never was with.
+  const gone = Boolean(sessionAgent) && agents.length > 0 && !agents.some((a) => a.id === sessionAgent);
+  const currentAgent = gone ? undefined : (agents.find((a) => a.id === selectedAgent) ?? agents[0]);
   const looks = chat.looks;
 
   const writable = conversation.session?.writable ?? true;
@@ -381,9 +386,10 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
     agentId: selectedAgent,
     agentName: currentAgent?.displayName || selectedAgent || "Agent",
     look: looks.get(selectedAgent),
-    status: working ? { words: working, ...(helpers > 0 ? { more: " in the background" } : {}), tone: "working" } : { words: doing?.words ?? "", tone: doing?.tone ?? "muted" },
+    status: gone ? { words: "Deleted", tone: "muted" } : working ? { words: working, ...(helpers > 0 ? { more: " in the background" } : {}), tone: "working" } : { words: doing?.words ?? "", tone: doing?.tone ?? "muted" },
     room,
     elsewhere,
+    gone,
   };
 
   return (
@@ -481,8 +487,8 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
 
           {!room && <PlanStrip plan={workNotes.data?.plan} chat={conversation.session} busy={busy} />}
 
-          {elsewhere ? (
-            <ReadOnlyNote platform={elsewhere} kind="chat" />
+          {gone || elsewhere ? (
+            <NothingWritten gone={gone ? selectedAgent : undefined} platform={elsewhere} />
           ) : (
           <Composer
             input={input}

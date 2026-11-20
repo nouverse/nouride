@@ -1,6 +1,6 @@
 /**
  * One agent's own settings: what a turn may spend, how much it hands to helpers in the background, how many missions it
- * runs at once, and which tools it has.
+ * runs at once, and which tools it has. At its foot, for an admin, deleting the agent.
  *
  * Moved off the Model tab, which is now only the endpoint and the model: these are about how the agent
  * works, whatever it runs on, and a Model tab that also held them was where nobody looked for them.
@@ -18,6 +18,7 @@ import { AgentBackgroundHelpers } from "./components/AgentBackgroundHelpers";
 import { AgentMissionSlots } from "./components/AgentMissionSlots";
 import { offersSharedTools, SharedTools } from "./components/SharedTools";
 import { ExternalNote } from "./components/ExternalNote";
+import { DeleteAgent } from "./components/DeleteAgent";
 
 export default function AgentSettingsPage({ agentId }: { agentId: string }) {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
@@ -38,6 +39,8 @@ export default function AgentSettingsPage({ agentId }: { agentId: string }) {
       <AgentTools agentId={agent.id} tools={agent.tools} admin={isAdmin(me.data ?? null)} />
       {/* The orchestrator's alone: in any other agent's pack the setting changes nothing. */}
       {offersSharedTools(status.data?.orchestrator, agent) ? <SharedTools agent={agent} editable={isAdmin(me.data ?? null)} /> : null}
+      {/* Last on the page, and an admin's alone: what it takes does not come back. */}
+      {isAdmin(me.data ?? null) ? <DeleteAgent agent={agent} orchestrator={status.data?.orchestrator === agent.id} /> : null}
     </div>
   );
 }

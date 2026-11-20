@@ -8,7 +8,7 @@
  */
 
 import { oneLine, type GatewayName, type Session } from "@nouride/shared";
-import type { ChatListAgent, ChatListGroup, ChatListLine, ChatListPayload, ChatListRoom } from "@nouride/wire";
+import type { ChatListAgent, ChatListGone, ChatListGroup, ChatListLine, ChatListPayload, ChatListRoom } from "@nouride/wire";
 import { cronJobOfChat } from "@/modules/cron/session.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { personFor, SESSIONS_READ, speakersOf, SPOKEN } from "@/modules/pipeline/known-rooms.ts";
@@ -120,6 +120,24 @@ function agentsOf(deps: ControlDeps, local: string, rooms: Set<string>, running:
   });
 }
 
+/**
+ * The deleted agents the reader has a conversation with, each with its newest: a deleted agent's chats are kept, and
+ * no agent's row leads to them. On any connection, since the one it answered on went with it; not a room's, which is
+ * its own row, nor a scheduled job's.
+ */
+function goneOf(deps: ControlDeps, rooms: Set<string>, reader: Reader): ChatListGone[] {
+  const whose = reader.ids.length === 0 && reader.everyone ? {} : { openedBy: reader.ids };
+  const asked = { notGateway: MISSION_GATEWAY_ID, ...whose };
+  return (deps.sessions?.agents(asked) ?? [])
+    .filter((agentId) => !deps.registry.get(agentId))
+    .flatMap((agentId): ChatListGone[] => {
+      const row = deps.sessions?.list({ ...asked, agentId, limit: OWN_READ }).find((session) => session.sessionType === "main" && !rooms.has(session.chatId) && cronJobOfChat(session.chatId) === null);
+      if (!row) return [];
+      const line = turnLine(deps.turns?.latestForSession(row.id) ?? null);
+      return [{ agentId, sessionId: row.id, at: Math.max(row.updatedAt, line?.at ?? 0), ...bare(line) }];
+    });
+}
+
 /** The dashboard's rooms, with who answers a message there that tags nobody. */
 function roomsOf(deps: ControlDeps, local: string, platform: GatewayName): ChatListRoom[] {
   return (deps.rooms?.list(local) ?? []).map((room) => {
@@ -196,6 +214,7 @@ export function registerChatListRoutes(control: ControlApp, deps: ControlDeps): 
     const rooms = local ? roomsOf(deps, local, deps.local?.platform ?? "web") : [];
     const payload: ChatListPayload = {
       agents: local ? agentsOf(deps, local, new Set(rooms.map((room) => room.chatId)), running, reader) : [],
+      gone: goneOf(deps, new Set(rooms.map((room) => room.chatId)), reader),
       rooms: rooms.filter((room) => mine(local!, room.chatId)),
       // A group is the reader's where their person spoke, on whichever of our bots heard it.
       groups: groupsOf(deps, running).filter((group) => all || spoke.in(group.platform, group.chatId)),

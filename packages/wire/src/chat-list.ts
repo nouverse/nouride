@@ -71,8 +71,21 @@ export interface ChatListGroup {
   tags?: Record<string, string>;
 }
 
+/**
+ * An agent that was deleted, and its newest conversation the reader may open. Its chats are kept: read, and not written
+ * to while no agent has its id.
+ */
+export interface ChatListGone {
+  agentId: string;
+  sessionId: string;
+  at: number;
+  last?: ChatListLine;
+}
+
 export interface ChatListPayload {
   agents: ChatListAgent[];
+  /** The deleted agents the reader has a conversation with, newest first. */
+  gone: ChatListGone[];
   rooms: ChatListRoom[];
   groups: ChatListGroup[];
 }

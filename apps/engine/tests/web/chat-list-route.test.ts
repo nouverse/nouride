@@ -13,6 +13,7 @@ import { sessionIdFor } from "@nouride/shared";
 import type { ChatListPayload } from "@nouride/wire";
 import { openAndMigrate } from "@/db/index.ts";
 import { RoomMessageStore } from "@/modules/chat-events/room-messages.store.ts";
+import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { RoomStore } from "@/modules/rooms/rooms.store.ts";
 import { SessionStore } from "@/modules/sessions/sessions.store.ts";
 import { registerChatListRoutes } from "@/modules/web/control/routes/chat-list.ts";
@@ -51,7 +52,10 @@ async function mount(options: { untagged?: (chatId: string) => string | null; ow
     turns,
     rooms,
     roomMessages,
-    registry: { all: () => ["nouva", "nestor", "kuro"].map((id) => ({ config: { id } })) },
+    registry: {
+      all: () => ["nouva", "nestor", "kuro"].map((id) => ({ config: { id } })),
+      get: (id: string) => (["nouva", "nestor", "kuro"].includes(id) ? { config: { id } } : undefined),
+    },
     jobs: {
       running: (agentId: string) =>
         (options.helpers ?? []).filter((job) => job.agentId === agentId).map((job, n) => ({ id: `job_${n}`, kind: "helper", gatewayId: LOCAL, chatId: job.chatId })),
@@ -112,6 +116,29 @@ describe("GET /chat-list", () => {
     expect(nouva.sessionId).not.toBe(older);
     expect(nouva.last).toEqual({ from: "agent", name: "nouva", text: "All good: 3 agents up. Nothing waits for you." });
     expect(nouva.working).toBe(false);
+  });
+
+  test("a deleted agent's chats are kept: its newest is listed apart, on whichever connection it was, not a room's or a mission's; an agent that is there is not among them", async () => {
+    const h = await mount();
+    h.talk("nouva", LOCAL, "web-1", "status?", "All good.");
+    tick();
+    h.talk("rex", LOCAL, "web-9", "hello rex", "I am rex.");
+    tick();
+    const newest = h.talk("rex", "telegram:rex", "777", "on telegram", "**The newest** of rex's chats.");
+    const at = Date.now();
+    tick();
+    h.rooms.create({ gatewayId: LOCAL, chatId: "room-9", agentIds: ["rex", "nouva"] });
+    h.talk("rex", LOCAL, "room-9", "@rex in the room", "a room's answer");
+    tick();
+    h.talk("rex", MISSION_GATEWAY_ID, "msn_1", "a mission's turn", "a mission's answer");
+    tick();
+    // Another that is gone, talked to after rex: the one talked to last is first.
+    h.talk("old", LOCAL, "web-3", "anyone?", "I was here once.");
+
+    const { body } = await h.list();
+    expect(body.agents.map((agent) => agent.agentId)).toEqual(["nouva", "nestor", "kuro"]);
+    expect(body.gone.map((one) => one.agentId)).toEqual(["old", "rex"]);
+    expect(body.gone[1]).toEqual({ agentId: "rex", sessionId: newest, at, last: { from: "agent", name: "rex", text: "The newest of rex's chats." } });
   });
 
   test("an agent nobody has talked to in the dashboard has a row with no conversation; every agent is listed", async () => {

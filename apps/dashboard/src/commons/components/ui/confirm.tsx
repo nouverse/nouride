@@ -34,6 +34,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { TriangleAlert } from "lucide-react";
+import { useWide } from "@/commons/hooks/use-wide";
 
 export interface ConfirmRequest {
   /** The question, as a short noun phrase: "Delete draw-diagram?" */
@@ -53,6 +54,16 @@ export interface ConfirmRequest {
    * are — signing out: the blue, focused button keeps you signed in, and leaving is the plain one.
    */
   emphasis?: "confirm" | "cancel";
+  /**
+   * Words the person must type before the affirmative button works, exactly: the name of what is about to go, for a
+   * delete that takes much with it and cannot be taken back. Its field has the focus, not the button.
+   */
+  typed?: string;
+  /**
+   * Seconds counted down before the affirmative button can be pressed, shown on the button: the last layer of such a
+   * delete. With `typed`, counted from the moment the words are right, and again from the top if they stop being so.
+   */
+  waitSeconds?: number;
 }
 
 export interface Confirmation {
@@ -61,8 +72,28 @@ export interface Confirmation {
   dialog: ReactNode;
 }
 
+/**
+ * The seconds left before a layered question's button can be pressed (`ConfirmRequest.waitSeconds`): from the whole
+ * count while `ready` is false, and counted down a second at a time once it is. A question with none is at 0 always.
+ */
+function useCountdown(request: ConfirmRequest | null, ready: boolean): number {
+  const whole = request?.waitSeconds ?? 0;
+  const [left, setLeft] = useState(whole);
+  useEffect(() => {
+    setLeft(whole);
+    if (!ready || whole <= 0) return undefined;
+    const timer = setInterval(() => setLeft((was) => Math.max(0, was - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [request, ready, whole]);
+  return ready ? left : whole;
+}
+
+/** How many frames the typed field's focus is tried for while the dialog opens: about a second. */
+const FOCUS_FRAMES = 60;
+
 export function useConfirm(): Confirmation {
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
+  const wide = useWide();
   const ref = useRef<HTMLDialogElement>(null);
   /**
    * The pending answer.
@@ -82,6 +113,7 @@ export function useConfirm(): Confirmation {
         // A copy, so every question is a new one to React: the dialog is opened by the effect below when the request
         // changes, and a caller that asks with one kept object (a conversation's delete does) asked the same value
         // twice. The second time nothing changed, the dialog stayed shut, and the click did nothing.
+        setTyped("");
         setRequest({ ...next });
       }),
     [],
@@ -90,8 +122,22 @@ export function useConfirm(): Confirmation {
   // Opened as an effect rather than in `ask`, because the element does not exist until the state
   // that renders it has landed.
   useEffect(() => {
-    if (request) ref.current?.showModal();
-  }, [request]);
+    if (!request) return undefined;
+    ref.current?.showModal();
+    if (!request.typed || !wide) return undefined;
+    // The words are typed with no press on the field first, where there is a keyboard: on a phone the field waits for
+    // a tap, so the list above it is read before a keyboard covers it. The box is drawn hidden while the dialog opens,
+    // and a focus does not land on what is hidden: asked again each frame until it has.
+    let frame = 0;
+    let tries = 0;
+    const focus = () => {
+      const field = ref.current?.querySelector("input");
+      field?.focus();
+      if (field && document.activeElement !== field && tries++ < FOCUS_FRAMES) frame = requestAnimationFrame(focus);
+    };
+    focus();
+    return () => cancelAnimationFrame(frame);
+  }, [request, wide]);
 
   // The question stays drawn once answered, so its box is seen to close (`main.css`, "Dialogs") rather than emptied
   // under the closing dialog; the next `ask` replaces it.
@@ -102,7 +148,11 @@ export function useConfirm(): Confirmation {
   }, []);
 
   const danger = request?.danger !== false;
+  const layered = Boolean(request?.typed) || (request?.waitSeconds ?? 0) > 0;
   const stay = request?.emphasis === "cancel";
+  const [typed, setTyped] = useState("");
+  const matches = !request?.typed || typed === request.typed;
+  const left = useCountdown(request, matches);
 
   const dialog = (
     <dialog
@@ -121,6 +171,22 @@ export function useConfirm(): Confirmation {
             {request.title}
           </h3>
           {request.body ? <div className="py-3 text-sm opacity-70">{request.body}</div> : null}
+          {request.typed ? (
+            <label className="block space-y-1.5 pt-1 text-sm">
+              <span className="text-base-content/80">
+                Type <span className="font-mono font-semibold text-base-content">{request.typed}</span> to confirm
+              </span>
+              <input
+                className="input w-full rounded-xl font-mono text-sm"
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                aria-label={`Type ${request.typed} to confirm`}
+              />
+            </label>
+          ) : null}
           <div className="modal-action">
             <button
               type="button"
@@ -134,13 +200,16 @@ export function useConfirm(): Confirmation {
               type="button"
               className={`btn btn-sm ${stay ? "btn-ghost" : danger ? "btn-error" : "btn-primary"}`}
               onClick={() => settle(true)}
+              disabled={!matches || left > 0}
               // The affirmative answer is focused rather than the cancel, because the person chose
               // it once by clicking the thing that opened this. Escape and the backdrop are the
               // cheap way out and both are one keystroke away. Unless `emphasis` says staying is the
               // answer to offer first.
-              autoFocus={!stay}
+              autoFocus={!stay && !layered}
             >
               {request.confirmLabel ?? "Confirm"}
+              {/* Counted where the press will be, once the words are right: a button that woke with no sign looked stuck. */}
+              {matches && left > 0 ? <span className="font-mono tabular-nums"> in {left} s</span> : null}
             </button>
           </div>
         </div>

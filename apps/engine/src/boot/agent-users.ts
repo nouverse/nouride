@@ -15,6 +15,9 @@ import {
   HELPER_BINARY,
   HELPER_SOCKET,
   putCommand,
+  removalOf,
+  removeCommand,
+  type AccountRemoval,
   type AgentUsers,
   type AgentUsersFinding,
   type HelperFolders,
@@ -244,7 +247,17 @@ export interface AgentUsersBoot {
   finding: AgentUsersFinding;
   /** Every loaded agent, made ready: run at boot, and again for an agent when it loads. */
   ready(agents: readonly LoadedAgent[]): Promise<void>;
+  /**
+   * A deleted agent's user removed by the helper (`op: remove`), with what it answered. `none` where agents' commands
+   * run as the daemon's own user: there is no account to remove.
+   */
+  remove(agentId: string): Promise<AccountRemoval | { how: "none" }>;
+  /** True where each agent's commands run as a user of its own. */
+  own(): boolean;
 }
+
+/** Long enough for the helper to end the agent's processes and walk the shared workspace, which may hold a great many files. */
+const REMOVE_TIMEOUT_MS = 5 * 60_000;
 
 /**
  * Found, said, and put in front of every agent's command from now on. `landlock` and the agent's declared roots are
@@ -262,7 +275,7 @@ export async function settleAgentUsers(input: {
   const users = finding.users;
   if (!users) {
     log.warn("agents' commands run as the daemon's own user", { reason: finding.reason });
-    return { finding, ready: async () => {} };
+    return { finding, ready: async () => {}, remove: async () => ({ how: "none" }), own: () => false };
   }
   const landlock = () => input.config.security.exec.landlock ?? "auto";
   const confine = (id: string) => ({ landlock: landlock(), writable: input.agent(id)?.config.workspaceRoots ?? [] });
@@ -303,6 +316,12 @@ export async function settleAgentUsers(input: {
   const said = new Set<string>();
   return {
     finding,
+    own: () => true,
+    // The helper's own word on it, read from what it printed. An agent whose id cannot be a user's name never had one.
+    remove: async (agentId) => {
+      if (!canHaveOwnUser(agentId)) return { how: "absent" };
+      return removalOf(await runCommand(removeCommand(users, agentId), { ...SANDBOX, timeoutMs: REMOVE_TIMEOUT_MS }));
+    },
     ready: async (agents) => {
       const started = Date.now();
       const problems = await Promise.all(
