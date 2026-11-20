@@ -217,6 +217,10 @@ export class MissionTimers {
     }
     // Paused by someone: it waits as long as they like, and nobody is reminded of a wait they chose.
     if (mission.waitKind === "paused") return;
+    // A draft: it is in the backlog until someone starts it, and asks nothing of anybody. Its chat was told when it
+    // was made; four hours on, "is still waiting for you: not started" reached a person's phone before five in the
+    // morning for a draft they had meant to leave.
+    if (mission.waitKind === "accept" && mission.startedAt === null) return;
     if (mission.waitKind === "limit" && now - since >= LIMIT_WAIT_MS) {
       this.missions.end(mission, "failed", `${mission.reason ?? "a limit"} was reached and nobody continued it in 7 days`);
       return;

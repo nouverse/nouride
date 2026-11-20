@@ -262,6 +262,13 @@ export interface Gateway {
   readonly editsMessages?: boolean;
 
   /**
+   * How many characters one message of this platform holds, where it has a limit. `send` already parts a longer text;
+   * an edit cannot, and cuts it. Whoever rewrites a message with a text that may have grown reads this first
+   * (`Notifier.fitsOne`): a draft's notice rewritten after its goal grew would have lost its end unsaid.
+   */
+  readonly maxMessageChars?: number;
+
+  /**
    * How much of a turn's working-out this platform should carry.
    *
    * `"live"` is the edited bubble that tracks each tool as it runs — right for a channel that exists

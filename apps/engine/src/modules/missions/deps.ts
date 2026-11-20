@@ -59,6 +59,11 @@ export interface MissionsDeps {
    */
   tell: (mission: Mission, text: string, buttons?: MessageButton[]) => Promise<void>;
   /**
+   * A draft's notice: `whole` sent when it is made (`line` null), and when it changes that message rewritten in place
+   * where the chat can, `line` said where it cannot (`draft-notices.ts`). Absent, `tell` says it whole each time.
+   */
+  tellDraft?: (mission: Mission, whole: string, line: string | null, buttons: MessageButton[]) => Promise<void>;
+  /**
    * A progress line (0.8.7): where the chat can edit what it was sent, the mission's one progress message is rewritten
    * rather than a new one sent each time. Absent: `tell`.
    */

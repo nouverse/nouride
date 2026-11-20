@@ -143,6 +143,12 @@ export class Notifier {
     }
   }
 
+  /** Whether `text` is one message on this connection (`Gateway.maxMessageChars`): a rewrite of one cannot become two. */
+  fitsOne(target: ChatTarget, text: string): boolean {
+    const most = this.options.gateways.get(target.gatewayId)?.maxMessageChars;
+    return most === undefined || text.length <= most;
+  }
+
   /**
    * A question asked with buttons, settled: the message says how, and its buttons go. Best-effort, like every notice.
    * With `keep`, a question still open said again, its buttons under it (`Gateway.settleButtons`).

@@ -79,8 +79,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the missions' one service (start, the dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, the slots, its jobs) over state this class alone holds",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
-    lines: 430,
-    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits (declared, `editsMessages`), files as a set, buttons, presence, reconnect and the command menu",
+    lines: 431,
+    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits and the one-message limit (both declared), files as a set, buttons, presence, reconnect and the command menu",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {
     lines: 409,

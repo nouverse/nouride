@@ -43,7 +43,10 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 - **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it, as it does
   when you are away ("do it, I'm off to sleep"). You can change it in the draft.
 - A draft nobody starts stays in the board's Backlog until someone starts or drops it, however long that is: a draft
-  never expires. It is not counted among what needs you.
+  never expires. It is not counted among what needs you, and you are not reminded of it.
+- **A draft's notice is one message.** When the agent changes the draft, that message is rewritten where it stands,
+  its buttons kept, in a chat app that can rewrite one (Telegram, Discord). Elsewhere one line says what changed.
+  It used to be sent whole again at each change.
 
 Said "do it now, I'm off to sleep"? Every mission an agent starts is a draft first (0.8.40): it drafts it and says so,
 and you start it, or tell it to go and it starts its draft on your word. What it had written down about the task, and
@@ -102,7 +105,8 @@ A list of things with their state is a table.
 [Links from a chat](/en/docs/manual/dashboard/#links-from-a-chat).
 
 Between those, a progress line written from its checklist ("3 of 8 steps done"), at most every half hour, and only
-when a step finished. A wait on you is named again once, after four hours.
+when a step finished. A wait on you is named again once, after four hours; never a draft, and never a mission
+you paused.
 
 ## Watching it
 

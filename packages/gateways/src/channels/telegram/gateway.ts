@@ -101,6 +101,7 @@ export interface TelegramGatewayOptions extends GatewayIdentity {
 export class TelegramGateway extends BaseGateway {
   /** A message it sent is rewritten in place (`editMessage`). */
   readonly editsMessages = true;
+  readonly maxMessageChars = MAX_MESSAGE_CHARS;
   /** What the agent is told about writing here — `Gateway.formatting`: converted markdown, a phone, no tables. */
   readonly formatting =
     "Formatting: write normal markdown; it is converted before sending. Headings become bold. This is usually read on a phone, so do not use tables; write short labelled lines instead. A table you send anyway is flattened into one, which will not be the layout you intended.";

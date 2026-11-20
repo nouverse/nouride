@@ -97,7 +97,7 @@ export function buildTurnParts(
   });
   // Long work an agent finishes alone (0.8.0): built before the pipeline, which shapes their turns — `boot/missions.ts`.
   const missions = buildMissions({
-    db, config: input.contextConfig, machine: input.machine, registry, notes: stores.notes, jobs: stores.jobs, approvals: () => approvals, notifier: { toChat: (to, text) => notifier.toChat(to, text), ask: (to, text, buttons) => notifier.ask(to, text, buttons), edit: (to, id, text) => notifier.edit(to, id, text) }, chatEvents: stores.chatEvents, memory: input.memory,
+    db, config: input.contextConfig, machine: input.machine, registry, notes: stores.notes, jobs: stores.jobs, approvals: () => approvals, notifier: { toChat: (to, text) => notifier.toChat(to, text), ask: (to, text, buttons) => notifier.ask(to, text, buttons), edit: (to, id, text) => notifier.edit(to, id, text), settle: (to, id, text, keep) => notifier.settle(to, id, text, keep), fitsOne: (to, text) => notifier.fitsOne(to, text) }, chatEvents: stores.chatEvents, memory: input.memory,
     jobAllowed: (jobId) => cron.get(jobId)?.allowed?.flatMap((allowance) => allowance.keys) ?? [],
     roomForCli: () => externalAgents.room().enough,
     forgetCliSession: (agentId, gatewayId, chatId) => externalAgents.forgetSession(agentId, gatewayId, chatId),

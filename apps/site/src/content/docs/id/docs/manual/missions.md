@@ -44,7 +44,10 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 - **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa, seperti
   yang ia lakukan kalau kamu pergi ("kerjakan ya, aku mau tidur"). Itu bisa kamu ubah di draft.
 - Draft yang tidak dimulai siapa pun tetap ada di Backlog papan, sampai ada yang memulai atau membuangnya, berapa pun
-  lamanya: draft tidak pernah kedaluwarsa. Ia tidak dihitung sebagai yang butuh kamu.
+  lamanya: draft tidak pernah kedaluwarsa. Ia tidak dihitung sebagai yang butuh kamu, dan kamu tidak diingatkan soal itu.
+- **Notice sebuah draft itu satu pesan.** Kalau agent mengubah draft-nya, pesan itu ditulis ulang di tempatnya,
+  tombolnya tetap, di aplikasi chat yang bisa menulis ulang pesan (Telegram, Discord). Di tempat lain satu baris
+  bilang apa yang berubah. Dulu seluruh draft dikirim lagi tiap kali berubah.
 
 Bilang "kerjain sekarang, gw tidur dulu"? Setiap misi yang dimulai agent selalu jadi draft dulu (0.8.40): ia membuat
 draft-nya dan bilang begitu, lalu kamu yang memulainya, atau kamu suruh jalan dan ia memulai draft-nya atas kata-katamu.
@@ -107,7 +110,7 @@ Notifikasi *mulai*, *butuh kamu*, dan *selesai* diakhiri link ke halaman misinya
 
 Di antara itu, satu baris progres yang ditulis dari checklist-nya ("3 dari 8 langkah selesai"), paling sering tiap
 setengah jam, dan cuma kalau ada langkah yang selesai. Kalau ia menunggu kamu, ia mengingatkan sekali lagi setelah empat
-jam.
+jam; tidak pernah untuk draft, dan tidak pernah untuk misi yang kamu pause.
 
 ## Memantaunya
 

@@ -213,7 +213,7 @@ async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: T
   const edited = await missions.edit(mission.id, change, { byAgent: ctx.agentId });
   if ("refused" in edited) return refused(edited.refused);
   const brief = edited.briefFailed ? ` Its brief could not be written: ${edited.briefFailed}.` : "";
-  return ok(`Draft ${shortId(mission.id)} changed: ${edited.changed.join(", ")}. Its notice was sent to this chat again, saying so.${brief}`);
+  return ok(`Draft ${shortId(mission.id)} changed: ${edited.changed.join(", ")}. Its notice in this chat says so now: it was rewritten where it stands, or one line was added under it.${brief}`);
 }
 
 /** Start it — once git has taken the branch it names, if it names one (`Missions.branchRefusal`). */

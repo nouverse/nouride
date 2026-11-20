@@ -153,6 +153,7 @@ export function logShardLifecycle(client: Pick<Client, "on">, log: Logger, curre
 export class DiscordGateway extends BaseGateway {
   /** A message it sent is rewritten in place (`editMessage`). */
   readonly editsMessages = true;
+  readonly maxMessageChars = MAX_MESSAGE_CHARS;
   /** The bot's presence, following its agent (0.8.0) — kept, so a reconnect shows it again. */
   private presence: GatewayPresence = "online";
 
