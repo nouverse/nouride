@@ -453,7 +453,10 @@ describe("an import that fails halfway", () => {
     const fresh = await newMachine();
     const file = join(dir, "nouride.tar.gz");
     expect((await cli(old, ["export", "--out", file, "--folders", "--stdin"], `${PASSPHRASE}\n`)).code).toBe(0);
-    const before = tree(fresh.home);
+    // Not the database's `-shm`: SQLite's own index of its log, written anew by whoever opens the database, the import's
+    // undone migration and this test's reads among them. On macOS it came back with other bytes over the same rows.
+    const index = (path: string) => path.endsWith(".db-shm");
+    const before = tree(fresh.home, index);
     const { config } = await loadGlobalConfig(fresh.root, { quiet: true });
     const store = { env: {}, layout: commandKeyLayout({ dataDir: fresh.data, configPath: fresh.configPath }) };
 
@@ -465,7 +468,7 @@ describe("an import that fails halfway", () => {
       expect({ stopAt, done }).toEqual({ stopAt, done: { ok: false, error: `the disk gave out at ${stopAt}`, restored: true } });
       expect(existsSync(kept)).toBe(false);
       // Everything of the install is as it was: its files byte for byte, its database opened and read.
-      const now = tree(fresh.home, (path) => path.startsWith("import-staging") || path.startsWith("data/backups"));
+      const now = tree(fresh.home, (path) => path.startsWith("import-staging") || path.startsWith("data/backups") || index(path));
       expect({ stopAt, now }).toEqual({ stopAt, now: before });
       expect(rows<{ username: string }>(fresh.db, "SELECT username FROM users")).toEqual([{ username: "setup" }]);
       const secrets = await SecretStore.open(fresh.data, {}, { layout: store.layout });
