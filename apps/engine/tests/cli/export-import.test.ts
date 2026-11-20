@@ -229,6 +229,16 @@ describe("nouride export", () => {
     const again = await cli(old, ["export", "--out", file, "--no-secrets"]);
     expect(again.code).toBe(1);
     expect(again.err).toContain("is already there");
+    // A folder the command cannot reach: said as that, with the way on. Root's `--out ~/…` on the live box was
+    // answered "/root is not a folder", the command running as the service account.
+    const nowhere = await cli(old, ["export", "--out", join(dir, "no-such-folder", "x.tar.gz"), "--no-secrets"]);
+    expect(nowhere.code).toBe(1);
+    expect(nowhere.err).toContain(`${join(dir, "no-such-folder")} is not a folder this command can write in.`);
+    expect(nowhere.err).toContain("Nouride's commands run as its own account, whoever types them: name a folder that account can write in, such as /var/tmp.");
+    const missing = await cli(old, ["import", join(dir, "no-such-file.tar.gz")]);
+    expect(missing.code).toBe(1);
+    expect(missing.err).toContain("no-such-file.tar.gz is not there, or cannot be read from here.");
+    expect(missing.err).toContain("put the file where that account can read it, such as /var/tmp.");
     // An install whose store holds nothing has nothing to seal: no passphrase is asked for, and the file holds none.
     const bare = await install("bare", 18111);
     const empty = await cli(bare, ["export", "--out", join(dir, "bare.tar.gz")]);

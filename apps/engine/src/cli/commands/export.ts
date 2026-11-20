@@ -72,7 +72,11 @@ export async function exportInstall(args: string[]): Promise<void> {
   if (!out) usageError("Where should the file go?", "nouride export --out <file> [--folders] [--stdin | --no-secrets]");
   const file = resolve(out);
   if (statFile(file)) fail(`${file} is already there.`, "Name another file, or remove that one first.");
-  if (!statFile(dirname(file))?.isDirectory) fail(`${dirname(file)} is not a folder.`);
+  // A folder that is there and cannot be reached reads the same as one that is not: on a server install root's
+  // `nouride` runs as the service account, and `--out ~/…` typed by root names a folder that account may not enter.
+  if (!statFile(dirname(file))?.isDirectory) {
+    fail(`${dirname(file)} is not a folder this command can write in.`, "On a server, Nouride's commands run as its own account, whoever types them: name a folder that account can write in, such as /var/tmp.");
+  }
 
   const { config, source } = await loadConfig();
   const configPath = source ?? defaultConfigPath();

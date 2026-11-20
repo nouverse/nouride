@@ -38,13 +38,17 @@ karakter, atau hilangkan centang secret. Centang folder milik agent kalau mau ik
 Dari terminal, di mesinnya langsung:
 
 ```bash
-nouride export --out ~/nouride-export.tar.gz             # menanyakan passphrase, dua kali
-nouride export --out ~/nouride-export.tar.gz --folders   # dengan folder milik agent
-nouride export --out ~/nouride-export.tar.gz --no-secrets
+nouride export --out /var/tmp/nouride-export.tar.gz             # menanyakan passphrase, dua kali
+nouride export --out /var/tmp/nouride-export.tar.gz --folders   # dengan folder milik agent
+nouride export --out /var/tmp/nouride-export.tar.gz --no-secrets
 ```
 
 Script memberi passphrase lewat stdin dengan `--stdin`. Perintah ini jalan baik Nouride sedang hidup atau gak, dan
 gak pernah menimpa file yang sudah ada.
+
+Di install server perintah ini jalan sebagai akun Nouride sendiri, siapa pun yang mengetiknya, termasuk root. Akun
+itu gak bisa menulis di folder milik root, jadi `--out ~/…` yang diketik root ditolak: sebut folder yang bisa
+ditulisinya, misalnya `/var/tmp`. File-nya hanya milik akun itu; salin keluar dari mesin sebagai root.
 
 Biarkan mesin lama tetap jalan dulu: belum ada yang berubah di sana.
 
@@ -69,11 +73,14 @@ Dari terminal, dengan Nouride dihentikan:
 
 ```bash
 nouride stop
-nouride import ~/nouride-export.tar.gz     # menanyakan passphrase, lalu kata "replace"
+nouride import /var/tmp/nouride-export.tar.gz     # menanyakan passphrase, lalu kata "replace"
 nouride start                              # atau: systemctl start nouride
 ```
 
 Script memberi passphrase di baris pertama stdin dan kata itu di baris kedua, dengan `--stdin`.
+
+Di install server, taruh file-nya di tempat yang bisa dibaca akun Nouride sendiri, misalnya `/var/tmp`, dan bisa
+dibaca olehnya (`chown nouride /var/tmp/nouride-export.tar.gz`): perintahnya jalan sebagai akun itu.
 
 Yang ditolak impor, sebelum ada yang diganti: file yang bukan hasil ekspor atau terpotong, database yang rusak,
 file dari Nouride yang lebih baru, passphrase yang gak membuka secret, dan kata yang gak diketik.

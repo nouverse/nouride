@@ -40,7 +40,7 @@ export async function importInstall(args: string[]): Promise<void> {
   const [named] = bareArgs(args);
   if (!named) usageError("Which file?", "nouride import <file> [--stdin]");
   const file = resolve(named);
-  if (!statFile(file)) fail(`${file} is not there.`);
+  if (!statFile(file)) fail(`${file} is not there, or cannot be read from here.`, "On a server, Nouride's commands run as its own account, whoever types them: put the file where that account can read it, such as /var/tmp.");
   const { config, source } = await loadConfig();
   const configPath = source ?? defaultConfigPath();
   const data = config.daemon.dataDir;

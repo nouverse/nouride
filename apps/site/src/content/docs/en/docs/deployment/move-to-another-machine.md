@@ -39,13 +39,17 @@ characters, or untick the secrets. Tick the agents' own folders if you want them
 From a terminal, on the machine itself:
 
 ```bash
-nouride export --out ~/nouride-export.tar.gz             # asks for the passphrase, twice
-nouride export --out ~/nouride-export.tar.gz --folders   # with the agents' own folders
-nouride export --out ~/nouride-export.tar.gz --no-secrets
+nouride export --out /var/tmp/nouride-export.tar.gz             # asks for the passphrase, twice
+nouride export --out /var/tmp/nouride-export.tar.gz --folders   # with the agents' own folders
+nouride export --out /var/tmp/nouride-export.tar.gz --no-secrets
 ```
 
 A script gives the passphrase on stdin with `--stdin`. The command works whether Nouride is running or not, and
 never writes over a file that is already there.
+
+On a server install the command runs as Nouride's own account, whoever types it, root included. That account
+cannot write in root's folders, so `--out ~/…` typed by root is refused: name a folder it can write in, such as
+`/var/tmp`. The file is that account's alone; copy it off the machine as root.
 
 Leave the old machine running for now: nothing has changed on it.
 
@@ -70,11 +74,14 @@ From a terminal, with Nouride stopped:
 
 ```bash
 nouride stop
-nouride import ~/nouride-export.tar.gz     # asks for the passphrase, then for the word "replace"
+nouride import /var/tmp/nouride-export.tar.gz     # asks for the passphrase, then for the word "replace"
 nouride start                              # or: systemctl start nouride
 ```
 
 A script gives the passphrase on the first line of stdin and the word on the second, with `--stdin`.
+
+On a server install, put the file where Nouride's own account can read it, such as `/var/tmp`, and readable by
+it (`chown nouride /var/tmp/nouride-export.tar.gz`): the command runs as that account.
 
 What the import refuses, before anything is replaced: a file that is not an export or was cut short, a damaged
 database, a file from a newer Nouride, a passphrase that does not open the secrets, and the word not typed.
