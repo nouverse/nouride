@@ -16,6 +16,7 @@ baru, impor file-nya di sana, lalu **Go live**. Impor menggantikan semua isi mes
 | Memory dan dokumen | Tool yang terpasang dan cache |
 | File yang dikirim di chat, dan work notes | Folder milik agent, kecuali kamu minta |
 | Secret, disegel dengan passphrase yang kamu ketik | Kunci dan control token milik mesin lama |
+| | Folder kredensial (`credentials_dir`): file kunci dan file token yang dibaca agent-mu. Salin sendiri |
 
 File-nya `.tar.gz` yang bisa kamu buka dengan `tar` biasa. Entri pertamanya, `manifest.json`, menjelaskan isi
 sisanya. Yang disegel cuma secret. Sisanya bisa dibaca siapa pun yang memegang file itu, dan isinya semua chat dan
@@ -99,6 +100,10 @@ Semua sesi dan token perangkat berakhir saat impor. Masuk dengan akun dari mesin
 **Settings**, **Export and import** sekarang dibuka dengan hasil impornya: apa yang ikut, apa yang gak, dan tempat
 yang disebut config tapi gak ada di mesin ini (misalnya folder proyek sebuah agent). Masukkan lagi tiap CLI coding
 dari halaman agent-nya.
+
+Folder kredensial gak pernah ada di file itu, di mana pun config-mu menaruhnya, termasuk di dalam folder agents:
+kunci ssh atau file service account di sana akan terbaca oleh siapa pun yang memegang file-nya. Salin sendiri ke
+tempat yang sama di mesin baru, lewat jalur yang kamu percaya, dan jadikan milik akun layanan (`chown -R nouride`).
 
 ## 5. Matikan mesin lama, lalu Go live
 

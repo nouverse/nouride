@@ -17,6 +17,7 @@ merged.
 | The memory and the documents | Installed tools and caches |
 | Files sent in chats, and the work notes | The agents' own folders, unless you ask for them |
 | The secrets, sealed to a passphrase you type | The old machine's own key and control token |
+| | The credentials folder (`credentials_dir`): the key files and token files your agents read. Copy it yourself |
 
 The file is a `.tar.gz` you can open with your own `tar`. Its first entry, `manifest.json`, says what the rest is.
 Only the secrets are sealed. Everything else is readable by whoever holds the file, and it holds every chat and
@@ -100,6 +101,10 @@ Every session and every device's token ends with the import. Sign in with the ac
 **Settings**, **Export and import** now leads with how the import went: what came, what did not, and any place the
 config names that is not on this machine (an agent's project folder, say). Sign each coding CLI in again from its
 agent's page.
+
+The credentials folder is never in the file, wherever your config keeps it, inside the agents' folder too: an
+ssh key or a service account's file there would be readable by whoever held the file. Copy it to the same place
+on the new machine yourself, over a channel you trust, and make it the service account's (`chown -R nouride`).
 
 ## 5. Switch the old machine off, then Go live
 

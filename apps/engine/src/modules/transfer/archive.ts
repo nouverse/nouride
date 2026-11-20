@@ -16,7 +16,7 @@
  * chat app's own session, and the files this machine is known by (its control token, its key).
  */
 
-import { ensureDir, join, listDir, removePath, renamePath, sealKeyFromPassphrase, sealToKey, statFile, writeTarGz, type TarEntry } from "@nouride/runtime";
+import { ensureDir, join, listDir, removePath, renamePath, resolve, sealKeyFromPassphrase, sealToKey, statFile, writeTarGz, type TarEntry } from "@nouride/runtime";
 import { sharedWorkspace } from "@nouride/persona";
 import type { GlobalConfig } from "@nouride/shared";
 import { keptFolders } from "@/boot/kept-folders.ts";
@@ -98,6 +98,9 @@ export function placesOf(config: GlobalConfig, configPath: string, folders: bool
   ];
 }
 
+/** The credentials folder as the walk meets it: one whole path, whatever the config's spelling of it. */
+const credentialsOf = (config: GlobalConfig): string => resolve(keptFolders(config).credentials);
+
 interface Found {
   entries: TarEntry[];
   files: number;
@@ -110,8 +113,12 @@ interface Found {
  * The files under one place as archive entries, with what was passed over. A backup beside a file (`.bak.N`), a write
  * in flight and what tools installed are no part of an install; in the agents' folders, neither is a coding CLI's own
  * folder nor any file Files would not show.
+ *
+ * `never`: the credentials folder, wherever the config puts it. It is no place of its own here, and an install that
+ * keeps it inside its agents' folder (`agents/shared/.credentials`, as the live box does) had its key files and tokens
+ * in the export with the packs, readable by whoever held the file.
  */
-function gather(place: Place, leftOut: HoldsCredential): Found {
+function gather(place: Place, leftOut: HoldsCredential, never: string): Found {
   const found: Found = { entries: [], files: 0, bytes: 0, links: 0, credentials: 0 };
   const take = (abs: string, name: string): void => {
     const stat = statFile(abs);
@@ -133,7 +140,8 @@ function gather(place: Place, leftOut: HoldsCredential): Found {
       const path = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory) {
         if (INSTALLED.has(entry.name) || (agentsOwn && entry.name === ".cli")) continue;
-        if (agentsOwn && leftOut(`${place.name}/${path}`)) found.credentials += 1;
+        if (resolve(join(dir, entry.name)) === never) found.credentials += 1;
+        else if (agentsOwn && leftOut(`${place.name}/${path}`)) found.credentials += 1;
         else walk(join(dir, entry.name), path);
       } else if (!entry.isFile) found.links += 1;
       else if (entry.name.endsWith(".tmp") || /\.bak\.\d+$/.test(entry.name)) continue;
@@ -149,7 +157,7 @@ function gather(place: Place, leftOut: HoldsCredential): Found {
 export function exportPlan(input: { config: GlobalConfig; configPath: string; dbPath: string; folders: boolean; credential: HoldsCredential }): { parts: ExportManifest["parts"]; database: number; folders: { files: number; bytes: number }; bytes: number } {
   const parts: ExportManifest["parts"] = {};
   for (const place of placesOf(input.config, input.configPath, true)) {
-    const found = gather(place, input.credential);
+    const found = gather(place, input.credential, credentialsOf(input.config));
     const was = parts[place.part] ?? { files: 0, bytes: 0 };
     parts[place.part] = { files: was.files + found.files, bytes: was.bytes + found.bytes };
   }
@@ -205,7 +213,7 @@ export async function writeExport(input: {
     };
     const entries: TarEntry[] = [{ name: "data/nouride.db", from: snapshot, size, mode: 0o600 }];
     for (const place of placesOf(input.config, input.configPath, input.folders)) {
-      const found = gather(place, input.credential);
+      const found = gather(place, input.credential, credentialsOf(input.config));
       entries.push(...found.entries);
       const was = manifest.parts[place.part] ?? { files: 0, bytes: 0 };
       manifest.parts[place.part] = { files: was.files + found.files, bytes: was.bytes + found.bytes };

@@ -168,6 +168,30 @@ const rows = <T>(path: string, sql: string): T[] => {
 };
 const beforeImport = (at: Install) => readdirSync(at.home).filter((name) => name.startsWith("before-import-"));
 
+describe("the credentials folder", () => {
+  // The live box keeps it inside its agents' folder, and its first export held an agent's ssh key, a service account's
+  // file and the tokens beside them, unsealed, among the packs.
+  test("is never in an export, wherever the config keeps it: not among the packs it lives beside", async () => {
+    const at = await install("keys", 18222);
+    const kept = join(at.home, "agents/shared/.credentials");
+    put(at.configPath, `[daemon]\nname = "keys"\ndata_dir = "${at.data}"\n\n[dashboard]\nport = 18222\n\n[security]\ncredentials_dir = "${kept}"\n`);
+    put(join(at.home, "agents/rex/config.toml"), 'id = "rex"\ndisplay_name = "Rex"\n');
+    put(join(at.home, "agents/shared/notes.md"), "what every agent may read\n");
+    put(join(kept, "id_ed25519_rex"), "an ssh key\n", 0o600);
+    put(join(kept, "google/tokens.json"), "{}\n", 0o600);
+    const file = join(dir, "keys.tar.gz");
+    const made = await cli(at, ["export", "--out", file, "--no-secrets"]);
+    expect(made.code).toBe(0);
+    const into = join(dir, "keys-opened");
+    await extractTarGz(file, into);
+    expect(existsSync(join(into, "agents/shared/notes.md"))).toBe(true);
+    expect(existsSync(join(into, "agents/rex/config.toml"))).toBe(true);
+    expect(existsSync(join(into, "agents/shared/.credentials"))).toBe(false);
+    // Counted among what was passed over, so the file says it left something out.
+    expect(JSON.parse(readFileSync(join(into, "manifest.json"), "utf8")).passed.credentials).toBe(1);
+  });
+});
+
 describe("nouride export", () => {
   test("says what the file will hold before it is made, and makes one a person's own tar opens: the manifest first, no secret unsealed, nothing of this machine's", async () => {
     const old = await oldMachine();
