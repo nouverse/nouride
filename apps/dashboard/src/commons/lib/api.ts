@@ -19,6 +19,7 @@ import type { HealthPayload, StatusPayload } from "@nouride/wire";
 export { ApiError } from "./api.client";
 import { setupApi } from "./api.setup";
 import { agentToolsApi } from "./api.agent-tools";
+import { transferApi } from "./api.transfer";
 import { externalAgentsApi } from "./api.external-agents";
 import { mcpCatalogApi } from "./api.mcp-catalog";
 import { mcpLibraryApi } from "./api.mcp-library";
@@ -54,6 +55,7 @@ export const api = {
 
   ...setupApi,
   ...agentToolsApi,
+  ...transferApi,
   ...externalAgentsApi,
   ...mcpCatalogApi,
   ...mcpLibraryApi,

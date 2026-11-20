@@ -387,6 +387,14 @@ apa-apa: permintaan itu tetap menunggu orang yang ditanya. Admin melihat dan men
 orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, dan perintah yang masih berjalan di
 latar belakang.
 
+**Export and import** (0.8.41, khusus admin) membawa semua isi Nouride ini ke mesin lain sebagai satu file, atau
+memasukkan file seperti itu ke sini. Halamannya bilang apa isi file sebelum dibuat; secret cuma ikut kalau dikunci
+dengan password yang kamu ketik, dan folder milik agent cuma kalau dicentang. File yang dimasukkan ditampilkan di
+samping isi yang ada sebelum ada yang diganti, meminta kata `replace` dan sepuluh detik, lalu menggantikan semuanya:
+gak ada yang digabung. Setelah itu halamannya dibuka dengan apa yang ikut dan apa yang gak, dan koneksi serta
+automation menunggu **Go live**.
+[Pindahkan Nouride ke mesin lain](/id/docs/deployment/move-to-another-machine/) berisi langkah-langkahnya.
+
 ## System
 
 Untuk yang mengurus box, **System** di menu berisi empat tab: System, Files, Update, dan Logs. Hanya admin yang punya;

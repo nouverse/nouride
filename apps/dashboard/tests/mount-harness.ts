@@ -147,6 +147,15 @@ export const RESPONSES: Record<string, unknown> = {
     truncated: false,
     masked: true,
   },
+  /**
+   * Hand-written: export and import. What the routes answer is this machine's own (the room on its disk, the size of
+   * its database as it stands), which no fixture written on another machine would hold.
+   */
+  "/transfer": { export: { state: "none" }, upload: null, imported: null, restarts: true, failed: null, staged: false, held: false },
+  "/transfer/plan": {
+    parts: { config: { files: 3, bytes: 4096 }, agents: { files: 12, bytes: 20_480 }, memory: { files: 40, bytes: 204_800 }, attachments: { files: 2, bytes: 1024 } },
+    database: 5 * 1024 * 1024, folders: { files: 310, bytes: 80 * 1024 * 1024 }, bytes: 5 * 1024 * 1024 + 230_400, secrets: 4, freeBytes: 20 * 1024 ** 3,
+  },
   "/update": {
     supported: true,
     install: { version: "0.7.9", edition: "basic", installDir: "/opt/nouride", supervisor: "systemd", compiled: true, platform: "linux", arch: "x64", musl: false },
@@ -514,6 +523,7 @@ export const PAGES: [name: string, path: string][] = [
   ["account", "/account"],
   ["box", "/box"],
   ["update", "/update"],
+  ["export and import", "/transfer"],
   // Where a first sign-in with a printed password lands; nothing redirects an admin away from it.
   ["welcome", "/welcome"],
   ["llm gateway", "/llm-gateway"],

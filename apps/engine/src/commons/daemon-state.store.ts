@@ -23,8 +23,11 @@ export const STATE_FILES = [
   "advisories",
 ] as const;
 
-/** A row's name: a state that was a file, where this install is (`boot/install-root.ts`), and the record of the move. */
-export type StateName = (typeof STATE_FILES)[number] | "install-root" | "files-moved" | "cli-newest" | "model-windows" | "cli-account-limits";
+/**
+ * A row's name: a state that was a file, where this install is (`boot/install-root.ts`), the record of the move, and
+ * what an import brought with whether it has gone live (`modules/transfer/held.ts`).
+ */
+export type StateName = (typeof STATE_FILES)[number] | "install-root" | "files-moved" | "cli-newest" | "model-windows" | "cli-account-limits" | "imported";
 
 /** What reads and writes the rows: the store, or a stand-in a test holds. */
 export interface StateRows {

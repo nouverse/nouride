@@ -80,6 +80,8 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   },
   db: { forms: { "": NONE, backup: NONE, list: NONE, verify: NONE, restore: NONE, adopt: NONE } },
   users: { forms: { "": NONE, reset: NONE } },
+  export: { forms: { "": ["--out <file>", "--folders", "--stdin", "--no-secrets"] } },
+  import: { forms: { "": ["--stdin"], "*": ["--stdin"] } },
   provider: {
     forms: {
       "": NONE,

@@ -373,6 +373,13 @@ waiting for whoever it was asked of. An admin sees and answers every one.
 commands and decisions. On **Logs**, anyone else has the two other tabs: what ran on a schedule, and the commands
 still running in the background.
 
+**Export and import** (0.8.41, an admin's) takes everything this Nouride holds to another machine as one file, or
+brings such a file in. The page says what the file will hold before it is made; the secrets go in only locked with a
+password you type, and the agents' own folders only when ticked. A file brought in is shown beside what is here
+before anything is replaced, asks for the word `replace` and ten seconds, and replaces everything: nothing is merged.
+Afterwards the page leads with what came and what did not, and the connections and automations wait for **Go live**.
+[Move Nouride to another machine](/en/docs/deployment/move-to-another-machine/) has the steps.
+
 ## System
 
 For whoever runs the box, **System** in the menu holds four tabs: System, Files, Update and Logs. Only an admin has

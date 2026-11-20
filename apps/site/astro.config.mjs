@@ -123,6 +123,7 @@ const sidebar = [
       { label: 'An Android phone as a server', slug: 'docs/deployment/android-server', translations: { id: 'HP Android Jadi Server' } },
       { label: 'Sign in with Nouverse', slug: 'docs/deployment/sign-in', translations: { id: 'Masuk dengan Nouverse' } },
       { label: 'Updating', slug: 'docs/deployment/updating', translations: { id: 'Memperbarui' } },
+      { label: 'Move to another machine', slug: 'docs/deployment/move-to-another-machine', translations: { id: 'Pindah ke Mesin Lain' } },
       { label: 'Upgrading to 0.8', slug: 'docs/deployment/upgrading-to-0-8', translations: { id: 'Upgrade ke 0.8' } },
     ],
   },

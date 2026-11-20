@@ -48,7 +48,7 @@ describe("the whole check refuses", () => {
 
   test("and passes it once it is added with its reason", async () => {
     const { cron, ...rest } = LINKS_AT_START;
-    const added = { "cron → missions": "planted: the reason cron needs missions" };
+    const added = { ...LINKS_ADDED, "cron → missions": "planted: the reason cron needs missions" };
     expect((await checkDomains(ROOT, { ...rest, cron: cron!.filter((to) => to !== "missions") }, added)).findings).toEqual([]);
   });
 });

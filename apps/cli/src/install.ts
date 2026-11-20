@@ -34,6 +34,9 @@ export interface Install {
   config: Local;
   db: Local;
   users: Local;
+  /** `nouride export` and `nouride import`: an install as one file, written and brought in (the engine's `cli/commands/export.ts` and `import.ts`). */
+  exportInstall: Local;
+  importInstall: Local;
   gatewayRename: Local;
   decryptSecrets: Local;
   restoreSecrets: Local;

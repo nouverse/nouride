@@ -1349,6 +1349,27 @@ It snapshots the database first, records a `users_reset` audit row, and names th
 With no account there is nothing to do, and it says so; with no database it fails, since the first start has not run.
 A bare `nouride users` is its help.
 
+### `nouride export`, `nouride import`
+
+An install taken to another machine as one file (since 0.8.41). Both are local, like `nouride db`: they work on the install's own folders.
+
+```bash
+nouride export --out nouride-export.tar.gz              # asks for a passphrase for the secrets, twice
+nouride export --out nouride-export.tar.gz --folders    # with the agents' own folders (private and shared)
+nouride export --out nouride-export.tar.gz --no-secrets # a file that holds no secret, said before it is made
+printf '%s\n' "$PASSPHRASE" | nouride export --out nouride-export.tar.gz --stdin
+nouride import nouride-export.tar.gz                    # the daemon must be stopped
+printf '%s\nreplace\n' "$PASSPHRASE" | nouride import nouride-export.tar.gz --stdin
+```
+
+`export` says what the file will hold and how large, then writes a `.tar.gz`: `manifest.json` first, `data/nouride.db` (a snapshot taken and verified as `nouride db backup` takes one), `config/`, `agents/`, `memory/`, `knowledge/`, `uploads/`, `notes/`, `attachments/`, and `secrets.sealed` when a passphrase was given (at least 12 characters).
+It runs beside a running daemon, refuses to write over a file that is there, and exits 2 when neither a passphrase nor `--no-secrets` was given and there is no terminal to ask on.
+Never in the file: a coding CLI's sign-ins, the snapshots, logs kept as files, installed tools and caches, a chat app's own session, the control token and the store's key. In the agents' folders, links and files that hold a sign-in or a key are passed over, and the manifest counts them.
+
+`import` refuses while a daemon runs on this data directory. It unpacks and checks the file first, and refuses with nothing changed: a file that is not an export or is cut short, a database that does not check out, a file from a newer Nouride ("Update Nouride first"), a passphrase that does not open the secrets, and the word `replace` not typed.
+It then replaces everything: each thing the install holds is moved into `before-import-<stamp>/` beside the data folder and the export's is moved in. A step that fails moves it all back. The config keeps this machine's own places (`data_dir`, `agents_dir`, `workspace_dir`, `backup_dir`, `[memory] dir`, the dashboard's host and port), and the secrets are stored under this machine's key. A file with no secrets leaves the store empty.
+In the database it brought: migrated as at an update, every dashboard session deleted and every device token revoked, each mission that was running or queued paused, and a mark that holds the install back. Until **Go live** on the dashboard's Export and import page, the daemon makes no connection to a chat app and runs no automation.
+
 ### `nouride logs`
 
 ```bash

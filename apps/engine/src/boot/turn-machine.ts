@@ -19,6 +19,7 @@ import { Notifier } from "@/commons/notify.ts";
 import type { BoxBusy } from "@/commons/box-load.ts";
 import type { Machine } from "@/commons/machine.ts";
 import { buildScheduler } from "./scheduler.ts";
+import { heldBack } from "@/modules/transfer/held.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
 import { routePresses } from "@/modules/gateways/presses.ts";
@@ -224,7 +225,7 @@ export function buildTurnParts(
 /** What the machine reads of the stores. */
 type MachineStores = Pick<
   Stores,
-  | "db" | "secrets" | "accounts" | "cron" | "watch" | "jobWakes" | "providers" | "sessions" | "turns" | "durable" | "chatEvents" | "rooms"
+  | "db" | "state" | "secrets" | "accounts" | "cron" | "watch" | "jobWakes" | "providers" | "sessions" | "turns" | "durable" | "chatEvents" | "rooms"
   | "roomMessages" | "grants" | "toolGrants" | "attachments" | "attachmentIndex" | "access" | "jobs" | "spill" | "notes"
   | "usage" | "autoApprove" | "childEnv" | "heldSecrets" | "ownSecrets" | "audit" | "credentialsDir"
 >;
@@ -372,7 +373,7 @@ export async function buildTurnMachine(
   // Constructed here and started much later. It needs the pipeline (to run turns) and the tool
   // registry needs it (so a job can be forced to run), which is a cycle only if construction and
   // starting are the same act. They are not: building it touches nothing.
-  const { scheduler, stepAsks } = buildScheduler({ cron: stores.cron, watch: stores.watch, config: () => ctx.config, notifier: parts.notifier, pipeline, missions, audit });
+  const { scheduler, stepAsks } = buildScheduler({ cron: stores.cron, watch: stores.watch, config: () => ctx.config, notifier: parts.notifier, pipeline, missions, audit, held: () => heldBack(stores.state) });
 
   // Built after the pipeline and handed back to it: `session_status` needs live session facts
   // while the pipeline needs the tool map. See `boot/tools.ts`.

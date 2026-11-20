@@ -5,6 +5,7 @@
  */
 
 import { HeadlineField } from "@/commons/components/ui/HeadlineField";
+import { SetupImport } from "@/commons/components/transfer/SetupImport";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, Loader2, Sparkles } from "lucide-react";
@@ -72,6 +73,8 @@ export default function SetupPage() {
         </div>
 
         {step === 1 ? <ProviderStep /> : step === 2 ? <AgentStep /> : <MemoryStep />}
+        {/* For a new install that is a move: the other machine's file, in place of every step here. */}
+        {step === 1 ? <SetupImport /> : null}
       </div>
     </div>
   );

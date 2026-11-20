@@ -37,6 +37,8 @@ import { restoreSecrets } from "@/cli/commands/secret-restore.ts";
 import { service } from "@/cli/commands/service.ts";
 import { runShared, tools } from "@/cli/commands/tools.ts";
 import { users } from "@/cli/commands/users.ts";
+import { exportInstall } from "@/cli/commands/export.ts";
+import { importInstall } from "@/cli/commands/import.ts";
 import { daemonPlace } from "@/cli/connect.ts";
 import { loadConfig } from "@/cli/load-config.ts";
 import { describeStop, stopDaemon } from "@/cli/stop.ts";
@@ -78,6 +80,8 @@ async function start(): Promise<void> {
   // The install's own `.env`, for the daemon only — the binary no longer reads one from wherever it runs
   // (`config/global/dotenv.ts`). Before the config is read, which it may point somewhere.
   loadInstallEnv(executableRoot());
+  // An import asked for from the dashboard goes in now, before the daemon reads the config it replaces (`boot/staged-import.ts`).
+  await (await import("@/boot/staged-import.ts")).applyStagedImport();
   // Imported lazily so `nouride chat` does not open the database or bind a port. `index.ts`
   // guards its own auto-boot with `import.meta.main`, so this import does not start anything.
   const { runDaemon } = await import("@/index.ts");
@@ -106,6 +110,8 @@ await runCli({
   config: configCmd,
   db,
   users,
+  exportInstall,
+  importInstall,
   gatewayRename,
   decryptSecrets,
   restoreSecrets,

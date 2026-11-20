@@ -72,6 +72,7 @@ import { registerMcpServerRoutes } from "./routes/mcp-server.ts";
 import { registerLlmGatewayRoutes } from "./routes/llm-gateway.ts";
 import { registerAgentRoutes } from "./routes/agents.ts";
 import { registerAgentDeleteRoutes } from "./routes/agent-delete.ts";
+import { registerTransferRoutes } from "./routes/transfer.ts";
 import { registerAgentToolRoutes } from "./routes/agent-tools.ts";
 import { registerExternalAgentRoutes } from "./routes/external-agents.ts";
 import { registerUpdateRoutes } from "./routes/update.ts";
@@ -168,6 +169,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerMcpServerRoutes(control, deps);
   // Before the agent module: its `/agents/:id/:action` would take `tools` and `default` as actions.
   registerAgentDeleteRoutes(control, deps);
+  registerTransferRoutes(control, deps);
   registerAgentToolRoutes(control, deps);
   registerExternalAgentRoutes(control, deps);
   registerAgentRoutes(control, deps);

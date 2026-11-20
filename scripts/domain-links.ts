@@ -44,4 +44,10 @@ export const LINKS_AT_START: Readonly<Record<string, readonly string[]>> = {
 };
 
 /** Links added since the rule began, `"from → to"`, each with the reason `from` needs `to`. */
-export const LINKS_ADDED: Readonly<Record<string, string>> = {};
+export const LINKS_ADDED: Readonly<Record<string, string>> = {
+  "transfer → config": "an import writes the export's config with this machine's own places, through the config's own text edits",
+  "transfer → memory": "an export holds the documents, and asks memory where they are kept",
+  "transfer → missions": "an import pauses the missions that were at work, through the missions' own store",
+  "transfer → people": "an export holds the people's files, and asks people where they are kept",
+  "web → transfer": "the control routes of the Export and import page are the transfer service's",
+};

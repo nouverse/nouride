@@ -104,6 +104,14 @@ ${BOLD}Without a running daemon${RESET} ${DIM}(these read the install's own file
   nouride users reset              Remove every dashboard account, so the next start creates a new admin
                                    and prints its password (for a lost first password). Snapshots the database
                                    first. Daemon must be stopped.
+  nouride export --out <file> [--folders] [--stdin | --no-secrets]
+                                   This install as one file, to take it to another machine: the database,
+                                   the config and people, the agents, the memory, the documents, and the
+                                   secrets sealed to a passphrase (asked for; --stdin reads it). --folders
+                                   adds the agents' own folders. Works whether Nouride runs or not.
+  nouride import <file> [--stdin]  Replace everything this install holds with an export, after the word
+                                   "replace" is typed; what was here is kept in a folder beside it. Then
+                                   connections and automations wait for Go live. Daemon must be stopped.
   nouride gateway rename <old> <new> [--apply]   Rename an instance. Daemon must be stopped.
   nouride config check [file]      Validate a config without starting anything
   nouride config schema [section]  Every valid config key, as JSON Schema

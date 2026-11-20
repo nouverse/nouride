@@ -33,6 +33,8 @@ export function buildScheduler(params: {
     watch(watcher: (mission: Mission) => void): void;
   };
   audit?: AuditPort;
+  /** Whether the install was imported and has not gone live: the scheduler then runs nothing (`CronSchedulerOptions.held`). */
+  held?: () => boolean;
 }): { scheduler: CronScheduler; stepAsks: StepAsks } {
   const { pipeline, missions } = params;
   // A step that waits for a person: its card where the job reports, and a press on it. The run is the scheduler's.
@@ -51,6 +53,7 @@ export function buildScheduler(params: {
     store: params.cron,
     config: params.config().cron,
     watch: params.watch,
+    ...(params.held ? { held: params.held } : {}),
     // Read at each use: the hours are changed from the dashboard and apply to the next thing said.
     quiet: new Quiet({ hours: () => params.config().cron.quietHours, timeZone: () => params.config().daemon.timezone, now: Date.now }),
     // A `mission` job's run starts a mission, and a step that is one waits for it; the rest run through the pipeline.
