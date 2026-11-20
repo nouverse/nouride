@@ -289,7 +289,8 @@ export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | 
     case "paused":
       return `Paused by ${mission.pausedBy ?? "someone"}. Its work so far is kept, and the time it is paused is not counted. Resume lets it go on from its checklist, whenever you like.`;
     case "retry":
-      return `Its model could not answer${about ? `: ${about}` : ""}. ${triesAgain(mission.retryAt, now)} Continue tries now.`;
+      // The reason is a sentence of its own more often than not ("… The operator has been told."): its own stop is kept.
+      return `Its model could not answer${about ? `: ${about.replace(/[.!?]+$/, "")}` : ""}. ${triesAgain(mission.retryAt, now)} Continue tries now.`;
     default:
       return about || "It waits for a person.";
   }

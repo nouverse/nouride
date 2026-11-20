@@ -123,7 +123,8 @@ export function whenTip(mission: MissionView): string {
 export function dayBeside(mission: MissionView, now: number = Date.now()): string {
   const column = columnOf(mission);
   if (column === "backlog") return dayOf(mission.createdAt, now);
-  if (column === "working") return `since ${dayOf(mission.startedAt ?? mission.createdAt, now)}`;
+  // Held up, its line says since when it is: the day of that, not the day work began.
+  if (column === "working") return isHeldUp(mission) ? dayOf(mission.updatedAt, now) : `since ${dayOf(mission.startedAt ?? mission.createdAt, now)}`;
   if (column === "needs") return dayOf(mission.updatedAt, now);
   return dayOf(mission.endedAt ?? mission.updatedAt, now);
 }

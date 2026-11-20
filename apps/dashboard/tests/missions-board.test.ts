@@ -47,6 +47,9 @@ describe("one held up because its model could not answer", () => {
     expect(cardLine(HELD, NOW)).toEqual({ label: "Held up", text: "Its model could not answer. It tries again by itself in 47 min, then an hour apart at most, for about a day." });
     expect(timeLine(HELD, NOW)).toBe("held up 13 min ago");
     expect(whenLines(HELD).at(-1)).toEqual({ label: "Held up since", at: NOW - 13 * 60_000 });
+    // Beside "held up 13 min ago" stands the day of that, where one at work has the day its work began.
+    expect(dayBeside(m({ ...HELD, startedAt: NOW - 9 * 86_400_000 }), NOW)).toBe(dayBeside(m({ status: "waiting", seen: "needs_you", waitKind: "input", updatedAt: NOW - 13 * 60_000 }), NOW));
+    expect(dayBeside(m({ startedAt: NOW - 9 * 86_400_000 }), NOW)).toStartWith("since ");
   });
 });
 

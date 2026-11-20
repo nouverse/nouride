@@ -113,6 +113,8 @@ describe("what a person can say to it now", () => {
     expect(triesAgain(at - 5_000, at)).toBe("It tries again by itself in less than a minute, then an hour apart at most, for about a day.");
     // A daemon that says no time: the rhythm alone.
     expect(needsYouSaid(waiting("retry", { reason: "usage limit reached" }), at)).toBe("Its model could not answer: usage limit reached. It tries again by itself, an hour apart at most, for about a day. Continue tries now.");
+    // A reason that ends its own sentence is not given a second stop ("… has been told.. It tries").
+    expect(needsYouSaid(waiting("retry", { reason: "My credentials are not working. The operator has been told." }), at)).toBe("Its model could not answer: My credentials are not working. The operator has been told. It tries again by itself, an hour apart at most, for about a day. Continue tries now.");
     expect(rowLine(waiting("retry", { reason: "usage limit reached" }))?.label).toBe("Held up");
     expect(isHeldUp(waiting("retry"))).toBe(true);
     expect(isHeldUp(waiting("paused"))).toBe(false);
