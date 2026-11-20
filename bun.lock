@@ -56,7 +56,7 @@
     },
     "apps/engine": {
       "name": "@nouride/engine",
-      "version": "0.8.40",
+      "version": "0.8.41",
       "bin": {
         "nouride": "./src/cli/main.ts",
       },
