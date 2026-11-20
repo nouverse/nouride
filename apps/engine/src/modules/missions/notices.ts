@@ -10,6 +10,7 @@ import type { MissionWaitKind } from "@nouride/wire";
 import { clip, plural } from "@nouride/shared";
 import { worktreeBranch } from "./worktree.ts";
 import type { KeptPlan } from "@/modules/notes/store.ts";
+import { retryRhythm } from "./decide.ts";
 import { shortId } from "./page.ts";
 import type { Mission } from "./types.ts";
 
@@ -94,7 +95,7 @@ export function needsYouNotice(mission: Pick<Mission, "id" | "title" | "checks" 
     case "retry":
       // Said once, when it is held up: each try after is quiet, and only its going on again or a person's turn is told.
       // "Paused" is not its word: that is a mission someone paused, which does nothing until someone says to go on.
-      return `⏳ ${name} is held up because its model could not answer: ${clip(detail.trim(), 400)}${GAP}It tries again by itself, further apart each time, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
+      return `⏳ ${name} is held up because its model could not answer: ${clip(detail.trim(), 400)}${GAP}It tries again by itself, ${retryRhythm()}, for about a day. /mission continue ${id} to try now, /mission stop ${id} to end it.`;
     case "paused":
       // `detail` says who paused it ("paused by Sam"). What it keeps is said, since a stop keeps none of it going.
       return `⏸ ${name} is ${detail}. Its work so far and its folder are kept, and the time it is paused is not counted.${GAP}/mission continue ${id} goes on from its checklist, whenever you like · /mission stop ${id} ends it.`;

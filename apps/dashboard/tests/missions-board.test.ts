@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import type { MissionView, NotesPlanStep } from "@nouride/wire";
 import { stepsShown } from "@/modules/missions/components/Checklist";
-import { barFill, cardLine, columnOf, dayBeside, doneWhen, FINISHED_SPAN, FINISHED_SPANS, fromLink, phoneOpening, SHOWN, STAGES, timeLine, whenLines, whenTip } from "@/modules/missions/lib/board";
+import { badgeOf, barFill, cardLine, columnOf, dayBeside, doneWhen, FINISHED_SPAN, FINISHED_SPANS, fromLink, phoneOpening, SHOWN, STAGES, timeLine, whenLines, whenTip } from "@/modules/missions/lib/board";
 
 const NOW = 1_800_000_000_000;
 const base = { status: "running", seen: "working", waitKind: null, startedAt: 1, changeable: true, answers: [], checks: [], accept: false, reviewOn: false, reason: null, report: null, createdAt: NOW - 60_000, updatedAt: NOW - 60_000, endedAt: null, checklist: null, person: undefined } as unknown as MissionView;
@@ -28,6 +28,25 @@ describe("the column", () => {
 
   test("one waiting for someone else is at work as the reader sees it", () => {
     expect(columnOf(m({ status: "waiting", seen: "needs_you", waitKind: "input", changeable: false }))).toBe("working");
+  });
+});
+
+describe("one held up because its model could not answer", () => {
+  // The owner, of a mission at its plan's limit under "Needs you" with Continue beside it: could it not try
+  // again by itself every hour? It did, and nothing on its card or its page said when.
+  const HELD = m({ status: "waiting", seen: "needs_you", waitKind: "retry", reason: "usage limit reached", updatedAt: NOW - 13 * 60_000, retryAt: NOW + 47 * 60_000 });
+
+  test("is at work as the reader sees it, never in Needs you", () => {
+    expect(columnOf(HELD)).toBe("working");
+    // Running, the same wait kind left on its record means nothing: only one that waits is held up.
+    expect(badgeOf(m({ waitKind: "retry" }))).toBe("Working");
+  });
+
+  test("its card says held up, and when it tries again", () => {
+    expect(badgeOf(HELD)).toBe("Held up");
+    expect(cardLine(HELD, NOW)).toEqual({ label: "Held up", text: "Its model could not answer. It tries again by itself in 47 min, then an hour apart at most, for about a day." });
+    expect(timeLine(HELD, NOW)).toBe("held up 13 min ago");
+    expect(whenLines(HELD).at(-1)).toEqual({ label: "Held up since", at: NOW - 13 * 60_000 });
   });
 });
 

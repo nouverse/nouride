@@ -77,6 +77,8 @@ export interface MissionView {
   waitKind: MissionWaitKind | null;
   /** What it waits for, or why it ended. */
   reason: string | null;
+  /** When it tries its model again by itself, while it is held up because its model could not answer. Absent otherwise, and from a daemon before the field. */
+  retryAt?: number;
   /** Who paused it, while it is paused: a person's name, or "agent <id>". Absent otherwise. */
   pausedBy?: string;
   report: string | null;

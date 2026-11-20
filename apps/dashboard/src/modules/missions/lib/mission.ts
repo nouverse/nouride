@@ -7,6 +7,7 @@
 
 import type { ChatTurn, MissionSeen, MissionView, MissionWaitKind } from "@nouride/wire";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
+import { inTime } from "@/commons/lib/format";
 import { systemHeading } from "@/commons/lib/turn-display";
 
 /** What a person sees, in their words. */
@@ -60,6 +61,15 @@ export function isPaused(mission: Pick<MissionView, "status" | "waitKind">): boo
   return mission.status === "waiting" && mission.waitKind === "paused";
 }
 
+/**
+ * Held up: its model could not answer (a plan's limit, a provider down), and it tries again by itself. Nothing is the
+ * reader's to do, so it is not "Needs you" anywhere: a person shown one there, with Continue beside it, took the going
+ * on for theirs to press and asked whether it ever tried again by itself.
+ */
+export function isHeldUp(mission: Pick<MissionView, "status" | "waitKind">): boolean {
+  return mission.status === "waiting" && mission.waitKind === "retry";
+}
+
 /** A draft's tone, the Backlog's own: it waits to be started, which is no call on anybody. */
 const DRAFT_TONE = "bg-secondary/12 text-secondary border-secondary/25";
 
@@ -81,6 +91,7 @@ export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind"
   if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
   if (isDraft(mission)) return "Draft";
   if (isPaused(mission)) return "Paused";
+  if (isHeldUp(mission)) return "Held up · tries again by itself";
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
   if (mission.status === "queued") return `${SEEN_LABEL.working} · queued`;
@@ -240,7 +251,7 @@ export function anyOpen(missions: readonly Pick<MissionView, "seen">[]): boolean
  */
 export function rowLine(mission: MissionView): { label: string; text: string } | null {
   if (waitsElsewhere(mission)) return { label: "Waiting", text: `Only ${mission.person?.name ?? "an admin"} can answer what it waits for.` };
-  if (mission.seen === "needs_you") return { label: "Needs you", text: needsYouSaid(mission) };
+  if (mission.seen === "needs_you") return { label: isHeldUp(mission) ? "Held up" : "Needs you", text: needsYouSaid(mission) };
   if (mission.seen === "working") {
     if (mission.status === "queued") return { label: "Queued", text: mission.reason ?? "waits for a free slot" };
     if (mission.status === "checking") return { label: "Now", text: "running its checks" };
@@ -259,7 +270,7 @@ export function rowLine(mission: MissionView): { label: string; text: string } |
  * engine), with the page's buttons where the chat names commands. `reason` is what the wait is about: the question,
  * the limit, the calls parked, the report.
  */
-export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | "startedAt" | "byAgent" | "agentId" | "checks" | "pausedBy">): string {
+export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | "startedAt" | "byAgent" | "agentId" | "checks" | "pausedBy" | "retryAt">, now: number = Date.now()): string {
   const about = mission.reason?.trim() ?? "";
   switch (mission.waitKind) {
     case "input":
@@ -278,10 +289,21 @@ export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | 
     case "paused":
       return `Paused by ${mission.pausedBy ?? "someone"}. Its work so far is kept, and the time it is paused is not counted. Resume lets it go on from its checklist, whenever you like.`;
     case "retry":
-      return `Its model could not answer${about ? `: ${about}` : ""}. It tries again by itself, further apart each time, for about a day. Continue tries now.`;
+      return `Its model could not answer${about ? `: ${about}` : ""}. ${triesAgain(mission.retryAt, now)} Continue tries now.`;
     default:
       return about || "It waits for a person.";
   }
+}
+
+/**
+ * When a held-up mission tries again, as its page and card say it: the next try by the clock the daemon keeps, and how
+ * it goes on after. "Further apart each time" named no moment, and a person could not tell a mission that would try in
+ * ten minutes from one that had given up. A daemon that says no time gets the rhythm alone.
+ */
+export function triesAgain(retryAt: number | undefined, now: number = Date.now()): string {
+  const rhythm = "an hour apart at most, for about a day";
+  if (retryAt === undefined) return `It tries again by itself, ${rhythm}.`;
+  return `It tries again by itself ${inTime(retryAt, now)}, then ${rhythm}.`;
 }
 
 /** A result file as people read it: where it is in the mission's folder, not the whole path. */

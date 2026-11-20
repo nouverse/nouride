@@ -143,6 +143,39 @@ test("a paused one says so under its own word, with who paused it, and offers Re
   expect(sent).toEqual([{ path: "/missions/msn_1/continue", body: {} }]);
 });
 
+test("one held up for its model says so under its own word, with when it tries again, and is not Needs you on the board", async () => {
+  const shown = WIRE["/missions/msn_1"] as { mission: Record<string, unknown> };
+  const listed = WIRE["/missions"] as { missions: Record<string, unknown>[] };
+  const held = { status: "waiting", seen: "needs_you", waitKind: "retry", reason: "usage limit reached", retryAt: Date.now() + 43 * 60_000 + 20_000 };
+  answer({
+    "/missions/msn_1": { status: 200, body: { ...shown, mission: { ...shown.mission, ...held } } },
+    "/missions": { status: 200, body: { ...listed, missions: [{ ...listed.missions[0]!, ...held }, ...listed.missions.slice(1)] } },
+  });
+  const page = { said: "", badge: "", offered: [] as string[] };
+  await renderPage("/missions/msn_1", async (host) => {
+    await eventually(() => buttons(host).includes("Continue"), 2_000, "Continue");
+    page.said = host.querySelector('[role="status"].alert')?.textContent ?? "";
+    page.offered = buttons(host).filter((label) => ["Pause", "Resume", "Stop", "Accept as it is", "Continue", "Answer"].includes(label));
+  });
+  expect(page.said).toBe("Held upIts model could not answer: usage limit reached. It tries again by itself in 43 min, then an hour apart at most, for about a day. Continue tries now.");
+  expect(page.said).not.toContain("Needs you");
+  expect(page.offered).toEqual(["Continue", "Accept as it is", "Stop"]);
+
+  const card = { column: "", badge: "", tone: "", line: "" };
+  await renderPage("/missions", async (host) => {
+    const one = () => host.querySelector<HTMLElement>('[data-mission="msn_1"]');
+    await eventually(() => one() !== null, 3_000, "its card");
+    card.column = one()!.getAttribute("data-column") ?? "";
+    card.badge = one()!.querySelector("[data-badge]")?.textContent?.trim() ?? "";
+    card.tone = one()!.querySelector("[data-badge]")?.className ?? "";
+    card.line = one()!.querySelector("[data-line]")?.textContent?.trim() ?? "";
+  });
+  expect(card.column).toBe("working");
+  expect(card.badge).toBe("Held up");
+  expect(card.tone).toContain("text-warning");
+  expect(card.line).toContain("It tries again by itself in 43 min");
+});
+
 test("on the board a paused one stands in Needs you under a Paused tag, with Resume on its card", async () => {
   const listed = WIRE["/missions"] as { missions: Record<string, unknown>[] };
   const paused = { ...listed.missions[0]!, status: "waiting", seen: "needs_you", waitKind: "paused", reason: "paused by agent nouva", pausedBy: "agent nouva" };

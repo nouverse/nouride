@@ -201,6 +201,36 @@ export function retryAfter(attempt: number): number {
 }
 
 /**
+ * When a mission held up for its model tries again by itself, on its `attempt`-th try: what the minute's check goes by
+ * and what its page says, one rule for both. Null while it waits for nothing of the kind.
+ */
+export function retryAt(mission: Pick<Mission, "status" | "waitKind" | "waitingSince" | "updatedAt">, attempt: number): number | null {
+  if (mission.status !== "waiting" || mission.waitKind !== "retry") return null;
+  return (mission.waitingSince ?? mission.updatedAt) + retryAfter(attempt);
+}
+
+/**
+ * Its failed turns in a row, this one counted. A turn that failed after getting something done is its model answering
+ * and then stopping: held up anew, so it is said again and tried again from the shortest wait. msn_30d10c worked two
+ * hours between two limits of its plan: the second was the fourth failure "in a row", told to nobody, its first try
+ * an hour off.
+ */
+export function failuresAfter(before: number, outcome: { failed: boolean; worked: number }): number {
+  if (!outcome.failed) return 0;
+  return outcome.worked > 0 ? 1 : before + 1;
+}
+
+/**
+ * When a mission held up for its model tries again, in words a person is told once (`RETRY_AFTER_MS`, its last
+ * repeated): "after 2, 10 and 30 minutes, then every hour". Made from the numbers, so the words cannot say another
+ * rhythm than the one kept. "Further apart each time" left a person asking whether it tried again at all.
+ */
+export function retryRhythm(): string {
+  const minutes = RETRY_AFTER_MS.slice(0, -1).map((ms) => ms / 60_000);
+  return `after ${minutes.slice(0, -1).join(", ")} and ${minutes.at(-1)} minutes, then every hour`;
+}
+
+/**
  * What a mission is told once it has waited an hour for a job: which one, and the way on where it is one that never
  * ends. Said to its model, so the words carry the rule: stop it, start it again as a service, carry on.
  */

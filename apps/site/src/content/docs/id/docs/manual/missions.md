@@ -241,6 +241,11 @@ setelah 2, 10 dan 30 menit, lalu tiap jam, selama kira-kira sehari. Kamu diberi 
 waktu ia jalan lagi; waktu menunggunya gak dihitung ke batas jamnya. **Retry now** mencoba saat itu juga, **Stop**
 mengakhirinya. Setelah sehari, misinya bertanya ke kamu.
 
+Selama tertahan gak ada yang diminta dari kamu, jadi ia gak ada di Needs you: di board ia tetap di **Working** dengan
+tanda **Held up**, dan kartu serta halamannya bilang kapan percobaan berikutnya ("It tries again by itself in 43 min").
+Misi yang sempat bekerja lagi setelah satu percobaan lalu tertahan lagi, seperti misi di paket yang punya batas tiap
+beberapa jam, memberi tahu kamu lagi dan mulai lagi dari 2 menit.
+
 ## Mem-pause misi
 
 Misi yang sedang jalan atau masih antre bisa di-pause (0.8.41): **Pause** di halamannya, `/mission pause <id>` di

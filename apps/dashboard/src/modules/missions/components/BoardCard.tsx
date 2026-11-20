@@ -18,7 +18,7 @@ import { cn } from "@/commons/lib/utils";
 import { Lit } from "@/commons/components/ui/Lit";
 import { ENTER, type Motion } from "@/commons/hooks/use-motion-list";
 import { useMissionAct } from "../hooks/use-mission-act";
-import { actionsFor } from "../lib/mission";
+import { actionsFor, isHeldUp } from "../lib/mission";
 import { badgeOf, barFill, cardLine, columnOf, outcomeOf } from "../lib/board";
 import { WhenLine } from "./WhenLine";
 
@@ -28,7 +28,8 @@ function badgeTone(mission: MissionView): string {
   if (column === "backlog") return "bg-secondary/12 text-secondary";
   // A paused one is as quiet as a stopped one: nothing calls on the reader until they want it to go on.
   if (column === "needs") return mission.waitKind === "paused" ? "bg-base-content/[0.07] text-base-content/70" : "bg-warning/15 text-warning";
-  if (column === "working") return "bg-primary/12 text-primary";
+  // Held up for its model is a state, not work going on: the warning's tone, as its page's badge has.
+  if (column === "working") return isHeldUp(mission) ? "bg-warning/15 text-warning" : "bg-primary/12 text-primary";
   return { done: "bg-success/12 text-success", failed: "bg-failed/15 text-failed", stopped: "bg-base-content/[0.07] text-base-content/70" }[outcomeOf(mission)];
 }
 

@@ -11,7 +11,7 @@ import { stepNow } from "@/commons/lib/steps";
 import { badgeOf, cardLine, columnOf, timeLine, whenLines } from "@/modules/missions/lib/board";
 import { waitingLine, waitsForReader } from "@/commons/lib/mission-waits";
 import { missionName } from "@/commons/lib/mission-name";
-import { actionsFor, briefShown, inFolder, isPaused, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, whyStarted } from "@/modules/missions/lib/mission";
+import { actionsFor, briefShown, inFolder, isHeldUp, isPaused, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, triesAgain, whyStarted } from "@/modules/missions/lib/mission";
 import { ownPicture } from "@/modules/missions/components/MissionResult";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
@@ -105,8 +105,18 @@ describe("what a person can say to it now", () => {
     for (const kind of ["limit", "stuck", "unknown_outcome", "retry"] as const) expect(actionsFor(waiting(kind))).toEqual(["continue", "acceptAsIs", "stop"]);
     // Held up for its model (0.8.7): said as what it is, and that it tries again by itself. Never "paused", which is a
     // mission someone paused.
-    expect(seenAs(waiting("retry"))).toBe("Needs you · retrying");
-    expect(needsYouSaid(waiting("retry", { reason: "usage limit reached" }))).toBe("Its model could not answer: usage limit reached. It tries again by itself, further apart each time, for about a day. Continue tries now.");
+    // Nor "Needs you": it tries again by itself, and a person shown one there took the going on for theirs to press.
+    expect(seenAs(waiting("retry"))).toBe("Held up · tries again by itself");
+    // When, by the time the daemon says: a mission that tries in ten minutes read the same as one that had given up.
+    const at = 1_800_000_000_000;
+    expect(needsYouSaid(waiting("retry", { reason: "usage limit reached", retryAt: at + 43 * 60_000 }), at)).toBe("Its model could not answer: usage limit reached. It tries again by itself in 43 min, then an hour apart at most, for about a day. Continue tries now.");
+    expect(triesAgain(at - 5_000, at)).toBe("It tries again by itself in less than a minute, then an hour apart at most, for about a day.");
+    // A daemon that says no time: the rhythm alone.
+    expect(needsYouSaid(waiting("retry", { reason: "usage limit reached" }), at)).toBe("Its model could not answer: usage limit reached. It tries again by itself, an hour apart at most, for about a day. Continue tries now.");
+    expect(rowLine(waiting("retry", { reason: "usage limit reached" }))?.label).toBe("Held up");
+    expect(isHeldUp(waiting("retry"))).toBe(true);
+    expect(isHeldUp(waiting("paused"))).toBe(false);
+    expect(isHeldUp({ ...MISSION, waitKind: "retry" })).toBe(false);
     // Parked approvals are answered on their own cards; continuing past them is not offered — accepting it as it is is.
     expect(actionsFor(waiting("approval"))).toEqual(["acceptAsIs", "stop"]);
     // Ended, the one thing left is deleting it (0.8.13); open, there is no Delete — the daemon refuses one still open.

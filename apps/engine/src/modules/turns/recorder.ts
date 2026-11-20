@@ -102,6 +102,11 @@ export class TurnRecorder {
   private lastFlush = 0;
   /** The held text's write, when the interval is up. */
   private tail: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * Calls that ended without failing, `plan` aside, counted as they are recorded: what a turn that threw had got done
+   * by then. Its result is where a turn that ended says so, and a turn that threw has none.
+   */
+  worked = 0;
 
   private constructor(
     private readonly store: TurnsPort,
@@ -128,6 +133,7 @@ export class TurnRecorder {
   /** `detail` is kept with the step — a call's id, why a model call was asked again — and not shown live. */
   step(kind: ActivityKind, text: string, detail?: Record<string, unknown>): void {
     const mapped = STEP_KINDS[kind];
+    if (kind === "tool_done" && detail?.error !== true && detail?.name !== "plan") this.worked += 1;
     try {
       // `thinking` is no step: said to whoever watches now (the stream's `thinking` frame), and kept nowhere.
       if (!mapped) return this.store.pulse(this.id, text);

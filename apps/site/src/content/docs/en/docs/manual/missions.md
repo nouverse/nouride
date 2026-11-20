@@ -224,6 +224,11 @@ and 30 minutes, then every hour, for about a day. You are told once when it is h
 it waits is not counted against its hours. **Retry now** tries at once, **Stop** ends it. After a day of it, the mission
 asks you.
 
+Nothing is asked of you while it is held up, so it is not under Needs you: on the board it stays in **Working** under
+a **Held up** tag, and its card and its page say when the next try is ("It tries again by itself in 43 min"). A mission
+that worked on after a try and is then held up again, as one on a plan with a limit every few hours is, tells you
+again and starts from the 2 minutes.
+
 ## Pausing one
 
 A mission that is running or waiting in the queue can be paused (0.8.41): **Pause** on its page, `/mission pause <id>`

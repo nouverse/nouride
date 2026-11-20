@@ -64,6 +64,8 @@ function line(mission: Mission): string {
 
 function state(mission: Mission): string {
   if (mission.status === "waiting" && mission.waitKind === "paused") return "paused";
+  // Held up for its model: it tries again by itself, and nothing is asked of anybody.
+  if (mission.status === "waiting" && mission.waitKind === "retry") return "held up, tries again by itself";
   return seenAs(mission.status) === "needs_you" ? `needs you (${mission.waitKind ?? "?"})` : mission.status;
 }
 

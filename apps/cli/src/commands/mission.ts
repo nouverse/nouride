@@ -89,7 +89,7 @@ export async function mission(client: Client, args: string[]): Promise<void> {
   const shown = all ? ended : ended.slice(0, RECENT_ENDED);
   if (open.length === 0) say(`${DIM}nothing running${RESET}`);
   for (const m of [...open, ...shown]) {
-    const mark = m.seen === "needs_you" ? `${YELLOW}✋${RESET}` : m.seen === "working" ? `${YELLOW}●${RESET}` : m.seen === "done" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+    const mark = m.status === "waiting" && m.waitKind === "retry" ? `${YELLOW}⏳${RESET}` : m.seen === "needs_you" ? `${YELLOW}✋${RESET}` : m.seen === "working" ? `${YELLOW}●${RESET}` : m.seen === "done" ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
     // Its name; a daemon whose missions have none still says its goal's start.
     say(`${mark} ${BOLD}${m.title ?? clip(m.goal, 90)}${RESET}`);
     say(`    ${DIM}${m.id} · ${m.agentId} · ${statusOf(m)} · turn ${m.turnsUsed}${m.shown?.turns === false ? "" : `/${m.limits.turns}`}${RESET}`);
@@ -110,6 +110,8 @@ function reviewingLine(reviewing: { pass: number; of: number; since: number }, n
 
 function statusOf(m: { status: string; waitKind: string | null }): string {
   if (m.status === "waiting" && m.waitKind === "paused") return "paused";
+  // Held up for its model: it tries again by itself, and nothing is asked of anybody.
+  if (m.status === "waiting" && m.waitKind === "retry") return "held up, tries again by itself";
   return m.status === "waiting" ? `needs you (${m.waitKind ?? "?"})` : m.status;
 }
 

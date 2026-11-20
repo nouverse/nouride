@@ -15,7 +15,7 @@
 
 import type { MissionDetail, MissionView } from "@nouride/wire";
 import { sessionIdFor } from "@nouride/shared";
-import { stepsDone } from "@/modules/missions/decide.ts";
+import { retryAt, stepsDone } from "@/modules/missions/decide.ts";
 import type { DraftChange } from "@/modules/missions/drafts.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
@@ -51,7 +51,8 @@ function view(missions: Missions, mission: Mission, things: Things, turns?: Cont
   // Who paused it goes out as the name alone, while it is paused.
   const { owner: _owner, pausedBy, pausedByAgent: _pausedByAgent, ...shown } = mission;
   const active = activeAt(turns, mission);
-  return { ...shown, ...(pausedBy && mission.waitKind === "paused" ? { pausedBy } : {}), seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...(active !== undefined ? { activeAt: active } : {}), ...things.said(thingOfMission(mission)) };
+  const triesAt = retryAt(mission, missions.retryAttempt(mission.id));
+  return { ...shown, ...(triesAt !== null ? { retryAt: triesAt } : {}), ...(pausedBy && mission.waitKind === "paused" ? { pausedBy } : {}), seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...(active !== undefined ? { activeAt: active } : {}), ...things.said(thingOfMission(mission)) };
 }
 
 /**

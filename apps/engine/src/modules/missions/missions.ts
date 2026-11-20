@@ -18,7 +18,7 @@ import { buttonsFor } from "./actions.ts";
 import { Asking, type Asked } from "./asking.ts";
 import { Checking, type Reviewing } from "./checking.ts";
 import type { MissionJob, MissionsDeps } from "./deps.ts";
-import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsNear, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
+import { afterTurn, answersWait, blockedBy, continueGives, failuresAfter, limitReached, limitsNear, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
 import { isMissionChat, MISSION_GATEWAY_ID } from "./gateway.ts";
 import { APPROVAL_ANSWERABLE_MS, MAX_RESUMES, STALL_AFTER_MS } from "./limits.ts";
 import { newMission, startRefusal, type StartRequest } from "./start.ts";
@@ -443,11 +443,8 @@ export class Missions implements TurnShaper {
     // Its question still open and nothing claimed: it waits for the answer, whether it stopped to or worked on until
     // nothing was left. Not after a turn that failed, which is tried again with the question as open as it was.
     if (!outcome.failed && this.asking.waitsOn(mission)) return;
-    state.failures = outcome.failed ? state.failures + 1 : 0;
-    if (!outcome.failed && state.retried > 0) {
-      void this.deps.tell(mission, goesOnNotice(mission, state.retried));
-      state.retried = 0;
-    }
+    state.failures = failuresAfter(state.failures, outcome);
+    if (!outcome.failed) this.goesOn(mission);
     // Nothing done: no call that ran and worked, no step moved — refused or failing calls are not progress.
     const stood = outcome.worked === 0 && !moved;
     state.idle = stood && !outcome.failed ? state.idle + 1 : 0;
@@ -624,6 +621,18 @@ export class Missions implements TurnShaper {
   /** The try a paused mission is on (`retry`): its failed turns in a row — one, after a restart forgot them. */
   retryAttempt(id: string): number {
     return Math.max(this.state.get(id)?.failures ?? 0, 1);
+  }
+
+  /**
+   * Its model answers again after tries: said once. At the end of the turn that was taken up, or sooner where the
+   * minute's check sees a coding CLI's turn at work spend: such a turn runs for hours, and its person went on reading
+   * "held up" until they pressed Continue themselves.
+   */
+  goesOn(mission: Mission): void {
+    const state = this.turnState(mission.id);
+    if (state.retried === 0) return;
+    void this.deps.tell(mission, goesOnNotice(mission, state.retried));
+    state.retried = 0;
   }
 
   /** A paused mission's time came round (`timers.ts`): out of its wait, a turn to try its model again. */
