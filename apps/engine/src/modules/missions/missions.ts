@@ -447,7 +447,10 @@ export class Missions implements TurnShaper {
     if (!outcome.failed) this.goesOn(mission);
     // Nothing done: no call that ran and worked, no step moved — refused or failing calls are not progress.
     const stood = outcome.worked === 0 && !moved;
-    state.idle = stood && !outcome.failed ? state.idle + 1 : 0;
+    // Not counted while work of its own is under way: such a turn is the daemon looking in on a job that still runs,
+    // and "nothing yet" is the right answer. Three helpers each got a look-in in the same seconds, the mission was
+    // stuck with all three at work, and their results then found it waiting and woke nothing (msn_17aff8).
+    state.idle = stood && !outcome.failed ? state.idle + (this.awaits(mission) ? 0 : 1) : 0;
     const reached = limitReached(mission, now, this.inForce(mission));
     if (reached) return this.limitHit(mission, reached);
     // Not beside the limit itself: msn_3d28e0's chat was told "80% of its 100M tokens" and "reached its token limit" in
