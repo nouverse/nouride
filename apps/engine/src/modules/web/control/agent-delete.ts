@@ -124,10 +124,13 @@ export async function summarize(deps: AgentDeleteDeps, agentId: string): Promise
   };
 }
 
-/** A folder and all in it gone: as the agent first, which removes what is its own, then what is left as the daemon. */
-async function removeFolder(agentId: string, path: string): Promise<boolean> {
+/**
+ * A folder and all in it gone: as the agent first, which removes what is its own, then what is left as the daemon.
+ * `asAgent` false once its user is removed: the daemon alone, since nothing runs as a user that is gone.
+ */
+async function removeFolder(agentId: string, path: string, asAgent = true): Promise<boolean> {
   if (!statFile(path)) return true;
-  await removeAsAgent(agentId, path).catch((err: unknown) => log.warn("a deleted agent's folder could not be emptied as the agent", { agent: agentId, path, error: String(err) }));
+  if (asAgent) await removeAsAgent(agentId, path).catch((err: unknown) => log.warn("a deleted agent's folder could not be emptied as the agent", { agent: agentId, path, error: String(err) }));
   try {
     removePath(path);
   } catch (err) {
@@ -189,7 +192,7 @@ export async function deleteAgent(deps: AgentDeleteDeps, agentId: string, by: st
   }
   const account = await removeAccount(deps, agentId, notes);
   // What the agent's own user could not delete, and its user is gone: the helper handed it over, so once more.
-  if (account === "removed") for (const path of paths) await removeFolder(agentId, path);
+  if (account === "removed") for (const path of paths) await removeFolder(agentId, path, false);
 
   deps.audit.record({ action: "agent_deleted", actor: by, agentId, details: { ...took, connections: took.connections.join(",") || "none", account, rows, notes: notes.length } });
   log.info("agent deleted", { agent: agentId, by, account, notes: notes.length });

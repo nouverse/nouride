@@ -23,6 +23,8 @@ import {
   type HelperFolders,
 } from "@nouride/isolation";
 import {
+  agentUserBack,
+  agentUserGone,
   copyFileAtomic,
   dirname,
   ensureDir,
@@ -320,6 +322,9 @@ export async function settleAgentUsers(input: {
     // The helper's own word on it, read from what it printed. An agent whose id cannot be a user's name never had one.
     remove: async (agentId) => {
       if (!canHaveOwnUser(agentId)) return { how: "absent" };
+      // Before the helper is asked: a command already on its way as this agent (its stopped mission's folder being
+      // tidied) is refused from here, or the helper would make the user again for it once it is removed.
+      agentUserGone(agentId);
       return removalOf(await runCommand(removeCommand(users, agentId), { ...SANDBOX, timeoutMs: REMOVE_TIMEOUT_MS }));
     },
     ready: async (agents) => {
@@ -327,6 +332,8 @@ export async function settleAgentUsers(input: {
       const problems = await Promise.all(
         agents.map(async (agent) => {
           const id = agent.config.id;
+          // An agent made again under a deleted one's id is an agent like any other.
+          agentUserBack(id);
           const mine = (readying.get(id) ?? Promise.resolve()).catch(() => {}).then(() => readyOne(agent));
           readying.set(id, mine);
           return [id, await mine] as const;

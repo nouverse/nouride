@@ -10,10 +10,11 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { Hono } from "hono";
 import { privateWorkspace } from "@nouride/persona";
+import { runAgentCommandsThrough } from "@nouride/runtime";
 import { SecretStore } from "@nouride/secrets";
 import type { AgentDeleted, AgentDeletion } from "@nouride/wire";
 import { AuditLog } from "@/commons/audit.store.ts";
@@ -411,6 +412,40 @@ describe("its user on the machine", () => {
 
   test("one that never ran a command had none", async () => {
     expect((await removed({ own: () => true, remove: async () => ({ how: "absent" }) })).done).toMatchObject({ account: "absent", notes: [] });
+  });
+
+  test("once its user is removed, what is left of its folders is taken by the daemon alone: nothing is run as the agent again", async () => {
+    // The live box: the delete removed the agent's user, went over its folders once more as the agent, and the helper
+    // made the user again for that command. Root may delete anything, so there is nothing left for a second pass.
+    if (process.getuid?.() === 0) return;
+    let noted = "";
+    let parent = "";
+    const i = await install({
+      account: {
+        own: () => true,
+        // The helper hands what is left to the daemon as it removes the user: the folder can be deleted from here on.
+        remove: async () => (appendFileSync(noted, "the user is removed\n"), chmodSync(parent, 0o755), { how: "removed", left: 0 }),
+      },
+    });
+    await fill(i, "rex");
+    noted = join(i.bench.dataDir, "as-agent.log");
+    parent = dirname(i.private("rex"));
+    // Each command run as an agent is noted and does nothing, as an agent's user that may not delete a thing.
+    runAgentCommandsThrough({ prefix: (agent) => ["sh", "-c", `echo "as ${agent}" >> "${noted}"`, "--"], put: () => [] });
+    // What the daemon cannot delete at first: its private folder, in a folder the daemon may not change yet.
+    chmodSync(parent, 0o555);
+    try {
+      const res = await i.call("/agents/rex/delete", { body: { confirm: "rex" } });
+      expect(res.status).toBe(200);
+    } finally {
+      runAgentCommandsThrough(null);
+      chmodSync(parent, 0o755);
+    }
+    const lines = readFileSync(noted, "utf8").trim().split("\n");
+    const removed = lines.indexOf("the user is removed");
+    expect(lines.slice(0, removed)).toContain("as rex");
+    expect(lines.slice(removed + 1)).toEqual([]);
+    expect(existsSync(i.private("rex"))).toBe(false);
   });
 
   test("an install whose helper is older still deletes the agent, and says its account is left and how to bring it up to date", async () => {

@@ -12,6 +12,7 @@
  * says it — `processGroupActivity` looks it up here.
  */
 
+import { NourideError } from "@nouride/shared";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readTextFileSync, removePath } from "./fs.ts";
@@ -25,6 +26,13 @@ export interface AgentCommands {
 }
 
 let through: AgentCommands | null = null;
+/**
+ * Agents whose user was removed with them (`agentUserGone`). The helper makes a user for whatever id a command names,
+ * which is how a new agent gets one at its first command; for a deleted agent it made the account again. On the live
+ * box the delete removed `nr-e2e-live` and, in the same second, a command still on its way as that agent brought the
+ * user and its folders back.
+ */
+const gone = new Set<string>();
 /** Each running client's pid file, by the client's pid — the pid the daemon holds. */
 const pidFiles = new Map<number, string>();
 let made = 0;
@@ -32,6 +40,21 @@ let made = 0;
 /** Run agents' commands through the helper from now on — or, with null, as the daemon's user again. */
 export function runAgentCommandsThrough(commands: AgentCommands | null): void {
   through = commands;
+}
+
+/** `agent`'s user is being removed with it: from here on nothing is run or written as that agent. */
+export function agentUserGone(agent: string): void {
+  gone.add(agent);
+}
+
+/** An agent of that id is there again (made anew, or the daemon readies it): commands run as it as before. */
+export function agentUserBack(agent: string): void {
+  gone.delete(agent);
+}
+
+/** Refused, by name: a command for an agent that was deleted is a fault of whoever still asks for it. */
+function refuseGone(agent: string): void {
+  if (gone.has(agent)) throw new NourideError("agent_deleted", `the agent ${agent} was deleted, and nothing runs or is written as its user any more`, "That agent has been deleted.");
 }
 
 /** Whether agents' commands run as their own users. */
@@ -50,7 +73,9 @@ export function agentReadableMode(): number {
 
 /** The command line that writes a file as `agent`; null where agents' commands run as the daemon's user. */
 export function putAsAgent(agent: string, path: string): string[] | null {
-  return through ? through.put(agent, path) : null;
+  if (!through) return null;
+  refuseGone(agent);
+  return through.put(agent, path);
 }
 
 /**
@@ -59,6 +84,7 @@ export function putAsAgent(agent: string, path: string): string[] | null {
  */
 export function asItsAgent(cmd: string[], agent: string | undefined, cwd: string | undefined): { cmd: string[]; pidFile?: string } {
   if (!through || !agent) return { cmd };
+  refuseGone(agent);
   made += 1;
   const pidFile = join(tmpdir(), `nouride-command-${process.pid}-${made}.pid`);
   return { cmd: [...through.prefix(agent, cwd, pidFile), ...cmd], pidFile };
