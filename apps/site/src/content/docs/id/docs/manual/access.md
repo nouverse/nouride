@@ -177,6 +177,9 @@ Seluruh daftar jadi satu baris di History. File yang gak boleh dibaca perintahny
 sebagai akun Nouride sendiri, siapa pun yang mengetiknya) diberikan lewat standard input:
 `--from - < contacts.txt`.
 
+Nama dari daftar ditampilkan sampai orang itu menulis. Sejak itu tab Approved menampilkan nama yang
+dipakai akunnya, sama seperti siapa pun yang disetujui.
+
 Di WhatsApp orang biasanya menulis ke kamu dengan id tersembunyi, bukan nomornya. Nouride diberi tahu
 nomor di baliknya dan memasukkan dia lewat yang mana pun, jadi daftar nomor tetap jalan. Di Telegram
 dan Discord, orang yang dimasukkan lewat username dikenal lewat username itu: kalau ia melepasnya dan

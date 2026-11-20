@@ -166,6 +166,9 @@ many were said twice, and which lines it could not read. Up to 50,000 lines a ru
 one line in History. A file the command may not read (on a server it runs as Nouride's own account,
 whoever types it) is handed over on standard input: `--from - < contacts.txt`.
 
+A name from the list is shown until that person writes. From then on the Approved tab shows the name
+their account carries, as it does for anybody approved.
+
 On WhatsApp a person usually writes to you under a hidden id, not their number. Nouride is told the
 number beside it and lets them in by either, so a list of numbers works. On Telegram and Discord
 somebody let in by username is known by that username: if they give it up and somebody else takes it,
