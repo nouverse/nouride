@@ -383,10 +383,13 @@ otherwise be twenty phone notifications. A turn that runs no tools posts nothing
 The same switch covers the agent's **opening line**, on every platform, including the ones that cannot
 edit a message (WhatsApp). When the model writes a sentence beside its first tool call ("Okay, I'll go
 through the 52 documents first"), that sentence is sent to the chat at once, as its own message, instead
-of waiting for the turn to end. A later one goes out only when two minutes have passed since the last,
-so long work gets an occasional status and not a running commentary; the rest stay in the conversation.
-The final answer never repeats it. A question answered without tools is one message, as before, and a
-background job's or a schedule's turn sends no opening line.
+of waiting for the turn to end. A later one-line status goes out only when two minutes have passed since
+the last, so long work gets an occasional status and not a running commentary; the rest stay in the
+conversation. More than a line is no status and goes out at once, whatever the gap (0.8.42): held back,
+a whole answer written beside a tool call reached nobody. The final answer never repeats it. A question
+answered without tools is one message, as before, and a background job's or a schedule's turn sends no
+opening line. A turn that ends on nothing but a full stop, having written its words beside a tool call,
+sends those words as its answer (0.8.42).
 
 An agent a coding CLI answers (Claude Code, Codex) is the exception to the two minutes: what the CLI
 writes between its steps goes to the chat as it is written, each its own message, the way its own

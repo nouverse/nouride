@@ -392,10 +392,14 @@ gak memposting apa pun.
 Saklar yang sama juga mengatur **kalimat pembuka** agent, di semua platform, termasuk yang gak bisa
 menyunting pesan (WhatsApp). Kalau model menulis satu kalimat di samping panggilan tool pertamanya ("Oke
 Kak, aku cek 52 dokumennya dulu ya"), kalimat itu langsung dikirim ke chat sebagai pesan tersendiri,
-gak menunggu giliran selesai. Kalimat berikutnya baru dikirim kalau sudah lewat dua menit sejak yang
-terakhir, jadi kerja panjang dapat kabar sesekali, bukan komentar tiap langkah; sisanya tetap tersimpan
-di percakapan. Jawaban akhir gak mengulangnya. Pertanyaan yang dijawab tanpa tool tetap satu pesan, dan
-giliran dari background job atau jadwal gak mengirim kalimat pembuka.
+gak menunggu giliran selesai. Status satu baris berikutnya baru dikirim kalau sudah lewat dua menit sejak
+yang terakhir, jadi kerja panjang dapat kabar sesekali, bukan komentar tiap langkah; sisanya tetap
+tersimpan di percakapan. Lebih dari satu baris bukan status dan langsung dikirim, berapa pun jaraknya
+(0.8.42): kalau ditahan, jawaban utuh yang ditulis di samping panggilan tool gak sampai ke siapa pun.
+Jawaban akhir gak mengulangnya. Pertanyaan yang dijawab tanpa tool tetap satu pesan, dan giliran dari
+background job atau jadwal gak mengirim kalimat pembuka. Giliran yang berakhir hanya dengan titik,
+padahal kata-katanya sudah ditulis di samping panggilan tool, mengirim kata-kata itu sebagai jawabannya
+(0.8.42).
 
 Agent yang dijawab coding CLI (Claude Code, Codex) gak kena aturan dua menit itu: apa yang ditulis CLI di
 sela langkahnya langsung masuk ke chat begitu ditulis, masing-masing pesan sendiri, seperti di
