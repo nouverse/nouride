@@ -2,16 +2,32 @@
  * Classes of work seen once, held until they recur (`069_baseline.sql`).
  *
  * A skill is a procedure for work that comes back, and one conversation cannot show that. So a create from the pass is
- * a candidate first: its name, its "Use when" line and why. The skill is written when another conversation is the same
- * class of work — by the name, or by the candidate the pass says it recurs — and a person asking for a skill skips the
- * wait. A candidate that does not come back in `HELD_DAYS` lapses.
+ * a candidate first: its name, its "Use when" line and why. The skill is written when the same class of work is seen
+ * again — by the name, or by the candidate the pass says it recurs — and a person asking for a skill skips the wait. A
+ * candidate that does not come back in `HELD_DAYS` lapses.
+ *
+ * ## The same chat, after a break
+ *
+ * A conversation is a chat, and a chat does not end: somebody who talks to their agent in one direct message has one
+ * conversation for as long as the install lives. Held to "another conversation" alone, their work never came back. On
+ * a live box over fifteen days, 44 of 45 creates were held and one skill was written: one class of work was held
+ * twelve times across a week in one chat, another eleven times, a third nine.
+ *
+ * So the same chat counts too, once the work was put down and picked up again: `SAME_CHAT_BREAK_MS` since it was
+ * last seen there. Sightings minutes apart are one sitting, which is what "the same conversation going on" meant.
  */
 
 import type { SqliteDb } from "@nouride/runtime";
 
-/** How long a class of work seen once waits for a second conversation. */
+/** How long a class of work seen once waits to be seen again. */
 const HELD_DAYS = 30;
 const DAY_MS = 86_400_000;
+/**
+ * How long a class of work was not seen in a chat before seeing it there again is the work coming back. A choice, not
+ * a measurement: of that box's 32 gaps between two sightings of one class in one chat, 25 were under two hours (one
+ * sitting), six over fourteen (another day), and one was seven and a half.
+ */
+const SAME_CHAT_BREAK_MS = 6 * 3_600_000;
 
 export interface SkillCandidate {
   name: string;
@@ -57,12 +73,14 @@ export class CandidateStore {
 
   /**
    * The candidate this create is a second sighting of: the one it names in `recurs`, else one of the same name — and
-   * only when it was seen in another conversation. The same conversation going on is not the work coming back.
+   * only when it was seen in another conversation, or in this one before a break. The same sitting going on is not
+   * the work coming back.
    */
   recurring(create: { name: string; recurs?: string }, sessionId: string): SkillCandidate | null {
     const held = this.list();
     const match = held.find((candidate) => candidate.name === create.recurs) ?? held.find((candidate) => candidate.name === create.name);
-    return match && match.sessionId !== sessionId ? match : null;
+    if (!match) return null;
+    return match.sessionId !== sessionId || this.now() - match.lastSeenAt >= SAME_CHAT_BREAK_MS ? match : null;
   }
 
   /** Hold a class of work seen once. A name already held keeps its first sighting and takes the newer wording. */

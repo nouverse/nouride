@@ -19,6 +19,7 @@ const EFFORT_MAX_SESSIONS = 500;
 export interface CooldownConfig {
   cooldownMs: number;
   rapidFollowUpMs: number;
+  refusedRestMs: number;
 }
 
 export class Cooldowns {
@@ -61,6 +62,9 @@ export class Cooldowns {
    * within minutes is the same noise as one agent doing it twice.
    */
   private readonly written = new Map<string, number>();
+
+  /** When each skill's draft was last refused, by name: see `TUNING.refusedRestMs`. In memory: a restart may forget it. */
+  private readonly refusedAt = new Map<string, number>();
 
   constructor(
     private readonly config: CooldownConfig,
@@ -133,6 +137,18 @@ export class Cooldowns {
   tooSoonToLook(agentId: string, lastDraftAt: number): boolean {
     const last = Math.max(lastDraftAt, this.looked.get(agentId) ?? 0);
     return last > 0 && this.now() - last < this.config.cooldownMs;
+  }
+
+  /** Mark that a draft for this skill was refused, after its writer was told why and tried again. */
+  refused(skill: string): void {
+    if (this.refusedAt.size > EFFORT_MAX_SESSIONS) this.refusedAt.clear();
+    this.refusedAt.set(skill, this.now());
+  }
+
+  /** `true` while a skill whose draft was just refused is left alone. */
+  resting(skill: string): boolean {
+    const last = this.refusedAt.get(skill) ?? 0;
+    return last > 0 && this.now() - last < this.config.refusedRestMs;
   }
 
   /** Mark that this skill reached the pool without anybody approving it. */

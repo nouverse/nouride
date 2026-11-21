@@ -221,9 +221,11 @@ menyambungkan sebuah kamera dan sekarang berhasil, *kamera*-nya memang kasus sat
 
 **Jenis pekerjaan baru dicatat dulu sebelum ditulis.** Satu percakapan belum membuktikan pekerjaan itu
 bakal datang lagi. Jadi pertama kali, sebuah create ditahan sebagai **kandidat**: nama dan baris "Use
-when", tanpa isi dan tanpa panggilan model kedua. Skill-nya baru ditulis ketika percakapan lain ternyata
-jenis pekerjaan yang sama, atau langsung saat itu juga kalau ada orang yang meminta skill dengan
-kata-kata. Kandidat yang gak muncul lagi dalam 30 hari gugur.
+when", tanpa isi dan tanpa panggilan model kedua. Skill-nya baru ditulis ketika jenis pekerjaan yang
+sama datang lagi: di percakapan lain, atau di chat yang sama setelah pekerjaan itu ditinggal enam jam
+atau lebih. Pekerjaan yang masih berlanjut dalam satu kali duduk belum dihitung datang lagi. Orang yang
+meminta skill dengan kata-kata langsung mendapatkannya. Kandidat yang gak muncul lagi dalam 30 hari
+gugur.
 
 ## Seberapa banyak yang berjalan tanpa kamu
 
@@ -335,7 +337,14 @@ akun email, atau menceritakan satu sesi ("in this session", "the user said") ali
 prosedurnya. Ia juga ditolak kalau deskripsinya berbunyi seperti catatan suntingan ("Update…",
 "Document…") dan bukan kapan skill itu dipakai, dan kalau badan skill baru lebih dari 8.000 karakter.
 Revisi boleh menumbuhkan badan sampai 12.000 karakter; badan yang sudah lewat dari itu gak boleh
-bertambah panjang. Penolakan dicatat di log dan di audit log.
+bertambah panjang.
+
+Draft yang ditolak dikembalikan ke agent satu kali, beserta alasannya, untuk dibetulkan: sebuah alamat
+diganti penanda tempat, badan yang kepanjangan memindahkan rinciannya ke file di samping skill. Kalau
+percobaan kedua ditolak juga, gak ada yang disimpan, penolakannya dicatat di log dan di audit log, dan
+skill itu dibiarkan dulu selama enam jam. Sebuah revisi hanya bertanggung jawab atas yang ia tambahkan:
+alamat yang memang sudah ada di sebuah skill gak membuat revisinya ditolak, dan tinjauan mingguanlah
+yang membuangnya.
 
 **Skill ditulis dalam bahasa Inggris**, apa pun bahasa yang kamu pakai. Satu pustaka, satu bahasa,
 supaya agent mana pun bisa membaca skill mana pun.

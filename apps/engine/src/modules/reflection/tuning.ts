@@ -46,6 +46,14 @@ export interface Tuning {
   cooldownMs: number;
   /** Pending drafts before the pass stops proposing: a backlog nobody clears is a reason to stop generating. */
   maxPending: number;
+  /**
+   * How long a skill is left alone after a draft for it was refused, its second try included.
+   *
+   * A draft the writer could not make fit after being told why will not fit a quarter of an hour later either, and
+   * each try is the pass's dearest call, twice. On a live box two skills were each revised and refused nineteen times
+   * in a week. Six hours is a choice: the rest of a sitting.
+   */
+  refusedRestMs: number;
 }
 
 export const TUNING: Tuning = {
@@ -55,4 +63,5 @@ export const TUNING: Tuning = {
   rapidFollowUpMs: 3 * 60_000,
   cooldownMs: 60_000,
   maxPending: 20,
+  refusedRestMs: 6 * 3_600_000,
 };

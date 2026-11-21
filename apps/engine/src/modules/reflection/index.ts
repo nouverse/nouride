@@ -33,6 +33,7 @@ import type { AuditPort, SkillRead } from "@/commons/audit.store.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import { REASON_SEPARATOR, ToolMemory, lessonOf, type DraftsPort } from "./drafts.store.ts";
 import { redact } from "@nouride/secrets";
+import { applyEdits, redactAll } from "./draft-fields.ts";
 import { detectTrigger } from "./trigger.ts";
 import { buildTranscript, synthesizeSkill } from "./synthesis.ts";
 import { breadthOf, listSkillFiles, readPool, readSkill, readSkillFile, writeRefusal } from "./pool.ts";
@@ -45,7 +46,7 @@ import { LibraryReview } from "./review.ts";
 import type { ReviewStore } from "./reviews.store.ts";
 import type { CandidateStore } from "./candidates.store.ts";
 import { refusalOf, writeNow } from "./gates.ts";
-import type { DraftEdits, ObservedTurn, SkillDraft } from "./types.ts";
+import type { DraftEdits, ObservedTurn, SkillDraft, Trigger } from "./types.ts";
 
 // What the daemon builds the loop from, and nothing else: a test that needs the trigger, the triage or the prompts
 // imports them from their own files rather than widening this surface for it.
@@ -302,40 +303,15 @@ export class ReflectionEngine {
     const { text: transcript, redactions } = buildTranscript(source);
     const model = helperModel(this.deps.config.model, agent.config.llm, this.deps.llmDefaults ?? { provider: "" }) || agent.config.llm.model;
     const existing = await readPool(this.deps.agentsDir, this.deps.builtinSkillsDir);
-
-    const synthesized = await synthesizeSkill({
-      provider,
-      model,
-      transcript,
-      trigger,
-      existing: await Promise.all(
-        existing.map(async (skill) => ({
-          name: skill.name,
-          description: skill.description,
-          /**
-           * Listed whatever it is, marked by who keeps it — see `renderSkillList`.
-           *
-           * A skill the pass may not write to still has to appear, or it cannot be recognised as
-           * covering the ground and declined as a duplicate. `author` is set by this loop when it
-           * writes one, so its absence in the shared pool means a person wrote the file by hand;
-           * `builtin` is ours and is absent from `author` for a different reason. See `Skill.author`.
-           */
-          owner: skill.scope === "builtin" ? "nouride" : skill.author ? "agent" : "person",
-          ...(await breadthOf(skill)),
-        })),
-      ),
-      readSkill: (name) => readSkill(existing, name, this.deps.drafts),
-      listSkillFiles: (name) => listSkillFiles(existing, name),
-      readSkillFile: (name, path) => readSkillFile(existing, name, path),
-      candidates: (this.deps.candidates?.list() ?? []).map((held) => ({ name: held.name, description: held.description, day: new Date(held.lastSeenAt).toISOString().slice(0, 10) })),
-      gate: (create) => writeNow(this.deps.candidates, create, { trigger, agentId: turn.agentId, sessionId: turn.sessionId, audit: this.deps.audit }),
-    });
+    const { synthesized, seenAgain } = await this.write(turn, trigger, { provider, model, transcript, existing, explicit });
     if (!synthesized) return;
 
+    // Checked again here, whatever the writer's second try gave: this is the rule, and what is recorded.
     const refused = await refusalOf(synthesized, existing, this.deps.drafts);
     if (refused) {
       log.info("reflection draft refused", { agent_id: turn.agentId, skill: synthesized.name, reason: refused });
       this.deps.audit?.record({ action: "skill_draft_refused", agentId: turn.agentId, details: { skill: synthesized.name, reason: refused } });
+      this.cooldowns.refused(synthesized.name);
       return;
     }
 
@@ -455,6 +431,9 @@ export class ReflectionEngine {
       model,
     });
 
+    // Only now: a class whose draft was refused is still a candidate, and is written the next time it is seen.
+    for (const name of new Set([seenAgain, draft.name])) if (name) this.deps.candidates?.take(name);
+
     this.deps.audit?.record({
       action: "skill_draft_created",
       agentId: turn.agentId,
@@ -509,6 +488,57 @@ export class ReflectionEngine {
     }
 
     await announceDraft(this.notifyDeps(), draft, superseded);
+  }
+
+  /**
+   * Triage and the writing call for one turn, with what the daemon holds a draft to on the way: the wait for work to
+   * come back, the rest after a refusal, and the refusal a writer is handed once to put right.
+   *
+   * `seenAgain` is the candidate a create was a second sighting of. It is done with once its draft exists, not here.
+   */
+  private async write(
+    turn: ObservedTurn,
+    trigger: Trigger,
+    pass: { provider: LLMProvider; model: string; transcript: string; existing: Awaited<ReturnType<typeof readPool>>; explicit: boolean },
+  ): Promise<{ synthesized: Awaited<ReturnType<typeof synthesizeSkill>>; seenAgain?: string }> {
+    // A skill whose draft was just refused is left alone a while (`TUNING.refusedRestMs`); a person asking is not held.
+    const resting = pass.explicit ? undefined : (skill: string) => this.cooldowns.resting(skill);
+    let seenAgain: string | undefined;
+    const synthesized = await synthesizeSkill({
+      provider: pass.provider,
+      model: pass.model,
+      transcript: pass.transcript,
+      trigger,
+      existing: await Promise.all(
+        pass.existing.map(async (skill) => ({
+          name: skill.name,
+          description: skill.description,
+          /**
+           * Listed whatever it is, marked by who keeps it — see `renderSkillList`.
+           *
+           * A skill the pass may not write to still has to appear, or it cannot be recognised as
+           * covering the ground and declined as a duplicate. `author` is set by this loop when it
+           * writes one, so its absence in the shared pool means a person wrote the file by hand;
+           * `builtin` is ours and is absent from `author` for a different reason. See `Skill.author`.
+           */
+          owner: skill.scope === "builtin" ? "nouride" : skill.author ? "agent" : "person",
+          ...(await breadthOf(skill)),
+        })),
+      ),
+      readSkill: (name) => readSkill(pass.existing, name, this.deps.drafts),
+      listSkillFiles: (name) => listSkillFiles(pass.existing, name),
+      readSkillFile: (name, path) => readSkillFile(pass.existing, name, path),
+      candidates: (this.deps.candidates?.list() ?? []).map((held) => ({ name: held.name, description: held.description, day: new Date(held.lastSeenAt).toISOString().slice(0, 10) })),
+      gate: (create) => {
+        if (resting?.(create.name)) return false;
+        const verdict = writeNow(this.deps.candidates, create, { trigger, agentId: turn.agentId, sessionId: turn.sessionId, audit: this.deps.audit });
+        seenAgain = verdict.candidate;
+        return verdict.write;
+      },
+      refusal: (draft) => refusalOf(draft, pass.existing, this.deps.drafts),
+      ...(resting ? { resting } : {}),
+    });
+    return { synthesized, ...(seenAgain ? { seenAgain } : {}) };
   }
 
   // --- the two decisions a human makes ------------------------------------------------------
@@ -688,32 +718,4 @@ export class ReflectionEngine {
     log.info("skill draft discarded", { draft: id, skill: draft.name, actor: by });
     return true;
   }
-}
-
-/** The draft's fields with a human's corrections applied. Anything absent keeps what the model wrote. */
-function applyEdits(
-  draft: SkillDraft,
-  edits: DraftEdits,
-): { name: string; description: string; requires: string; needsTools: string; body: string } {
-  return {
-    name: (edits.name ?? draft.name).trim().toLowerCase(),
-    description: (edits.description ?? draft.description).trim(),
-    requires: (edits.requires ?? draft.requires).trim(),
-    needsTools: (edits.needsTools ?? draft.needsTools).trim(),
-    body: (edits.body ?? draft.body).trim(),
-  };
-}
-
-/** Scrub the two fields that end up in a file every agent reads on every turn. */
-function redactAll(
-  body: string,
-  description: string,
-): { body: string; description: string; hits: string[] } {
-  const scrubbedBody = redact(body);
-  const scrubbedDescription = redact(description);
-  return {
-    body: scrubbedBody.text,
-    description: scrubbedDescription.text,
-    hits: [...new Set([...scrubbedBody.hits, ...scrubbedDescription.hits])],
-  };
 }

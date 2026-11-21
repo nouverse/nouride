@@ -142,12 +142,14 @@ async function rewrite(deps: ReviewDeps, pool: SkillState[], entry: Entry, reaso
       readSkill: (name) => readSkill(pool, name, deps.drafts),
       listSkillFiles: (name) => listSkillFiles(pool, name),
       readSkillFile: (name, path) => readSkillFile(pool, name, path),
+      refusal: (draft) => refusalOf(draft, pool, deps.drafts, true),
     },
     entry.skill.name,
     why,
   );
   if (!result) return null;
-  const refused = await refusalOf(result, pool, deps.drafts);
+  // Judged whole: this revision was asked to take such facts out, so one it kept is its own.
+  const refused = await refusalOf(result, pool, deps.drafts, true);
   if (refused) return { refused };
   return result;
 }

@@ -16,7 +16,8 @@
 import { createLogger, cutAtWord, keepEnds, messageText, type ChatMessage, type LLMProvider, oneLine, type ToolDefinition } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { outputCap } from "@/modules/llm/output-cap.ts";
-import { skillBodyIsEnglish, VALID_SKILL_NAME } from "@nouride/persona";
+import { parseFrontmatter, skillBodyIsEnglish, VALID_SKILL_NAME } from "@nouride/persona";
+import { BODY_CHARS } from "./draft-lint.ts";
 import { AUTHOR_INSTRUCTION, REVISE_INSTRUCTION, TRIAGE_INSTRUCTION, renderCandidates, renderSkillList } from "./prompts.ts";
 import { redact } from "@nouride/secrets";
 import type { SkillFile, Trigger } from "./types.ts";
@@ -129,6 +130,13 @@ export interface SynthesisInput {
    */
   gate?: (create: Extract<Triage, { decision: "create" }>) => boolean;
   /**
+   * Why the daemon would refuse this draft, or null (`gates.ts`). Given, a refused draft goes back to its writer once
+   * with the reason: see `handedBackOnce`.
+   */
+  refusal?: (draft: SynthesisResult) => Promise<string | null>;
+  /** Whether a skill is being left alone, its last draft refused a moment ago: no revision of it is paid for. */
+  resting?: (skill: string) => boolean;
+  /**
    * Reads a skill's current body, for the second call.
    *
    * Injected rather than done here so this module still needs nothing but a provider — the pass is
@@ -198,6 +206,10 @@ export async function synthesizeSkill(input: SynthesisInput): Promise<SynthesisR
       decision: triaged.decision,
       why: triaged.why,
     });
+    return null;
+  }
+  if (input.resting?.(triaged.target)) {
+    log.info("reflection left a skill alone: its last draft was refused a moment ago", { skill: triaged.target });
     return null;
   }
   // `attach` is a revision asked to land in a file rather than in the body — same call, same output
@@ -273,16 +285,64 @@ export function parseTriage(text: string | null): Triage | null {
   return null;
 }
 
+/** One answer of a writing call, with the draft read from it. */
+interface Written {
+  answer: string;
+  draft: SynthesisResult;
+}
+
+/**
+ * A draft the daemon refuses goes back to its writer once, with the reason.
+ *
+ * It used to be dropped where it stood. On a live box over fifteen days that was 64 of the 83 drafts the pass wrote:
+ * 43 for a body a few hundred characters past its size, 21 for an account's address. Each was the pass's dearest
+ * call thrown away for something its writer could have put right had it been told, and the next pass wrote the same
+ * draft and lost it the same way.
+ *
+ * Once, not until it fits: nobody is waiting, and a writer that cannot fix it when told will not on a third try. The
+ * second draft is returned whatever it is, and the caller's own check still decides. Where the second call gives
+ * nothing usable, the first is returned, so the refusal is recorded with its reason.
+ */
+async function handedBackOnce(input: SynthesisInput, write: (note?: string) => Promise<Written | null>): Promise<SynthesisResult | null> {
+  const first = await write();
+  if (!first) return null;
+  const reason = (await input.refusal?.(first.draft)) ?? null;
+  if (reason === null) return first.draft;
+  log.info("reflection draft refused, handed back to be put right", { skill: first.draft.name, reason });
+  const second = await write(refusedNote(first.answer, reason));
+  return second?.draft ?? first.draft;
+}
+
+/** What the writer is told with its refused answer. The words carry the rule: one thing fixed, the rest kept. */
+export const refusedNote = (answer: string, reason: string): string =>
+  [
+    "",
+    "",
+    "## Your first answer was refused",
+    "",
+    `The daemon refused the draft you wrote for this: ${reason}.`,
+    "",
+    "Your refused answer:",
+    "",
+    answer,
+    "",
+    "Answer again in the same JSON shape, with that put right and everything else kept. A fact about this",
+    "environment becomes a placeholder (`<host>`, `<account>`) or is left out. A body past its size keeps its",
+    "procedure and gives its detail to a file under `references/`, with a one-line pointer in the body.",
+  ].join("\n");
+
 /** Second call, create branch. */
-async function author(
-  input: SynthesisInput,
-  context: string,
-  why: string,
-): Promise<SynthesisResult | null> {
-  const answer = await askWithFiles(input, AUTHOR_INSTRUCTION, context, [
-    { tool: READ_SKILL_TOOL, read: (name) => input.readSkill(name) },
-  ], skillOutputTokens(input.model));
-  if (answer === null) return null;
+async function author(input: SynthesisInput, context: string, why: string): Promise<SynthesisResult | null> {
+  return await handedBackOnce(input, async (note = "") => {
+    const answer = await askWithFiles(input, AUTHOR_INSTRUCTION, context + note, [{ tool: READ_SKILL_TOOL, read: (name) => input.readSkill(name) }], skillOutputTokens(input.model));
+    if (answer === null) return null;
+    const draft = authored(answer, why);
+    return draft ? { answer, draft } : null;
+  });
+}
+
+/** The new skill an author's answer holds, or nothing. */
+function authored(answer: string, why: string): SynthesisResult | null {
 
   const parsed = extractJson(answer);
   if (!parsed) {
@@ -347,49 +407,51 @@ async function revise(
     return null;
   }
 
-  const answer = await askWithFiles(
-    input,
-    REVISE_INSTRUCTION,
-    [
-      `Skill: ${target}`,
-      "",
-      current,
-      ...(await (async () => {
-        const files = (await input.listSkillFiles?.(target)) ?? [];
-        if (files.length === 0) return [];
-        return [
+  const bodyChars = (current.startsWith("---") ? parseFrontmatter(current).body : current).trim().length;
+  const chars = (n: number) => n.toLocaleString("en-US");
+  const content = [
+    `Skill: ${target}`,
+    // Said as numbers: "keep it under 12,000" was in the instruction, and a body at 11,900 was still revised past it.
+    `Its body is ${chars(bodyChars)} characters now. Your revision's body may be at most ${chars(Math.max(BODY_CHARS, bodyChars))}.`,
+    "",
+    current,
+    ...(await (async () => {
+      const files = (await input.listSkillFiles?.(target)) ?? [];
+      if (files.length === 0) return [];
+      return [
+        "",
+        `Files already beside it: ${files.join(", ")}.`,
+        "Anything you list under `files` replaces a file of that name, so use a new name unless you",
+        "mean to rewrite that one, and prefer extending one of these over starting a third.",
+      ];
+    })()),
+    ...(preferSupportFile
+      ? [
           "",
-          `Files already beside it: ${files.join(", ")}.`,
-          "Anything you list under `files` replaces a file of that name, so use a new name unless you",
-          "mean to rewrite that one, and prefer extending one of these over starting a third.",
-        ];
-      })()),
-      ...(preferSupportFile
-        ? [
-            "",
-            "This lesson was judged bulky: put it in a support file under `references/`, `scripts/`",
-            "or `templates/`, and change the body only to add the one-line pointer to it.",
-          ]
-        : []),
-      "",
-      // The weekly review hands its reason, not a conversation (`curator.ts`).
-      input.trigger.kind === "curation" ? "Why the weekly review is revising it:" : "What happened this turn:",
-      "",
-      input.transcript,
-    ].join("\n"),
-    [
-      {
-        tool: READ_FILE_TOOL,
-        // `SKILL.md` is already in the prompt above; offering it here too costs a round for nothing,
-        // so the reader serves support files and answers for anything else.
-        read: async (path) =>
-          path === "SKILL.md" ? current : ((await input.readSkillFile?.(target, path)) ?? null),
-      },
-    ],
-    skillOutputTokens(input.model),
-  );
-  if (answer === null) return null;
+          "This lesson was judged bulky: put it in a support file under `references/`, `scripts/`",
+          "or `templates/`, and change the body only to add the one-line pointer to it.",
+        ]
+      : []),
+    "",
+    // The weekly review hands its reason, not a conversation (`curator.ts`).
+    input.trigger.kind === "curation" ? "Why the weekly review is revising it:" : "What happened this turn:",
+    "",
+    input.transcript,
+  ].join("\n");
+  // `SKILL.md` is already in the prompt above; offering it here too costs a round for nothing, so the reader serves
+  // support files and answers for anything else.
+  const readers = [{ tool: READ_FILE_TOOL, read: async (path: string) => (path === "SKILL.md" ? current : ((await input.readSkillFile?.(target, path)) ?? null)) }];
 
+  return await handedBackOnce(input, async (note = "") => {
+    const answer = await askWithFiles(input, REVISE_INSTRUCTION, content + note, readers, skillOutputTokens(input.model));
+    if (answer === null) return null;
+    const draft = revised(answer, target, why);
+    return draft ? { answer, draft } : null;
+  });
+}
+
+/** The revision a reviser's answer holds, or nothing. */
+function revised(answer: string, target: string, why: string): SynthesisResult | null {
   const parsed = extractJson(answer);
   if (!parsed) {
     log.warn("reflection revision did not answer with JSON", { skill: target, head: answer.slice(0, 120) });

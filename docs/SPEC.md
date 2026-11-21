@@ -1875,11 +1875,13 @@ about destination: an incident earns a line only as the step that prevents it on
 facts, measurements, one task's own steps and Nouride's own flags are not captured. A second call writes: the new
 skill, or the revised one, given the current file.
 
-**A new kind of work waits for a second conversation** (`candidates.store.ts`, `069_baseline.sql`). A `create`
-names the class and its "Use when" line and is held as a candidate — no body, no second call. When a later
-conversation is the same kind of work (triage names the candidate in `recurs`, or picks its name) the skill is
-written; a person asking for one skips the wait; a candidate lapses after 30 days. One conversation cannot show that
-work recurs, and on the live box by 2026-10-22 a single audit workbook had become a skill.
+**A new kind of work waits until it comes back** (`candidates.store.ts`, `069_baseline.sql`). A `create` names the
+class and its "Use when" line and is held as a candidate — no body, no second call. When the same kind of work is
+seen again (triage names the candidate in `recurs`, or picks its name) the skill is written: in another conversation,
+or in the same one six hours or more after it was last seen there, since a chat is one conversation for as long as
+the install lives. A person asking for one skips the wait; a candidate lapses after 30 days, and is done with only
+once its skill is drafted. One sitting cannot show that work recurs, and on the live box by 2026-10-22 a single audit
+workbook had become a skill.
 
 **Checked in code** (`draft-lint.ts`, `gates.ts`), because the prompts said the same and it did not hold. A draft is
 refused when its body names a machine's address, a hardware address or an account, or tells a session ("in this
@@ -1887,6 +1889,14 @@ session", "the user said"); when a description it set reads as an edit note ("Up
 passes 8,000 characters; and when a revision takes a body past 12,000 — one already past it may only shrink. Revisions
 integrate the lesson into the step it changes rather than append it. The live box had grown `home-pc-ops` to 306 lines
 of incidents under the old rule, "keep everything that is still true".
+
+**A refused draft goes back to its writer once** (`synthesis.ts` `handedBackOnce`), with its own answer and the
+reason; the second draft is checked as the first was, and a second refusal keeps nothing. A revision answers for what
+it adds: an address, an account or a story its skill already held is passed over (`notAProcedure`'s `kept`), and the
+weekly review's revision, asked to take those out, is judged whole. The reviser is told the body's size and its limit
+as numbers. A skill whose draft was refused twice is left alone for six hours (`TUNING.refusedRestMs`), a person
+asking excepted. Measured on the live box over fifteen days before this: 64 of the 83 drafts written were refused and
+dropped, 43 for size and 21 for an account's address, two skills nineteen times each.
 
 **Scope.** A skill learning writes is on for the agent whose work it came from (`agents:` in its frontmatter,
 `Skill.agents`); another agent turns it on in its `skills.toml`, whose answer always wins. Until 0.7.27 every pooled

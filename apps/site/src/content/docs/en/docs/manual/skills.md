@@ -209,9 +209,10 @@ connected and it now works, the *camera* is a one-off but the *procedure* is not
 
 **A new kind of work is noted before it is written.** One conversation does not show that the work
 comes back. So the first time, a create is held as a **candidate**: a name and a "Use when" line, with
-no body and no second model call. The skill is written when another conversation turns out to be the
-same kind of work, or at once when somebody asks for a skill in words. A candidate that does not come
-back within 30 days lapses.
+no body and no second model call. The skill is written when the same kind of work comes back: in
+another conversation, or in the same chat once it has been put down for six hours or more. Work that
+goes on in one sitting is not the work coming back. Somebody asking for a skill in words gets it at
+once. A candidate that does not come back within 30 days lapses.
 
 ## How much runs without you
 
@@ -319,8 +320,13 @@ refused before it reaches you when its body names a machine's address, a hardwar
 email account, or tells a session ("in this session", "the user said") instead of writing the
 procedure. It is refused when its description reads as an edit note ("Update…", "Document…") rather
 than saying when to use the skill, and when a new skill's body is over 8,000 characters. A revision
-may grow a body to 12,000 characters; a body already past that may not grow. A refusal is
-logged and recorded in the audit log.
+may grow a body to 12,000 characters; a body already past that may not grow.
+
+A refused draft goes back to the agent once, with the reason, to be put right: an address becomes a
+placeholder, a long body gives its detail to a file beside the skill. If the second try is refused
+too, nothing is kept, the refusal is logged and recorded in the audit log, and that skill is left
+alone for six hours. A revision answers for what it adds: an address a skill already held does not
+refuse a revision of it, and the weekly review is what takes it out.
 
 **Skills are written in English**, whatever language you were speaking. One library, one language, so
 any agent can read any skill.

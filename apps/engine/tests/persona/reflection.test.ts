@@ -54,6 +54,7 @@ const RSI: SkillLearningSection & Tuning = {
   model: "",
   cooldownMs: 60_000,
   maxPending: 5,
+  refusedRestMs: 6 * 3_600_000,
   notifyChat: false,
 };
 

@@ -111,8 +111,8 @@ export const TEST_BUDGET: Record<string, Budget> = {
     why: "the pipeline's first suite, from before the pipeline was split, its cases on the one `harness` this file builds; new cases go beside the module they test",
   },
   "apps/engine/tests/persona/reflection.test.ts": {
-    lines: 2_075,
-    why: "reflection end to end, written before `modules/reflection` was split, on this file's `enginePointedAt` harness; new cases go to tests/reflection/",
+    lines: 2_076,
+    why: "reflection end to end, written before `modules/reflection` was split, on its `enginePointedAt` harness; new cases go to tests/reflection/. Grew by its fixture's line for a new dial",
   },
   "apps/dashboard/tests/mount.test.ts": {
     lines: 1_495,

@@ -1,7 +1,9 @@
 /**
- * What the reflection pass may write, checked in code (0.7.28): a new kind of work waits for a second conversation, a
- * draft that names this environment or tells a session is refused, a body past its size is tightened rather than
- * grown, and a new skill is on for the agent whose work it came from.
+ * What the reflection pass may write, checked in code (0.7.28): a new kind of work waits until it comes back (in
+ * another conversation, or in the same chat after a break), a draft that names this environment or tells a session is
+ * refused, a body past its size is tightened rather than grown, and a new skill is on for the agent whose work it
+ * came from. A refused draft goes back to its writer once, a revision answers for what it adds, and a skill refused
+ * twice is left alone a while.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -15,6 +17,7 @@ import { migrate } from "@/db/index.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import { CandidateStore, DraftStore, ReflectionEngine, ToolMemory } from "@/modules/reflection/index.ts";
 import { BODY_CHARS, draftRefusal, NEW_BODY_CHARS } from "@/modules/reflection/draft-lint.ts";
+import { refusedNote } from "@/modules/reflection/synthesis.ts";
 import { fakeAgent } from "../helpers.ts";
 
 const dirs: string[] = [];
@@ -41,35 +44,40 @@ const create = (extra: Record<string, unknown> = {}) =>
   JSON.stringify({ decision: "create", name: "restart-stuck-ingress", description: "Use when the ingress answers 502 after a node reboot.", closest: "none", why_not_update: "n/a", why: "a fix that worked", ...extra });
 const SKILL = JSON.stringify({ name: "restart-stuck-ingress", description: "Use when the ingress answers 502 after a node reboot.", requires: "kubectl", body: "## When to Use\n- 502 after a reboot\n\n## Procedure\n1. `kubectl rollout restart deploy/<ingress>`" });
 
-/** An engine whose triage answers `triage` and whose writing call answers `written`, counting each. */
-function engine(options: { triage?: string; written?: string } = {}) {
+/**
+ * An engine whose triage answers `triage` and whose writing call answers `written`, counting each. `written` as a
+ * list answers one writing call after another, its last entry from then on. `agentsDir` is a pool made beforehand.
+ */
+function engine(options: { triage?: string; written?: string | string[]; agentsDir?: string; refusedRestMs?: number } = {}) {
   const db = freshDb();
-  const agentsDir = tempDir();
+  const agentsDir = options.agentsDir ?? tempDir();
   const drafts = new DraftStore(db, () => 1000);
   let clock = Date.UTC(2026, 9, 22);
   const candidates = new CandidateStore(db, () => clock);
   const asked = { triage: 0, written: 0, prompts: [] as string[] };
+  const answers = Array.isArray(options.written) ? options.written : [options.written ?? SKILL];
   const provider = {
     async chat(request: { messages: { content: string }[] }) {
       const triage = (request.messages[0]?.content ?? "").includes("what should happen to the skill");
       asked.prompts.push(request.messages.map((message) => message.content).join("\n"));
       if (triage) asked.triage += 1;
       else asked.written += 1;
-      return { text: triage ? (options.triage ?? create()) : (options.written ?? SKILL), toolCalls: [], stopReason: "stop" as const, usage: { inputTokens: 1, outputTokens: 1 } };
+      return { text: triage ? (options.triage ?? create()) : answers[Math.min(asked.written, answers.length) - 1]!, toolCalls: [], stopReason: "stop" as const, usage: { inputTokens: 1, outputTokens: 1 } };
     },
   } as unknown as LLMProvider;
   const agent = fakeAgent();
   const reflection = new ReflectionEngine({
     config: LEARNING,
-    tuning: TUNING,
+    tuning: { ...TUNING, ...(options.refusedRestMs !== undefined ? { refusedRestMs: options.refusedRestMs } : {}) },
     drafts,
+    now: () => clock,
     toolMemory: new ToolMemory(db, () => 1000),
     candidates,
     registry: { get: (id: string) => (id === agent.config.id ? agent : undefined), reloadAll: async () => {} } as unknown as AgentRegistry,
     providers: { get: () => provider } as unknown as ProviderRegistry,
     agentsDir,
   });
-  return { reflection, drafts, candidates, asked, agentsDir, later: (days: number) => void (clock += days * 86_400_000) };
+  return { reflection, drafts, candidates, asked, agentsDir, later: (days: number) => void (clock += days * 86_400_000), hours: (hours: number) => void (clock += hours * 3_600_000) };
 }
 
 /** Two failed steps and one that worked: a recovery, in conversation `session`. */
@@ -85,7 +93,7 @@ const turn = (session: string, userText = "kenapa ingress-nya 502") => ({
   steps: [{ name: "exec", ok: false }, { name: "exec", ok: false }, { name: "exec", ok: true }],
 });
 
-describe("a new kind of work waits for a second conversation", () => {
+describe("a new kind of work waits until it comes back", () => {
   test("seen once: held as a candidate, and nothing written — not even the body", async () => {
     const h = engine();
     await h.reflection.observe(turn("ses_1"));
@@ -104,12 +112,45 @@ describe("a new kind of work waits for a second conversation", () => {
     expect(h.asked.prompts.find((prompt) => prompt.includes("Seen once, not skills yet"))).toContain("restart-stuck-ingress");
   });
 
-  test("the same conversation going on is not the work coming back", async () => {
+  test("the same sitting going on is not the work coming back", async () => {
     const h = engine();
     await h.reflection.observe(turn("ses_1"));
+    h.hours(5);
     await h.reflection.observe(turn("ses_1"));
     expect(h.drafts.pending()).toEqual([]);
     expect(h.asked.written).toBe(0);
+  });
+
+  // A chat is one conversation for as long as the install lives: on a live box one class of work was held twelve
+  // times in a week of one chat, and no skill came of it.
+  test("the same chat after a break is the work coming back: the skill is drafted", async () => {
+    const h = engine();
+    await h.reflection.observe(turn("ses_1"));
+    h.hours(7);
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.drafts.pending().map((draft) => draft.name)).toEqual(["restart-stuck-ingress"]);
+    expect(h.candidates.list()).toEqual([]);
+  });
+
+  test("the break is counted from when the work was last seen, not first: a long sitting is one sitting", async () => {
+    const h = engine();
+    await h.reflection.observe(turn("ses_1"));
+    for (let sighting = 0; sighting < 3; sighting += 1) {
+      h.hours(4);
+      await h.reflection.observe(turn("ses_1"));
+    }
+    expect(h.drafts.pending()).toEqual([]);
+    h.hours(6);
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.drafts.pending()).toHaveLength(1);
+  });
+
+  test("the pass is told the rule in those words", async () => {
+    const h = engine();
+    await h.reflection.observe(turn("ses_1"));
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.asked.prompts[0]).toContain("in another conversation or in this one after a break");
+    expect(h.asked.prompts[1]).toContain("each is written when the same kind of work comes back");
   });
 
   test("a second sighting under another name counts when the pass says which candidate it is", async () => {
@@ -179,13 +220,136 @@ describe("what a drafted skill may not be", () => {
   });
 });
 
-describe("a refused draft is not kept", () => {
-  test("the pass wrote a host's address: no draft, and the candidate it came from is still done with", async () => {
-    const leaky = JSON.stringify({ name: "restart-stuck-ingress", description: "Use when the ingress answers 502.", requires: "", body: "## Procedure\n1. ssh root@172.16.42.8 and restart" });
-    const h = engine({ triage: create(), written: leaky });
+const LEAKY = JSON.stringify({ name: "restart-stuck-ingress", description: "Use when the ingress answers 502.", requires: "", body: "## Procedure\n1. ssh root@172.16.42.8 and restart" });
+
+describe("a refused draft goes back to its writer once", () => {
+  test("told why, the writer puts it right: the second draft is kept", async () => {
+    const h = engine({ written: [LEAKY, SKILL] });
+    await h.reflection.observe(turn("ses_1", "jadiin skill ya"));
+    expect(h.drafts.pending().map((draft) => draft.body)).toEqual([JSON.parse(SKILL).body]);
+    expect(h.asked.written).toBe(2);
+    // The second call carries the refused answer and the reason, and asks for that one thing.
+    const second = h.asked.prompts.at(-1)!;
+    expect(second).toContain("The daemon refused the draft you wrote for this: it names a machine's address (172.16.42.8)");
+    expect(second).toContain("ssh root@172.16.42.8 and restart");
+    expect(second).toContain("with that put right and everything else kept");
+  });
+
+  test("a draft that passes is not asked for twice", async () => {
+    const h = engine();
+    await h.reflection.observe(turn("ses_1", "jadiin skill ya"));
+    expect(h.asked.written).toBe(1);
+    expect(h.drafts.pending()).toHaveLength(1);
+  });
+
+  test("refused again: no draft, and no third call", async () => {
+    const h = engine({ written: LEAKY });
     await h.reflection.observe(turn("ses_1", "jadiin skill ya"));
     expect(h.drafts.pending()).toEqual([]);
+    expect(h.asked.written).toBe(2);
+  });
+
+  test("a second answer that is not a skill at all leaves the first refusal standing", async () => {
+    const h = engine({ written: [LEAKY, "sorry, I cannot"] });
+    await h.reflection.observe(turn("ses_1", "jadiin skill ya"));
+    expect(h.drafts.pending()).toEqual([]);
+    expect(h.asked.written).toBe(2);
+  });
+
+  test("the note names a placeholder for a fact and references/ for a long body", () => {
+    const note = refusedNote("{}", "its body is 12,838 characters, past 12,000");
+    expect(note).toContain("its body is 12,838 characters, past 12,000");
+    expect(note).toContain("becomes a placeholder");
+    expect(note).toContain("gives its detail to a file under `references/`");
+  });
+});
+
+describe("a class whose draft was refused is still a candidate", () => {
+  test("seen again and refused twice: the candidate stays, and the next sighting writes it", async () => {
+    const h = engine({ written: [LEAKY, LEAKY, SKILL], refusedRestMs: 0 });
+    await h.reflection.observe(turn("ses_1"));
+    await h.reflection.observe(turn("ses_2"));
+    expect(h.drafts.pending()).toEqual([]);
+    expect(h.candidates.list().map((held) => held.name)).toEqual(["restart-stuck-ingress"]);
+    await h.reflection.observe(turn("ses_3"));
+    expect(h.drafts.pending()).toHaveLength(1);
+    expect(h.candidates.list()).toEqual([]);
+  });
+});
+
+describe("a skill whose draft was refused is left alone a while", () => {
+  test("no writing call is paid for it inside the rest, and one is after it", async () => {
+    const h = engine({ written: [LEAKY, LEAKY, SKILL] });
+    await h.reflection.observe(turn("ses_1"));
+    await h.reflection.observe(turn("ses_2"));
+    expect(h.asked.written).toBe(2);
+    h.hours(1);
+    await h.reflection.observe(turn("ses_3"));
+    expect(h.asked).toMatchObject({ triage: 3, written: 2 });
+    h.hours(6);
+    await h.reflection.observe(turn("ses_4"));
+    expect(h.asked.written).toBe(3);
+    expect(h.drafts.pending()).toHaveLength(1);
+  });
+
+  test("a revision of it is not paid for inside the rest either", async () => {
+    const agentsDir = tempDir();
+    await writeNewSkill(agentsDir, { name: "site-contributing", description: "Use when changing the site.", body: "1. Run the build.", author: "nouva" });
+    const leaky = JSON.stringify({ description: "Use when changing the site.", requires: "", body: "1. Run the build.\n2. ssh root@172.16.42.8" });
+    const h = engine({ agentsDir, triage: JSON.stringify({ decision: "update", target: "site-contributing", why: "a step was missing" }), written: leaky });
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.asked.written).toBe(2);
+    h.hours(1);
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.asked).toMatchObject({ triage: 2, written: 2 });
+    h.hours(6);
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.asked.written).toBe(4);
+  });
+
+  test("a person asking for it is not held", async () => {
+    const h = engine({ written: [LEAKY, LEAKY, SKILL] });
+    await h.reflection.observe(turn("ses_1"));
+    await h.reflection.observe(turn("ses_2"));
+    await h.reflection.observe(turn("ses_3", "simpan jadi skill ya"));
+    expect(h.drafts.pending()).toHaveLength(1);
+  });
+});
+
+describe("a revision answers for what it adds", () => {
+  const kept = "## Procedure\n1. commit as dev@nouverse.tech from 172.16.42.8\n2. In this session we pushed.";
+  const revision = (body: string, whole = false) => draftRefusal({ description: "Use when committing.", body, previousBody: kept, descriptionChanged: false, ...(whole ? { whole } : {}) });
+
+  test("an address, an account or a story the skill already held does not refuse its revision", () => {
+    expect(revision(`${kept}\n3. push with --force-with-lease`)).toBeNull();
+  });
+
+  test("one the revision adds still does", () => {
+    expect(revision(`${kept}\n3. mail ops@nouverse.tech`)).toContain("ops@nouverse.tech");
+    expect(revision(`${kept}\n3. ssh to 172.16.42.9`)).toContain("172.16.42.9");
+    expect(revision(`${kept}\n3. the MAC is 9C:6B:00:8C:1D:13`)).toContain("hardware address");
+    expect(revision(`${kept}\n3. The user said to squash.`)).toContain("tells a session");
+  });
+
+  test("a new skill has nothing it already held", () => {
+    expect(draftRefusal({ description: "Use when committing.", body: kept, descriptionChanged: true })).toContain("172.16.42.8");
+  });
+
+  test("the weekly review's revision is judged whole: taking those out is what it was asked for", () => {
+    expect(revision(`${kept}\n3. push`, true)).toContain("172.16.42.8");
+  });
+
+  // On a live box a skill whose body held an account's address was revised and refused nineteen times in a week.
+  test("through the pass: a skill that names an account is revised, where it was refused every time", async () => {
+    const agentsDir = tempDir();
+    await writeNewSkill(agentsDir, { name: "site-contributing", description: "Use when changing the site.", body: kept, author: "nouva" });
+    const better = JSON.stringify({ description: "Use when changing the site.", requires: "", body: `${kept}\n3. Run the build before pushing.` });
+    const h = engine({ agentsDir, triage: JSON.stringify({ decision: "update", target: "site-contributing", why: "the build step was missing" }), written: better });
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.drafts.pending().map((draft) => draft.target)).toEqual(["site-contributing"]);
     expect(h.asked.written).toBe(1);
+    // The reviser is told the size as numbers.
+    expect(h.asked.prompts.at(-1)).toContain(`Its body is ${kept.length} characters now. Your revision's body may be at most 12,000.`);
   });
 });
 
