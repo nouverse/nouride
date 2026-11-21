@@ -43,7 +43,10 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 - **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it, as it does
   when you are away ("do it, I'm off to sleep"). You can change it in the draft.
 - A draft nobody starts stays in the board's Backlog until someone starts or drops it, however long that is: a draft
-  never expires. It is not counted among what needs you.
+  never expires. It is not counted among what needs you, and you are not reminded of it.
+- **A draft's notice is one message.** When the agent changes the draft, that message is rewritten where it stands,
+  its buttons kept, in a chat app that can rewrite one (Telegram, Discord). Elsewhere one line says what changed.
+  It used to be sent whole again at each change.
 
 Said "do it now, I'm off to sleep"? Every mission an agent starts is a draft first (0.8.40): it drafts it and says so,
 and you start it, or tell it to go and it starts its draft on your word. What it had written down about the task, and
@@ -78,8 +81,13 @@ The chat stays quiet. A mission says:
   (0.8.39), not at the end of the turn it was asked in;
 - that it **asks, and works on meanwhile** (0.8.39): a question whose answer the rest of the work does not wait for.
   The mission goes on, and your answer is handed to the work in progress. If the turn ends with the question still
-  open, you are told once that it has done what it could and waits for the answer now. One question is open at a time;
-- that it **paused** because its model could not answer, and tries again by itself;
+  open, you are told once that it has done what it could and waits for the answer now. A mission that finishes
+  everything else while its question is still open does not go on to its checks, and you are not asked to accept
+  anything yet (0.8.41): it tells you once that the rest is finished and waits for your answer, since the answer may
+  change the work. With the answer it does what the answer changes and says it is done again. Accepting it as it
+  stands still closes it. One question is open at a time;
+- that it is **held up** because its model could not answer, and tries again by itself;
+- that it is **paused** (0.8.41), by whom, with Resume and Stop;
 - that it is **done**, with its result in two or three sentences; then its whole **report** as `report.md`, and the
   files it made for you: a document, an image, a spreadsheet. Code it changed in a repository stays on its branch,
   which the notice names, and is not sent;
@@ -97,7 +105,8 @@ A list of things with their state is a table.
 [Links from a chat](/en/docs/manual/dashboard/#links-from-a-chat).
 
 Between those, a progress line written from its checklist ("3 of 8 steps done"), at most every half hour, and only
-when a step finished. A wait on you is named again once, after four hours.
+when a step finished. A wait on you is named again once, after four hours; never a draft, and never a mission
+you paused.
 
 ## Watching it
 
@@ -214,10 +223,31 @@ closes with a note: `/mission accept <id> --outside "<where>"`.
 
 ## When its model cannot answer
 
-A usage limit, a rate limit, a provider that is down: the mission **pauses** and tries again by itself: after 2, 10
-and 30 minutes, then every hour, for about a day. You are told once when it pauses and once when it goes on; the time
+A usage limit, a rate limit, a provider that is down: the mission is **held up** and tries again by itself: after 2, 10
+and 30 minutes, then every hour, for about a day. You are told once when it is held up and once when it goes on; the time
 it waits is not counted against its hours. **Retry now** tries at once, **Stop** ends it. After a day of it, the mission
 asks you.
+
+Nothing is asked of you while it is held up, so it is not under Needs you: on the board it stays in **Working** under
+a **Held up** tag, and its card and its page say when the next try is ("It tries again by itself in 43 min"). A mission
+that worked on after a try and is then held up again, as one on a plan with a limit every few hours is, tells you
+again and starts from the 2 minutes.
+
+## Pausing one
+
+A mission that is running or waiting in the queue can be paused (0.8.41): **Pause** on its page, `/mission pause <id>`
+in its chat, or `nouride mission pause <id>`. Its turn at work is cut and its background jobs are ended, as at a limit.
+Nothing of it is lost: its checklist, its folder and its work so far are kept, and its agent is free for other work.
+A mission paused in a repository keeps that repository, so another mission there waits until it goes on or is stopped.
+
+It stays paused as long as you like. The time it is paused counts against none of its limits and you are not
+reminded of it. **Resume** on its page or on its card under Needs you, the **Resume** button under its notice, or
+`/mission continue <id>`, lets it go on from its checklist; one paused while it was queued takes its place in the
+queue again. **Stop** ends it.
+
+Whoever may stop a mission may pause it. The orchestrator can pause any agent's mission when you ask it to, and can
+go on only with one it paused itself: a mission you paused is yours to resume. A mission being checked, one that
+already waits for you, and a draft cannot be paused, since nothing of theirs is running.
 
 ## Its questions
 
@@ -314,7 +344,8 @@ branch of its own, `mission/<id>-helper-<n>`; the result names the branches, for
 | `/mission <goal>` | the agent you address drafts one from your goal; it runs once you start it |
 | `/mission` | what runs and waits here, needs-you first |
 | `/mission stop <id>` | end it |
-| `/mission continue <id> [note]` | go on past a limit, out of being stuck, or with what an accept found missing |
+| `/mission pause <id>` | hold it where it is: its turn cut, its jobs ended, its work kept |
+| `/mission continue <id> [note]` | go on past a limit, out of being stuck, after a pause, or with what an accept found missing |
 | `/mission accept <id>` | accept a result, or a proposal, which starts it; on one waiting for anything else, accept it as it stands |
 | `/mission accept <id> --outside "<where>"` | close it as done another way, its checks not run |
 | `/mission answer <id> <answer>` | answer its question |

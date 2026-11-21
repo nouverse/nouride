@@ -3,7 +3,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { AgentPresets } from "@nouride/wire";
+import type { AgentDeleted, AgentDeletion, AgentPresets } from "@nouride/wire";
 
 export const agentToolsApi = {
   agentPresets: () => request<AgentPresets>(`${control}/setup/presets`),
@@ -15,4 +15,8 @@ export const agentToolsApi = {
   setAgentAccess: (id: string, access: "follow" | "pair" | "allowlist") => post<{ ok: true }>(`${control}/agents/${id}/access`, { access }),
   /** Admin: the agent that answers when nobody is named, and the front desk of rooms. */
   setOrchestrator: (id: string) => post<{ ok: true }>(`${control}/agents/${id}/orchestrator`, {}),
+  /** Admin: what deleting this agent would take, counted for the question that asks. Refused for the orchestrator. */
+  agentDeletion: (id: string) => request<AgentDeletion>(`${control}/agents/${id}/delete`),
+  /** Admin: the agent deleted. `confirm` is its id, typed again by the person. */
+  deleteAgent: (id: string, confirm: string) => post<AgentDeleted>(`${control}/agents/${id}/delete`, { confirm }),
 };

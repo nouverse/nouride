@@ -156,7 +156,7 @@ describe("D4 — a draft changed before it runs", () => {
     const { h, tools, draft } = await setup();
     const { mission } = await draft({ review: "Each answer of the owner's is in the RFC." });
     const answer = await tools.chat.execute({ action: "edit", id: mission!.id, checks: ["test -s RFC.md", "bun run check-paths"], accept: true, no_review: true }, person());
-    expect(answer.content).toBe(`Draft ${mission!.id.slice(0, 10)} changed: checks (2), no reviewer, you accept it. Its notice was sent to this chat again, saying so.`);
+    expect(answer.content).toBe(`Draft ${mission!.id.slice(0, 10)} changed: checks (2), no reviewer, you accept it. Its notice in this chat says so now: it was rewritten where it stands, or one line was added under it.`);
     expect(h.store.get(mission!.id)).toMatchObject({ checks: ["test -s RFC.md", "bun run check-paths"], accept: true, reviewOn: false, status: "waiting" });
     const notice = h.told.at(-1)!;
     expect(notice.text).toStartWith(`✎ Draft ${mission!.id.slice(0, 10)} changed: checks (2), no reviewer, you accept it.\n\n📝 Draft`);

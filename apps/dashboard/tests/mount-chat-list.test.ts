@@ -17,6 +17,7 @@ const agent = (id: string) => ({ ...STATUS.agents[0], id, displayName: id[0]!.to
 const status = { ...STATUS, orchestrator: "nouva", agents: ["nouva", "nestor", "nix", "kuro"].map(agent) };
 const NOW = Date.now();
 const LIST: ChatListPayload = {
+  gone: [],
   agents: [
     { agentId: "nouva", sessionId: "ses_1", at: NOW - 3_600_000, last: { from: "agent", name: "nouva", text: "Morning summary is ready" }, working: false, helpers: 0 },
     { agentId: "nestor", sessionId: "ses_nestor", at: NOW - 60_000, last: { from: "person", text: "compare the caching" }, working: true, helpers: 3 },
@@ -387,6 +388,65 @@ describe("an agent's tag", () => {
     expect(seen.answer).toEqual(["@nouva"]);
     expect(seen.code).toBeNull();
     expect(seen.chips).toEqual(["nouva", "nix"]);
+  });
+});
+
+describe("a deleted agent's chats", () => {
+  const gone = { ...LIST, gone: [{ agentId: "rex", sessionId: "ses_rex", at: NOW - 5_000, last: { from: "agent" as const, name: "rex", text: "The durian is in the blue box" } }] };
+  const transcript = { session: { id: "ses_rex", agentId: "rex", chatId: "web-9", gatewayId: "web:dashboard", updatedAt: NOW, writable: true }, earlier: [], turns: [], events: [], messages: [] };
+  const wire = { ...list, "/chat-list": { status: 200, body: gone }, "/sessions/ses_rex/turns": { status: 200, body: transcript }, "/sessions/ses_rex/notes": { status: 404, body: { error: "no notes" } } };
+
+  test("are listed last under their own heading, by the agent's id, each opening its newest", async () => {
+    answer(wire);
+    let names: unknown[] = [];
+    let text = "";
+    let href = "";
+    await renderPage("/chat", async (host) => {
+      await eventually(() => rowNames(host).includes("rex"), 3_000, "the row");
+      names = rowNames(host);
+      text = aside(host)!.textContent ?? "";
+      href = [...aside(host)!.querySelectorAll("a")].find((row) => row.textContent?.includes("Deleted"))?.getAttribute("href") ?? "";
+    });
+    expect(names).toEqual(["Nouva", "Nestor", "Harness research", "Nix", "Kuro", "rex"]);
+    expect(text.indexOf("Deleted agents")).toBeGreaterThan(text.indexOf("Say hi to Kuro"));
+    expect(text).toContain("The durian is in the blue box");
+    expect(href).toEndWith("/chat/ses_rex");
+  });
+
+  test("the chat is read and not written to: the agent's id over it, a note where the box would be, no new chat with it; its History is still there", async () => {
+    answer(wire);
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/ses_rex", async (host) => {
+      await eventually(() => host.querySelector("[data-agent-deleted]") !== null, 3_000, "the note");
+      seen.note = host.querySelector("[data-agent-deleted]")!.textContent;
+      seen.box = host.querySelector("textarea") !== null;
+      seen.name = host.querySelector("header h2")?.textContent;
+      seen.header = host.querySelector("header h2")?.closest("header")?.textContent;
+      seen.newChat = host.querySelector('header a[aria-label^="New chat with"]') !== null;
+      seen.history = host.querySelector(`header button[aria-label="rex's conversations"]`) !== null;
+      seen.current = aside(host)?.querySelector('a[aria-current="page"]')?.textContent ?? "";
+    });
+    expect(seen.box).toBe(false);
+    expect(seen.note).toBe("Read-only. rex was deleted: this chat is kept to read, and nothing more can be written in it.");
+    // Not the first agent of the list, which this chat was never with.
+    expect(seen.name).toBe("rex");
+    expect(seen.header).toContain("Deleted");
+    expect(seen.header).toContain("Read-only");
+    expect(seen.newChat).toBe(false);
+    expect(seen.history).toBe(true);
+  });
+
+  test("an agent that is there keeps its box, and has no such note", async () => {
+    const mine = { session: { id: "ses_1", agentId: "nouva", chatId: "web-1", gatewayId: "web:dashboard", updatedAt: NOW, writable: true }, earlier: [], turns: [], events: [], messages: [] };
+    answer({ ...wire, "/sessions/ses_1/turns": { status: 200, body: mine } });
+    const seen: Record<string, unknown> = {};
+    await renderPage("/chat/ses_1", async (host) => {
+      await eventually(() => host.querySelector("textarea") !== null, 3_000, "the box");
+      seen.note = host.querySelector("[data-agent-deleted]") !== null;
+      seen.newChat = host.querySelector('header a[aria-label^="New chat with"]') !== null;
+    });
+    expect(seen.note).toBe(false);
+    expect(seen.newChat).toBe(true);
   });
 });
 

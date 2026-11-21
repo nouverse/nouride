@@ -71,6 +71,19 @@ describe("toChat", () => {
   });
 });
 
+describe("fitsOne", () => {
+  // A rewrite of one message cannot become two: an edit cuts what does not fit, where a send parts it.
+  test("by the connection's own limit, where it has one; with none, or no such connection, anything fits", () => {
+    const limited = { id: "discord:main", platform: "discord", maxMessageChars: 2000 } as unknown as Gateway;
+    const open = { id: "web:dashboard", platform: "web" } as unknown as Gateway;
+    const n = new Notifier({ gateways: new Map([[limited.id, limited], [open.id, open]]), alertCooldownMs: 1000 });
+    expect(n.fitsOne({ gatewayId: "discord:main", chatId: "c" }, "x".repeat(2000))).toBe(true);
+    expect(n.fitsOne({ gatewayId: "discord:main", chatId: "c" }, "x".repeat(2001))).toBe(false);
+    expect(n.fitsOne({ gatewayId: "web:dashboard", chatId: "c" }, "x".repeat(50_000))).toBe(true);
+    expect(n.fitsOne({ gatewayId: "nowhere:x", chatId: "c" }, "x".repeat(50_000))).toBe(true);
+  });
+});
+
 describe("alert", () => {
   test("goes to the owner chat with a marker", async () => {
     const { n, sent } = notifier();

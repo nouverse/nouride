@@ -18,11 +18,11 @@ import { buttonsFor } from "./actions.ts";
 import { Asking, type Asked } from "./asking.ts";
 import { Checking, type Reviewing } from "./checking.ts";
 import type { MissionJob, MissionsDeps } from "./deps.ts";
-import { afterTurn, answersWait, blockedBy, continueGives, limitReached, limitsNear, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
+import { afterTurn, answersWait, blockedBy, continueGives, failuresAfter, limitReached, limitsNear, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
 import { isMissionChat, MISSION_GATEWAY_ID } from "./gateway.ts";
 import { APPROVAL_ANSWERABLE_MS, MAX_RESUMES, STALL_AFTER_MS } from "./limits.ts";
 import { newMission, startRefusal, type StartRequest } from "./start.ts";
-import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
+import { acceptMission, acceptOutside, answerMission, continueMission, deleteMission, pauseMission, stopMission, type Acted, type Deleted, type Sayer } from "./person.ts";
 import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice } from "./notices.ts";
@@ -427,6 +427,8 @@ export class Missions implements TurnShaper {
     if (claim?.kind === "fail") return this.end(mission, "failed", `gave up: ${claim.reason}`, claim.report);
     if (claim?.kind === "stuck") return this.wait(mission, "stuck", claim.reason);
     if (claim?.kind === "done") {
+      // Its question still open: it waits for the answer, and nothing it claimed is kept or checked (`asking.ts`).
+      if (this.asking.waitsOn(mission, true)) return;
       mission.summary = claim.summary;
       mission.report = claim.report;
       mission.files = claim.files;
@@ -441,14 +443,14 @@ export class Missions implements TurnShaper {
     // Its question still open and nothing claimed: it waits for the answer, whether it stopped to or worked on until
     // nothing was left. Not after a turn that failed, which is tried again with the question as open as it was.
     if (!outcome.failed && this.asking.waitsOn(mission)) return;
-    state.failures = outcome.failed ? state.failures + 1 : 0;
-    if (!outcome.failed && state.retried > 0) {
-      void this.deps.tell(mission, goesOnNotice(mission, state.retried));
-      state.retried = 0;
-    }
+    state.failures = failuresAfter(state.failures, outcome);
+    if (!outcome.failed) this.goesOn(mission);
     // Nothing done: no call that ran and worked, no step moved — refused or failing calls are not progress.
     const stood = outcome.worked === 0 && !moved;
-    state.idle = stood && !outcome.failed ? state.idle + 1 : 0;
+    // Not counted while work of its own is under way: such a turn is the daemon looking in on a job that still runs,
+    // and "nothing yet" is the right answer. Three helpers each got a look-in in the same seconds, the mission was
+    // stuck with all three at work, and their results then found it waiting and woke nothing (msn_17aff8).
+    state.idle = stood && !outcome.failed ? state.idle + (this.awaits(mission) ? 0 : 1) : 0;
     const reached = limitReached(mission, now, this.inForce(mission));
     if (reached) return this.limitHit(mission, reached);
     // Not beside the limit itself: msn_3d28e0's chat was told "80% of its 100M tokens" and "reached its token limit" in
@@ -522,6 +524,11 @@ export class Missions implements TurnShaper {
     return stopMission(this, this.deps, id, by);
   }
 
+  /** Paused until someone says to go on (`person.ts` `pauseMission`); `agent` where an agent's `work` tool did it. */
+  pause(id: string, by: string, agent?: string): Acted {
+    return pauseMission(this, this.deps, id, by, agent);
+  }
+
   /**
    * Its conversation deleted (0.8.0): the mission goes with it — stopped first while it still runs, or it worked on with
    * its checklist gone; then the folder the daemon made for it, and its record. One history, one lifetime, as retention
@@ -540,7 +547,7 @@ export class Missions implements TurnShaper {
     return deleteMission(this, this.deps, id, by, how);
   }
 
-  /** Go on: past a limit (the one it reached raised again), out of being stuck, or with what an accept found missing. */
+  /** Go on: past a limit (the one it reached raised again), out of being stuck, after a pause, or with what an accept found missing. */
   continueMission(id: string, by: string, note?: string, as?: Sayer): Acted {
     return continueMission(this, this.deps, id, by, note, as);
   }
@@ -617,6 +624,18 @@ export class Missions implements TurnShaper {
   /** The try a paused mission is on (`retry`): its failed turns in a row — one, after a restart forgot them. */
   retryAttempt(id: string): number {
     return Math.max(this.state.get(id)?.failures ?? 0, 1);
+  }
+
+  /**
+   * Its model answers again after tries: said once. At the end of the turn that was taken up, or sooner where the
+   * minute's check sees a coding CLI's turn at work spend: such a turn runs for hours, and its person went on reading
+   * "held up" until they pressed Continue themselves.
+   */
+  goesOn(mission: Mission): void {
+    const state = this.turnState(mission.id);
+    if (state.retried === 0) return;
+    void this.deps.tell(mission, goesOnNotice(mission, state.retried));
+    state.retried = 0;
   }
 
   /** A paused mission's time came round (`timers.ts`): out of its wait, a turn to try its model again. */

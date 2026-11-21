@@ -8,7 +8,7 @@ import { afterEach, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { asItsAgent, runAgentCommandsThrough } from "@nouride/runtime";
+import { agentUserBack, asItsAgent, runAgentCommandsThrough, runCommand } from "@nouride/runtime";
 import { addLogSink, holdLines } from "@nouride/shared";
 import { refreshHelper, settleAgentUsers } from "@/boot/agent-users.ts";
 import { keptFolders } from "@/boot/kept-folders.ts";
@@ -191,4 +191,32 @@ test("one agent made ready twice at once — boot's and a reload's — has its H
   await Promise.all([boot.ready([nouva]), boot.ready([nouva])]);
   expect(readFileSync(log, "utf-8").split("\n").filter((line) => line.includes("tar -xf"))).toHaveLength(1);
   expect(existsSync(join(root, "workspace/private/nouva/.nouride-seeded"))).toBe(true);
+});
+
+// The live box, the first delete of an agent there: its user removed, and made again in the same second by a
+// command still on its way as that agent (the helper makes a user for whatever id a command names).
+test("an agent's user removed with it: nothing is run as it after, and an agent made again under its id runs as before", async () => {
+  const { config, log, users } = world();
+  // The stand-in answers `remove` as the helper does, and runs anything else as given.
+  writeFileSync(users.binary, `#!/bin/sh\necho "$*" >> "${log}"\n[ "$1" = groups ] && exit 0\n[ "$1" = remove ] && { echo "removed left=0"; exit 0; }\nwhile [ "$1" != "--" ]; do shift; done\nshift\nexec "$@"\n`, { mode: 0o755 });
+  const nox = fakeAgent({ config: { ...fakeAgent().config, id: "nox", credentials: false } });
+  const boot = await settleAgentUsers({ config, kept: keptFolders(config), agent: () => undefined, find: async () => ({ users, reason: "found" }) });
+  try {
+    await boot.ready([nox]);
+    const asked = () => readFileSync(log, "utf8").trim().split("\n");
+    const before = asked().length;
+    expect((await boot.remove("nox")).how).toBe("removed");
+    expect(asked().slice(before).filter((line) => line.startsWith("remove "))).toHaveLength(1);
+    const after = asked().length;
+    // Its stopped mission's folder being tidied, its folders being emptied once more: each refused, the helper not asked.
+    await expect(runCommand(["true"], { agent: "nox", cwd: "/", env: {}, timeoutMs: 5_000, maxOutputBytes: 1024 })).rejects.toThrow("the agent nox was deleted");
+    expect(asked().length).toBe(after);
+    // Another agent's commands as before.
+    expect((await runCommand(["true"], { agent: "nouva", cwd: "/", env: {}, timeoutMs: 5_000, maxOutputBytes: 1024 })).exitCode).toBe(0);
+    // Made again under the same id, it is readied as any agent is, and runs.
+    await boot.ready([nox]);
+    expect((await runCommand(["true"], { agent: "nox", cwd: "/", env: {}, timeoutMs: 5_000, maxOutputBytes: 1024 })).exitCode).toBe(0);
+  } finally {
+    agentUserBack("nox");
+  }
 });

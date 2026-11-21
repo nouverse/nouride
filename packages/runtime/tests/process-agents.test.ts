@@ -9,13 +9,40 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { commandLine, runCommand } from "../src/process.ts";
 import { writeFileAsAgent } from "../src/process-agent-files.ts";
-import { agentCommandsHaveOwnUsers, asItsAgent, commandGroupOf, runAgentCommandsThrough, trackCommand, untrackCommand } from "../src/process-agents.ts";
+import { agentCommandsHaveOwnUsers, agentUserBack, agentUserGone, asItsAgent, commandGroupOf, putAsAgent, runAgentCommandsThrough, trackCommand, untrackCommand } from "../src/process-agents.ts";
 
 const CLIENT = "/usr/local/lib/nouride-run/nouride-run";
 const prefix = (agent: string, cwd: string | undefined, pidFile: string) => [CLIENT, "exec", "--agent", agent, "--cwd", cwd ?? "", "--pid-file", pidFile, "--"];
 const unused = () => [] as string[];
 
-afterEach(() => runAgentCommandsThrough(null));
+afterEach(() => {
+  runAgentCommandsThrough(null);
+  agentUserBack("rex");
+});
+
+// On the live box an agent's delete removed its user, and a command still on its way as that agent had the helper make
+// the user and its folders again, in the same second.
+test("nothing is run or written as an agent whose user was removed with it, until an agent of that id is there again", async () => {
+  runAgentCommandsThrough({ prefix, put: (agent, path) => [CLIENT, "put", "--agent", agent, path] });
+  expect(asItsAgent(["rm", "-rf", "--", "/w/x"], "rex", "/").cmd[0]).toBe(CLIENT);
+  agentUserGone("rex");
+  const refused = "the agent rex was deleted, and nothing runs or is written as its user any more";
+  expect(() => asItsAgent(["rm", "-rf", "--", "/w/x"], "rex", "/")).toThrow(refused);
+  expect(() => putAsAgent("rex", "/w/x")).toThrow(refused);
+  // The spawn itself is refused: no client is started for it.
+  await expect(runCommand(["true"], { agent: "rex", cwd: "/", env: {}, timeoutMs: 5_000, maxOutputBytes: 1024 })).rejects.toThrow(refused);
+  // Every other agent's commands, and the daemon's own, as before.
+  expect(asItsAgent(["ls"], "nouva", "/w").cmd[0]).toBe(CLIENT);
+  expect(asItsAgent(["git", "status"], undefined, "/w")).toEqual({ cmd: ["git", "status"] });
+  agentUserBack("rex");
+  expect(asItsAgent(["ls"], "rex", "/w").cmd[0]).toBe(CLIENT);
+});
+
+test("…and where agents' commands run as the daemon's user there is no user to bring back: nothing is refused", () => {
+  agentUserGone("rex");
+  expect(asItsAgent(["ls"], "rex", "/w")).toEqual({ cmd: ["ls"] });
+  expect(putAsAgent("rex", "/w/x")).toBeNull();
+});
 
 test("with no helper, or no agent named, a command runs as the daemon's user, as before", () => {
   expect(agentCommandsHaveOwnUsers()).toBe(false);

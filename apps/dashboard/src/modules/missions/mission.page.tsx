@@ -141,7 +141,9 @@ export default function MissionPage({ missionId }: { missionId: string }) {
           <Mascot pose="waiting" decorative className="w-12 sm:w-14" />
           <div className="w-full min-w-0 space-y-3">
             <p className="text-sm leading-relaxed text-base-content">
-              <span className="mr-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-warning">Needs you</span>
+              {/* A pause is under its own word: nothing is asked of the reader until they want it to go on. */}
+              {/* Nor is one held up for its model: it tries again by itself, and the label says which of the two it is. */}
+              {waitingOn === "paused" ? null : <span className="mr-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-warning">{waitingOn === "retry" ? "Held up" : "Needs you"}</span>}
               {asking ? "It asked a question and works on meanwhile. Your answer reaches it while it works." : waitingOn === "input" ? "It asked a question and waits for your answer." : needsYouSaid(mission)}
             </p>
             {(waitingOn === "input" || asking) && (

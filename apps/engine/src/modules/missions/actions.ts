@@ -41,6 +41,8 @@ function actionButtons(mission: Pick<Mission, "id" | "startedAt">, kind: Mission
       return [button(mission, "continue", kind, "Continue"), button(mission, "stop", kind, "Stop", "negative")];
     case "retry":
       return [button(mission, "continue", kind, "Retry now"), button(mission, "stop", kind, "Stop", "negative")];
+    case "paused":
+      return [button(mission, "continue", kind, "Resume", "positive"), button(mission, "stop", kind, "Stop", "negative")];
     case "input":
     case "approval":
       return [];

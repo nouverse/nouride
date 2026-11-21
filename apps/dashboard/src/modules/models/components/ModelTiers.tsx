@@ -23,6 +23,7 @@ import { Details } from "@/commons/components/ui/Details";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { chatModels } from "@/commons/lib/model-kind";
+import { useWide } from "@/commons/hooks/use-wide";
 
 /** Each helper, as a person knows it, and what its empty setting means — they do not all mean the same thing. */
 const HELPERS: { key: TierHelper; label: string; setting: string; unset: string }[] = [
@@ -69,6 +70,7 @@ function tiersLine(defaults: { model: string; smallModel: string; highModel: str
 function ModelTiersDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const me = useMe();
+  const wide = useWide();
   const view = useQuery({ queryKey: ["model-tiers"], queryFn: api.modelTiers, retry: false });
   const provider = view.data?.defaults.provider ?? "";
   const modelList = useQuery({
@@ -146,6 +148,7 @@ function ModelTiersDialog({ onClose }: { onClose: () => void }) {
                 value={value(key, live.defaults[key])}
                 onChange={(next) => setDraft((was) => ({ ...was, [key]: next }))}
                 disabled={!editable}
+                listOnPress={wide}
               />
               <span className="block text-xs text-base-content/65">
                 {key === "smallModel" ? "The cheapest. Empty: the default model." : "The strongest and the dearest. Empty: the default model."}

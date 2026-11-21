@@ -16,6 +16,7 @@ import type { AgentSummary } from "@nouride/wire";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { useWide } from "@/commons/hooks/use-wide";
 
 type Tier = "small" | "high";
 
@@ -28,6 +29,7 @@ const FOR: Record<Tier, string> = {
 export function AgentModelTiers({ agent, models, loading, editable }: { agent: AgentSummary; models: string[]; loading: boolean; editable: boolean }) {
   const queryClient = useQueryClient();
   const saved = useSaved();
+  const wide = useWide();
   /** What is being typed, per tier; `undefined` follows the daemon until it is touched. */
   const [typed, setTyped] = useState<Partial<Record<Tier, string>>>({});
   const tiers = agent.tiers;
@@ -72,7 +74,7 @@ export function AgentModelTiers({ agent, models, loading, editable }: { agent: A
               label={tier === "small" ? "Small" : "High"}
               hint={`${FOR[tier]} ${tiers[tier].own ? `Set for this agent; inherits ${tiers[tier].inherits} when cleared.` : `Inherits ${tiers[tier].inherits}.`}`}
             >
-              <Combobox options={models} loading={loading} value={current(tier)} onChange={(value) => setTyped((was) => ({ ...was, [tier]: value }))} disabled={!editable} />
+              <Combobox options={models} loading={loading} value={current(tier)} onChange={(value) => setTyped((was) => ({ ...was, [tier]: value }))} disabled={!editable} listOnPress={wide} />
             </Field>
           ))}
         </div>

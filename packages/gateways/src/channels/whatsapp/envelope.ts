@@ -52,6 +52,7 @@ export function whatsappEnvelope(event: Extract<BridgeEvent, { type: "message" }
     chatId: event.chatId,
     chatType: event.chatType,
     senderId: event.senderId,
+    ...(event.senderAlso && event.senderAlso.length > 0 ? { senderAlso: event.senderAlso } : {}),
     senderName: event.senderName || "unknown",
     text,
     ...(quoted ? { quotedText: quoted } : {}),
@@ -102,4 +103,17 @@ function attachmentKind(kind: string, mimeType: string): "image" | "video" | "au
   if (mimeType.startsWith("audio/")) return "audio";
   log.debug("unrecognised media kind from the bridge", { kind, mimeType });
   return "file";
+}
+
+/**
+ * A number as a person writes it, as WhatsApp addresses it. With its country code, 8 to 15 digits (E.164), whatever
+ * `+`, spaces, dashes, dots and brackets it is written with; an address WhatsApp's own (`…@s.whatsapp.net`,
+ * `…@lid`) as it is. A number written the local way, from 0, is nobody's: which country's is not ours to guess.
+ */
+export function whatsappSenderId(written: string): string | null {
+  const said = written.trim();
+  if (/^\d+@(s\.whatsapp\.net|lid)$/.test(said)) return said;
+  if (!/^\+?[\d\s().-]+$/.test(said)) return null;
+  const digits = said.replace(/\D/g, "");
+  return digits.length >= 8 && digits.length <= 15 && !digits.startsWith("0") ? `${digits}@s.whatsapp.net` : null;
 }

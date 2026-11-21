@@ -268,6 +268,25 @@ kerja.
 
 ![Para agent sebagai baris di bawah Office, dengan baris Wren terbuka: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
+### Menghapus agent
+
+Admin menghapus agent di bagian bawah tab **Settings**-nya (0.8.41), atau dengan `nouride agent delete <id>`. Ini
+permanen. Semua yang membuat agent itu jalan ikut hilang: file dan folder pribadinya beserta sign-in CLI coding-nya,
+automation-nya, izin tetap dan sign-in ke connector-nya, koneksi yang cuma dia yang menjawab, kursinya di room, job
+latar belakangnya, dan user-nya sendiri di mesin kalau agent punya user sendiri. Misi yang masih terbuka dihentikan
+dulu. Automation agent lain yang salah satu langkahnya diberikan ke dia dimatikan, dengan alasannya tertulis. Token
+sebuah koneksi tetap ada di Secrets, bisa kamu hapus atau pakai lagi.
+
+Yang sudah terjadi tetap disimpan: chat-nya, yang dia ingat, catatan misinya, audit log, dan pemakaian. Chat-nya
+muncul di bagian paling bawah **Chats**, di bawah **Deleted agents**, dengan id agent-nya: bisa dibaca, tapi gak bisa
+ditulisi lagi. Kalau nanti kamu membuat agent dengan id yang sama, agent baru itu tersambung ke chat dan memori
+tersebut, apa pun tujuan agent barunya, dan chat-nya bisa ditulisi lagi.
+
+Pertanyaannya berlapis, karena gak ada yang bisa dikembalikan: daftar yang akan hilang, dengan jumlah dan besar
+foldernya; id agent yang harus diketik; lalu hitungan mundur sepuluh detik di tombolnya sebelum bisa ditekan. Di
+terminal cuma id yang diminta, tanpa hitungan mundur. Orchestrator gak bisa dihapus: jadikan agent lain orchestrator
+dulu. Gak ada agent yang bisa menghapus agent.
+
 ### Model versus Models
 
 Perbedaan yang nyata, bukan kebetulan penamaan. **Profil** adalah infrastruktur, endpoint, wire
@@ -367,6 +386,14 @@ apa-apa: permintaan itu tetap menunggu orang yang ditanya. Admin melihat dan men
 **Log daemon dan log audit hanya dibaca admin** (0.8.35). Isinya setiap baris dari chat, perintah dan keputusan semua
 orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, dan perintah yang masih berjalan di
 latar belakang.
+
+**Export and import** (0.8.41, khusus admin) membawa semua isi Nouride ini ke mesin lain sebagai satu file, atau
+memasukkan file seperti itu ke sini. Halamannya bilang apa isi file sebelum dibuat; secret cuma ikut kalau dikunci
+dengan password yang kamu ketik, dan folder milik agent cuma kalau dicentang. File yang dimasukkan ditampilkan di
+samping isi yang ada sebelum ada yang diganti, meminta kata `replace` dan sepuluh detik, lalu menggantikan semuanya:
+gak ada yang digabung. Setelah itu halamannya dibuka dengan apa yang ikut dan apa yang gak, dan koneksi serta
+automation menunggu **Go live**.
+[Pindahkan Nouride ke mesin lain](/id/docs/deployment/move-to-another-machine/) berisi langkah-langkahnya.
 
 ## System
 

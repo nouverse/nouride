@@ -6,7 +6,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
-import { Ban, Check, Clock, RotateCcw, Unlock, UserPlus, UserX, X } from "lucide-react";
+import { Ban, Check, Clock, ListPlus, RotateCcw, Unlock, UserPlus, UserX, X } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import type { AccessEvent, SenderRecord } from "@nouride/wire";
 import { EmptyState, ErrorNote } from "@/commons/components/ui/ui";
@@ -29,6 +29,14 @@ const SAID: Record<AccessEvent["action"], { icon: LucideIcon; tone: string; text
   access_reset: { icon: RotateCcw, tone: "text-info", text: (event) => `Denial reset${byWhom(event.actor)}, may ask again` },
   access_unblocked: { icon: Unlock, tone: "text-info", text: (event) => `Unblocked${byWhom(event.actor)}, may ask again` },
   access_expired: { icon: Clock, tone: "text-base-content/65", text: () => "The code expired, unanswered" },
+  access_imported: {
+    icon: ListPlus,
+    tone: "text-success",
+    text: (event) => {
+      const { added = 0, already = 0, blocked = 0 } = event.details ?? {};
+      return `Let in from a list${byWhom(event.actor)}: ${added.toLocaleString("en-US")} new${already ? `, ${already.toLocaleString("en-US")} in already` : ""}${blocked ? `, ${blocked.toLocaleString("en-US")} blocked and left out` : ""}`;
+    },
+  },
 };
 
 export function HistoryTab({
@@ -54,6 +62,8 @@ export function HistoryTab({
   }
   // Each line as a sender, so the one filter box reads them the way it reads every other list here.
   const lines = entries.map((event) => {
+    // A whole list let in at once is one line, of nobody in particular.
+    if (event.action === "access_imported") return { event, gatewayId: event.gatewayId!, senderId: "a list", senderName: "A list of senders" };
     const senderId = senderOf(event) ?? "?";
     return { event, gatewayId: event.gatewayId!, senderId, senderName: names.get(`${event.gatewayId}:${senderId}`) ?? null };
   });

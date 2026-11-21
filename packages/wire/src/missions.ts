@@ -12,9 +12,11 @@ export type MissionStatus = "queued" | "running" | "waiting" | "checking" | "don
 /**
  * Why a waiting mission waits: approvals parked and nothing else left to do, a question it asked, a loop it cannot get
  * out of, a call a restart cut off whose outcome is unknown, a limit reached, or checks that passed and a person who
- * accepts — each needing a person — or (0.8.7) its model could not answer, and it tries again by itself (`retry`).
+ * accepts — each needing a person — or (0.8.7) its model could not answer, and it tries again by itself (`retry`). Or
+ * someone paused it (`paused`): its turn cut, its jobs ended, its folder kept, until someone says to go on. A reader
+ * that does not know a kind shows the mission as waiting for a person, which each of them but `retry` is.
  */
-export type MissionWaitKind = "approval" | "input" | "stuck" | "unknown_outcome" | "limit" | "accept" | "retry";
+export type MissionWaitKind = "approval" | "input" | "stuck" | "unknown_outcome" | "limit" | "accept" | "retry" | "paused";
 
 /** What a person sees: working, needs you, done, ended. */
 export type MissionSeen = "working" | "needs_you" | "done" | "ended";
@@ -26,6 +28,8 @@ export interface MissionAnswered {
   at: number;
   /** How it was asked: the mission waits for the answer, or works on meanwhile. Absent from a daemon that asks at a turn's end. */
   asked?: "wait" | "meanwhile";
+  /** The mission finished everything else and waits for this answer before it says it is done. Absent otherwise. */
+  finished?: true;
 }
 
 /** What a person told it while it worked (0.8.10), and the turn it read it in — absent while unread. */
@@ -73,6 +77,10 @@ export interface MissionView {
   waitKind: MissionWaitKind | null;
   /** What it waits for, or why it ended. */
   reason: string | null;
+  /** When it tries its model again by itself, while it is held up because its model could not answer. Absent otherwise, and from a daemon before the field. */
+  retryAt?: number;
+  /** Who paused it, while it is paused: a person's name, or "agent <id>". Absent otherwise. */
+  pausedBy?: string;
   report: string | null;
   /** Result files `done` named, inside its folder. */
   files: string[];
@@ -168,7 +176,7 @@ export interface MissionStart {
 }
 
 /** What a person says to a mission. */
-export type MissionVerb = "stop" | "continue" | "accept" | "answer" | "tell";
+export type MissionVerb = "stop" | "continue" | "accept" | "answer" | "tell" | "pause";
 
 /** The five `[missions]` settings by name. */
 export interface MissionLimits {

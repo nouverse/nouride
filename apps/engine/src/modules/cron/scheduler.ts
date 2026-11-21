@@ -142,6 +142,12 @@ export interface CronSchedulerOptions {
   watch?: WatchStore;
   /** The install's quiet hours (`quiet.ts`). Absent: nothing is ever held. */
   quiet?: Quiet;
+  /**
+   * Whether this install was imported and has not gone live (`modules/transfer/held.ts`). While it is so nothing runs:
+   * not by the clock, not by hand, not by a webhook. An automation that runs a command would run it on the new machine
+   * while the old one may still be doing the same.
+   */
+  held?: () => boolean;
 }
 
 /** Why a job set to tell once is off: `disabled_reason`, which its page puts into words. */
@@ -200,7 +206,8 @@ export class CronScheduler {
       log.info("scheduler disabled by config");
       return;
     }
-    if (this.started) return;
+    // Held: imported and not gone live. Started when it has (`modules/transfer/service.ts` `goLive`).
+    if (this.started || this.options.held?.()) return;
     this.started = true;
 
     const interrupted = this.options.store.reconcileInterrupted();
@@ -213,8 +220,7 @@ export class CronScheduler {
     this.options.store.onScheduleChange(() => this.arm());
     this.arm();
 
-    const pending = this.options.store.list().length;
-    log.info("scheduler started", { jobs: pending, max_sleep_ms: this.options.maxSleepMs ?? MAX_SLEEP_MS });
+    log.info("scheduler started", { jobs: this.options.store.list().length, max_sleep_ms: this.options.maxSleepMs ?? MAX_SLEEP_MS });
   }
 
   /**
@@ -386,7 +392,7 @@ export class CronScheduler {
     trigger?: TriggerContext,
   ): Promise<RunOutcome | Parked | { status: "unavailable"; result: string }> {
     const job = this.options.store.get(id);
-    if (!job) return { status: "unavailable", result: "no such job" };
+    if (!job || this.options.held?.()) return { status: "unavailable", result: job ? "this install was imported and has not gone live: automations wait for Go live" : "no such job" };
     // One run at a time, and a run that waits is still its job's run.
     const waiting = this.stepRuns.waitingOf(job.id);
     if (waiting) return { status: "unavailable", result: `its last run is still waiting for ${waiting.wait.kind === "mission" ? `mission ${waiting.wait.missionId}` : "a person's answer"}` };

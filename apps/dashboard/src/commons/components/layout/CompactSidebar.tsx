@@ -28,7 +28,8 @@ export function CompactSidebar({
   onExpand: () => void;
   theme: Theme;
   toggleTheme: () => void;
-  signOut: () => void;
+  /** Absent in a device's session, as in the whole menu (`Sidebar`). */
+  signOut?: (() => void) | undefined;
 }) {
   return (
     <div className="flex h-full w-[5.5rem] flex-col items-center">
@@ -45,10 +46,12 @@ export function CompactSidebar({
           {theme === "dark" ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
           <span aria-hidden="true">{theme === "dark" ? "Day" : "Night"}</span>
         </button>
-        <button type="button" className={TILE} onClick={signOut} aria-label="Sign out">
-          <LogOut size={18} aria-hidden="true" />
-          <span aria-hidden="true">Sign out</span>
-        </button>
+        {signOut ? (
+          <button type="button" className={TILE} onClick={signOut} aria-label="Sign out">
+            <LogOut size={18} aria-hidden="true" />
+            <span aria-hidden="true">Sign out</span>
+          </button>
+        ) : null}
         {/* Inside Nouride Home, as the whole menu has it: closes the dashboard. */}
         {inHomeApp() && (
           <a href={HOME_APP_BACK} className={TILE} aria-label="Back to Nouride Home">

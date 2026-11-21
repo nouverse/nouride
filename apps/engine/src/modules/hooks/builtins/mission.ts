@@ -2,7 +2,7 @@
  * `/mission` — a person's side of missions in the chat. `/mission <goal>` asks the agent addressed to draft one from
  * that goal, since every mission an agent starts is a draft first: a turn of its own that reads what it needs, writes
  * the brief and checks, or asks in the chat first when the goal is unclear; `/mission` lists what is running and waiting here, *needs you* first;
- * `/mission stop|continue|accept <id>` and `/mission answer <id> <text>` act on one; `/mission tell <id> <words>` (0.8.10)
+ * `/mission stop|pause|continue|accept <id>` and `/mission answer <id> <text>` act on one; `/mission tell <id> <words>` (0.8.10)
  * gives it words while it works. Most missions are started by the agent without a command — this is the explicit way, and
  * the way back in.
  */
@@ -14,14 +14,15 @@ import { isFinal, seenAs, type Mission } from "@/modules/missions/types.ts";
 import type { Hook, HookContext } from "../types.ts";
 
 /** What `/mission` reaches of the missions. */
-export type MissionCommands = Pick<Missions, "start" | "stop" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "now" | "limitsLine" | "forStatus" | "load" | "running">;
+export type MissionCommands = Pick<Missions, "start" | "stop" | "pause" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "now" | "limitsLine" | "forStatus" | "load" | "running">;
 
-const VERBS = ["stop", "continue", "accept", "answer", "tell", "show"] as const;
+const VERBS = ["stop", "pause", "continue", "accept", "answer", "tell", "show"] as const;
 
 const USAGE =
   "/mission <goal>: this agent drafts one from your goal; it runs once you start it, and reports here.\n" +
   "/mission: what is running and waiting here. /mission show <id>: one in full.\n" +
   "/mission stop|continue|accept <id>, /mission answer <id> <answer>.\n" +
+  "/mission pause <id>: stop its work for now and keep everything; /mission continue <id> goes on from its checklist, whenever you like.\n" +
   "/mission tell <id> <words>: tell it something while it works; it is read before its next step and followed, never a new goal.\n" +
   '/mission accept <id> --outside "<note>": done another way, closed as accepted without its checks.';
 
@@ -35,6 +36,7 @@ function show(mission: Mission, limits: string): string {
   ];
   const asked = mission.answers.at(-1);
   if (mission.status === "waiting" && mission.waitKind === "input" && asked) lines.push(`Asks: ${asked.question}`);
+  else if (mission.status === "waiting" && mission.waitKind === "paused") lines.push(`Paused by ${mission.pausedBy ?? "someone"}: /mission continue ${shortId(mission.id)} goes on from its checklist.`);
   else if (mission.reason) lines.push(`${mission.status === "waiting" ? "Waiting for" : "Why"}: ${mission.reason}`);
   if (mission.report) lines.push(`Report: ${mission.report}`);
   const told = mission.told.at(-1);
@@ -61,6 +63,9 @@ function line(mission: Mission): string {
 }
 
 function state(mission: Mission): string {
+  if (mission.status === "waiting" && mission.waitKind === "paused") return "paused";
+  // Held up for its model: it tries again by itself, and nothing is asked of anybody.
+  if (mission.status === "waiting" && mission.waitKind === "retry") return "held up, tries again by itself";
   return seenAs(mission.status) === "needs_you" ? `needs you (${mission.waitKind ?? "?"})` : mission.status;
 }
 
@@ -116,13 +121,15 @@ const missionHook: Hook = {
     const acted =
       verb === "stop"
         ? missions.stop(mission.id, by)
-        : verb === "continue"
+        : verb === "pause"
+          ? missions.pause(mission.id, by)
+          : verb === "continue"
           ? missions.continueMission(mission.id, by, rest.join(" ") || undefined, as)
           : verb === "accept"
             ? missions.accept(mission.id, by, as)
             : missions.answer(mission.id, rest.join(" "), by);
     if ("refused" in acted) return { handled: true, reply: acted.refused };
-    // Stop and accept are answered by the mission's own notice; continue and answer go on quietly. An answer to one
+    // Stop, pause and accept are answered by the mission's own notice; continue and answer go on quietly. An answer to one
     // that went on working says where it went, as a `tell` does.
     return { handled: true, ...(verb === "continue" || verb === "answer" ? { reply: acted.said ?? `Mission ${shortId(mission.id)} goes on.` } : {}) };
   },

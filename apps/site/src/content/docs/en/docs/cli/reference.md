@@ -133,6 +133,7 @@ nouride jobs kill <id>
 nouride mission                   # missions: needs you first, then what runs, then the last five ended
 nouride mission show <id>         # one in full: goal, checks, checklist, limits, report
 nouride mission stop|continue|accept <id> [text]
+nouride mission pause <id>        # hold a running or queued one where it is, its work kept; continue goes on
 nouride mission answer <id> <answer>
 nouride mission tell <id> <words> # words for it while it works: read before its next step
 nouride mission delete <id>       # an ended one gone: its conversation, checklist and own folder (--force: work nobody committed too)
@@ -158,6 +159,7 @@ nouride agent enable  <id>        # written to config.toml, so it survives a res
 nouride agent disable <id>
 nouride agent external <id> <cli> [--profile <name>]   # a coding CLI answers it instead of its model
 nouride agent internal <id>       # its model answers it again
+nouride agent delete <id>         # for good, after its id is typed: what makes it run goes, its chats and memories stay
 nouride agent skill-root add <id> <path>   # it takes the skills in that project's .agents/skills as its own
 nouride agent skill-root rm  <id> <path>
 nouride acp [--agent <id>]        # an agent in Zed or another ACP editor; the editor runs this
@@ -234,6 +236,26 @@ start creates the first admin again and prints its password, or takes `INITIAL_A
 `INITIAL_ADMIN_PASSWORD` from the install's `.env` when both are set. Like `db restore`, it refuses while
 a daemon runs on this data directory.
 [FAQ: I missed the first-run password →](/en/docs/reference/faq/)
+
+## Moving to another machine
+
+```bash
+nouride export --out <file>              # this install as one file; asks for a passphrase for the secrets
+nouride export --out <file> --folders    # with the agents' own folders
+nouride export --out <file> --no-secrets # a file that holds no secret
+nouride import <file>                    # replaces everything here; daemon must be STOPPED
+```
+
+Since 0.8.41. `export` says what the file will hold, then writes a `.tar.gz` with the database (a verified
+snapshot), the config and people, the agents' packs and skills, the memory, the documents, files sent in chats,
+and the secrets sealed to the passphrase. It works whether the daemon runs or not, and never over a file that is
+there. `import` opens and checks the file first (not an export, damaged, from a newer Nouride, a passphrase that
+does not open it: refused with nothing changed), says what it holds beside what it replaces, and asks for the word
+`replace`. What the install held is kept in `before-import-<date>` beside its data, and a failed import moves it
+all back. `--stdin` reads the passphrase from stdin for `export`, and the passphrase then the word, a line each,
+for `import`. After an import every session and device token is ended, and connections and automations wait for
+**Go live** on the dashboard.
+[Move Nouride to another machine →](/en/docs/deployment/move-to-another-machine/)
 
 ## A Home app that stays signed in
 
@@ -317,6 +339,8 @@ level without asking; or anything else, asked once under `careful`.
 nouride access [pending|approved|denied|blocked]  # who may talk to the agents
 nouride access approve <code> [--me | --as <key> | --new "<name>"]
 nouride access allow <gateway:sender> [--name "<name>"]  # in before they ask, under Approved
+nouride access allow --from <file|-> --gateway <connection> [--dry-run]   # a whole list, one a line
+nouride access approved --find <id or name>      # one among many: the list holds the newest 500
 nouride access deny|block <gateway:sender>       # no for a day · no until unblocked
 nouride access revoke|reset|unblock <gateway:sender>
 nouride access mode [open|allowlist|pair]      # show or switch, no restart

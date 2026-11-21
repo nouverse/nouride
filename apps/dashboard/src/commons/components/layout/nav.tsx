@@ -16,6 +16,7 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, type ComponentType } from "react";
 import {
+  ArrowLeftRight,
   Activity,
   Blocks,
   Box,
@@ -156,6 +157,7 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
       { to: "/logs", label: "Logs", icon: ScrollText, exceptAdmin: true, about: "What the agents and the box did, line by line, for when something went wrong." },
       // A tab of System for an admin, as Logs is; for anyone else it is here, where it always was.
       { to: "/update", label: "Update", icon: Download, exceptAdmin: true, about: "The newest version of Nouride, and installing it." },
+      { to: "/transfer", label: "Export and import", icon: ArrowLeftRight, adminOnly: true, about: "Take this Nouride to another machine as one file, or bring one in." },
     ],
   },
 ];

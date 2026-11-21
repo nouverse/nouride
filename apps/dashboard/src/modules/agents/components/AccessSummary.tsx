@@ -14,7 +14,7 @@ import { Card, EmptyState } from "@/commons/components/ui/ui";
 
 export function AccessSummary({ agentId }: { agentId: string }) {
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
-  const access = useQuery({ queryKey: ["access"], queryFn: api.access, refetchInterval: 15_000, retry: false });
+  const access = useQuery({ queryKey: ["access"], queryFn: () => api.access(), refetchInterval: 15_000, retry: false });
 
   const mine = new Set((gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agentId).map((gateway) => gateway.id));
   if (gateways.data && mine.size === 0) {

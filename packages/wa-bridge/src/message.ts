@@ -223,18 +223,27 @@ export function selfIdsOf(user: { id?: string; lid?: string } | undefined): stri
     .map((id) => id.replace(/:\d+@/, "@"));
 }
 
+/** An address without its device: `628…:12@s.whatsapp.net` is the same person as `628…@s.whatsapp.net`. */
+const bareAddress = (jid: string): string => jid.replace(/:\d+(?=@)/, "");
+
 /** The `message` event for what `incoming` let through, with our own addresses and the media saved for it, if any. */
 export function messageEvent(
   message: WAMessage,
   found: Incoming,
   selfIds: string[],
   media?: MessageEvent["media"],
+  /** The phone number behind a hidden id, as the session knows it: asked where the message itself names none. */
+  phoneOf: (lid: string) => string | null = () => null,
 ): MessageEvent {
   const group = isJidGroup(found.chatId) ?? false;
   // In a group the sender is `participant`; in a DM the chat *is* the sender. Getting this wrong
   // makes every member of a group share one identity, which is the thing the people table exists to
   // tell apart.
   const senderId = (group ? message.key.participant : found.chatId) ?? found.chatId;
+  // The sender's other address. WhatsApp delivers most people under a hidden id now, and names the number beside it;
+  // a list of numbers let in ahead matched nobody without it. Asked of the session where the message names none.
+  const alt = (group ? message.key.participantAlt : message.key.remoteJidAlt) ?? (senderId.endsWith("@lid") ? phoneOf(senderId) : null);
+  const also = alt ? bareAddress(alt) : null;
 
   /**
    * Who was addressed, and what they were addressing.
@@ -254,6 +263,7 @@ export function messageEvent(
     chatId: found.chatId,
     chatType: group ? "group" : "dm",
     senderId,
+    ...(also && also !== bareAddress(senderId) ? { senderAlso: [also] } : {}),
     senderName: message.pushName ?? "unknown",
     text: found.text,
     timestamp: Number(message.messageTimestamp ?? 0) * 1000,

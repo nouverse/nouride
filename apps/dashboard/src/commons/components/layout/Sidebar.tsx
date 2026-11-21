@@ -43,7 +43,8 @@ export function Sidebar({
   principal: Principal | null | undefined;
   theme: Theme;
   toggleTheme: () => void;
-  signOut: () => void;
+  /** Absent in a device's session (`Principal.device`): no Sign out is drawn, and nothing in its place. */
+  signOut?: (() => void) | undefined;
   /** Drawn in More's sheet on a phone, under the sheet's head. */
   inSheet?: boolean;
   /** Folds the menu to its icons: offered on Chats only. */
@@ -78,9 +79,11 @@ export function Sidebar({
           <button type="button" className="btn btn-ghost btn-square size-10 text-base-content/70 hover:text-base-content" onClick={toggleTheme} aria-label={theme === "dark" ? "Switch to the day look" : "Switch to the night look"} title={theme === "dark" ? "Day look" : "Night look"}>
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <button type="button" className="btn btn-ghost btn-square size-10 text-base-content/70 hover:bg-error/10 hover:text-error" onClick={signOut} aria-label="Sign out" title="Sign out">
-            <LogOut size={16} />
-          </button>
+          {signOut ? (
+            <button type="button" className="btn btn-ghost btn-square size-10 text-base-content/70 hover:bg-error/10 hover:text-error" onClick={signOut} aria-label="Sign out" title="Sign out">
+              <LogOut size={16} />
+            </button>
+          ) : null}
         </div>
         {inHomeApp() && (
           <a href={HOME_APP_BACK} className="btn btn-ghost h-10 min-h-10 w-full justify-start gap-2 px-2 text-sm font-medium text-base-content/70 hover:text-base-content">

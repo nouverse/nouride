@@ -459,11 +459,19 @@ export class UserStore {
    * it, and the lookup is already touching the row that proves it is stale.
    */
   sessionUser(token: string): UserRecord | null {
+    return this.session(token)?.user ?? null;
+  }
+
+  /**
+   * The account behind a session token and whether a device's token made the session (`routes/devices.ts`), or null.
+   * The dashboard offers no Sign out in such a session: the app that holds the token trades it again at once.
+   */
+  session(token: string): { user: UserRecord; device: boolean } | null {
     if (!token) return null;
     const hash = sha256Text(token);
     const row = this.options.db
-      .prepare<{ user_id: string; expires_at: number }>(
-        "SELECT user_id, expires_at FROM user_sessions WHERE token_hash = ?",
+      .prepare<{ user_id: string; expires_at: number; device_id: string | null }>(
+        "SELECT user_id, expires_at, device_id FROM user_sessions WHERE token_hash = ?",
       )
       .get(hash);
     if (!row) return null;
@@ -472,7 +480,8 @@ export class UserStore {
       this.options.db.prepare("DELETE FROM user_sessions WHERE token_hash = ?").run(hash);
       return null;
     }
-    return this.byId(row.user_id);
+    const user = this.byId(row.user_id);
+    return user ? { user, device: row.device_id !== null } : null;
   }
 
   endSession(token: string): void {

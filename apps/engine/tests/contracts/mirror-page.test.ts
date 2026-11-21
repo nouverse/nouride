@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { floorOf, readPage, strandedFloors, type MirrorEntry } from "../../../../scripts/release/mirror-page.ts";
+import { floorOf, pageSaid, readPage, strandedFloors, type MirrorEntry } from "../../../../scripts/release/mirror-page.ts";
 
 const entry = (tag: string, floor: string | null = null, prerelease = false): MirrorEntry => ({ tag, floor, prerelease });
 /** The mirror as it stood on 2026-11-04, with 0.8.17 on top. */
@@ -38,6 +38,16 @@ describe("the mirror's first page", () => {
   test("a pre-release takes a place but is no stone: the updaters skip it", () => {
     const quiet = TODAY.map((release) => (release.tag === "v0.7.29" ? { ...release, prerelease: true } : release));
     expect(strandedFloors(quiet)).toHaveLength(1);
+  });
+
+  // It stopped a release with everything else green, for a stone still on the page.
+  test("a stranded floor is said as a warning and stops no release", () => {
+    const problems = strandedFloors([...newer(22), ...TODAY]);
+    expect(pageSaid(problems, true)).toEqual([`::warning::${problems[0]}`]);
+    expect(pageSaid(problems, false)).toEqual([`! ${problems[0]}`]);
+    expect(pageSaid([], true)).toEqual(["✓ every floor on the mirror's first page has its stepping stone within the first 25"]);
+    const script = readFileSync(join(import.meta.dir, "../../../../scripts/release/mirror-page.ts"), "utf8");
+    expect(script).not.toContain("process.exit(1)");
   });
 
   test("a release's floor is read from its notes in this repository", () => {
@@ -90,12 +100,14 @@ describe("reading the page", () => {
 describe("the release workflow", () => {
   const workflow = readFileSync(join(import.meta.dir, "../../../../.github/workflows/release.yml"), "utf8");
 
-  test("checks the page with the release on top, before anything is published", () => {
+  test("looks at the page with the release on top, before anything is published, and goes on whatever it says", () => {
     const check = workflow.indexOf('bun run scripts/release/mirror-page.ts --adding "${GITHUB_REF_NAME}"');
     expect(check).toBeGreaterThan(-1);
     expect(check).toBeLessThan(workflow.indexOf("- name: Initialize releases if tagged"));
     // Read with the run's token: with none, the hosted runner's shared address ran out of asks.
-    const step = workflow.slice(workflow.indexOf("- name: The mirror's first page keeps every stepping stone"), check);
+    const named = workflow.indexOf("- name: The mirror's first page, and any stepping stone leaving it");
+    expect(named).toBeGreaterThan(-1);
+    const step = workflow.slice(named, check);
     expect(step).toContain("GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
   });
 

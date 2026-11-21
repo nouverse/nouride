@@ -21,6 +21,7 @@ export type * from "./appliance.ts";
 export type * from "./approvals.ts";
 export type * from "./chat.ts";
 export type * from "./chat-list.ts";
+export type * from "./transfer.ts";
 export type * from "./cron.ts";
 export type * from "./external-agents.ts";
 export type * from "./groups.ts";

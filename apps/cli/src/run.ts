@@ -163,6 +163,11 @@ export async function runCli(install: Install): Promise<void> {
     // Local for the same reason, and for the person it is for: they cannot sign in (`commands/users.ts`).
     case "users":
       return await install.users(args);
+    // Local: an export reads the install's folders, and an import replaces what a running daemon holds open.
+    case "export":
+      return await install.exportInstall(args);
+    case "import":
+      return await install.importInstall(args);
 
     case "provider":
     case "providers":

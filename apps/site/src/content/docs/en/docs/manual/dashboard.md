@@ -259,6 +259,25 @@ the agents that are active, idle, asleep or unavailable.
 
 ![The agents as rows under the Office, with Wren's row opened: Details, Open chat, Sleep, Workspace, Edit look](/media/dashboard-agents.png)
 
+### Deleting an agent
+
+An admin deletes an agent at the foot of its **Settings** tab (0.8.41), or with `nouride agent delete <id>`. It is for
+good. Everything that makes the agent run goes: its files and private folder with its coding CLI's sign-ins, its
+automations, its standing permissions and sign-ins to connectors, the connections only it answers, its seat in rooms,
+its background jobs, and its own user on the machine where agents have one. Missions it still has open are stopped
+first. An automation of another agent with a step given to it is turned off and says why. A connection's token stays
+in Secrets, where you can delete it or use it again.
+
+What happened is kept: its chats, what it remembered, the records of its missions, the audit log and usage. Its chats
+are listed at the end of **Chats** under **Deleted agents**, by the agent's id: they can be read, and nothing more can
+be written in them. If you later make an agent with the same id, it is joined to those chats and memories, whatever
+the new agent is for, and its chats can be written in again.
+
+The question comes in layers, since none of it can be taken back: a list of what goes, with counts and how much its
+folders hold; the agent's id, typed; then ten seconds counted down on the button before it can be pressed. The
+terminal asks for the id and has no countdown. The orchestrator cannot be deleted: make another agent the
+orchestrator first. No agent can delete an agent.
+
 ### Model versus Models
 
 A real distinction, not a naming accident. A **profile** is infrastructure, an endpoint, a wire
@@ -353,6 +372,13 @@ waiting for whoever it was asked of. An admin sees and answers every one.
 **The daemon's log and the audit log are an admin's to read** (0.8.35). They hold every line of everybody's chats,
 commands and decisions. On **Logs**, anyone else has the two other tabs: what ran on a schedule, and the commands
 still running in the background.
+
+**Export and import** (0.8.41, an admin's) takes everything this Nouride holds to another machine as one file, or
+brings such a file in. The page says what the file will hold before it is made; the secrets go in only locked with a
+password you type, and the agents' own folders only when ticked. A file brought in is shown beside what is here
+before anything is replaced, asks for the word `replace` and ten seconds, and replaces everything: nothing is merged.
+Afterwards the page leads with what came and what did not, and the connections and automations wait for **Go live**.
+[Move Nouride to another machine](/en/docs/deployment/move-to-another-machine/) has the steps.
 
 ## System
 

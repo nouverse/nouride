@@ -3,14 +3,15 @@
  *
  * Chats: the orchestrator always first, pinned, whatever it last did; then agents, rooms and the groups pinned here,
  * mixed, newest first, because "what was I doing" does not care which kind of conversation the answer is; then the
- * agents nobody has talked to here yet, at the end and still reachable.
+ * agents nobody has talked to here yet, at the end and still reachable; and last the agents that were deleted, whose
+ * chats are kept to read.
  *
  * Groups: the conversations agents are in on chat apps, one row per group, and the rooms made here, newest first,
  * narrowed by a chip that counts each — an app's, or the dashboard's for its rooms; one quiet for two weeks or more
  * folded into one row at the end.
  */
 
-import type { AgentSummary, ChatListAgent, ChatListGroup, ChatListPayload, ChatListRoom } from "@nouride/wire";
+import type { AgentSummary, ChatListAgent, ChatListGone, ChatListGroup, ChatListPayload, ChatListRoom } from "@nouride/wire";
 
 /** A group this long without a word goes under "Quiet": two weeks. */
 export const QUIET_AFTER_MS = 14 * 86_400_000;
@@ -18,7 +19,8 @@ export const QUIET_AFTER_MS = 14 * 86_400_000;
 export type ChatRow =
   | { kind: "agent"; key: string; at: number; agent: AgentSummary; entry: ChatListAgent | undefined }
   | { kind: "room"; key: string; at: number; room: ChatListRoom }
-  | { kind: "group"; key: string; at: number; group: ChatListGroup };
+  | { kind: "group"; key: string; at: number; group: ChatListGroup }
+  | { kind: "gone"; key: string; at: number; gone: ChatListGone };
 
 export interface ChatsView {
   /** The orchestrator, first and kept there. Null without one, or when a search leaves it out. */
@@ -27,6 +29,8 @@ export interface ChatsView {
   recent: ChatRow[];
   /** Agents nobody has talked to here yet. */
   untouched: Extract<ChatRow, { kind: "agent" }>[];
+  /** Deleted agents with a conversation kept, newest first. One made again under its id is an agent's row again. */
+  gone: Extract<ChatRow, { kind: "gone" }>[];
 }
 
 /** A group's key, the same whichever of our bots it was heard through: its app and its chat. */
@@ -73,7 +77,11 @@ export function chatsView(input: {
   const others = agentRows.filter((row) => row !== pinned);
   const recent = [...others.filter((row) => row.entry?.sessionId), ...rooms, ...groups].sort((a, b) => b.at - a.at || a.key.localeCompare(b.key));
   const untouched = others.filter((row) => !row.entry?.sessionId).sort((a, b) => named(a.agent).localeCompare(named(b.agent)));
-  return { pinned, recent, untouched };
+  const known = new Set(agents.map((agent) => agent.id));
+  const gone = (list?.gone ?? [])
+    .filter((one) => !known.has(one.agentId) && finds(query, [one.agentId, one.last?.text]))
+    .map((one): Extract<ChatRow, { kind: "gone" }> => ({ kind: "gone", key: `gone:${one.agentId}`, at: one.at, gone: one }));
+  return { pinned, recent, untouched, gone };
 }
 
 /** The Groups tab's chip for the rooms made in the dashboard, after the apps'. */

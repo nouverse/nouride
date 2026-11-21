@@ -467,6 +467,24 @@ failed to load, or a model provider with no credential. `/status` in chat and th
 An external agent (`docs/SPEC.md` §4.4) is unavailable for its CLI's reasons instead: not installed, not signed in,
 failing to start, or a new version that did not answer its check.
 
+### `nouride agent delete <id>`
+
+```bash
+nouride agent delete coder          # says what goes, asks for the id typed, then deletes
+echo coder | nouride agent delete coder   # a script answers the question on stdin
+```
+
+For good, and an admin's (0.8.41). Everything that makes the agent run goes: its pack, its private folder with its
+coding CLI's sign-ins, its automations, its grants and stored sign-ins, the connections only it answers, its seat in
+rooms, its background jobs, and its Linux user where agents have one; its open missions are stopped first. Another
+agent's automation with a step given to it is turned off, with why. A connection's token stays in Secrets. Its chats,
+what it remembered, its missions' records, the audit log and usage are kept, and an agent made later with the same id
+is joined to them. The orchestrator is refused: make another agent the orchestrator first. The dashboard asks the
+same on the agent's Settings tab, with ten seconds counted down after the id; the terminal has no countdown.
+
+Where the helper that runs agents as their own users was installed by a release before this one, the agent is still
+deleted and the command says its account, `nr-<id>`, is left: running `install.sh` again brings the helper up to date.
+
 ### `nouride agent external <id> <cli>` · `nouride agent internal <id>`
 
 ```bash
@@ -846,7 +864,8 @@ nouride mission                          # what needs you first, then what runs,
 nouride mission --all                    # every ended one too
 nouride mission show <id>                # its goal, checks, checklist, limits, parked approvals, report and folder
 nouride mission answer <id> <answer>     # the answer to the question it waits on
-nouride mission continue <id> [text]     # on past a limit it reached, with a line for it if you like
+nouride mission pause <id>               # hold a running or queued one where it is: its turn cut, its jobs ended, its work kept
+nouride mission continue <id> [text]     # on past a limit it reached or after a pause, with a line for it if you like
 nouride mission accept <id>              # done, where it waits for your yes
 nouride mission tell <id> <words>        # words for it while it works (0.8.10): read before its next step, never a new goal
 nouride mission stop <id>
@@ -1329,6 +1348,27 @@ Local, like `db restore`: it refuses while a daemon runs on this data directory,
 It snapshots the database first, records a `users_reset` audit row, and names the snapshot, which `nouride db restore` puts back, and each account it removed with its role and `web:<id>` — a People entry that named one needs that line changed, because the new admin is a new id.
 With no account there is nothing to do, and it says so; with no database it fails, since the first start has not run.
 A bare `nouride users` is its help.
+
+### `nouride export`, `nouride import`
+
+An install taken to another machine as one file (since 0.8.41). Both are local, like `nouride db`: they work on the install's own folders.
+
+```bash
+nouride export --out nouride-export.tar.gz              # asks for a passphrase for the secrets, twice
+nouride export --out nouride-export.tar.gz --folders    # with the agents' own folders (private and shared)
+nouride export --out nouride-export.tar.gz --no-secrets # a file that holds no secret, said before it is made
+printf '%s\n' "$PASSPHRASE" | nouride export --out nouride-export.tar.gz --stdin
+nouride import nouride-export.tar.gz                    # the daemon must be stopped
+printf '%s\nreplace\n' "$PASSPHRASE" | nouride import nouride-export.tar.gz --stdin
+```
+
+`export` says what the file will hold and how large, then writes a `.tar.gz`: `manifest.json` first, `data/nouride.db` (a snapshot taken and verified as `nouride db backup` takes one), `config/`, `agents/`, `memory/`, `knowledge/`, `uploads/`, `notes/`, `attachments/`, and `secrets.sealed` when a passphrase was given (at least 12 characters).
+It runs beside a running daemon, refuses to write over a file that is there, and exits 2 when neither a passphrase nor `--no-secrets` was given and there is no terminal to ask on.
+Never in the file: a coding CLI's sign-ins, the snapshots, logs kept as files, installed tools and caches, a chat app's own session, the control token and the store's key. In the agents' folders, links and files that hold a sign-in or a key are passed over, and the manifest counts them.
+
+`import` refuses while a daemon runs on this data directory. It unpacks and checks the file first, and refuses with nothing changed: a file that is not an export or is cut short, a database that does not check out, a file from a newer Nouride ("Update Nouride first"), a passphrase that does not open the secrets, and the word `replace` not typed.
+It then replaces everything: each thing the install holds is moved into `before-import-<stamp>/` beside the data folder and the export's is moved in. A step that fails moves it all back. The config keeps this machine's own places (`data_dir`, `agents_dir`, `workspace_dir`, `backup_dir`, `[memory] dir`, the dashboard's host and port), and the secrets are stored under this machine's key. A file with no secrets leaves the store empty.
+In the database it brought: migrated as at an update, every dashboard session deleted and every device token revoked, each mission that was running or queued paused, and a mark that holds the install back. Until **Go live** on the dashboard's Export and import page, the daemon makes no connection to a chat app and runs no automation.
 
 ### `nouride logs`
 

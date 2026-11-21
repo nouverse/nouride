@@ -49,6 +49,7 @@ export function HistoryPanel({
   onClose,
   agentId,
   agentName,
+  gone,
   current,
   list,
 }: {
@@ -56,6 +57,8 @@ export function HistoryPanel({
   onClose: () => void;
   agentId: string;
   agentName: string;
+  /** The agent was deleted: its conversations are listed to read, and no new one is offered. */
+  gone?: boolean;
   /** The conversation on screen, marked in the list. */
   current: string | undefined;
   list: ChatListPayload | undefined;
@@ -65,12 +68,12 @@ export function HistoryPanel({
     // Its list is read when it is first opened, not with every conversation on screen.
     <Drawer open={open} onClose={onClose} side="left" label={label} lazy>
       <DrawerHead title={label} closeLabel="Close History" onClose={onClose} />
-      <HistoryBody agentId={agentId} agentName={agentName} current={current} list={list} onClose={onClose} />
+      <HistoryBody agentId={agentId} agentName={agentName} gone={Boolean(gone)} current={current} list={list} onClose={onClose} />
     </Drawer>
   );
 }
 
-function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: string; agentName: string; current: string | undefined; list: ChatListPayload | undefined; onClose: () => void }) {
+function HistoryBody({ agentId, agentName, gone, current, list, onClose }: { agentId: string; agentName: string; gone: boolean; current: string | undefined; list: ChatListPayload | undefined; onClose: () => void }) {
   const [search, setSearch] = useState("");
   const term = useDebounced(search, 250);
   const { whose, setWhose, canPick } = useWhose("chat");
@@ -178,11 +181,13 @@ function HistoryBody({ agentId, agentName, current, list, onClose }: { agentId: 
           </button>
         ) : null}
       </div>
-      <div className="shrink-0 border-t border-base-content/[0.06] p-3">
-        <Link to="/chat" search={{ agent: agentId }} onClick={onClose} className="btn btn-primary h-11 w-full rounded-[14px]">
-          <Plus size={16} aria-hidden="true" /> New chat with {agentName}
-        </Link>
-      </div>
+      {gone ? null : (
+        <div className="shrink-0 border-t border-base-content/[0.06] p-3">
+          <Link to="/chat" search={{ agent: agentId }} onClick={onClose} className="btn btn-primary h-11 w-full rounded-[14px]">
+            <Plus size={16} aria-hidden="true" /> New chat with {agentName}
+          </Link>
+        </div>
+      )}
       {dialog}
     </>
   );

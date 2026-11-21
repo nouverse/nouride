@@ -19,6 +19,7 @@ export * from "./host.ts";
 export * from "./lock.ts";
 export * from "./file-stream.ts";
 export * from "./tar.ts";
+export * from "./tar-write.ts";
 export * from "./zip.ts";
 export * from "./yaml.ts";
 export * from "./append-file.ts";

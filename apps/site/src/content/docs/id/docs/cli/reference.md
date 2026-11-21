@@ -137,6 +137,7 @@ nouride jobs kill <id>
 nouride mission                   # misi: yang butuh kamu dulu, lalu yang jalan, lalu lima terakhir yang selesai
 nouride mission show <id>         # satu misi lengkap: tujuan, cek, checklist, batas, laporan
 nouride mission stop|continue|accept <id> [teks]
+nouride mission pause <id>        # tahan misi yang jalan atau antre di tempatnya, kerjanya disimpan; continue melanjutkan
 nouride mission answer <id> <jawaban>
 nouride mission tell <id> <kata>  # pesan untuknya selagi bekerja: dibaca sebelum langkah berikutnya
 nouride mission delete <id>       # hapus misi yang sudah selesai: percakapan, checklist dan foldernya sendiri (--force: termasuk kerja yang belum di-commit)
@@ -162,6 +163,7 @@ nouride agent enable  <id>        # ditulis ke config.toml, jadi bertahan setela
 nouride agent disable <id>
 nouride agent external <id> <cli> [--profile <nama>]   # CLI coding yang menjawabnya, bukan model-nya
 nouride agent internal <id>       # model-nya menjawab lagi
+nouride agent delete <id>         # permanen, setelah id-nya diketik: yang membuatnya jalan hilang, chat dan memorinya tetap
 nouride agent skill-root add <id> <path>   # dia mengambil skill di .agents/skills project itu sebagai miliknya
 nouride agent skill-root rm  <id> <path>
 nouride acp [--agent <id>]        # agent di Zed atau editor ACP lain; editor yang menjalankan ini
@@ -242,6 +244,26 @@ Start berikutnya membuat admin pertama lagi dan mencetak password-nya, atau mema
 `INITIAL_ADMIN_USERNAME` dan `INITIAL_ADMIN_PASSWORD` dari `.env` instalasi kalau keduanya di-set. Seperti
 `db restore`, ia menolak jalan selama ada daemon yang jalan di direktori data ini.
 [FAQ: password pertama terlewat →](/id/docs/reference/faq/)
+
+## Pindah ke mesin lain
+
+```bash
+nouride export --out <file>              # instalasi ini jadi satu file; menanyakan passphrase untuk secret
+nouride export --out <file> --folders    # dengan folder milik agent
+nouride export --out <file> --no-secrets # file tanpa secret
+nouride import <file>                    # menggantikan semua isi di sini; daemon harus DIHENTIKAN
+```
+
+Sejak 0.8.41. `export` menyebut apa isi file-nya, lalu menulis `.tar.gz` berisi database (snapshot yang sudah
+diperiksa), config dan people, pack agent dan skill, memory, dokumen, file yang dikirim di chat, dan secret yang
+disegel dengan passphrase. Ia jalan baik daemon hidup atau gak, dan gak pernah menimpa file yang sudah ada.
+`import` membuka dan memeriksa file-nya dulu (bukan hasil ekspor, rusak, dari Nouride yang lebih baru, passphrase
+yang gak membukanya: ditolak tanpa ada yang berubah), menyebut isinya di samping apa yang digantikannya, lalu
+meminta kata `replace`. Isi instalasi sebelumnya disimpan di `before-import-<tanggal>` di samping datanya, dan
+impor yang gagal memindahkan semuanya balik. `--stdin` membaca passphrase dari stdin untuk `export`, dan
+passphrase lalu kata itu, satu baris masing-masing, untuk `import`. Setelah impor semua sesi dan token perangkat
+berakhir, dan koneksi serta automation menunggu **Go live** di dashboard.
+[Pindahkan Nouride ke mesin lain →](/id/docs/deployment/move-to-another-machine/)
 
 ## Aplikasi Home yang tetap masuk
 
@@ -326,6 +348,8 @@ ditanya; atau selain itu, ditanya sekali di `careful`.
 nouride access [pending|approved|denied|blocked]  # siapa yang boleh bicara dengan para agent
 nouride access approve <kode> [--me | --as <key> | --new "<nama>"]
 nouride access allow <gateway:sender> [--name "<nama>"]  # masuk sebelum minta, tampil di Approved
+nouride access allow --from <file|-> --gateway <koneksi> [--dry-run]   # satu daftar sekaligus, satu per baris
+nouride access approved --find <id atau nama>    # satu di antara banyak: daftarnya memuat 500 terbaru
 nouride access deny|block <gateway:sender>       # tidak selama sehari · tidak sampai di-unblock
 nouride access revoke|reset|unblock <gateway:sender>
 nouride access mode [open|allowlist|pair]      # lihat atau ganti, tanpa restart

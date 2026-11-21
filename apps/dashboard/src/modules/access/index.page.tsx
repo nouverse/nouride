@@ -35,7 +35,12 @@ import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 const count = (n: number, tone = "badge-ghost") => (n > 0 ? <span className={`badge badge-xs ${tone} font-semibold`}>{n}</span> : null);
 
 export default function AccessPage({ search, onSearch }: { search: AccessSearch; onSearch: (next: AccessSearch) => void }) {
-  const access = useQuery({ queryKey: ["access"], queryFn: api.access, refetchInterval: 15_000, retry: false });
+  /**
+   * What the Approved tab was asked to find among everyone approved, where they are more than a listing holds: a
+   * list let in from a file may be thousands, and the page is sent the newest of them.
+   */
+  const [found, setFound] = useState("");
+  const access = useQuery({ queryKey: found ? ["access", found] : ["access"], queryFn: () => api.access(found || undefined), refetchInterval: 15_000, retry: false });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
   const tab: AccessTab = search.tab ?? "pending";
   /** One filter for whichever tab is open, in the row that stays at the top of the window. */
@@ -48,6 +53,8 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
   const senders = (access.data?.senders ?? []).filter((sender) => inScope(sender.gatewayId));
   const by = (status: string) => senders.filter((sender) => sender.status === status);
   const [pending, approved, denied, blocked] = [by("pending"), by("approved"), by("denied"), by("blocked")];
+  // Everyone approved, where the page shows all agents' and was sent only the newest; else what it holds.
+  const approvedTotal = !search.agent && !found ? Math.max(access.data?.approvedTotal ?? 0, approved.length) : approved.length;
   // A bare id is honoured on every connection; a qualified one only on its own.
   const allowlist = (access.data?.allowlist ?? []).filter((id) => {
     const at = id.lastIndexOf(":");
@@ -116,7 +123,7 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
             <SegmentedTabs
               tabs={[
                 { value: "pending", label: "Pending", after: count(pending.length, "badge-warning") },
-                { value: "approved", label: "Approved", after: count(approved.length) },
+                { value: "approved", label: "Approved", after: count(approvedTotal) },
                 { value: "denied", label: "Denied", after: count(denied.length) },
                 { value: "blocked", label: "Blocked", after: count(blocked.length) },
                 { value: "history", label: "History" },
@@ -132,7 +139,7 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
           ) : tab === "pending" ? (
             <PendingTab senders={pending} agentOf={agentOf} pairingOn={mode !== "allowlist"} />
           ) : tab === "approved" ? (
-            <ApprovedTab senders={approved} allowlist={allowlist} blocked={blocked} agentOf={agentOf} />
+            <ApprovedTab senders={approved} allowlist={allowlist} blocked={blocked} agentOf={agentOf} total={approvedTotal} found={found} onFind={setFound} />
           ) : tab === "denied" ? (
             <DeniedTab senders={denied} agentOf={agentOf} />
           ) : tab === "blocked" ? (

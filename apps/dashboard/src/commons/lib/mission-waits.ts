@@ -31,13 +31,14 @@ export function asksWhileWorking(mission: Asking): boolean {
  * Whether it waits for the reader. One at work with a question open does. An approval is counted and answered as one,
  * and a mission paused because its model could not answer tries again by itself: neither is a card. Nor is one the
  * reader only reads, which waits for its own person, nor a draft: it is in the Missions board's backlog until
- * someone starts it, and its chat notice offers Start and Drop.
+ * someone starts it, and its chat notice offers Start and Drop. Nor one somebody paused: it waits as long as they like,
+ * on the Missions board under its own tag, and a count that stood for days over a wait they chose would be a reminder.
  */
 export function waitsForReader(mission: Asking & Pick<MissionView, "seen" | "changeable" | "startedAt">): boolean {
   if (mission.changeable === false) return false;
   if (asksWhileWorking(mission)) return true;
   if (mission.waitKind === "accept" && mission.startedAt === null) return false;
-  return mission.seen === "needs_you" && mission.waitKind !== "approval" && mission.waitKind !== "retry";
+  return mission.seen === "needs_you" && mission.waitKind !== "approval" && mission.waitKind !== "retry" && mission.waitKind !== "paused";
 }
 
 /** A question on one line, as a card's line carries it: its options were listed under it, a line each. */
@@ -60,6 +61,8 @@ export function waitingLine(mission: Asking): string {
       return "Stuck. See what stopped it";
     case "unknown_outcome":
       return "Cut off by a restart. Check it, then let it go on";
+    case "paused":
+      return "Paused. Resume it when you like";
     default:
       return "Waiting for you";
   }

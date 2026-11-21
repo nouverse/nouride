@@ -701,6 +701,162 @@ fn a_user_nouride_did_not_make_is_never_run_as() {
     );
 }
 
+/// How many processes run as `uid`, by the kernel's own list.
+fn processes_of(uid: u32) -> usize {
+    fs::read_dir("/proc")
+        .unwrap()
+        .flatten()
+        .filter(|entry| entry.file_name().to_string_lossy().bytes().all(|b| b.is_ascii_digit()))
+        .filter(|entry| {
+            fs::read_to_string(entry.path().join("status")).is_ok_and(|status| {
+                status
+                    .lines()
+                    .find_map(|line| line.strip_prefix("Uid:"))
+                    .is_some_and(|ids| ids.split_whitespace().any(|one| one == uid.to_string()))
+            })
+        })
+        .count()
+}
+
+#[test]
+fn remove_takes_a_user_this_helper_made_with_its_processes_and_no_other() {
+    let world = world_or_skip!();
+    let shared = world.workspace().join("shared");
+    let s = shared.display();
+    let private = world.workspace().join("private/omega");
+    let p = private.display();
+    // Another agent, with a folder of its own in `shared/`, a file there and a process running before any of this.
+    let theirs = world.sh_as(
+        "psi",
+        &format!("mkdir {s}/psi-dir && echo theirs > {s}/psi.txt && (setsid sleep 601 >/dev/null 2>&1 &)"),
+    );
+    assert!(theirs.status.success(), "{}", text(&theirs.stderr));
+    let psi = id("-u", "nr-psi");
+    assert_eq!(processes_of(psi), 1);
+    // The agent to remove: files in `shared/` (one inside the other agent's folder), a link there to a file of the
+    // system's, a hard link to the other agent's file, a file in its own folder and one in /tmp, a process it left
+    // running, and one that keeps starting more: stopped before it is killed, it starts none meanwhile.
+    let made = world.sh_as(
+        "omega",
+        &format!(
+            "echo mine > {s}/omega.txt && mkdir {s}/omega-dir && echo deep > {s}/omega-dir/deep.txt && \
+             echo guest > {s}/psi-dir/from-omega.txt && ln {s}/psi.txt {s}/omega-dir/psi-hard && \
+             ln -s /etc/passwd {s}/omega-link && echo kept > {p}/notes.md && echo scratch > /tmp/omega-left.txt && \
+             (setsid sleep 600 >/dev/null 2>&1 &) && \
+             (setsid sh -c 'while :; do sleep 0.02 & done' >/dev/null 2>&1 &)"
+        ),
+    );
+    assert!(made.status.success(), "{}", text(&made.stderr));
+    let omega = id("-u", "nr-omega");
+    let omega_gid = id("-g", "nr-omega");
+    assert!(processes_of(omega) >= 2, "its sleep and its loop are running");
+    assert_eq!(fs::metadata(world.root.join("agents/omega")).unwrap().gid(), omega_gid);
+    let remove = |uid: u32, agent: &str| world.client(uid, &["remove", "--agent", agent], &[], None);
+
+    // Only the daemon asks: an operator in its group is not answered, and nothing is removed.
+    let stranger = remove(world.operator_uid, "omega");
+    assert_ne!(stranger.status.code(), Some(0));
+    assert_eq!(id("-u", "nr-omega"), omega);
+
+    // A user of that shape somebody else made keeps its account: the name is not proof.
+    sh("id nr-keepme >/dev/null 2>&1 || useradd --system --no-create-home --comment 'An operator' nr-keepme");
+    let kept = remove(world.service_uid, "keepme");
+    assert_eq!(kept.status.code(), Some(125));
+    assert!(
+        text(&kept.stderr).contains("nouride did not make"),
+        "{}",
+        text(&kept.stderr)
+    );
+    sh("id nr-keepme >/dev/null");
+    // An id that is no agent's names nothing: `root` would be the user `nr-root`.
+    assert_ne!(remove(world.service_uid, "root").status.code(), Some(0));
+    assert_ne!(remove(world.service_uid, "../omega").status.code(), Some(0));
+
+    // An agent's user whose number another account holds too is left, with every process of both.
+    assert!(world
+        .sh_as("tau", "(setsid sleep 602 >/dev/null 2>&1 &)")
+        .status
+        .success());
+    let tau = id("-u", "nr-tau");
+    sh(&format!("useradd --system --no-create-home -o -u {tau} nr-twin-of-tau"));
+    let shared_number = remove(world.service_uid, "tau");
+    assert_eq!(shared_number.status.code(), Some(125));
+    assert!(
+        text(&shared_number.stderr).contains(&format!("shares uid {tau} with nr-twin-of-tau")),
+        "{}",
+        text(&shared_number.stderr)
+    );
+    assert_eq!(processes_of(tau), 1, "nothing of the shared number was ended");
+    sh("id nr-tau >/dev/null");
+
+    // An agent that never ran a command has no user: said, and not a failure.
+    let absent = remove(world.service_uid, "never-ran");
+    assert_eq!(absent.status.code(), Some(0), "{}", text(&absent.stderr));
+    assert_eq!(text(&absent.stdout), "absent\n");
+
+    let removed = remove(world.service_uid, "omega");
+    assert_eq!(removed.status.code(), Some(0), "{}", text(&removed.stderr));
+    assert_eq!(text(&removed.stdout), "removed left=0\n");
+    assert!(
+        !Command::new("id").arg("nr-omega").output().unwrap().status.success(),
+        "the user is gone"
+    );
+    assert!(
+        !Command::new("getent")
+            .args(["group", "nr-omega"])
+            .output()
+            .unwrap()
+            .status
+            .success(),
+        "its own group went with it"
+    );
+    assert_eq!(
+        processes_of(omega),
+        0,
+        "what it left running was ended first, the loop too"
+    );
+    // Nobody else's process was touched: the other agent's and the shared number's are the ones started before.
+    assert_eq!(processes_of(psi), 1);
+    assert_eq!(processes_of(tau), 1);
+    // What it owned in `shared/` is the service user's now, in another agent's folder too, the link itself and never
+    // what it points at; a user made later under the same number owns none of it.
+    for name in [
+        "omega.txt",
+        "omega-dir",
+        "omega-dir/deep.txt",
+        "omega-link",
+        "psi-dir/from-omega.txt",
+    ] {
+        let owner = fs::symlink_metadata(shared.join(name)).unwrap().uid();
+        assert_eq!(owner, world.service_uid, "{name}");
+    }
+    assert_eq!(
+        fs::metadata("/etc/passwd").unwrap().uid(),
+        0,
+        "a link's target is never touched"
+    );
+    // Another agent's file is theirs under whatever name the removed one gave it, and so is its folder.
+    for name in ["psi.txt", "omega-dir/psi-hard", "psi-dir"] {
+        assert_eq!(fs::metadata(shared.join(name)).unwrap().uid(), psi, "{name}");
+    }
+    // What the daemon had not deleted of its private folder is the service user's too, the folder itself included:
+    // left to the dead number, an agent made again under the id was refused its own folder.
+    assert_eq!(fs::metadata(&private).unwrap().uid(), world.service_uid);
+    assert_eq!(fs::metadata(private.join("notes.md")).unwrap().uid(), world.service_uid);
+    // Its own group's number is on nothing either: the folder the daemon keeps for it, and what it left in /tmp.
+    assert_eq!(
+        fs::metadata(world.root.join("agents/omega")).unwrap().gid(),
+        world.service_gid
+    );
+    let scratch = fs::metadata("/tmp/omega-left.txt").unwrap();
+    assert_eq!((scratch.uid(), scratch.gid()), (world.service_uid, world.service_gid));
+    assert!(world.run("psi", &["true"]).status.success());
+    // Removed twice is absent the second time.
+    assert_eq!(text(&remove(world.service_uid, "omega").stdout), "absent\n");
+    // And an agent made again under the id gets a user and its folder as any new agent does.
+    assert!(world.run("omega", &["true"]).status.success());
+}
+
 #[test]
 fn a_folder_the_daemon_made_is_handed_over_and_nothing_of_roots_moves_with_it() {
     let world = world_or_skip!();

@@ -8,9 +8,10 @@
 import { describe, expect, test } from "bun:test";
 import type { LiveTurn, MissionSettings, MissionView, TurnStep } from "@nouride/wire";
 import { stepNow } from "@/commons/lib/steps";
-import { columnOf } from "@/modules/missions/lib/board";
+import { badgeOf, cardLine, columnOf, timeLine, whenLines } from "@/modules/missions/lib/board";
+import { waitingLine, waitsForReader } from "@/commons/lib/mission-waits";
 import { missionName } from "@/commons/lib/mission-name";
-import { actionsFor, briefShown, inFolder, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, whyStarted } from "@/modules/missions/lib/mission";
+import { actionsFor, briefShown, inFolder, isHeldUp, isPaused, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, triesAgain, whyStarted } from "@/modules/missions/lib/mission";
 import { ownPicture } from "@/modules/missions/components/MissionResult";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
@@ -95,19 +96,56 @@ describe("what a person sees", () => {
 
 describe("what a person can say to it now", () => {
   test("each verb only where the daemon would take it", () => {
-    expect(actionsFor(MISSION)).toEqual(["stop"]);
-    expect(actionsFor({ ...MISSION, status: "queued" })).toEqual(["stop"]);
+    // Pause where the daemon pauses: at work or in the queue; not while its checks run, nor waiting for a person.
+    expect(actionsFor(MISSION)).toEqual(["pause", "stop"]);
+    expect(actionsFor({ ...MISSION, status: "queued" })).toEqual(["pause", "stop"]);
     expect(actionsFor({ ...MISSION, status: "checking" })).toEqual(["stop"]);
     expect(actionsFor(waiting("input"))).toEqual(["answer", "acceptAsIs", "stop"]);
     expect(actionsFor(waiting("accept"))).toEqual(["accept", "continue", "stop"]);
     for (const kind of ["limit", "stuck", "unknown_outcome", "retry"] as const) expect(actionsFor(waiting(kind))).toEqual(["continue", "acceptAsIs", "stop"]);
-    // Paused for its model (0.8.7): said as what it is, and that it tries again by itself.
-    expect(seenAs(waiting("retry"))).toBe("Needs you · paused, retrying");
-    expect(needsYouSaid(waiting("retry", { reason: "usage limit reached" }))).toBe("Its model could not answer: usage limit reached. It tries again by itself, further apart each time, for about a day. Continue tries now.");
+    // Held up for its model (0.8.7): said as what it is, and that it tries again by itself. Never "paused", which is a
+    // mission someone paused.
+    // Nor "Needs you": it tries again by itself, and a person shown one there took the going on for theirs to press.
+    expect(seenAs(waiting("retry"))).toBe("Held up · tries again by itself");
+    // When, by the time the daemon says: a mission that tries in ten minutes read the same as one that had given up.
+    const at = 1_800_000_000_000;
+    expect(needsYouSaid(waiting("retry", { reason: "usage limit reached", retryAt: at + 43 * 60_000 }), at)).toBe("Its model could not answer: usage limit reached. It tries again by itself in 43 min, then an hour apart at most, for about a day. Continue tries now.");
+    expect(triesAgain(at - 5_000, at)).toBe("It tries again by itself in less than a minute, then an hour apart at most, for about a day.");
+    // A daemon that says no time: the rhythm alone.
+    expect(needsYouSaid(waiting("retry", { reason: "usage limit reached" }), at)).toBe("Its model could not answer: usage limit reached. It tries again by itself, an hour apart at most, for about a day. Continue tries now.");
+    // A reason that ends its own sentence is not given a second stop ("… has been told.. It tries").
+    expect(needsYouSaid(waiting("retry", { reason: "My credentials are not working. The operator has been told." }), at)).toBe("Its model could not answer: My credentials are not working. The operator has been told. It tries again by itself, an hour apart at most, for about a day. Continue tries now.");
+    expect(rowLine(waiting("retry", { reason: "usage limit reached" }))?.label).toBe("Held up");
+    expect(isHeldUp(waiting("retry"))).toBe(true);
+    expect(isHeldUp(waiting("paused"))).toBe(false);
+    expect(isHeldUp({ ...MISSION, waitKind: "retry" })).toBe(false);
     // Parked approvals are answered on their own cards; continuing past them is not offered — accepting it as it is is.
     expect(actionsFor(waiting("approval"))).toEqual(["acceptAsIs", "stop"]);
     // Ended, the one thing left is deleting it (0.8.13); open, there is no Delete — the daemon refuses one still open.
     for (const status of ["done", "failed", "stopped"] as const) expect(actionsFor({ ...MISSION, status })).toEqual(["delete"]);
+  });
+
+  test("a paused one: its own word, who paused it, and Resume and Stop alone", () => {
+    const paused = waiting("paused", { reason: "paused by Gading", pausedBy: "Gading" });
+    expect(isPaused(paused)).toBe(true);
+    expect(isPaused(waiting("retry"))).toBe(false);
+    expect(seenAs(paused)).toBe("Paused");
+    // As quiet as one that ended: nothing calls on the reader until they want it to go on.
+    expect(seenTone(paused)).toBe(seenTone({ ...MISSION, status: "stopped", seen: "ended" }));
+    expect(seenTone(paused)).not.toBe(seenTone(waiting("limit")));
+    expect(actionsFor(paused)).toEqual(["resume", "stop"]);
+    expect(needsYouSaid(paused)).toBe("Paused by Gading. Its work so far is kept, and the time it is paused is not counted. Resume lets it go on from its checklist, whenever you like.");
+    expect(rowLine(paused)).toEqual({ label: "Needs you", text: needsYouSaid(paused) });
+    // On the board: with what needs the reader, under its own tag, with who and since when.
+    expect(columnOf(paused)).toBe("needs");
+    expect(badgeOf(paused)).toBe("Paused");
+    expect(cardLine(paused)).toEqual({ label: "Paused", text: "by Gading. Its work so far is kept. Resume lets it go on." });
+    expect(timeLine(paused, paused.updatedAt + 3 * 60_000)).toBe("paused 3 min ago");
+    expect(whenLines(paused).map((line) => line.label)).toContain("Paused since");
+    // No count and no card among what waits for the reader: a wait they chose is not a reminder.
+    expect(waitsForReader(paused)).toBe(false);
+    expect(waitsForReader(waiting("limit"))).toBe(true);
+    expect(waitingLine(paused)).toBe("Paused. Resume it when you like");
   });
 });
 
@@ -117,7 +155,7 @@ describe("one at work that asked a question and went on", () => {
   test("its badge says so, its row's line is the question, and Answer is offered with Stop", () => {
     expect(seenAs(asking)).toBe("Working · asked a question");
     expect(rowLine(asking)).toEqual({ label: "Asks", text: "Mermaid, at 735 KB?" });
-    expect(actionsFor(asking)).toEqual(["answer", "stop"]);
+    expect(actionsFor(asking)).toEqual(["answer", "pause", "stop"]);
   });
 
   test("it is in Needs you on the board: the answer is the reader's to give", () => {
@@ -131,7 +169,7 @@ describe("one at work that asked a question and went on", () => {
   test("answered, or one the reader only reads, it is a mission at work like any other", () => {
     const answered: MissionView = { ...asking, answers: [{ ...asking.answers[0]!, answer: "ya" }] };
     expect(seenAs(answered)).toBe("Working");
-    expect(actionsFor(answered)).toEqual(["stop"]);
+    expect(actionsFor(answered)).toEqual(["pause", "stop"]);
     expect(rowLine(answered)?.label).toBe("Now");
     expect(seenAs({ ...asking, changeable: false })).toBe("Working");
   });

@@ -78,6 +78,12 @@ export interface MessageEnvelope {
   chatId: string;
   chatType: ChatType;
   senderId: string;
+  /**
+   * Other ids this platform knows the sender by, where it knows more than one: on WhatsApp the phone number behind
+   * the hidden id a message now arrives under. Who may write is asked about each of them (`AccessStore.check`): a
+   * number let in ahead is a person let in, whichever id WhatsApp delivers them under. Absent where a sender has one.
+   */
+  senderAlso?: string[];
   senderName: string;
   /**
    * Did *this daemon* authenticate the sender, rather than a platform vouching for a handle?

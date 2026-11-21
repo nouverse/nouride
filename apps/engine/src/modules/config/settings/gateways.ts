@@ -195,7 +195,7 @@ export async function saveGateway(deps: SettingsDeps, input: {
  * directory. A token shared with another instance is left alone; nothing else references it by
  * construction, but checking is cheaper than being wrong.
  */
-export async function removeGateway(deps: SettingsDeps, id: string, actor: string): Promise<SaveResult> {
+export async function removeGateway(deps: SettingsDeps, id: string, actor: string, how: { keepToken?: boolean } = {}): Promise<SaveResult> {
   const existing = deps.config.gateways.find((gateway) => gateway.id === id);
   if (!existing) return { ok: false, error: `no gateway "${id}"` };
 
@@ -218,7 +218,10 @@ export async function removeGateway(deps: SettingsDeps, id: string, actor: strin
     (gateway) => (gateway.encryptionKeySecret ?? gateway.tokenSecret) === secretName,
   );
   let credentialRemoved = false;
-  if (secretName && !stillUsed) {
+  // `keepToken`, for a connection that goes with its deleted agent: a token a person obtained stays in Secrets, where
+  // they can delete it or name it in another connection. A session key the daemon made itself goes as it always did.
+  const kept = how.keepToken === true && !existing.encryptionKeySecret;
+  if (secretName && !stillUsed && !kept) {
     credentialRemoved = await deps.secrets.delete(secretName);
   }
 

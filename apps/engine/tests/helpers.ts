@@ -289,8 +289,9 @@ export function scriptedOpenAI(
   /**
    * `hang`: no answer at all — the request is held until it is aborted, and then fails as `fetch` does.
    * `promptTokens`: the input the provider reports for the request, 10 when unsaid.
+   * `refuse`: the provider answers with this HTTP status and an error body, as one whose key or plan ran out does.
    */
-  turns: { text?: string; toolCalls?: { id: string; name: string; args: unknown }[]; hang?: boolean; promptTokens?: number }[],
+  turns: { text?: string; toolCalls?: { id: string; name: string; args: unknown }[]; hang?: boolean; promptTokens?: number; refuse?: number }[],
   options: { models?: Record<string, unknown>[] } = {},
 ): { fetchImpl: typeof fetch; requests: any[] } {
   const requests: any[] = [];
@@ -314,6 +315,8 @@ export function scriptedOpenAI(
         else signal?.addEventListener("abort", fail, { once: true });
       });
     }
+
+    if (turn?.refuse) return new Response(JSON.stringify({ error: { message: "the plan's limit was reached" } }), { status: turn.refuse, headers: { "content-type": "application/json" } });
 
     // A non-streaming request (the executor's wrap-up call withholds tools and streaming)
     // still has to be answered in its own format.

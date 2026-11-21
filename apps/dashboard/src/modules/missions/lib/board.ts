@@ -5,8 +5,8 @@
  *
  * Three stages and a history, read only: a mission moves on its own, so there is nothing to drag. **Backlog** is the
  * drafts, which run when a person starts them; **Working** is at work (queued, running, checking, or waiting on someone
- * who is not the reader); **Needs you** waits on the reader (a question, approvals, a limit, a result to accept) and
- * never holds a draft. **Finished** is done, failed or stopped, within its own span: what has been, not a stage, so on a
+ * who is not the reader, or held up for its model and trying again by itself); **Needs you** waits on the reader (a question, approvals, a limit, a result to accept, or a
+ * mission paused, under its own "Paused" tag with Resume) and never holds a draft. **Finished** is done, failed or stopped, within its own span: what has been, not a stage, so on a
  * wide page it is a list under the three and only on a phone a fourth tab.
  */
 
@@ -14,7 +14,7 @@ import type { MissionView } from "@nouride/wire";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
 import { ago } from "@/commons/lib/format";
 import { dayOf, fullWhen } from "@/commons/lib/when";
-import { isDraft, needsYouSaid, waitsElsewhere } from "./mission";
+import { isDraft, isHeldUp, isPaused, needsYouSaid, triesAgain, waitsElsewhere } from "./mission";
 
 export type Column = "backlog" | "working" | "needs" | "finished";
 export type Outcome = "done" | "failed" | "stopped";
@@ -48,7 +48,7 @@ export const FINISHED_SPAN: FinishedSpan = 7;
 export function columnOf(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable"> & { answers?: MissionView["answers"] }): Column {
   if (isDraft(mission)) return "backlog";
   if (mission.seen === "done" || mission.seen === "ended") return "finished";
-  if (waitsElsewhere(mission)) return "working";
+  if (waitsElsewhere(mission) || isHeldUp(mission)) return "working";
   if (mission.seen === "needs_you") return "needs";
   return asksWhileWorking(mission) && mission.changeable !== false ? "needs" : "working";
 }
@@ -65,10 +65,11 @@ export function badgeOf(mission: MissionView): string {
   if (column === "finished") return { done: "Done", failed: "Failed", stopped: "Stopped" }[outcomeOf(mission)];
   if (column === "working") {
     if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
+    if (isHeldUp(mission)) return "Held up";
     return mission.status === "queued" ? "Queued" : mission.status === "checking" ? "Checking" : "Working";
   }
   if (asksWhileWorking(mission) || mission.waitKind === "input") return "Needs you · a question";
-  return { approval: "Needs you · approval", limit: "Needs you · a limit", accept: "Needs you · accept", stuck: "Needs you · stuck", unknown_outcome: "Needs you · check", retry: "Needs you", input: "Needs you · a question" }[mission.waitKind ?? "retry"];
+  return { approval: "Needs you · approval", limit: "Needs you · a limit", accept: "Needs you · accept", stuck: "Needs you · stuck", unknown_outcome: "Needs you · check", retry: "Needs you", input: "Needs you · a question", paused: "Paused" }[mission.waitKind ?? "retry"];
 }
 
 /** What it takes to be done, said for a draft: its checks, then the person's accept or the reviewer, where either is on. */
@@ -79,15 +80,17 @@ export function doneWhen(mission: Pick<MissionView, "checks" | "accept" | "revie
 }
 
 /** The one line that matters on a card, by its column: when it is done, what it does now, what it asks, how it ended. */
-export function cardLine(mission: MissionView): { label: string; text: string } | null {
+export function cardLine(mission: MissionView, now: number = Date.now()): { label: string; text: string } | null {
   const column = columnOf(mission);
   if (column === "backlog") return { label: "Done when", text: doneWhen(mission) };
   if (column === "needs") {
+    if (isPaused(mission)) return { label: "Paused", text: `by ${mission.pausedBy ?? "someone"}. Its work so far is kept. Resume lets it go on.` };
     const asked = openQuestion(mission);
     return { label: asked ? "Asks" : "Needs", text: asked ? asked.question.replace(/\s+/g, " ").trim() : needsYouSaid(mission) };
   }
   if (column === "working") {
     if (waitsElsewhere(mission)) return { label: "Waits", text: `Only ${mission.person?.name ?? "an admin"} can answer what it waits for.` };
+    if (isHeldUp(mission)) return { label: "Held up", text: `Its model could not answer. ${triesAgain(mission.retryAt, now)}` };
     if (mission.status === "queued") return { label: "Queued", text: mission.reason ?? "waits for a free slot" };
     if (mission.status === "checking") return { label: "Now", text: "running its checks" };
     return { label: "Now", text: mission.checklist?.active ?? (mission.checklist ? "between steps" : "writing its checklist") };
@@ -105,7 +108,8 @@ export function whenLines(mission: MissionView): { label: string; at: number }[]
   return [
     { label: "Created", at: mission.createdAt },
     ...(mission.startedAt !== null ? [{ label: "Started", at: mission.startedAt }] : []),
-    ...(column === "needs" ? [{ label: "Waiting since", at: mission.updatedAt }] : []),
+    ...(column === "needs" ? [{ label: isPaused(mission) ? "Paused since" : "Waiting since", at: mission.updatedAt }] : []),
+    ...(isHeldUp(mission) && column === "working" ? [{ label: "Held up since", at: mission.updatedAt }] : []),
     ...(column === "finished" ? [{ label: "Ended", at: mission.endedAt ?? mission.updatedAt }] : []),
   ];
 }
@@ -119,7 +123,8 @@ export function whenTip(mission: MissionView): string {
 export function dayBeside(mission: MissionView, now: number = Date.now()): string {
   const column = columnOf(mission);
   if (column === "backlog") return dayOf(mission.createdAt, now);
-  if (column === "working") return `since ${dayOf(mission.startedAt ?? mission.createdAt, now)}`;
+  // Held up, its line says since when it is: the day of that, not the day work began.
+  if (column === "working") return isHeldUp(mission) ? dayOf(mission.updatedAt, now) : `since ${dayOf(mission.startedAt ?? mission.createdAt, now)}`;
   if (column === "needs") return dayOf(mission.updatedAt, now);
   return dayOf(mission.endedAt ?? mission.updatedAt, now);
 }
@@ -128,7 +133,8 @@ export function dayBeside(mission: MissionView, now: number = Date.now()): strin
 export function timeLine(mission: MissionView, now: number = Date.now()): string {
   const column = columnOf(mission);
   if (column === "backlog") return `drafted ${ago(mission.createdAt, now)}`;
-  if (column === "needs") return `${openQuestion(mission) ? "asked" : "waiting since"} ${ago(mission.updatedAt, now)}`;
+  if (column === "needs") return `${isPaused(mission) ? "paused" : openQuestion(mission) ? "asked" : "waiting since"} ${ago(mission.updatedAt, now)}`;
+  if (column === "working" && isHeldUp(mission)) return `held up ${ago(mission.updatedAt, now)}`;
   if (column === "working") return mission.activeAt !== undefined ? `last step ${ago(mission.activeAt, now)}` : `started ${ago(mission.startedAt ?? mission.createdAt, now)}`;
   return `${outcomeOf(mission) === "stopped" ? "stopped" : "ended"} ${ago(mission.endedAt ?? mission.updatedAt, now)}`;
 }

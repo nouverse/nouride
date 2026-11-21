@@ -262,6 +262,20 @@ export interface Gateway {
   readonly editsMessages?: boolean;
 
   /**
+   * How many characters one message of this platform holds, where it has a limit. `send` already parts a longer text;
+   * an edit cannot, and cuts it. Whoever rewrites a message with a text that may have grown reads this first
+   * (`Notifier.fitsOne`): a draft's notice rewritten after its goal grew would have lost its end unsaid.
+   */
+  readonly maxMessageChars?: number;
+
+  /**
+   * A sender's id as a person writes one down, in the form this connection's messages carry: a phone number with its
+   * country code as WhatsApp's address of it. Null where what was written cannot be a sender here. Absent where an
+   * id is written as it arrives. What a list of people let in ahead is read by (`POST /access/import`).
+   */
+  senderIdOf?(written: string): string | null;
+
+  /**
    * How much of a turn's working-out this platform should carry.
    *
    * `"live"` is the edited bubble that tracks each tool as it runs — right for a channel that exists

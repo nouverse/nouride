@@ -78,9 +78,9 @@ describe("the dashboard's calls", () => {
     const calls = dashboardCalls();
     // The few with none are addresses handed to the browser to fetch itself, or built apart from their `request`: the
     // event stream, a file's own bytes for a picture or a player and the file to keep (System's Files), a picture of a
-    // mission's result its report draws, the two previews of HTML a frame is given (a reply's block, a file), and
-    // three of the second kind.
-    expect(calls.filter((call) => call.method !== null).length).toBeGreaterThan(calls.length - 10);
+    // mission's result its report draws, the two previews of HTML a frame is given (a reply's block, a file), an
+    // export's file to keep (Export and import), and three of the second kind.
+    expect(calls.filter((call) => call.method !== null).length).toBeGreaterThan(calls.length - 11);
   });
 });
 

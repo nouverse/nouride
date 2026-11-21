@@ -16,7 +16,7 @@ type Access = NonNullable<AgentSummary["access"]>;
 
 export function AgentAccessMode({ agent }: { agent: AgentSummary }) {
   const me = useMe();
-  const global = useQuery({ queryKey: ["access"], queryFn: api.access, retry: false });
+  const global = useQuery({ queryKey: ["access"], queryFn: () => api.access(), retry: false });
   const queryClient = useQueryClient();
   const save = useMutation({
     mutationFn: (access: Access) => api.setAgentAccess(agent.id, access),

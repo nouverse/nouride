@@ -81,6 +81,7 @@ export function OpenConversation(
             status={now.status}
             sessionId={sessionId}
             {...(now.elsewhere ? { readOnly: { platform: now.elsewhere } } : {})}
+            gone={now.gone}
             history={{ open: historyOpen, toggle: () => { closeNotes(); setHistoryOpen((was) => !was); } }}
             {...(workNotes.data ? { notes: { open: notesOpen, count: workNotes.data.tasks.length, toggle: () => { setHistoryOpen(false); toggleNotes(); } } } : {})}
             {...(writes ? { choice: { first, onFirst: setFirst } } : {})}
@@ -103,7 +104,7 @@ export function OpenConversation(
             />
           ) : null}
 
-          {now.room ? null : <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} agentId={now.agentId} agentName={now.agentName} current={sessionId} list={data.list.data} />}
+          {now.room ? null : <HistoryPanel open={historyOpen} onClose={() => setHistoryOpen(false)} agentId={now.agentId} agentName={now.agentName} gone={now.gone} current={sessionId} list={data.list.data} />}
         </>
       )}
     />

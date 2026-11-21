@@ -9,7 +9,7 @@
  */
 
 import { resolveWithin, statFile } from "@nouride/runtime";
-import { createLogger, MISSION_TITLE_MAX, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
+import { clip, createLogger, MISSION_TITLE_MAX, type Tool, type ToolContext, type ToolResult } from "@nouride/shared";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { isMissionChat } from "@/modules/missions/gateway.ts";
@@ -17,7 +17,7 @@ import { isDraft, signedOffBy, type DraftChange } from "@/modules/missions/draft
 import type { Missions } from "@/modules/missions/missions.ts";
 import type { StartRequest } from "@/modules/missions/start.ts";
 import type { Mission } from "@/modules/missions/types.ts";
-import type { AnswerReach } from "@/modules/missions/asking.ts";
+import { openQuestion, type AnswerReach } from "@/modules/missions/asking.ts";
 import { MAX_OPTIONS } from "@/modules/missions/options.ts";
 import { doneWhen, shortId } from "@/modules/missions/page.ts";
 
@@ -213,7 +213,7 @@ async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: T
   const edited = await missions.edit(mission.id, change, { byAgent: ctx.agentId });
   if ("refused" in edited) return refused(edited.refused);
   const brief = edited.briefFailed ? ` Its brief could not be written: ${edited.briefFailed}.` : "";
-  return ok(`Draft ${shortId(mission.id)} changed: ${edited.changed.join(", ")}. Its notice was sent to this chat again, saying so.${brief}`);
+  return ok(`Draft ${shortId(mission.id)} changed: ${edited.changed.join(", ")}. Its notice in this chat says so now: it was rewritten where it stands, or one line was added under it.${brief}`);
 }
 
 /** Start it — once git has taken the branch it names, if it names one (`Missions.branchRefusal`). */
@@ -361,6 +361,14 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
           files.push(path);
         }
         missions.claim(mission.id, { kind: "done", summary, report, files });
+        // Its question still open: said now, while the agent that asked is the one reading.
+        const open = openQuestion(missions.get(mission.id) ?? mission);
+        if (open) {
+          return claimed(
+            `Noted, but your question has no answer yet: "${clip(open.question.trim(), 300)}". If the answer comes before this turn ends, the mission goes on to be checked. If not, the mission waits for the answer, this \`done\` is not kept, and the answer starts your next turn: do what it changes, then call done again.`,
+            `Done: ${summary}`,
+          );
+        }
         return claimed(mission.checks.length > 0 ? `Noted. This turn ends here and the daemon runs the checks: ${mission.checks.join("; ")}.` : "Noted. This turn ends here and it goes to the person to accept.", `Done: ${summary}`);
       }
       case "ask": {

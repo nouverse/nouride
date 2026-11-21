@@ -206,6 +206,30 @@ describe("a mission's turn", () => {
     expect(turn?.reply).toBe("Done: out.txt holds hello.");
   });
 
+  test("a turn that threw says what it had done first: a call that worked is counted, though its model refused the next request", async () => {
+    // A failed turn was told as having done nothing, whatever it did: a coding CLI's two hours of work that ended at its
+    // plan's limit counted as one more try its model never answered (msn_30d10c).
+    const looked: Tool = { definition: { name: "look", description: "Looks.", parameters: { type: "object", properties: {} } }, requiresApproval: false, execute: async () => ({ content: "seen", isError: false }) };
+    // One call that worked, beside a `plan` (never counted as work) and a read the file tools refuse (a call that failed).
+    const calls = [
+      { id: "p1", name: "plan", args: { steps: [{ text: "look once", state: "active" }] } },
+      { id: "l1", name: "look", args: {} },
+      { id: "r1", name: "read", args: { path: "/nowhere/outside.txt" } },
+    ];
+    const d = await missionDaemon([{ toolCalls: calls }, { refuse: 401 }], '[llm]\nprovider = "test"\n\n[tools]\nenabled = ["look", "read", "plan"]\n', [looked]);
+    const ended: { failed: boolean; worked: number }[] = [];
+    const missions = d.missions();
+    const turnEnded = missions.turnEnded.bind(missions);
+    missions.turnEnded = (id, outcome) => (ended.push(outcome), turnEnded(id, outcome));
+    const started = missions.start({ agentId: "nouva", goal: "look once", startedBy: "u1", gatewayId: "telegram:main", chatId: "chat-1" });
+    if ("refused" in started) throw new Error(started.refused);
+    await eventually(() => missions.get(started.mission.id)?.status === "waiting", 6_000, "the mission held up");
+
+    expect(missions.get(started.mission.id)!.waitKind).toBe("retry");
+    expect(ended).toHaveLength(1);
+    expect(ended[0]).toMatchObject({ failed: true, worked: 1 });
+  });
+
   test("after a call is parked, three more rounds — then the turn ends, and with no step moved the mission waits", async () => {
     // On the live box a mission read its pending approval every five seconds for minutes, told not to.
     const reads = Array.from({ length: 6 }, (_, i) => ({ toolCalls: [{ id: `r${i}`, name: "read", args: { path: `poll-${i}.txt` } }] }));

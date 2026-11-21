@@ -6,6 +6,7 @@ import { saidSaved } from "../saved.ts";
 import { answeredBy } from "./agent-cli.ts";
 import { updateCli, updateSteps, type InstallShared } from "./agents-update.ts";
 import { skillRootCommand } from "./agent-skill-root.ts";
+import { deleteAgent } from "./agent-delete.ts";
 
 /** `nouride agents [scan|login <id>|update <cli>]`: the list, the coding CLIs this box has, a sign-in, an update. */
 /** `installShared` is the install's installer of a program for every agent, which `update` runs: the binary's entry hands it in. */
@@ -51,9 +52,10 @@ async function agents(client: Client): Promise<void> {
 
 export async function agentAction(client: Client, args: string[]): Promise<void> {
   const [action, id] = args;
-  knownAction("agent", action, ["sleep", "wake", "pause", "resume", "reload", "enable", "disable", "external", "internal", "skill-root"]);
+  knownAction("agent", action, ["sleep", "wake", "pause", "resume", "reload", "enable", "disable", "external", "internal", "skill-root", "delete"]);
   if (action === "skill-root") return skillRootCommand(client, args.slice(1));
-  if (!action || !id) usageError(`Which agent?`, "Usage: nouride agent <sleep|wake|reload|enable|disable|internal> <id>, or nouride agent external <id> <cli>");
+  if (!action || !id) usageError(`Which agent?`, "Usage: nouride agent <sleep|wake|reload|enable|disable|internal|delete> <id>, or nouride agent external <id> <cli>");
+  if (action === "delete") return deleteAgent(client, id);
   if (action === "external" || action === "internal") return answeredBy(client, action, id, args.slice(2));
   const answer = await client.post<{ restartRequired?: boolean }>(`/agents/${id}/${action}`);
   // `enable` and `disable` write the pack's config.toml — a save, said as one. The others act on the running agent.

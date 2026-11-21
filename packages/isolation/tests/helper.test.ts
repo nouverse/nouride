@@ -6,7 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { clientPrefix, findAgentUsers, groupsCommand, HELPER_BINARY, HELPER_SOCKET, helperUnits, putCommand } from "../src/index.ts";
+import { clientPrefix, findAgentUsers, groupsCommand, HELPER_BINARY, HELPER_SOCKET, helperUnits, putCommand, removalOf, removeCommand } from "../src/index.ts";
 
 const FOLDERS = {
   workspace: "/srv/nouride/.nouride/workspace",
@@ -69,6 +69,23 @@ describe("the client's command line", () => {
       HELPER_BINARY, "exec", "--socket", HELPER_SOCKET, "--agent", "nouva", "--cwd", "/w/shared", "--pid-file", "/tmp/p.pid", "--landlock", "auto", "--writable", "/srv/project", "--",
     ]);
     expect(groupsCommand(users, "nouva", ["nr-creds"])).toEqual([HELPER_BINARY, "groups", "--socket", HELPER_SOCKET, "--agent", "nouva", "--group", "nr-creds"]);
+  });
+
+  test("a deleted agent's user is removed by the helper's `remove`, and its answer read for what it did", () => {
+    expect(removeCommand(users, "nouva")).toEqual([HELPER_BINARY, "remove", "--socket", HELPER_SOCKET, "--agent", "nouva"]);
+    expect(removalOf({ exitCode: 0, stdout: "removed left=0\n", stderr: "" })).toEqual({ how: "removed", left: 0 });
+    expect(removalOf({ exitCode: 0, stdout: "removed left=3\n", stderr: "" })).toEqual({ how: "removed", left: 3 });
+    expect(removalOf({ exitCode: 0, stdout: "absent\n", stderr: "" })).toEqual({ how: "absent" });
+    // A helper an earlier release installed does not know the operation; its client, older still, prints its usage.
+    expect(removalOf({ exitCode: 125, stdout: "", stderr: "nouride-run: no such operation: remove\n" })).toEqual({ how: "old" });
+    expect(removalOf({ exitCode: 2, stdout: "", stderr: "usage: nouride-run serve ...\n" })).toEqual({ how: "old" });
+    // Any other refusal is said with its reason, and never read as done.
+    expect(removalOf({ exitCode: 125, stdout: "", stderr: "nouride-run: a user named nr-nouva exists that nouride did not make, so it is left as it is\n" })).toEqual({
+      how: "refused",
+      why: "a user named nr-nouva exists that nouride did not make, so it is left as it is",
+    });
+    expect(removalOf({ exitCode: 0, stdout: "something else\n", stderr: "" })).toEqual({ how: "refused", why: "something else" });
+    expect(removalOf({ exitCode: null, stdout: "", stderr: "" })).toEqual({ how: "refused", why: "exit null" });
   });
 
   test("a file the daemon writes for an agent is the helper's `put`, run as that agent", () => {

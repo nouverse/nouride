@@ -394,6 +394,51 @@ describe("an external agent's Brain tab", () => {
     }
   });
 
+  // The field listed nothing until something was typed, and a person who has not picked a model knows no name to type.
+  describe("the model field's list, before anything is typed", () => {
+    const rows = () => [...dom.document.querySelectorAll('ul[role="listbox"] [role="option"]')].map((row) => row.textContent?.trim() ?? "");
+    const field = (host: HTMLElement) => host.querySelector('input[role="combobox"]') as HTMLInputElement;
+    const arrow = (host: HTMLElement) => host.querySelector('button[aria-label="Show the whole list"]') as HTMLButtonElement;
+    afterEach(() => dom.happyDOM.setViewport({ width: 1024, height: 768 }));
+
+    test("in a wide window a press on the empty field lists every model the CLI offers, and so does emptying it", async () => {
+      serve("admin");
+      const { host, unmount } = await mount();
+      try {
+        expect(field(host).value).toBe("");
+        expect(rows()).toEqual([]);
+        field(host).click();
+        await eventually(() => rows().length > 0, 2_000, "the list on a press");
+        // Both of them, the second by the words the CLI gives it, and no row for typed words: nothing is typed.
+        expect(rows()).toHaveLength(2);
+        expect(rows()[0]).toContain("gpt-5.5-codex");
+        expect(rows()[1]).toContain("GPT-5.5 mini");
+        type(field(host), "mini");
+        await eventually(() => rows().some((row) => row.includes("mini")) && !rows().some((row) => row.includes("gpt-5.5-codex")), 2_000, "the list narrowed");
+        type(field(host), "");
+        await eventually(() => rows().length === 2, 2_000, "the whole list for an emptied field");
+      } finally {
+        unmount();
+      }
+    });
+
+    test("on a phone a press lists nothing, which the keyboard would move under the finger: the field's arrow does", async () => {
+      dom.happyDOM.setViewport({ width: 390, height: 844 });
+      serve("admin");
+      const { host, unmount } = await mount();
+      try {
+        field(host).click();
+        type(field(host), "");
+        await eventually(() => arrow(host).getAttribute("aria-expanded") === "false", 2_000, "the field settled");
+        expect(rows()).toEqual([]);
+        arrow(host).click();
+        await eventually(() => rows().length === 2, 2_000, "the whole list by the arrow");
+      } finally {
+        unmount();
+      }
+    });
+  });
+
   test("the effort row shows what the CLI offers for its model, the one it is set to marked, and whether [llm] effort reached it (0.8.7)", async () => {
     serve("admin", { ...CLI, effort: "high", efforts: [{ value: "low" }, { value: "high", current: "high" }] });
     let mounted = await mount();

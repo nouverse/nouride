@@ -29,12 +29,42 @@ export interface AccessEvent {
     | "access_revoked"
     | "access_reset"
     | "access_unblocked"
-    | "access_expired";
+    | "access_expired"
+    /** A list of senders let in ahead at once: one line for the list, its counts in `details`. */
+    | "access_imported";
   /** A dashboard user, `cli`, `system` for an expiry — or the sender themselves, for a request. */
   actor?: string;
   gatewayId?: string;
-  details?: { sender?: string; sender_name?: string | null; was?: string | null; until?: number };
+  details?: { sender?: string; sender_name?: string | null; was?: string | null; until?: number; added?: number; already?: number; blocked?: number };
   timestamp: number;
+}
+
+/** What `GET /access` answers: the rule in force and who stands where. */
+export interface AccessListing {
+  mode: AccessMode;
+  /** False when the daemon runs on built-in defaults: there is no file to write the mode to. */
+  editable?: boolean;
+  allowlist: string[];
+  /** Everyone asking, denied or blocked, and the newest approved: at most 500 of those. */
+  senders: SenderRecord[];
+  /** How many are approved in all. More than `senders` holds where a list was let in from a file. Absent from a daemon before it. */
+  approvedTotal?: number;
+}
+
+/**
+ * What letting a list in answers (`POST /access/import`), or would answer (`dryRun`): of the lines read, how many are
+ * new, how many were in already, how many are blocked and stay out, how many said the same sender twice, and which
+ * could not be a sender on that connection.
+ */
+export interface AccessImported {
+  gateway: string;
+  dryRun: boolean;
+  read: number;
+  added: number;
+  already: number;
+  blocked: number;
+  duplicates: number;
+  invalid: { count: number; examples: string[] };
 }
 
 /** The answers about one sender beside approving. None lets anybody in: reset and unblock let them ask. */

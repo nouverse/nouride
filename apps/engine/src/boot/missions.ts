@@ -23,6 +23,7 @@ import { SimilarAllowed } from "@/modules/missions/similar.ts";
 import { gateSide } from "@/modules/missions/gate-side.ts";
 import { OptionPresses } from "@/modules/missions/options.ts";
 import { ActionPresses } from "@/modules/missions/actions.ts";
+import { DraftNotices } from "@/modules/missions/draft-notices.ts";
 import { ProgressLines } from "@/modules/missions/progress-line.ts";
 import { toldBy } from "@/modules/missions/types.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
@@ -136,6 +137,28 @@ function wordsIntoTurn(late: () => Pick<MissionsLate, "steerInto" | "steerReach"
   };
 }
 
+/**
+ * Each draft's one notice (`draft-notices.ts`): sent when the draft is made, rewritten in place when it changes where
+ * its chat can and the text is still one message, one line otherwise.
+ */
+function draftTelling(notifier: Pick<Notifier, "toChat" | "ask" | "settle" | "fitsOne">, reportsTo: (mission: Mission) => { gatewayId: string; chatId: string }, noted: (mission: Mission, text: string) => void): { tell: NonNullable<MissionsDeps["tellDraft"]>; forget: (missionId: string) => void } {
+  const notices = new DraftNotices({
+    ask: (to, text, buttons) => notifier.ask(to, text, buttons),
+    // Not one grown past a single message: an edit cuts what does not fit, where a send parts it.
+    rewrite: async (to, messageId, text, buttons) => notifier.fitsOne(to, text) && (await notifier.settle(to, messageId, text, buttons)),
+    say: (to, text) => notifier.toChat(to, text),
+  });
+  return {
+    tell: async (mission, whole, line, buttons) => {
+      if (line === null) await notices.made(mission.id, reportsTo(mission), whole, buttons);
+      else await notices.changed(mission.id, reportsTo(mission), whole, line, buttons);
+      // The dashboard's conversation keeps the draft whole once, and each change as its line.
+      noted(mission, line ?? whole);
+    },
+    forget: (missionId) => notices.forget(missionId),
+  };
+}
+
 /** What the missions reach once the pipeline and the tools exist. */
 interface MissionsLate {
   queueTurn: (envelope: MessageEnvelope) => boolean;
@@ -170,7 +193,7 @@ export function buildMissions(params: {
   notes: NotesPort;
   jobs: JobsPort;
   approvals: () => Pick<ApprovalGate, "pending" | "expireAll"> & Pick<SqliteApprovalGate, "recentlySettledForChat" | "settled" | "get">;
-  notifier: Pick<Notifier, "toChat" | "ask" | "edit">;
+  notifier: Pick<Notifier, "toChat" | "ask" | "edit" | "settle" | "fitsOne">;
   chatEvents: Pick<ChatEventsPort, "record">;
   /** Where an ended mission is remembered — one episode, from its report. */
   memory?: Pick<Memory, "saveConversation">;
@@ -209,6 +232,7 @@ export function buildMissions(params: {
   const noted = (mission: Mission, text: string): void => {
     params.chatEvents.record({ gatewayId: mission.gatewayId, chatId: mission.chatId, audience: "ui", kind: "note", text, agentId: mission.agentId, details: { mission: mission.id } });
   };
+  const drafted = draftTelling(params.notifier, reportsTo, noted);
   const gateway = new MissionGateway();
   let late: MissionsLate | undefined;
 
@@ -270,6 +294,7 @@ export function buildMissions(params: {
       params.approvals().expireAll(mission.agentId, { gatewayId: MISSION_GATEWAY_ID, chatId: mission.id });
       similar.forget(mission.id);
       progressed.forget(mission.id);
+      drafted.forget(mission.id);
     },
     letGoCli: (mission) => params.forgetCliSession?.(mission.agentId, MISSION_GATEWAY_ID, mission.id),
     tell: async (mission, text, buttons) => {
@@ -281,6 +306,7 @@ export function buildMissions(params: {
       // Where the chat is the dashboard's, nothing waits on what is sent: the conversation's events are what it shows.
       noted(mission, text);
     },
+    tellDraft: drafted.tell,
     progress: async (mission, text) => {
       await progressed.say(mission.id, reportsTo(mission), text);
       noted(mission, text);
@@ -444,6 +470,7 @@ export function buildMissions(params: {
         approvals: { pending: (agentId) => params.approvals().pending(agentId), settled: (options) => params.approvals().settled(options), get: (id) => params.approvals().get(id) },
         // Who a `tell` it passes on is from (0.8.10): their People name — their id where People does not know them.
         speaker: (who) => ({ name: personFor(params.config().people, who.gatewayId, who.senderId)?.name, admin: late?.isAdmin(who) === true }),
+        orchestrator: () => params.config().daemon.orchestrator,
         ...(params.linkFor ? { linkFor: params.linkFor } : {}),
         ...(params.audit ? { audit: params.audit } : {}),
       }),

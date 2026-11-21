@@ -239,6 +239,8 @@ export const INTERPOLATIONS: Record<string, { why: string; planAs?: string }> = 
   "sessions.store.ts A_PERSON": { why: "a constant clause: a turn a person caused, not the daemon or another agent", planAs: "t.cause IS NULL AND t.sender_id IS NOT NULL" },
   "turns.store.ts OWN": { why: "a constant clause naming the two causes of a delegate's own turn", planAs: "(cause IS NULL OR json_extract(cause, '$.via') NOT IN ('delegate', 'ask_agent'))" },
   "tokens.store.ts COLUMNS": { why: "a constant column list", planAs: "id, person, agents, scopes, label, created_at, last_used_at" },
+  "agent-rows.ts table": { why: "a table name from `db/keys.ts`, checked by `identifier()`" },
+  "agent-rows.ts column": { why: "a column name from `db/keys.ts`, checked by `identifier()`" },
   "rename.ts table": { why: "a table name from `db/keys.ts`, checked by `identifier()`" },
   "rename.ts set.sql": { why: "`assignment()`: a column from `db/keys.ts` checked by `identifier()`, set to a fixed expression; values are bound" },
   "rename.ts where.sql": { why: "`naming()`: a column from `db/keys.ts` checked by `identifier()`, compared by a fixed operator; values are bound" },

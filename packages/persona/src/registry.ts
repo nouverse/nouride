@@ -204,6 +204,20 @@ export class AgentRegistry {
     return this.agents.get(id);
   }
 
+  /**
+   * An agent taken out, for one that was deleted: no longer listed, routed to or reloaded, its pause mark and any load
+   * failure under its id forgotten. Its pack is the caller's to delete; a pack still on disk comes back at the next
+   * `reloadAll`. False when there was none.
+   */
+  remove(id: string): boolean {
+    const had = this.agents.delete(id);
+    const failed = this.failures.length;
+    this.failures = this.failures.filter((failure) => failure.id !== id);
+    if (this.paused.delete(id)) this.savePauses();
+    if (had) log.info("agent removed", { agent_id: id });
+    return had || this.failures.length !== failed;
+  }
+
   /** Every loaded pack, including disabled ones — the dashboard shows those too. */
   all(): LoadedAgent[] {
     return [...this.agents.values()];

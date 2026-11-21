@@ -482,7 +482,7 @@ async function forward(message: WAMessage): Promise<void> {
   }
 
   // Read after the download, as it always was: the socket may have been replaced while it ran.
-  const event = messageEvent(message, found, selfIdsOf(socket?.user), media);
+  const event = messageEvent(message, found, selfIdsOf(socket?.user), media, phoneForLid);
   // A group's name, where it is known — never waited for: the ask runs beside the message (`subjects.ts`).
   const current = socket;
   const chatTitle = event.chatType === "group" && current ? subjects.of(found.chatId, (jid) => current.groupMetadata(jid)) : undefined;

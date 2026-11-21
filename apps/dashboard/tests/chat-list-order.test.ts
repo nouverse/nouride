@@ -17,6 +17,7 @@ const AGENTS = ["nouva", "nestor", "nix", "nero", "kuro", "nox"].map((id) => age
 const said = (text: string) => ({ from: "agent" as const, text });
 
 const LIST: ChatListPayload = {
+  gone: [],
   agents: [
     // The orchestrator's conversation is the oldest of all, and it still comes first.
     { agentId: "nouva", sessionId: "s-nouva", at: NOW - 5_000_000, last: said("morning summary"), working: false, helpers: 0 },
@@ -60,6 +61,18 @@ describe("Chats", () => {
     const chats = view({ list: { ...LIST, agents: LIST.agents.filter((entry) => entry.agentId !== "nouva") } });
     expect(chats.pinned?.key).toBe("agent:nouva");
     expect(keys(chats.untouched)).not.toContain("agent:nouva");
+  });
+
+  test("a deleted agent's kept chat is a row of its own at the end, found by its id or its last line; one made again under the id is an agent's row", () => {
+    const gone = [{ agentId: "rex", sessionId: "s-rex", at: NOW - 10, last: said("the durian is in the blue box") }, { agentId: "milo", sessionId: "s-milo", at: NOW - 20 }];
+    const chats = view({ list: { ...LIST, gone } });
+    expect(keys(chats.gone)).toEqual(["gone:rex", "gone:milo"]);
+    // Not among the conversations that can be carried on, however new.
+    expect(keys(chats.recent)).not.toContain("gone:rex");
+    expect(keys(view({ list: { ...LIST, gone }, query: "durian" }).gone)).toEqual(["gone:rex"]);
+    expect(keys(view({ list: { ...LIST, gone }, query: "mil" }).gone)).toEqual(["gone:milo"]);
+    expect(keys(view({ list: { ...LIST, gone }, agents: [...AGENTS, agent("rex")] }).gone)).toEqual(["gone:milo"]);
+    expect(view().gone).toEqual([]);
   });
 
   test("a search finds names and last lines, in every part of the list", () => {

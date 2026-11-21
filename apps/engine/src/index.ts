@@ -48,6 +48,7 @@ import { resolveLinkedPlugins } from "@/boot/linked-plugins.ts";
 import { requestRestart } from "@/boot/restart.ts";
 import { startPresence } from "@/boot/presence.ts";
 import { startGateways } from "@/boot/gateways-start.ts";
+import { connectionsFor, heldBack } from "@/modules/transfer/held.ts";
 import { SkillsWatch } from "@/boot/skills-watch.ts";
 import { startControlPlane } from "@/boot/control-plane.ts";
 import { maskOutbound } from "@/commons/egress.ts";
@@ -225,8 +226,10 @@ export async function runDaemon(): Promise<void> {
 
   runPreflightChecks({ config, registry, providers, credentialsDir, state, secretSet: (name) => secrets.has(name) });
 
+  // An install that was imported and has not gone live has no connection to a chat app at all: none is made, so none
+  // can ask its platform for messages or send one, whatever asks it to (`modules/transfer/held.ts`).
   const gateways = await createGateways(
-    config.gateways,
+    connectionsFor(config.gateways, heldBack(state)),
     (name, usedBy) => secrets.require(name, usedBy),
     bridgeOpener,
   );
@@ -371,7 +374,7 @@ export async function runDaemon(): Promise<void> {
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
     grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
-    supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state,
+    supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state, agentAccounts: agentUsers,
     builtinTools: tools,
   });
   const { server, streams } = controlPlane;

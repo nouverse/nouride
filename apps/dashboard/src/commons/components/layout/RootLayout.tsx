@@ -8,12 +8,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import { HOME_APP_BACK, inHomeApp } from "@/commons/lib/home-app";
+import { homeAppPageBack, inHomeApp } from "@/commons/lib/home-app";
 import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingBar } from "./Reconnecting";
 import { UpdatedBanner } from "./UpdatedBanner";
 import { ImageMovedBanner } from "./ImageMovedBanner";
 import { bundleVersion, staleBundle } from "@/commons/lib/bundle";
-import { isAdmin, MCP_LOGIN_CALLBACK, useGate } from "@/commons/lib/session";
+import { isAdmin, MCP_LOGIN_CALLBACK, offersSignOut, useGate } from "@/commons/lib/session";
 import { useTheme } from "@/commons/lib/theme";
 import { useSignOut } from "@/commons/components/layout/sign-out";
 import { gatewayPage } from "@/commons/lib/bundled-gateway";
@@ -69,13 +69,14 @@ function PageTop({ pathname, admin, className }: { pathname: string; admin: bool
 const SCROLLS = "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
 
 /**
- * The way back to Nouride Home's own screen, inside its app (`home-app.ts`). One button for both places it stands: a
- * signed-in page's header, and the corner of the pages that have no header (the sign-in, the setup, the welcome, a
- * login coming back), where the phone's back gesture was the only way out.
+ * Back, inside Nouride Home (`home-app.ts`), in a signed-in page's header on a phone: a page back, as the phone's own
+ * Back is, which asks about leaving only at the first page. Leaving at once is the menu's "Back to Nouride Home". The
+ * pages that have no header (the sign-in, the setup, the welcome, a login coming back) draw their own way out, inside
+ * their content: `HomeAppLeave`.
  */
 function HomeAppBack({ className }: { className: string }) {
   return (
-    <a href={HOME_APP_BACK} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back to Nouride Home">
+    <a href={homeAppPageBack()} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back">
       <ChevronLeft size={22} />
     </a>
   );
@@ -142,7 +143,11 @@ export function RootLayout() {
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
-  const { signOut, dialog: signOutDialog } = useSignOut();
+  const { signOut: askSignOut, dialog: signOutDialog } = useSignOut();
+  // No Sign out in a session a device's token made: Nouride Home on the machine Nouride runs on signs itself in, so
+  // signing out there only flashed the sign-in page before the app traded its token again. Told from the session, not
+  // the browser: a browser on the same phone, signed in with a password, keeps its Sign out.
+  const signOut = offersSignOut(gate.principal) ? askSignOut : undefined;
 
   // Also while a redirect is on its way, until the page it goes to is the one drawn: the page asked for was drawn first,
   // and then again while the next page's route came in, so an unfinished install opened at Overview showed Overview,
@@ -172,8 +177,8 @@ export function RootLayout() {
     return (
       <div className="bg-base-200/50 min-h-dvh text-base-content selection:bg-primary/20 *:animate-fade">
         <ReconnectingBanner offline={gate.offline} />
-        {/* These pages have no header to hold the way back to Nouride Home: the same button, where the header's is. */}
-        {inHomeApp() && <HomeAppBack className="fixed left-3 top-[calc(0.25rem+env(safe-area-inset-top))] z-30" />}
+        {/* No header here, and nothing held to the window: each of these pages draws its own way back to Nouride Home
+            inside its content (`HomeAppLeave`). */}
         <Outlet />
       </div>
     );
@@ -187,7 +192,7 @@ export function RootLayout() {
   const phoneChat = chatOpen(pathname, search);
 
   /**
-   * A phone's header: the name, and the way back to Nouride Home inside its app; the rest is the tab bar's. It is the
+   * A phone's header: the name, and Back inside Nouride Home's app; the rest is the tab bar's. It is the
    * first thing in what scrolls (`SCROLLS`), before the page's `<main>`, held at the top: a scroll down puts it up and
    * gives the page the screen, the first scroll up brings it back (`useHead`). A row a page keeps in reach
    * (`StickyBar`) stops under it.

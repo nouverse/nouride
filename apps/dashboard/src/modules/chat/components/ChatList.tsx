@@ -36,12 +36,15 @@ export interface OpenNow {
 const rowIsOpen = (row: ChatRow, open: OpenNow) =>
   row.kind === "agent"
     ? Boolean(open.sessionId && row.entry?.sessionId === open.sessionId)
-    : row.kind === "room"
-      ? row.room.chatId === open.roomChatId
-      : groupKey(row.group) === open.group;
+    : row.kind === "gone"
+      ? row.gone.sessionId === open.sessionId
+      : row.kind === "room"
+        ? row.room.chatId === open.roomChatId
+        : groupKey(row.group) === open.group;
 
 /** Whether a row's newest line is an agent's: a person's own message is not something to read. */
-const fromAgent = (row: ChatRow) => (row.kind === "agent" ? row.entry?.last?.from === "agent" : row.kind === "room" ? row.room.last?.from === "agent" : row.group.last?.from === "agent");
+const fromAgent = (row: ChatRow) =>
+  row.kind === "agent" ? row.entry?.last?.from === "agent" : row.kind === "room" ? row.room.last?.from === "agent" : row.kind === "group" && row.group.last?.from === "agent";
 
 export function ChatList({ data, open, className }: { data: ChatListData; open: OpenNow; className?: string }) {
   const [tab, setTab] = useState<"chats" | "groups">(open.group ? "groups" : "chats");
@@ -121,7 +124,7 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
           <EveryoneList data={data} query={query} whose={whose} current={open.sessionId} />
         ) : data.agents.length === 0 ? (
           <EmptyState icon={MessagesSquare} title="No agents yet" description="Make an agent on Agents, and you can talk to it here." />
-        ) : !view.pinned && view.recent.length === 0 && view.untouched.length === 0 ? (
+        ) : !view.pinned && view.recent.length === 0 && view.untouched.length === 0 && view.gone.length === 0 ? (
           <p className="px-3 py-8 text-center text-sm text-base-content/65">Nothing matches “{query.trim()}”.</p>
         ) : (
           <div className="flex flex-col gap-0.5">
@@ -139,6 +142,11 @@ export function ChatList({ data, open, className }: { data: ChatListData; open: 
             {view.untouched.length > 0 ? <ListHeading>Not talked to yet</ListHeading> : null}
             {view.untouched.map((row) => (
               <ChatsRow key={row.key} row={row} data={data} current={false} unread={false} />
+            ))}
+            {/* Kept to read: nothing more is written in them while no agent has the id. */}
+            {view.gone.length > 0 ? <ListHeading>Deleted agents</ListHeading> : null}
+            {view.gone.map((row) => (
+              <ChatsRow key={row.key} row={row} data={data} current={rowIsOpen(row, open)} unread={false} />
             ))}
           </div>
         )}

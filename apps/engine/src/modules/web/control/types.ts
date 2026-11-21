@@ -64,6 +64,7 @@ import type { UploadStore } from "./uploads.ts";
 import type { ApprovalReach } from "@/modules/tools/reachability.ts";
 import type { DaemonRestart } from "@/modules/update/restart.ts";
 import type { UpdateOps } from "./routes/update.ts";
+import type { AccountRemoval } from "@nouride/isolation";
 
 /**
  * What the server knows about the connection, passed down as Hono's environment.
@@ -146,7 +147,12 @@ export interface ControlDeps {
    */
   logStore?: LogsPort;
   /** MCP connections, for `nouride mcp` — with what each server's tools cost a request. Absent when no agent declared a server. */
-  mcp?: { status(): McpServerStatus[]; toolList(agentId: string, server: string): McpToolRow[] | undefined };
+  mcp?: { status(): McpServerStatus[]; toolList(agentId: string, server: string): McpToolRow[] | undefined; disconnectAgent(agentId: string): Promise<void> | void };
+  /**
+   * The agents' users on the machine (`boot/agent-users.ts`): whether agents' commands run as users of their own, and
+   * a deleted agent's user removed. Absent in a process that settled none: there is no account to remove.
+   */
+  agentAccounts?: { own(): boolean; remove(agentId: string): Promise<AccountRemoval | { how: "none" }> };
   /** Remote MCP servers' logins (0.7.19): Connect on the MCP page, `nouride mcp login`. Absent: those routes answer 501. */
   mcpLogins?: McpLogins;
   /** Present only when the local gateway is registered. */

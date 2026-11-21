@@ -2,6 +2,8 @@ import type { AgentLook, AgentStatus, ApprovalRequest, Job, JobRun, Person, Sess
 import type {
   BackgroundJob,
   CatalogDraft,
+  AgentDeleted,
+  AgentDeletion,
   CliLoginView,
   CliRoom,
   MissionView as WireMissionView,
@@ -455,6 +457,12 @@ export interface MissionResponse {
   /** `tell` (0.8.10): where the words went, for the person. */
   said?: string;
 }
+
+/** `GET /agents/:id/delete`: what deleting the agent would take. */
+export type AgentDeletionResponse = AgentDeletion;
+
+/** `POST /agents/:id/delete`: the agent deleted, with what went and what could not. */
+export type AgentDeletedResponse = AgentDeleted;
 
 /** `DELETE /missions/:id` (0.8.13): the mission gone, and how many turn records went with its conversation. */
 export interface MissionDeletedResponse {

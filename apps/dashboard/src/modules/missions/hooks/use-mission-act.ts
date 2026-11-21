@@ -1,5 +1,5 @@
 /**
- * What a person says to a mission — stop, continue, accept, answer, tell — and what the page then says back: a toast that
+ * What a person says to a mission — stop, pause, continue, accept, answer, tell — and what the page then says back: a toast that
  * outlives the button, the daemon's own sentence when it refused (a 409: it ended meanwhile, it is not waiting for
  * that), and the mission read again either way, since the answer changes what it is.
  */
@@ -15,6 +15,7 @@ const DONE: Record<MissionVerb, string> = {
   accept: "Mission accepted",
   answer: "Answer sent",
   tell: "Told",
+  pause: "Mission paused",
 };
 
 export function useMissionAct(id: string) {

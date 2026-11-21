@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
 import { Combobox } from "@/commons/components/ui/Combobox";
 import { isEmbeddingModel } from "@/commons/lib/model-kind";
+import { useWide } from "@/commons/hooks/use-wide";
 
 export function ModelField(props: {
   provider: string;
@@ -30,6 +31,7 @@ export function ModelField(props: {
     retry: false,
     staleTime: 5 * 60_000,
   });
+  const wide = useWide();
   const listed = models.data?.ok ? models.data.models : [];
   const options = listed.filter((model) => isEmbeddingModel(model) === (props.kind === "embedding"));
   return (
@@ -40,6 +42,7 @@ export function ModelField(props: {
         value={props.value}
         onChange={props.onChange}
         disabled={props.disabled ?? false}
+        listOnPress={wide}
         {...(props.placeholder ? { placeholder: props.placeholder } : {})}
       />
       {listed.length > 0 && options.length === 0 ? (

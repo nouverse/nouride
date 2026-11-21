@@ -162,3 +162,11 @@ export function canWrite(principal: Principal | null): boolean {
 export function isAdmin(principal: Principal | null): boolean {
   return principal?.role === "admin";
 }
+
+/**
+ * Whether this session is offered a Sign out: every one but a device's (`Principal.device`), which the app that holds
+ * the device's token would sign straight back in.
+ */
+export function offersSignOut(principal: Principal | null | undefined): boolean {
+  return principal?.device !== true;
+}

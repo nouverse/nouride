@@ -13,7 +13,7 @@ import { inOwnFolder, ownFolderOf } from "./worktree.ts";
 import { createLogger } from "@nouride/shared";
 import type { MissionsDeps } from "./deps.ts";
 import type { Missions } from "./missions.ts";
-import { heldByJobText, limitReached, limitsNear, retryAfter, stepsDone } from "./decide.ts";
+import { heldByJobText, limitReached, limitsNear, retryAt, stepsDone } from "./decide.ts";
 import { MISSION_GATEWAY_ID } from "./gateway.ts";
 import { FOLLOW_UP_MS, KEEP_MS, KEEP_WHEN_DISK_LOW_MS, LIMIT_WAIT_MS, PROGRESS_EVERY_MS, STALL_AFTER_MS } from "./limits.ts";
 import { buttonsFor } from "./actions.ts";
@@ -178,6 +178,8 @@ export class MissionTimers {
     // Not yet at a limit, and past 80% of one with what its turn at work has spent: said now. Read at a turn's end
     // alone, a mission that is one turn long heard of its limit only when it was stopped at it.
     if (busy) this.missions.warnNear(mission, this.missions.unsettled(mission));
+    // Taken up again after its model could not answer, and its turn at work has spent something: it answers.
+    if (busy && (this.deps.runningTokens?.(mission) ?? 0) > 0) this.missions.goesOn(mission);
     this.progress(mission, now);
     if (busy) return;
     if (jobs) return this.heldByJob(mission, now);
@@ -210,9 +212,15 @@ export class MissionTimers {
     const since = mission.waitingSince ?? mission.updatedAt;
     // Paused for its model (0.8.7): tried again by itself when its time comes — no follow-up, nobody was asked.
     if (mission.waitKind === "retry") {
-      if (now - since >= retryAfter(this.missions.retryAttempt(mission.id))) this.missions.retryNow(mission);
+      if (now >= (retryAt(mission, this.missions.retryAttempt(mission.id)) ?? now)) this.missions.retryNow(mission);
       return;
     }
+    // Paused by someone: it waits as long as they like, and nobody is reminded of a wait they chose.
+    if (mission.waitKind === "paused") return;
+    // A draft: it is in the backlog until someone starts it, and asks nothing of anybody. Its chat was told when it
+    // was made; four hours on, "is still waiting for you: not started" reached a person's phone before five in the
+    // morning for a draft they had meant to leave.
+    if (mission.waitKind === "accept" && mission.startedAt === null) return;
     if (mission.waitKind === "limit" && now - since >= LIMIT_WAIT_MS) {
       this.missions.end(mission, "failed", `${mission.reason ?? "a limit"} was reached and nobody continued it in 7 days`);
       return;

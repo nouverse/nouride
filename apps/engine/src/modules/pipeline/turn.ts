@@ -464,7 +464,9 @@ export class TurnRunner {
     // What the turn did is kept however it ended, and the person is told what they need — `turn-endings.ts`.
     const cause = causeOf(controller.signal, message);
     await endEarly(this.ctx, { key: turn.key, history: turn.upkept ?? turn.history, asked: turn.asked, journal: turn.journal, cause, envelope, agentId: agent.config.id, turnId: turn.record?.id, prompt: turn.text, message, error: String(err), close: (patch) => close(turn, patch), progress: turn.progress, retryable: err instanceof LLMError && err.retryable });
-    tell(turn, { toolCalls: 0, worked: 0, tokens: 0, failed: true, error: message, interrupted: controller.signal.reason === STOPPED_BY_PERSON || this.ctx.paused, readOutside: false });
+    // What it had done before it threw is said: a coding CLI's turn of two hours that ends at its plan's limit is not
+    // a model that never answered, and its mission counts the two apart (`missions.ts`).
+    tell(turn, { toolCalls: 0, worked: turn.record?.worked ?? 0, tokens: 0, failed: true, error: message, interrupted: controller.signal.reason === STOPPED_BY_PERSON || this.ctx.paused, readOutside: false });
   }
 
   /** However the turn ended: its clock and nudges stopped, its place let go, and nothing left open. */

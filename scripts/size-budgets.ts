@@ -75,12 +75,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 590,
-    why: "the missions' one service (start, the dispatcher, a turn's shape, its end and the count of one cut short, ask, stop, continue, the slots, the jobs it waits for) over state this class alone holds",
+    lines: 594,
+    why: "the missions' one service (start, the dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, the slots, its jobs) over state this class alone holds",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
-    lines: 430,
-    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits (declared, `editsMessages`), files as a set, buttons, presence, reconnect and the command menu",
+    lines: 433,
+    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id (declared), files as a set, buttons, presence, reconnect, the command menu",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {
     lines: 409,
@@ -91,12 +91,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",
   },
   "scripts/check-sql.ts": {
-    lines: 496,
-    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses it lets through; the plan half is the seam when it grows",
+    lines: 498,
+    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses and registry names it lets through; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 417,
-    why: "the WhatsApp adapter's one state machine (bridge reachable, number linked, sends held) that every bridge event's handler reads and writes; moving the link state out would split it in two",
+    lines: 418,
+    why: "the WhatsApp adapter's one state machine (bridge reachable, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
   },
 };
 

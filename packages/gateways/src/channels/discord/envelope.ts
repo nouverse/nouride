@@ -65,6 +65,7 @@ export async function discordEnvelope(message: Message, gatewayId: string): Prom
     chatId: message.channelId,
     chatType: chatTypeOf(message.channel.type),
     senderId: message.author.id,
+    ...handleAlso(message.author),
     senderName: message.member?.displayName ?? message.author.username,
     ...(message.author.bot ? { senderIsBot: true } : {}),
     text: text ?? "",
@@ -214,4 +215,21 @@ function chatTypeOf(type: ChannelType | undefined): "dm" | "group" | "channel" {
     default:
       return "channel";
   }
+}
+
+/** A Discord account as written: its id (a snowflake) as it is, or its username as `@name`, lower case; else nobody. */
+export function discordSenderId(written: string): string | null {
+  const said = written.trim();
+  if (/^\d{15,21}$/.test(said)) return said;
+  const name = /^@?([A-Za-z0-9_.]{2,32})$/.exec(said)?.[1];
+  return name && !/^\d+$/.test(name) ? `@${name.toLowerCase()}` : null;
+}
+
+/**
+ * A sender's username as `@name`, lower case (`MessageEnvelope.senderAlso`): the id a person knows them by. Only an
+ * account on Discord's unique usernames (discriminator `0`): an older `name#1234` shares its name with others, and a
+ * name several accounts hold lets nobody in.
+ */
+export function handleAlso(user: { username: string; discriminator?: string }): { senderAlso?: string[] } {
+  return user.username && (user.discriminator ?? "0") === "0" ? { senderAlso: [`@${user.username.toLowerCase()}`] } : {};
 }

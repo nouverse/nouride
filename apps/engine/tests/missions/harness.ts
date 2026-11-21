@@ -60,7 +60,17 @@ function asStarted(goal: string, extra: Partial<Parameters<Missions["start"]>[0]
   return { agentId: "nova", goal, startedBy: "8142", gatewayId: "telegram:nova", chatId: "8142", ...named, ...extra };
 }
 
-export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null; noFolder?: (mission: Mission) => boolean } = {}) {
+/** The ports a test hands the service as they are, each only where the test names one. */
+function handedOver(options: Pick<MissionsDeps, "sourceRepository" | "runsOnCli" | "tellDraft" | "freeToDelete">): Partial<MissionsDeps> {
+  return {
+    ...(options.sourceRepository ? { sourceRepository: options.sourceRepository } : {}),
+    ...(options.runsOnCli ? { runsOnCli: options.runsOnCli } : {}),
+    ...(options.tellDraft ? { tellDraft: options.tellDraft } : {}),
+    ...(options.freeToDelete ? { freeToDelete: options.freeToDelete } : {}),
+  };
+}
+
+export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null; noFolder?: (mission: Mission) => boolean; tellDraft?: MissionsDeps["tellDraft"] } = {}) {
   const db = await openAndMigrate(join(tempDir("missions"), "nouride.db"));
   const store = new MissionStore(db);
   const told: { mission: string; text: string; buttons?: MessageButton[] }[] = [];
@@ -116,9 +126,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
       options.stopTurn?.(mission);
     },
     branchRefusal: options.branchRefusal ?? (async () => null),
-    ...(options.sourceRepository ? { sourceRepository: options.sourceRepository } : {}),
-    ...(options.runsOnCli ? { runsOnCli: options.runsOnCli } : {}),
-    ...(options.freeToDelete ? { freeToDelete: options.freeToDelete } : {}),
+    ...handedOver(options),
     readBrief: options.readBrief ?? ((path: string) => [...briefs.entries()].find(([id]) => path.includes(`/missions/${id}/`))?.[1] ?? null),
     draftFolder: async (mission: Mission, brief?: string) => {
       folders.push(mission.id);

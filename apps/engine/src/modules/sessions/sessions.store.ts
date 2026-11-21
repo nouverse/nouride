@@ -311,6 +311,15 @@ export class SessionStore {
       .map(toSession);
   }
 
+  /** Every agent with a conversation among these, the one talked to last first: whether or not it is still there. */
+  agents(options: Omit<SessionListOptions, "limit" | "before" | "agentId" | "query"> = {}): string[] {
+    const { where, params } = this.filter(options);
+    return this.db
+      .prepare<{ agent_id: string }>(`SELECT s.agent_id FROM sessions s ${where} GROUP BY s.agent_id ORDER BY MAX(s.updated_at) DESC`)
+      .all(...params)
+      .map((row) => row.agent_id);
+  }
+
   /** How many there are in total — the number the history badge should be showing. */
   count(options: Omit<SessionListOptions, "limit" | "before"> = {}): number {
     const { where, params } = this.filter(options);

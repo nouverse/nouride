@@ -40,6 +40,15 @@ export function chatTypeOf(type: string): MessageEnvelope["chatType"] {
   return type === "private" ? "dm" : type === "channel" ? "channel" : "group";
 }
 
+/**
+ * A sender's `@username`, lower case, where they have one (`MessageEnvelope.senderAlso`): the id a person knows them
+ * by. A bot is never told a number's account or a username's id until that account writes, so somebody let in ahead
+ * by username is known only by it.
+ */
+export function usernameAlso(from: { username?: string } | undefined): { senderAlso?: string[] } {
+  return from?.username ? { senderAlso: [`@${from.username.toLowerCase()}`] } : {};
+}
+
 /** Who wrote it, as a person reads a name — their name, else their username. */
 export function displayName(from: { first_name?: string; last_name?: string; username?: string } | undefined): string {
   return [from?.first_name, from?.last_name].filter(Boolean).join(" ") || from?.username || "unknown";
@@ -65,6 +74,7 @@ export function telegramEnvelope(message: Message, self: TelegramSelf): MessageE
     chatId: foldChatId(message.chat.id, message.message_thread_id),
     chatType: chatTypeOf(message.chat.type),
     senderId: String(message.from?.id ?? message.chat.id),
+    ...usernameAlso(message.from),
     ...(message.from?.is_bot ? { senderIsBot: true } : {}),
     senderName: displayName(message.from),
     text,

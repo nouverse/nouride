@@ -32,6 +32,11 @@ export interface Answered {
    * meanwhile (`keep_working`). Absent on one a mission of an earlier version asked.
    */
   asked?: "wait" | "meanwhile";
+  /**
+   * The mission said it was done while this was still open, and waits for the answer instead of going to its checks:
+   * the answer may change the work. That `done` is not kept; the turn the answer starts is told to say it again.
+   */
+  finished?: true;
 }
 
 /**
@@ -92,6 +97,10 @@ export interface Mission {
   waitKind: MissionWaitKind | null;
   /** What it waits for, or why it ended. */
   reason: string | null;
+  /** Who paused it, as the other verbs name whoever acted ("Sam", "agent nova"); null unless it is paused. */
+  pausedBy: string | null;
+  /** The agent that paused it through `work`, which alone may go on with it by that tool; null for a person's pause. */
+  pausedByAgent: string | null;
   /** The whole account of the work `done` or `fail` handed back: sent to its chat as `report.md`, never cut (0.8.11). */
   report: string | null;
   /** Its result, two or three sentences from `done`: the chat's text when it ends (0.8.11). Null before then. */

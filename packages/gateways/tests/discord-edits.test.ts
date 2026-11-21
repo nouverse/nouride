@@ -46,6 +46,7 @@ describe("an updated message", () => {
       chatId: "300",
       chatType: "channel",
       senderId: "5",
+      senderAlso: ["@ann"],
       senderName: "Ann",
       text: "deploy to staging",
       mentions: [],

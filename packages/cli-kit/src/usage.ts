@@ -104,6 +104,14 @@ ${BOLD}Without a running daemon${RESET} ${DIM}(these read the install's own file
   nouride users reset              Remove every dashboard account, so the next start creates a new admin
                                    and prints its password (for a lost first password). Snapshots the database
                                    first. Daemon must be stopped.
+  nouride export --out <file> [--folders] [--stdin | --no-secrets]
+                                   This install as one file, to take it to another machine: the database,
+                                   the config and people, the agents, the memory, the documents, and the
+                                   secrets sealed to a passphrase (asked for; --stdin reads it). --folders
+                                   adds the agents' own folders. Works whether Nouride runs or not.
+  nouride import <file> [--stdin]  Replace everything this install holds with an export, after the word
+                                   "replace" is typed; what was here is kept in a folder beside it. Then
+                                   connections and automations wait for Go live. Daemon must be stopped.
   nouride gateway rename <old> <new> [--apply]   Rename an instance. Daemon must be stopped.
   nouride config check [file]      Validate a config without starting anything
   nouride config schema [section]  Every valid config key, as JSON Schema
@@ -142,6 +150,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride agent <enable|disable> <id>       written to config.toml, so it survives one
   nouride agent external <id> <cli> [--profile <name>]   a coding CLI answers it instead of its model
   nouride agent internal <id>               its model answers it again
+  nouride agent delete <id>                 delete it for good, after its id is typed: its chats and memories are kept
   nouride agent skill-root <add|rm> <id> <path>   a folder whose .agents/skills it takes as its own skills
   nouride gateway [list]           Gateway connection status
   nouride gateway add --platform <p> --name <n> --agent <id> --stdin
@@ -182,7 +191,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride jobs log|kill <id>
   nouride mission [list] [--all]   Missions: what needs you first, then what runs, then the last five ended
   nouride mission show <id>        One mission: its goal, checks, checklist, limits and report
-  nouride mission stop|continue|accept <id> [text]
+  nouride mission stop|pause|continue|accept <id> [text]
   nouride mission answer <id> <answer>
   nouride mission tell <id> <words> Tell a mission something while it works: read before its next step
   nouride mission delete <id> [--force]
@@ -223,10 +232,13 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride turn-budget <seconds>    Set the daemon default
   nouride turn-budget --agent <id> <seconds|follow>
   nouride access [list|pending|approved|denied|blocked]   Who may talk to the agents
+  nouride access approved --find <id or name>   One among many approved: the list holds the newest 500
   nouride access mode [open|allowlist|pair]   What happens to somebody new; no word says which is in force
   nouride access approve <code> [--me | --as <person key> | --new "<name>"]
                                    Approve a pairing request, and say who they are
   nouride access allow <gateway:sender> [--name <name>]   Let somebody in before they ask
+  nouride access allow --from <file|-> --gateway <connection> [--dry-run]
+                                   A whole list of them, one a line (a phone number for WhatsApp)
   nouride access deny|block <gateway:sender>
   nouride access revoke|reset|unblock <gateway:sender>
   nouride people [list]            Who the agents know, from config and from conversations

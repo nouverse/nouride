@@ -5,7 +5,7 @@
  *   GET  /missions                      the list, *needs you* first, then working, then the rest — each with its checklist's count
  *   GET  /missions/:id                  one mission, with its checklist, its parked approvals and its conversation's id
  *   POST /missions                      start one { agent, goal, checks?, review?, noReview?, accept?, workdir? }
- *   POST /missions/:id/stop|continue|accept|answer   { text?, outside? } — what a person says to it; accept with
+ *   POST /missions/:id/stop|pause|continue|accept|answer   { text?, outside? } — what a person says to it; accept with
  *                                       `outside` closes it as done outside its checks, the note saying where (0.8.7)
  *   POST /missions/:id/tell             { text } — words for it while it works, answered with where they went (0.8.10)
  *   DELETE /missions/:id[?force=1]      an ended mission gone: its record, its conversation, its own folder (0.8.13)
@@ -15,12 +15,12 @@
 
 import type { MissionDetail, MissionView } from "@nouride/wire";
 import { sessionIdFor } from "@nouride/shared";
-import { stepsDone } from "@/modules/missions/decide.ts";
+import { retryAt, stepsDone } from "@/modules/missions/decide.ts";
 import type { DraftChange } from "@/modules/missions/drafts.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { workedMs } from "@/modules/missions/page.ts";
-import type { Deleted, Refused } from "@/modules/missions/person.ts";
+import type { Acted, Deleted, Refused } from "@/modules/missions/person.ts";
 import type { TellAnswer, TellWhere } from "@/modules/missions/tell.ts";
 import { seenAs, type Mission } from "@/modules/missions/types.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
@@ -48,9 +48,11 @@ const LISTED_DAYS = { usual: 7, most: 30 } as const;
  */
 function view(missions: Missions, mission: Mission, things: Things, turns?: ControlDeps["turns"]) {
   // Its owner goes out as the person, never as the id it is kept under.
-  const { owner: _owner, ...shown } = mission;
+  // Who paused it goes out as the name alone, while it is paused.
+  const { owner: _owner, pausedBy, pausedByAgent: _pausedByAgent, ...shown } = mission;
   const active = activeAt(turns, mission);
-  return { ...shown, seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...(active !== undefined ? { activeAt: active } : {}), ...things.said(thingOfMission(mission)) };
+  const triesAt = retryAt(mission, missions.retryAttempt(mission.id));
+  return { ...shown, ...(triesAt !== null ? { retryAt: triesAt } : {}), ...(pausedBy && mission.waitKind === "paused" ? { pausedBy } : {}), seen: seenAs(mission.status), workedMs: workedMs(mission, missions.now()), shown: missions.limitsShown(mission), ...(active !== undefined ? { activeAt: active } : {}), ...things.said(thingOfMission(mission)) };
 }
 
 /**
@@ -98,11 +100,17 @@ function refusedPlain(refused: Refused | Exclude<Deleted, { mission: Mission }> 
     case "command":
       return "That reads as a command, not an answer. Write the answer itself.";
     case "not-started":
-      return "This mission has not started yet, so there is nothing to accept. Stop it if it is not wanted.";
+      return verb === "pause" ? "This mission has not started yet, so there is nothing to pause." : "This mission has not started yet, so there is nothing to accept. Stop it if it is not wanted.";
     case "checking":
-      return "Its checks are running now. Decide once they are done.";
+      return verb === "pause" ? "Its checks are running now, so nothing of its own is at work to pause. Stop it if it should end." : "Its checks are running now. Decide once they are done.";
     case "working":
       return "This mission is still working and has not said it is done. Wait for it, or stop it.";
+    case "paused":
+      return "This mission is already paused. Resume lets it go on.";
+    case "waiting":
+      return "This mission is waiting for you already, so nothing of it is running to pause.";
+    case "not-yours":
+      return "This mission is not yours to change.";
     case "long":
       return `That is ${refused.length} characters, and a message to a mission can be ${refused.max} at most. Make it shorter.`;
   }
@@ -163,6 +171,8 @@ function toldPlain(where: TellWhere): string {
       return "Kept for its next turn. It waits for you to say whether to go on: Continue lets it.";
     case "retry":
       return "Kept for its next turn: its model could not answer, and it tries again by itself.";
+    case "paused":
+      return "Kept for its next turn. It is paused: Resume lets it go on, with this read first.";
     case "kept":
       return "Kept for its next turn.";
   }
@@ -202,6 +212,26 @@ function listed(missions: Missions, ask: { agent: string | undefined; limit: num
   const now = missions.now();
   const ended = missions.recent(ask.limit, ask.agent).filter((mission) => mission.endedAt !== null && (ask.days === null || now - mission.endedAt < ask.days * DAY_MS));
   return [...missions.stillOpen(ask.agent), ...ended];
+}
+
+/** A person's word to a mission from the dashboard or the CLI, by its verb; null for a verb there is none of. */
+function said(missions: Missions, verb: string, id: string, by: string, with_: { text: string | undefined; outside: unknown; account: string | undefined }): Acted | null {
+  switch (verb) {
+    case "stop":
+      return missions.stop(id, by);
+    case "pause":
+      return missions.pause(id, by);
+    case "continue":
+      return missions.continueMission(id, by, with_.text);
+    case "answer":
+      return missions.answer(id, with_.text ?? "", by);
+    case "accept":
+      if (typeof with_.outside === "string") return missions.acceptOutside(id, with_.outside, by);
+      // A yes to one an agent proposed on its own makes it the account's (`acceptMission`): said as them.
+      return missions.accept(id, by, with_.account ? { gatewayId: LOCAL_GATEWAY_ID, senderId: with_.account } : undefined);
+    default:
+      return null;
+  }
 }
 
 export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -366,20 +396,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       deps.audit.record({ action: "mission_tell", actor: principal.actor, agentId: told.mission.agentId, details: { mission: told.mission.id, chars: (text ?? "").trim().length } });
       return c.json({ mission: view(missions, told.mission, things, deps.turns), said: told.said, plain: toldPlain(told.where) } satisfies { mission: MissionView; said?: string; plain?: string });
     }
-    const acted =
-      verb === "stop"
-        ? missions.stop(id, by)
-        : verb === "continue"
-          ? missions.continueMission(id, by, text)
-          : verb === "accept"
-            ? typeof body.outside === "string"
-              ? missions.acceptOutside(id, body.outside, by)
-              : // A yes to one an agent proposed on its own makes it the account's (`acceptMission`): said as them.
-                missions.accept(id, by, principal.user ? { gatewayId: LOCAL_GATEWAY_ID, senderId: principal.user.id } : undefined)
-            : verb === "answer"
-              ? missions.answer(id, text ?? "", by)
-              : null;
-    if (!acted) return c.json({ error: "stop, continue, accept, answer or tell" }, 404);
+    const acted = said(missions, verb, id, by, { text, outside: body.outside, account: principal.user?.id });
+    if (!acted) return c.json({ error: "stop, pause, continue, accept, answer or tell" }, 404);
     if ("refused" in acted) return c.json({ error: acted.refused, plain: refusedPlain(acted, verb) }, 409);
     deps.audit.record({ action: `mission_${verb}`, actor: principal.actor, agentId: acted.mission.agentId, details: { mission: acted.mission.id, ...(typeof body.outside === "string" ? { outside: body.outside } : {}) } });
     // An answer to one that went on working says where it went, as a `tell` does.

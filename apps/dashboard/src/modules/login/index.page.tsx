@@ -7,6 +7,7 @@ import { nextOf } from "@/commons/lib/session";
 import { Mascot } from "@/commons/components/brand/Mascot";
 import { Details } from "@/commons/components/ui/Details";
 import { PasswordInput } from "@/commons/components/ui/PasswordInput";
+import { HomeAppLeave } from "@/commons/components/layout/HomeAppLeave";
 
 /**
  * What the OAuth callback can send a visitor back with.
@@ -65,9 +66,10 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center p-4 selection:bg-primary/20 overflow-clip">
+    <div className="relative flex min-h-dvh items-center justify-center p-4 pt-[calc(1rem+env(safe-area-inset-top))] selection:bg-primary/20 overflow-clip">
 
       <div className="relative w-full max-w-sm rounded-[22px] border border-base-content/[0.08] bg-base-100 p-7 sm:p-8 shadow-soft transition-all duration-200">
+        <HomeAppLeave className="-mt-3 mb-5" />
         <form
           className="space-y-5"
           onSubmit={(e) => {

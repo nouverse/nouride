@@ -66,6 +66,8 @@ interface Row {
   started_at: number | null;
   updated_at: number;
   ended_at: number | null;
+  paused_by: string | null;
+  paused_by_agent: string | null;
 }
 
 /** Every column, written whole — `toRow` gives the values in this order. */
@@ -74,8 +76,8 @@ const UPSERT = `INSERT INTO missions (
   wait_kind, reason, report, files, last_check, answers, workdir, parent_id, untrusted, job_id, request, reviewed,
   limit_hours, limit_turns, limit_tokens, turns_used, tokens_used, resumes, waited_ms, waiting_since, warned_at,
   followed_up_at, progress_at, progress_done, nudged_at, created_at, started_at, updated_at, ended_at, branch, told,
-  summary, cli_turns, cli_unreported, helpers_since, owner, title
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  summary, cli_turns, cli_unreported, helpers_since, owner, title, paused_by, paused_by_agent
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   agent_id = excluded.agent_id, started_by = excluded.started_by, by_agent = excluded.by_agent,
   gateway_id = excluded.gateway_id, chat_id = excluded.chat_id, goal = excluded.goal, checks = excluded.checks,
@@ -91,7 +93,8 @@ ON CONFLICT(id) DO UPDATE SET
   created_at = excluded.created_at, started_at = excluded.started_at, updated_at = excluded.updated_at,
   ended_at = excluded.ended_at, branch = excluded.branch, told = excluded.told, summary = excluded.summary,
   cli_turns = excluded.cli_turns, cli_unreported = excluded.cli_unreported, helpers_since = excluded.helpers_since,
-  owner = excluded.owner, title = excluded.title`;
+  owner = excluded.owner, title = excluded.title, paused_by = excluded.paused_by,
+  paused_by_agent = excluded.paused_by_agent`;
 
 /** A list that must parse to strings — read back from a JSON column this store wrote. */
 function strings(text: string): string[] {
@@ -112,6 +115,7 @@ function answered(text: string): Answered[] {
             ...(Array.isArray(one.options) && one.options.every((option) => typeof option === "string") ? { options: one.options } : {}),
             ...(typeof one.answer === "string" ? { answer: one.answer } : {}),
             ...(one.asked === "wait" || one.asked === "meanwhile" ? { asked: one.asked } : {}),
+            ...(one.finished === true ? { finished: true as const } : {}),
           },
         ]
       : [];
@@ -146,6 +150,8 @@ function fromRow(row: Row): Mission {
     status: row.status as MissionStatus,
     waitKind: row.wait_kind as MissionWaitKind | null,
     reason: row.reason,
+    pausedBy: row.paused_by,
+    pausedByAgent: row.paused_by_agent,
     report: row.report,
     summary: row.summary,
     files: strings(row.files),
@@ -191,7 +197,7 @@ function toRow(mission: Mission): unknown[] {
     mission.waitingSince, mission.warnedAt, mission.followedUpAt, mission.progressAt, mission.progressDone,
     mission.nudgedAt, mission.createdAt, mission.startedAt, mission.updatedAt, mission.endedAt, mission.branch,
     JSON.stringify(mission.told), mission.summary, mission.cliTurns, mission.cliUnreported, mission.helpersSince,
-    mission.owner, mission.title,
+    mission.owner, mission.title, mission.pausedBy, mission.pausedByAgent,
   ];
 }
 

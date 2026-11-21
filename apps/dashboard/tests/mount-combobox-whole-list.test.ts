@@ -5,17 +5,23 @@
  * under the finger). So a field that already held a model offered that one model and nothing else: to see the others,
  * a person had to delete its name first. The chevron lists every option whatever the field holds, and closes the list
  * when pressed again. Mounted on an agent's Model tab, where the field arrives holding the agent's model.
+ *
+ * In a wide window a press on the field lists them all too, as the chat's picker and the setup's field do: a field
+ * that waited for typing looked empty of choices. On a phone a press lists nothing, since a list opened on it moves
+ * under the keyboard, and the chevron is the way to the whole list.
  */
 
-import { expect, test } from "bun:test";
-import { answer, renderPage, useMountHarness } from "./mount-harness.ts";
+import { afterEach, expect, test } from "bun:test";
+import { answer, dom, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
+afterEach(() => dom.happyDOM.setViewport({ width: 1024, height: 768 }));
 
 const MODELS = ["test-model", "model-two", "other-three"];
 
-test("a field holding a model lists every model from the chevron, nothing on focus or on a press, and closes on a second press", async () => {
+test("on a phone, a field holding a model lists every model from the chevron, nothing on focus or on a press, and closes on a second press", async () => {
+  dom.happyDOM.setViewport({ width: 390, height: 844 });
   answer({ "/providers/test/models": { status: 200, body: { ok: true, models: MODELS } } });
   const seen: { onFocus: unknown; onPress: unknown; listed: string[]; chevronBefore: string | null; chevronOpen: string | null; afterSecond: unknown } = {
     onFocus: "not run",
@@ -41,8 +47,8 @@ test("a field holding a model lists every model from the chevron, nothing on foc
     input.focus();
     await eventually(() => document.activeElement === input, 2_000, "the field focused");
     seen.onFocus = list();
-    // Nor on a press: only a field that asks for it lists on one (a conversation's picker, in a wide window). React
-    // draws what a press does in the microtasks after it, so a list opened on it would be there once they have run.
+    // Nor on a press, on a phone: the keyboard that comes up would move the list under the finger. React draws what a
+    // press does in the microtasks after it, so a list opened on it would be there once they have run.
     input.click();
     for (let turn = 0; turn < 5; turn++) await Promise.resolve();
     seen.onPress = list();
@@ -65,6 +71,32 @@ test("a field holding a model lists every model from the chevron, nothing on foc
   expect(seen.listed).toEqual(MODELS);
   expect(seen.chevronOpen).toBe("Hide the list");
   expect(seen.afterSecond).toBeNull();
+});
+
+test("in a wide window, a press on a field holding a model lists every model, and focus alone lists none", async () => {
+  answer({ "/providers/test/models": { status: 200, body: { ok: true, models: MODELS } } });
+  const seen: { onFocus: unknown; listed: string[] } = { onFocus: "not run", listed: [] };
+
+  await renderPage("/agents/nouva/model", async (host) => {
+    const document = host.ownerDocument;
+    const field = () => [...host.querySelectorAll<HTMLInputElement>('input[role="combobox"]')].find((input) => input.value === "test-model");
+    await eventually(() => field() !== undefined, 2_000, "the model field holding the agent's model");
+    const input = field()!;
+    const chevron = () => input.parentElement!.querySelector<HTMLButtonElement>("button[aria-label]")!;
+    const list = () => document.body.querySelector('[role="listbox"]');
+    await eventually(() => !chevron().disabled, 2_000, "the models listed");
+
+    input.focus();
+    await eventually(() => document.activeElement === input, 2_000, "the field focused");
+    seen.onFocus = list();
+    input.click();
+    await eventually(() => list() !== null, 2_000, "the whole list on a press");
+    seen.listed = [...document.body.querySelectorAll('[role="listbox"] [role="option"]')].map((row) => row.textContent ?? "");
+  });
+
+  expect(seen.onFocus).toBeNull();
+  // Every option, though the field holds one of them and two do not contain its name.
+  expect(seen.listed).toEqual(MODELS);
 });
 
 test("a list the chevron opened without the field's focus closes on a press anywhere else", async () => {

@@ -111,6 +111,8 @@ export const KEY_COLUMNS: readonly KeyColumn[] = [
   // A mission's agent, the agent that started it, and the chat it reports to with the person who started it there (0.8.0).
   { table: "missions", column: "agent_id", kind: "agent" },
   { table: "missions", column: "by_agent", kind: "agent" },
+  // The agent that paused it through its `work` tool, while it is paused: the one agent that may go on with it.
+  { table: "missions", column: "paused_by_agent", kind: "agent" },
   { table: "missions", column: "gateway_id", kind: "gateway" },
   { table: "missions", column: "chat_id", kind: "chatId" },
   { table: "missions", column: "started_by", kind: "sender" },
@@ -255,3 +257,64 @@ export const ON_CONVERSATION_DELETE: Readonly<Record<string, "deleted" | "expire
   // What was asked from it, and what its agent answered in it, are not said in another chat once it is gone.
   work_for_another: "deleted",
 };
+
+/**
+ * What deleting an agent does to the rows that name it (`db/agent-rows.ts`, `web/control/agent-delete.ts`), by column.
+ *
+ * Every column that holds an agent's id is here, so a table added later is a decision made before it ships and not a
+ * row that keeps an agent running, or a credential of it, after it is gone. The rule: what makes the agent run, and
+ * any credential, goes; what happened stays, so that its chats, what it remembered and its records can still be read,
+ * and an agent made later under the same id is joined to them.
+ *
+ * - `deleted`: the rows go.
+ * - `unlisted`: the agent is taken out of a list the row keeps; the row stays for the others in it.
+ * - `stopped`: what is still open is ended first, by its own service; the row stays as the record of it.
+ * - `expired`: what still waits on a person is closed; what was settled stays as the record.
+ * - `kept`: a record of what happened, or somebody else's row that only names the agent.
+ */
+export type AgentDeleteRule = "deleted" | "unlisted" | "stopped" | "expired" | "kept";
+
+export const ON_AGENT_DELETE: Readonly<Record<string, AgentDeleteRule>> = {
+  // An approval still pending would be answered into nothing; a settled one is the record of what was asked.
+  "approvals.agent_id": "expired",
+  "audit_log.agent_id": "kept",
+  // Files in a room's chat, with who sent them: the room's history.
+  "chat_attachments.from_agent": "kept",
+  "chat_events.agent_id": "kept",
+  // Its seat in rooms: what the others wrote there stays, the agent only leaves.
+  "chat_members.agent_id": "deleted",
+  // Its automations: schedules that start by themselves under an agent made later with the id would surprise.
+  "cron_jobs.agent_id": "deleted",
+  "events.agent_id": "kept",
+  // Standing permissions for its commands and tools: an agent of the same id must earn its own.
+  "exec_grants.agent_id": "deleted",
+  "tool_grants.agent_id": "deleted",
+  // Its open missions are stopped first; every mission's row stays as the record of the work.
+  "missions.agent_id": "stopped",
+  // Another agent's mission it started or paused: that agent's work, which goes on.
+  "missions.by_agent": "kept",
+  "missions.paused_by_agent": "kept",
+  // Its background jobs: ended first, then the rows and their logs go with what made it run.
+  "jobs.agent_id": "deleted",
+  "llm_usage.agent_id": "kept",
+  "log_entries.agent_id": "kept",
+  // Stored sign-ins to connectors: credentials. Their tokens go from the secret store with them.
+  "mcp_oauth.agent_id": "deleted",
+  // A token another tool reaches Nouride with, for the agents it lists: this one is taken out of the list.
+  "mcp_tokens.agents": "unlisted",
+  // What it remembered, and the graph: kept, and joined again by an agent of the same id.
+  "memory_episode_agents.agent_id": "kept",
+  // Whether a room addresses it only when named, and which tools it has been seen to use: its own settings and counts.
+  "room_mention.agent_id": "deleted",
+  "rsi_tool_seen.agent_id": "deleted",
+  // Its chats.
+  "sessions.agent_id": "kept",
+  "turn_records.agent_id": "kept",
+  // Skills proposed from its work wait for a person's decision of their own.
+  "skill_candidates.agent_id": "kept",
+  "skill_drafts.agent_id": "kept",
+  // Work one agent did for another, on the asker's record as much as the helper's.
+  "work_for_another.helper": "kept",
+  "work_for_another.asker": "kept",
+};
+

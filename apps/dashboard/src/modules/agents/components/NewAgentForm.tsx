@@ -8,6 +8,20 @@ import type { PresetId } from "@nouride/wire";
 import { ToolPicker } from "./ToolPicker";
 import { AccountPicker, AnsweredBy } from "./AnsweredBy";
 import { chatModels } from "@/commons/lib/model-kind";
+import { useWide } from "@/commons/hooks/use-wide";
+
+/**
+ * The model the new agent answers with: the provider's list on a press in a wide window, since a person making an
+ * agent may know no model's name to type; on a phone the list waits for typing or the field's arrow (`Combobox`).
+ */
+function ModelName({ models, loading, value, onChange }: { models: string[]; loading: boolean; value: string; onChange: (value: string) => void }) {
+  const wide = useWide();
+  return (
+    <Field label="Model Name" hint="Search the models this provider offers, or type an exact name.">
+      <Combobox options={models} loading={loading} value={value} onChange={onChange} placeholder="e.g. claude-sonnet-5" required listOnPress={wide} />
+    </Field>
+  );
+}
 
 /**
  * Creating an agent persona pack.
@@ -173,16 +187,7 @@ export function NewAgentForm({
               </select>
             </Field>
 
-            <Field label="Model Name" hint="Search the models this provider offers, or type an exact name.">
-              <Combobox
-                options={models}
-                loading={modelList.isLoading}
-                value={model}
-                onChange={setModel}
-                placeholder="e.g. claude-sonnet-5"
-                required
-              />
-            </Field>
+            <ModelName models={models} loading={modelList.isLoading} value={model} onChange={setModel} />
           </div>
 
           {profile && !profile.hasCredential && (

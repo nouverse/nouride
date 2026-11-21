@@ -31,10 +31,12 @@
 import { createLogger, type Port} from "@nouride/shared";
 import { randomHex, type SqliteDb } from "@nouride/runtime";
 import type { AuditLog } from "@/commons/audit.store.ts";
+import { allowMany, listedRows } from "./access-many.store.ts";
 
 const log = createLogger("access");
 
 export type AccessStatus = "pending" | "approved" | "denied" | "blocked";
+
 
 /** Every audit action this store records — what the Access page's history reads. */
 export const ACCESS_ACTIONS = [
@@ -46,6 +48,7 @@ export const ACCESS_ACTIONS = [
   "access_reset",
   "access_unblocked",
   "access_expired",
+  "access_imported",
 ] as const;
 type AccessAction = (typeof ACCESS_ACTIONS)[number];
 
@@ -63,7 +66,7 @@ export interface SenderRecord {
   resolvedBy: string | null;
 }
 
-interface Row {
+export interface Row {
   gateway_id: string;
   sender_id: string;
   sender_name: string | null;
@@ -141,20 +144,33 @@ export class AccessStore {
     chatId: string;
     mode: "open" | "allowlist" | "pair";
     staticAllowlist: readonly string[];
+    /**
+     * The sender's other ids on this connection (`MessageEnvelope.senderAlso`): each is asked about as the sender
+     * is. A number let in ahead lets its person in under the hidden id WhatsApp delivers them by, and a block on
+     * either keeps them out. A request for a code is still kept under the id they wrote from.
+     */
+    alsoKnownAs?: readonly string[];
   }): AccessDecision {
     const existing = this.get(params.gatewayId, params.senderId);
+    const others = (params.alsoKnownAs ?? []).filter((id) => id !== params.senderId);
+    const known = [existing, ...others.map((id) => this.get(params.gatewayId, id))];
     // Silent, as a denial is. Telling somebody they were turned away invites them to keep trying, and
     // tells them the bot is live.
-    if (existing?.status === "blocked") return { action: "ignore", reason: "sender is blocked" };
+    if (known.some((one) => one?.status === "blocked")) return { action: "ignore", reason: "sender is blocked" };
 
     if (params.mode === "open") return { action: "allow" };
 
-    if (this.matchesStatic(params.staticAllowlist, params.gatewayId, params.senderId)) {
+    if ([params.senderId, ...others].some((id) => this.matchesStatic(params.staticAllowlist, params.gatewayId, id))) {
       return { action: "allow" };
     }
 
-    if (existing?.status === "approved") {
-      this.refreshName(existing, params.senderName);
+    const approved = known.find((one) => one?.status === "approved");
+    if (approved) {
+      this.refreshName(approved, params.senderName);
+      // Let in under their other id after asking under this one: the code they were given is not waiting for anybody.
+      if (existing && existing !== approved && existing.status === "pending") {
+        this.options.db.prepare("DELETE FROM sender_access WHERE gateway_id = ? AND sender_id = ? AND status = 'pending'").run(params.gatewayId, params.senderId);
+      }
       return { action: "allow" };
     }
     if (existing?.status === "denied" && existing.expiresAt !== null && existing.expiresAt > this.now) {
@@ -354,6 +370,11 @@ export class AccessStore {
     return after;
   }
 
+  /** A whole list let in ahead at once (`access-many.store.ts`). */
+  allowMany(gatewayId: string, senders: readonly { senderId: string; name?: string }[], by: string, dryRun = false): { added: number; already: number; blocked: number } {
+    return allowMany({ db: this.options.db, audit: this.options.audit, now: this.now }, gatewayId, senders, by, dryRun);
+  }
+
   /** Take an approval back. They may ask again: this is not a block. */
   revoke(gatewayId: string, senderId: string, by: string): boolean {
     return this.release(gatewayId, senderId, by, "approved", "access_revoked");
@@ -424,6 +445,12 @@ export class AccessStore {
           .prepare<Row>("SELECT * FROM sender_access ORDER BY requested_at DESC")
           .all();
     return rows.map(toRecord);
+  }
+
+  /** The senders as a page or a terminal lists them, the approved bounded (`access-many.store.ts`). */
+  listed(status?: AccessStatus, find?: string): { senders: SenderRecord[]; approvedTotal: number } {
+    const { rows, approvedTotal } = listedRows(this.options.db, status, find);
+    return { senders: rows.map(toRecord), approvedTotal };
   }
 
   /**

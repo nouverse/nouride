@@ -57,7 +57,7 @@ const DATABASE = /\.db(-wal|-shm|\.epoch)?$|\.sqlite3?$/i;
  * Under `home/`, every name that starts with a dot: that is where a tool keeps its own state and its sign-in
  * (`.claude`, `.config`, `.docker`, a shell's history), under names no list could keep up with.
  */
-function leftOut(path: string): boolean {
+export function leftOut(path: string): boolean {
   if (holdsCredential(path) || OWN_SECRETS.some((pattern) => pattern.test(path))) return true;
   const parts = path.split("/");
   if (parts[0] === "home" && parts.slice(1).some((part) => part.startsWith("."))) return true;

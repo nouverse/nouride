@@ -38,6 +38,7 @@ export const DASHBOARD_PAGES: readonly (readonly [name: string, path: string])[]
   ["Logs", "/logs"],
   ["Files", "/files"],
   ["Update", "/update"],
+  ["Export and import", "/transfer"],
 ];
 
 /** The pages of one thing, opened by its id: what it is, and the path its id goes under. */

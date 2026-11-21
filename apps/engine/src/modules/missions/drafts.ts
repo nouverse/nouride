@@ -71,6 +71,15 @@ export function draftNotice(mission: Pick<Mission, "id" | "title" | "goal" | "ag
   ].join(GAP);
 }
 
+/**
+ * A draft's change in one line, for a chat whose notice cannot be rewritten: what changed and how to start or drop it.
+ * The draft whole is on its page, and was in the chat when it was made.
+ */
+export function draftChangedLine(mission: Pick<Mission, "id">, changed: readonly string[]): string {
+  const id = shortId(mission.id);
+  return `✎ Draft ${id} changed: ${changed.join(", ")}. Start it: /mission accept ${id} · drop it: /mission stop ${id}`;
+}
+
 /** What may change in a draft — the start's own fields; `limits` from the dashboard only, as an agent raises none. */
 export interface DraftChange {
   title?: string;

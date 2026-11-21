@@ -7,6 +7,7 @@
 
 import type { ChatTurn, MissionSeen, MissionView, MissionWaitKind } from "@nouride/wire";
 import { asksWhileWorking, openQuestion } from "@/commons/lib/mission-waits";
+import { inTime } from "@/commons/lib/format";
 import { systemHeading } from "@/commons/lib/turn-display";
 
 /** What a person sees, in their words. */
@@ -25,7 +26,9 @@ const NEEDS: Record<MissionWaitKind, string> = {
   unknown_outcome: "unknown outcome",
   limit: "a limit",
   accept: "accept",
-  retry: "paused, retrying",
+  // Not "paused": that word is a mission someone paused, which does nothing until it is resumed.
+  retry: "retrying",
+  paused: "paused",
 };
 
 /** The badge's tone: blue is something working, the rest are states (the Nouverse design rules). */
@@ -50,12 +53,30 @@ export function isDraft(mission: Pick<MissionView, "status" | "waitKind" | "star
   return mission.status === "waiting" && mission.waitKind === "accept" && mission.startedAt === null;
 }
 
+/**
+ * Paused by someone: its work cut where it was and kept, until someone resumes it. It stands with what needs the
+ * reader, under its own word, since going on is theirs to say; nothing reminds them of a wait they chose.
+ */
+export function isPaused(mission: Pick<MissionView, "status" | "waitKind">): boolean {
+  return mission.status === "waiting" && mission.waitKind === "paused";
+}
+
+/**
+ * Held up: its model could not answer (a plan's limit, a provider down), and it tries again by itself. Nothing is the
+ * reader's to do, so it is not "Needs you" anywhere: a person shown one there, with Continue beside it, took the going
+ * on for theirs to press and asked whether it ever tried again by itself.
+ */
+export function isHeldUp(mission: Pick<MissionView, "status" | "waitKind">): boolean {
+  return mission.status === "waiting" && mission.waitKind === "retry";
+}
+
 /** A draft's tone, the Backlog's own: it waits to be started, which is no call on anybody. */
 const DRAFT_TONE = "bg-secondary/12 text-secondary border-secondary/25";
 
 /** The badge's colours: one that waits for someone else is as quiet as one that ended, since nothing is the reader's to do. */
 export function seenTone(mission: Pick<MissionView, "seen" | "changeable" | "status" | "waitKind" | "startedAt">): string {
-  if (waitsElsewhere(mission)) return SEEN_TONE.ended;
+  // A pause is no call on anybody either: as quiet as one that ended.
+  if (waitsElsewhere(mission) || isPaused(mission)) return SEEN_TONE.ended;
   return isDraft(mission) ? DRAFT_TONE : SEEN_TONE[mission.seen];
 }
 
@@ -69,6 +90,8 @@ export function seenTone(mission: Pick<MissionView, "seen" | "changeable" | "sta
 export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind" | "startedAt" | "changeable" | "person"> & { answers?: MissionView["answers"] }): string {
   if (waitsElsewhere(mission)) return `Waiting for ${mission.person?.name ?? "an admin"}`;
   if (isDraft(mission)) return "Draft";
+  if (isPaused(mission)) return "Paused";
+  if (isHeldUp(mission)) return "Held up · tries again by itself";
   if (mission.seen === "needs_you") return mission.waitKind ? `${SEEN_LABEL.needs_you} · ${NEEDS[mission.waitKind]}` : SEEN_LABEL.needs_you;
   if (mission.seen === "ended") return `${SEEN_LABEL.ended} · ${mission.status === "failed" ? "failed" : "stopped"}`;
   if (mission.status === "queued") return `${SEEN_LABEL.working} · queued`;
@@ -77,7 +100,7 @@ export function seenAs(mission: Pick<MissionView, "seen" | "status" | "waitKind"
   return SEEN_LABEL[mission.seen];
 }
 
-export type MissionAction = "stop" | "continue" | "accept" | "acceptAsIs" | "answer" | "delete";
+export type MissionAction = "stop" | "pause" | "resume" | "continue" | "accept" | "acceptAsIs" | "answer" | "delete";
 
 /** Continue lets it go on past what stopped it — never past a question, which takes an answer. */
 const CONTINUES: readonly MissionWaitKind[] = ["limit", "stuck", "unknown_outcome", "accept", "retry"];
@@ -87,15 +110,18 @@ const CONTINUES: readonly MissionWaitKind[] = ["limit", "stuck", "unknown_outcom
  * Stop until it has ended; Continue while it waits on a limit, a loop, a call whose outcome a restart lost, or an
  * accept; Accept while it waits for one; Answer while it waits on its question, or works on with one open; and, waiting
  * on anything else, Accept as it is — closed as done without its checks passing (0.8.7), the way out of a mission stuck
- * on a check it can never pass.
+ * on a check it can never pass. Pause while it runs or waits in the queue, the two the daemon pauses; and a paused one
+ * has Resume and Stop alone.
  */
 export function actionsFor(mission: Pick<MissionView, "status" | "waitKind"> & { answers?: MissionView["answers"] }): MissionAction[] {
   const actions: MissionAction[] = [];
   const waiting = mission.status === "waiting" ? mission.waitKind : null;
+  if (waiting === "paused") return ["resume", "stop"];
   if (waiting === "input" || asksWhileWorking(mission)) actions.push("answer");
   if (waiting === "accept") actions.push("accept");
   if (waiting && CONTINUES.includes(waiting)) actions.push("continue");
   if (waiting && waiting !== "accept") actions.push("acceptAsIs");
+  if (mission.status === "running" || mission.status === "queued") actions.push("pause");
   if (mission.status !== "done" && mission.status !== "failed" && mission.status !== "stopped") actions.push("stop");
   // Only once it has ended (0.8.13): the daemon refuses one still open, and Stop is the step before.
   else actions.push("delete");
@@ -225,7 +251,7 @@ export function anyOpen(missions: readonly Pick<MissionView, "seen">[]): boolean
  */
 export function rowLine(mission: MissionView): { label: string; text: string } | null {
   if (waitsElsewhere(mission)) return { label: "Waiting", text: `Only ${mission.person?.name ?? "an admin"} can answer what it waits for.` };
-  if (mission.seen === "needs_you") return { label: "Needs you", text: needsYouSaid(mission) };
+  if (mission.seen === "needs_you") return { label: isHeldUp(mission) ? "Held up" : "Needs you", text: needsYouSaid(mission) };
   if (mission.seen === "working") {
     if (mission.status === "queued") return { label: "Queued", text: mission.reason ?? "waits for a free slot" };
     if (mission.status === "checking") return { label: "Now", text: "running its checks" };
@@ -244,7 +270,7 @@ export function rowLine(mission: MissionView): { label: string; text: string } |
  * engine), with the page's buttons where the chat names commands. `reason` is what the wait is about: the question,
  * the limit, the calls parked, the report.
  */
-export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | "startedAt" | "byAgent" | "agentId" | "checks">): string {
+export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | "startedAt" | "byAgent" | "agentId" | "checks" | "pausedBy" | "retryAt">, now: number = Date.now()): string {
   const about = mission.reason?.trim() ?? "";
   switch (mission.waitKind) {
     case "input":
@@ -260,11 +286,25 @@ export function needsYouSaid(mission: Pick<MissionView, "waitKind" | "reason" | 
       return `A restart cut it off in the middle of ${about || "a call"}, and whether that ran is unknown. Check, then Continue or Stop.`;
     case "stuck":
       return `It is stuck: ${about || "no step moved"}. Continue to try again, Stop to end it.`;
+    case "paused":
+      return `Paused by ${mission.pausedBy ?? "someone"}. Its work so far is kept, and the time it is paused is not counted. Resume lets it go on from its checklist, whenever you like.`;
     case "retry":
-      return `Its model could not answer${about ? `: ${about}` : ""}. It tries again by itself, further apart each time, for about a day. Continue tries now.`;
+      // The reason is a sentence of its own more often than not ("… The operator has been told."): its own stop is kept.
+      return `Its model could not answer${about ? `: ${about.replace(/[.!?]+$/, "")}` : ""}. ${triesAgain(mission.retryAt, now)} Continue tries now.`;
     default:
       return about || "It waits for a person.";
   }
+}
+
+/**
+ * When a held-up mission tries again, as its page and card say it: the next try by the clock the daemon keeps, and how
+ * it goes on after. "Further apart each time" named no moment, and a person could not tell a mission that would try in
+ * ten minutes from one that had given up. A daemon that says no time gets the rhythm alone.
+ */
+export function triesAgain(retryAt: number | undefined, now: number = Date.now()): string {
+  const rhythm = "an hour apart at most, for about a day";
+  if (retryAt === undefined) return `It tries again by itself, ${rhythm}.`;
+  return `It tries again by itself ${inTime(retryAt, now)}, then ${rhythm}.`;
 }
 
 /** A result file as people read it: where it is in the mission's folder, not the whole path. */

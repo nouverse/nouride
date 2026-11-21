@@ -5,6 +5,7 @@
  */
 
 import { HeadlineField } from "@/commons/components/ui/HeadlineField";
+import { SetupImport } from "@/commons/components/transfer/SetupImport";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, Loader2, Sparkles } from "lucide-react";
@@ -19,6 +20,7 @@ import { Mascot } from "@/commons/components/brand/Mascot";
 import { KeyHints } from "@/commons/components/providers/KeyHints";
 import { ExtraHeaders } from "@/commons/components/providers/ExtraHeaders";
 import { useProviderDraft } from "@/commons/hooks/use-provider-draft";
+import { HomeAppLeave } from "@/commons/components/layout/HomeAppLeave";
 
 const PRESETS: Record<string, { label: string; baseUrl: string; hint: string }> = {
   openai: {
@@ -38,9 +40,12 @@ export default function SetupPage() {
   const step = !state?.hasProvider ? 1 : !state.hasAgent ? 2 : 3;
 
   return (
-    <div className="relative min-h-dvh py-10 px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-clip">
+    <div className="relative min-h-dvh py-10 pt-[calc(2.5rem+env(safe-area-inset-top))] px-4 flex flex-col items-center justify-center selection:bg-primary/20 overflow-clip">
 
       <div className="relative w-full max-w-xl space-y-6">
+        {/* At the top of the wizard's own column inside Nouride Home, and it scrolls with the page. Each step keeps its
+            own back button. */}
+        <HomeAppLeave className="mb-3 ml-0" />
         <header className="text-center space-y-2">
           <Mascot pose="waving" decorative className="mx-auto w-28" />
           <h1 className="text-2xl text-base-content sm:text-3xl">Set up Nouride</h1>
@@ -68,6 +73,8 @@ export default function SetupPage() {
         </div>
 
         {step === 1 ? <ProviderStep /> : step === 2 ? <AgentStep /> : <MemoryStep />}
+        {/* For a new install that is a move: the other machine's file, in place of every step here. */}
+        {step === 1 ? <SetupImport /> : null}
       </div>
     </div>
   );

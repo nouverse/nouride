@@ -38,7 +38,7 @@ import { Pacer } from "../../commons/pace.ts";
 import { chunk, sendsText } from "../../commons/text.ts";
 import { voiceMessageUpload } from "../../commons/voice.ts";
 import { discordAlbumMessage, discordAlbumRun } from "./album.ts";
-import { discordEdit, discordEnvelope } from "./envelope.ts";
+import { discordEdit, discordEnvelope, discordSenderId, handleAlso } from "./envelope.ts";
 import { discordRoomTitle, ThreadOpeners, type RoomChannel } from "./rooms.ts";
 import { heartbeatAlive } from "./heartbeat.ts";
 import { buttonRow, carryOut, discordPress } from "./presses.ts";
@@ -153,6 +153,9 @@ export function logShardLifecycle(client: Pick<Client, "on">, log: Logger, curre
 export class DiscordGateway extends BaseGateway {
   /** A message it sent is rewritten in place (`editMessage`). */
   readonly editsMessages = true;
+  readonly maxMessageChars = MAX_MESSAGE_CHARS;
+  /** A Discord account as a person writes it: its id as it is, or its username (`name`, `@name`) as `@name` in lower case. */
+  senderIdOf = discordSenderId;
   /** The bot's presence, following its agent (0.8.0) — kept, so a reconnect shows it again. */
   private presence: GatewayPresence = "online";
 
@@ -684,6 +687,7 @@ export class DiscordGateway extends BaseGateway {
             ? "group"
             : "channel",
       senderId: interaction.user.id,
+      ...handleAlso(interaction.user),
       senderName: interaction.member && "displayName" in interaction.member
         ? String(interaction.member.displayName)
         : interaction.user.username,

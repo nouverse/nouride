@@ -119,6 +119,12 @@ export interface Principal {
   role: User["role"];
   actor: string;
   user: User | null;
+  /**
+   * True when the session was traded from a device's token: Nouride Home on the machine Nouride runs on, which signs
+   * itself in. The dashboard offers no Sign out there. Absent for a password's session and the control token, and from
+   * an older daemon.
+   */
+  device?: boolean;
 }
 
 /** A provider profile and a model on it: one of an agent's fallbacks. */

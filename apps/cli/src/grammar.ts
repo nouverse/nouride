@@ -61,7 +61,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   acp: { forms: { "": ["--agent <id>"] } },
   // `pause` and `resume`, what asleep was called before 0.8.0: kept, untaught.
   agent: {
-    forms: { "": NONE, sleep: NONE, wake: NONE, pause: NONE, resume: NONE, reload: NONE, enable: NONE, disable: NONE, external: ["--profile <name>"], internal: NONE, "skill-root add": NONE, "skill-root rm": NONE },
+    forms: { "": NONE, sleep: NONE, wake: NONE, pause: NONE, resume: NONE, reload: NONE, enable: NONE, disable: NONE, external: ["--profile <name>"], internal: NONE, "skill-root add": NONE, "skill-root rm": NONE, delete: NONE },
     untaught: ["pause", "resume"],
   },
   gateway: {
@@ -80,6 +80,8 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   },
   db: { forms: { "": NONE, backup: NONE, list: NONE, verify: NONE, restore: NONE, adopt: NONE } },
   users: { forms: { "": NONE, reset: NONE } },
+  export: { forms: { "": ["--out <file>", "--folders", "--stdin", "--no-secrets"] } },
+  import: { forms: { "": ["--stdin"], "*": ["--stdin"] } },
   provider: {
     forms: {
       "": NONE,
@@ -142,15 +144,15 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   },
   access: {
     forms: {
-      "": NONE,
-      list: NONE,
+      "": ["--find <text>"],
+      list: ["--find <text>"],
       pending: NONE,
-      approved: NONE,
+      approved: ["--find <text>"],
       denied: NONE,
       blocked: NONE,
       approve: ["--me", "--as <key>", "--new <name>"],
       mode: NONE,
-      allow: ["--name <name>"],
+      allow: ["--name <name>", "--from <file>", "--gateway <connection>", "--dry-run"],
       deny: NONE,
       block: NONE,
       revoke: NONE,
@@ -159,7 +161,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
     },
   },
   jobs: { forms: { "": ["--all"], list: ["--all"], log: NONE, kill: NONE } },
-  mission: { forms: { "": ["--all"], list: ["--all"], show: NONE, stop: NONE, continue: NONE, accept: NONE, answer: NONE, tell: NONE, delete: ["--force"] } },
+  mission: { forms: { "": ["--all"], list: ["--all"], show: NONE, stop: NONE, pause: NONE, continue: NONE, accept: NONE, answer: NONE, tell: NONE, delete: ["--force"] } },
   cron: {
     forms: {
       "": ["--all"],

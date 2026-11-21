@@ -101,6 +101,19 @@ export interface TelegramGatewayOptions extends GatewayIdentity {
 export class TelegramGateway extends BaseGateway {
   /** A message it sent is rewritten in place (`editMessage`). */
   readonly editsMessages = true;
+  readonly maxMessageChars = MAX_MESSAGE_CHARS;
+
+  /**
+   * A Telegram account as a person writes it: its numeric id as it is, or its username (`@name`, `name`,
+   * `t.me/name`) as `@name` in lower case, which is what a message from it carries beside the id. Not a phone number:
+   * Telegram shows a bot nobody's.
+   */
+  senderIdOf(written: string): string | null {
+    const said = written.trim();
+    if (/^\d{1,20}$/.test(said)) return said;
+    const name = /^(?:@|(?:https?:\/\/)?t\.me\/)?([A-Za-z][A-Za-z0-9_]{3,31})$/.exec(said)?.[1];
+    return name ? `@${name.toLowerCase()}` : null;
+  }
   /** What the agent is told about writing here — `Gateway.formatting`: converted markdown, a phone, no tables. */
   readonly formatting =
     "Formatting: write normal markdown; it is converted before sending. Headings become bold. This is usually read on a phone, so do not use tables; write short labelled lines instead. A table you send anyway is flattened into one, which will not be the layout you intended.";

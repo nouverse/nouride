@@ -14,6 +14,9 @@ pub enum Op {
     Groups,
     /// The helper's version and the workspace it serves, so the daemon can check it is the one it expects.
     Info,
+    /// Remove the agent's user, where this helper made it: its processes ended, its files in the workspace handed to
+    /// the service user. For an agent the daemon has deleted.
+    Remove,
 }
 
 #[derive(Debug, Default)]
@@ -62,6 +65,7 @@ impl Request {
             Some(Op::Run) | None => "run",
             Some(Op::Groups) => "groups",
             Some(Op::Info) => "info",
+            Some(Op::Remove) => "remove",
         };
         write_frame(out, frame::OP, op.as_bytes())?;
         write_frame(out, frame::AGENT, self.agent.as_bytes())?;
@@ -114,6 +118,7 @@ impl Request {
                         b"run" => Op::Run,
                         b"groups" => Op::Groups,
                         b"info" => Op::Info,
+                        b"remove" => Op::Remove,
                         other => return Err(format!("no such operation: {}", String::from_utf8_lossy(other))),
                     })
                 }
@@ -264,6 +269,26 @@ mod tests {
         assert_eq!(
             refusal(&[v1, run, agent, arg, arg, arg, end]),
             "the request is too large"
+        );
+    }
+
+    #[test]
+    fn remove_names_an_agent_as_run_does_or_is_refused() {
+        let v1 = (frame::VERSION, PROTOCOL.as_bytes());
+        let remove = (frame::OP, &b"remove"[..]);
+        let end = (frame::END, &b""[..]);
+        let read = Request::read_from(&mut wire(&[v1, remove, (frame::AGENT, &b"nouva"[..]), end]).as_slice()).unwrap();
+        assert_eq!(read.op, Some(Op::Remove));
+        assert_eq!(read.agent, "nouva");
+        // Never a name that is not an agent's: `root` would be the user `nr-root`, and `../x` no user at all.
+        for bad in [&b"root"[..], b"shared", b"../nouva", b"Nouva", b""] {
+            assert!(refusal(&[v1, remove, (frame::AGENT, bad), end]).contains("not an agent id"));
+        }
+        assert!(refusal(&[v1, remove, end]).contains("not an agent id"));
+        // An operation this helper does not have is said by name: what an older helper answers to `remove`.
+        assert_eq!(
+            refusal(&[v1, (frame::OP, &b"erase"[..]), (frame::AGENT, &b"nouva"[..]), end]),
+            "no such operation: erase"
         );
     }
 

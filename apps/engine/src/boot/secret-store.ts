@@ -45,6 +45,11 @@ function installFolders(configPath: string): { nourideDir: string; installDir: s
   return { nourideDir, installDir: dirname(nourideDir) };
 }
 
+/** The key's places as the daemon reads them (`openSecretStore`): for an import applied in its process before it opens the store. */
+export function daemonKeyLayout(paths: { dataDir: string; configPath: string }): ReturnType<typeof installKeyLayout> {
+  return installKeyLayout({ dataDir: paths.dataDir, ...installFolders(paths.configPath), root: process.getuid?.() === 0 });
+}
+
 export async function openSecretStore(paths: { dataDir: string; configPath: string; home?: string }): Promise<SecretStore> {
   const env = { ...process.env };
   delete process.env[KEY_VARIABLE];
