@@ -15,7 +15,18 @@ const HOME_APP_MARK = "NourideHome/";
 export const HOME_APP_BACK = "nouridehome://home";
 
 /** Back: the app treats it as its system Back, a page back, and asks only at the first page. */
-export const HOME_APP_PAGE_BACK = "nouridehome://back";
+const HOME_APP_PAGE_BACK = "nouridehome://back";
+
+/**
+ * The link the header's Back sends, by what the app says it catches: the number after its mark. An app that says 1
+ * knows `nouridehome://home` alone, as its system Back, and opens any other link outside itself, where nothing takes
+ * it: sent `nouridehome://back`, its header's Back did nothing at all. Apps installed before the two links were told
+ * apart say 1, and are not updated with the daemon.
+ */
+export function homeAppPageBack(userAgent: string = typeof navigator === "undefined" ? "" : navigator.userAgent): string {
+  const says = Number(new RegExp(`${HOME_APP_MARK}(\\d+)`).exec(userAgent)?.[1] ?? 0);
+  return says >= 2 ? HOME_APP_PAGE_BACK : HOME_APP_BACK;
+}
 
 export function inHomeApp(userAgent: string = typeof navigator === "undefined" ? "" : navigator.userAgent): boolean {
   return userAgent.includes(HOME_APP_MARK);

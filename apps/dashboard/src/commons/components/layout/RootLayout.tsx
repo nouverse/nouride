@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import { HOME_APP_PAGE_BACK, inHomeApp } from "@/commons/lib/home-app";
+import { homeAppPageBack, inHomeApp } from "@/commons/lib/home-app";
 import { ReconnectingBanner, ReconnectingScreen, RestartedToast, RestartPendingBar } from "./Reconnecting";
 import { UpdatedBanner } from "./UpdatedBanner";
 import { ImageMovedBanner } from "./ImageMovedBanner";
@@ -76,7 +76,7 @@ const SCROLLS = "relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto";
  */
 function HomeAppBack({ className }: { className: string }) {
   return (
-    <a href={HOME_APP_PAGE_BACK} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back">
+    <a href={homeAppPageBack()} className={cn("btn btn-ghost btn-square size-11 text-secondary active:scale-90 transition-transform", className)} aria-label="Back">
       <ChevronLeft size={22} />
     </a>
   );

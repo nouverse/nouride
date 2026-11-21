@@ -7,9 +7,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HOME_APP_BACK, HOME_APP_PAGE_BACK, inHomeApp } from "@/commons/lib/home-app";
+import { HOME_APP_BACK, homeAppPageBack, inHomeApp } from "@/commons/lib/home-app";
 import { answer, dom, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
+
+const WEBVIEW = "Mozilla/5.0 (Linux; Android 15; wv) Chrome/131.0 Mobile Safari/537.36";
 
 describe("the way back to Nouride Home", () => {
   test("only the app's WebView is taken for the app", () => {
@@ -19,8 +21,15 @@ describe("the way back to Nouride Home", () => {
   });
 
   test("two addresses the app catches: one pages back, one leaves", () => {
-    expect(HOME_APP_PAGE_BACK).toBe("nouridehome://back");
+    expect(homeAppPageBack(`${WEBVIEW} NourideHome/2`)).toBe("nouridehome://back");
     expect(HOME_APP_BACK).toBe("nouridehome://home");
+  });
+
+  test("an app that says it catches the one link is sent that one for Back, as before the two were told apart", () => {
+    expect(homeAppPageBack(`${WEBVIEW} NourideHome/1`)).toBe("nouridehome://home");
+    expect(homeAppPageBack(`${WEBVIEW} NourideHome/12`)).toBe("nouridehome://back");
+    // No number at all is no word about a second link.
+    expect(homeAppPageBack(`${WEBVIEW} NourideHome/`)).toBe("nouridehome://home");
   });
 
   test("the header draws its chevron only inside the app", () => {
@@ -29,10 +38,10 @@ describe("the way back to Nouride Home", () => {
   });
 });
 
-/** The app's WebView for the length of `run`, then the browser the harness is again. */
-async function asTheApp(run: () => Promise<void>): Promise<void> {
+/** The app's WebView for the length of `run`, then the browser the harness is again. `says`: the number after the app's mark, 2 for an app that catches both links. */
+async function asTheApp(run: () => Promise<void>, says = 2): Promise<void> {
   const before = Object.getOwnPropertyDescriptor(navigator, "userAgent");
-  Object.defineProperty(navigator, "userAgent", { value: "Mozilla/5.0 (Linux; Android 15; wv) Chrome/131.0 Mobile Safari/537.36 NourideHome/1", configurable: true });
+  Object.defineProperty(navigator, "userAgent", { value: `${WEBVIEW} NourideHome/${says}`, configurable: true });
   try {
     await run();
   } finally {
@@ -156,6 +165,21 @@ describe("Back and \"Back to Nouride Home\" are two links", () => {
     expect(header[0]!.classes).toContain("btn-square");
     expect(header[0]!.classes).not.toContain("fixed");
     expect(menu.map(({ href, words }) => ({ href, words }))).toEqual([{ href: "nouridehome://home", words: "Back to Nouride Home" }]);
+  });
+
+  // An installed app is not updated with the daemon. One that catches `nouridehome://home` alone opens any other link
+  // outside itself, where nothing takes it: its header's chevron did nothing at all.
+  test("on a phone, in an app that catches the one link: the header's chevron sends that one", async () => {
+    let header: ReturnType<typeof appLinks> = [];
+    dom.happyDOM.setViewport({ width: 390, height: 844 });
+    answer({});
+    await asTheApp(async () => {
+      await renderPage("/agents", async (host) => {
+        await eventually(() => appLinks(host).some((link) => link.inHeader), 3_000, "the header's chevron");
+        header = appLinks(host).filter((link) => link.inHeader);
+      });
+    }, 1);
+    expect(header.map(({ href, label }) => ({ href, label }))).toEqual([{ href: "nouridehome://home", label: "Back" }]);
   });
 
   test("from a laptop's width: the menu's row and the folded menu's tile leave, and nothing but the header's pages back", async () => {
