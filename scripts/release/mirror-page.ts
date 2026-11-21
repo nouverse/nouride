@@ -11,7 +11,11 @@
  * The page is the one those updaters read: a draft is left out, as they never see one, and a pre-release takes a place
  * but is no stone, since they skip it. The release being cut is put at the top first, as it will stand once published.
  *
- *   bun run scripts/release/mirror-page.ts [--adding vX.Y.Z]     exit 1, each stranded floor named, when one is
+ * It says, and stops no release. It did stop one: a release was held, with everything else green, for a stone still on
+ * the page, and the way through was deleting twenty public releases or waiting. An install that far back is brought
+ * across by hand (the upgrading guide), which is the owner's choice over a release held for it.
+ *
+ *   bun run scripts/release/mirror-page.ts [--adding vX.Y.Z]     each stranded floor named as a warning; exit 0
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -41,6 +45,15 @@ function compare(a: string, b: string): number | null {
   if (!x || !y) return null;
   for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i]! - y[i]!;
   return 0;
+}
+
+/**
+ * What a look at the page says, a line each: every stranded floor as a warning (an annotation on a workflow's run,
+ * a marked line in a terminal), or that every stone stands. Never a reason to stop.
+ */
+export function pageSaid(problems: string[], onActions: boolean, within = STONE_WITHIN): string[] {
+  if (problems.length === 0) return [`✓ every floor on the mirror's first page has its stepping stone within the first ${within}`];
+  return problems.map((problem) => `${onActions ? "::warning::" : "! "}${problem}`);
 }
 
 /** Each release on the page whose floor has no stone within `within`, said as the problem it is. */
@@ -105,8 +118,9 @@ if (import.meta.main) {
   })();
   const read = await readPage({ token: process.env.GH_TOKEN || undefined });
   if (!read.ok) {
-    console.error(`✗ the mirror's page answered ${read.status} (${PAGE_URL})`);
-    process.exit(1);
+    // Nothing to say about a page that was not read, and nothing to stop for.
+    console.log(`${process.env.GITHUB_ACTIONS === "true" ? "::warning::" : "! "}the mirror's page answered ${read.status} (${PAGE_URL}): its stepping stones were not looked at`);
+    process.exit(0);
   }
   const listed = read.listed;
   const page: MirrorEntry[] = listed
@@ -117,9 +131,5 @@ if (import.meta.main) {
   for (const [place, entry] of page.entries()) {
     console.log(`  ${String(place + 1).padStart(2)}  ${entry.tag}${entry.floor ? `  (from ${entry.floor})` : ""}${entry.prerelease ? "  pre-release" : ""}`);
   }
-  if (problems.length > 0) {
-    for (const problem of problems) console.error(`✗ ${problem}`);
-    process.exit(1);
-  }
-  console.log(`✓ every floor on the mirror's first page has its stepping stone within the first ${STONE_WITHIN}`);
+  for (const line of pageSaid(problems, process.env.GITHUB_ACTIONS === "true")) console.log(line);
 }

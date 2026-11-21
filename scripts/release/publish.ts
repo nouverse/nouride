@@ -8,8 +8,8 @@
  * It refuses, naming every reason at once, unless: the checkout is on the release's branch (`releases/vX.Y.Z`, or
  * `lts/<line>` for a long-term patch); the version files and the notes say this version; every tree is clean and
  * pushed; every submodule's pin is on its remote; each `main` can fast-forward to what the release pins (a long-term
- * patch leaves the mains alone); CI passed on the commit; the mirror's first page keeps every stepping stone with the
- * release on top (`mirror-page.ts`); and the tag does not exist. Then, the order since 0.8.36: it opens the pull request
+ * patch leaves the mains alone); CI passed on the commit; and the tag does not exist. A stepping stone leaving the
+ * mirror's first page with the release on top is said and stops nothing (`mirror-page.ts`). Then, the order since 0.8.36: it opens the pull request
  * from the release branch to `main` (or takes the one open), waits for its checks, merges it with a merge commit,
  * deletes the branch, asks for `ci.yml` on the merge commit and waits for it to end green, moves the submodules' `main`
  * to their pins, tags the merge commit (annotated `[quiet]` for a quiet release) and waits for the release run and the
@@ -49,7 +49,7 @@ export interface PublishFacts {
   mainFastForwards: boolean;
   /** Whether `ci.yml` passed on `head`. */
   ciGreen: boolean;
-  /** What the mirror's first page would say with the release on top. */
+  /** What the mirror's first page would say with the release on top: said, never a refusal. */
   stranded: string[];
   tagExists: boolean;
 }
@@ -74,9 +74,16 @@ export function refusals(f: PublishFacts): string[] {
   }
   if (f.mode !== "lts" && !f.mainFastForwards) out.push(`main cannot fast-forward to ${f.branch}: take what main has first (merge, never cherry-pick)`);
   if (!f.ciGreen) out.push(`ci.yml has not passed on ${f.head.slice(0, 8)}: wait for it, or push and wait`);
-  for (const problem of f.stranded) out.push(`the mirror: ${problem}`);
   if (f.tagExists) out.push(`${f.tag} already exists`);
   return out;
+}
+
+/**
+ * What is said beside the plan and stops nothing: a floor whose stepping stone is leaving the mirror's first page
+ * (`mirror-page.ts`). A release was held for one with everything else green.
+ */
+export function notices(f: Pick<PublishFacts, "stranded">): string[] {
+  return f.stranded.map((problem) => `the mirror: ${problem}`);
 }
 
 /** What it would run, in order, once nothing refuses: what `--dry-run` says. `<n>` and `<merge>` are read as it goes. */
@@ -308,6 +315,7 @@ if (import.meta.main) {
     for (const reason of refused) console.error(`  - ${reason}`);
     process.exit(1);
   }
+  for (const notice of notices(facts)) console.log(`! ${notice}`);
   const steps = plan(facts);
   console.log(`${tag}, ${mode}: every check passed. ${process.argv.includes("--dry-run") ? "It would run:" : "Running:"}`);
   for (const step of steps) console.log(`  ${step}`);

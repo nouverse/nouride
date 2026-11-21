@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { dirtyPaths, plan, publish, refusals, run, settledChecks, settledRun, type PublishFacts, type PublishIo } from "../../../../scripts/release/publish.ts";
+import { dirtyPaths, notices, plan, publish, refusals, run, settledChecks, settledRun, type PublishFacts, type PublishIo } from "../../../../scripts/release/publish.ts";
 
 const PIN = (path: string, pin: string) => ({ path, pin, onRemote: true, mainFastForwards: true });
 const READY: PublishFacts = {
@@ -65,9 +65,16 @@ describe("publishing a release", () => {
       "internals/pro's main cannot fast-forward to its pin bbbbbbbb",
       "main cannot fast-forward to releases/v0.8.19: take what main has first (merge, never cherry-pick)",
       "ci.yml has not passed on aaaaaaaa: wait for it, or push and wait",
-      "the mirror: v0.8.0 upgrades only from 0.7.28, …",
       "v0.8.18 already exists",
     ]);
+  });
+
+  // A release was held for a stone still on the mirror's page, with everything else green.
+  test("a stepping stone leaving the mirror's page is said beside the plan and refuses nothing", () => {
+    const leaving = { ...READY, stranded: ["v0.8.0 upgrades only from 0.7.28, …"] };
+    expect(refusals(leaving)).toEqual([]);
+    expect(notices(leaving)).toEqual(["the mirror: v0.8.0 upgrades only from 0.7.28, …"]);
+    expect(notices(READY)).toEqual([]);
   });
 
   test("a branch never pushed is said so", () => {
