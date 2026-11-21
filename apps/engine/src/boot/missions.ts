@@ -11,7 +11,7 @@ import { privateWorkspace, sharedWorkspace, type AgentRegistry } from "@nouride/
 import { sessionIdFor } from "@nouride/shared";
 import { ownFolderPorts } from "./mission-folders.ts";
 import type { Notifier } from "@/commons/notify.ts";
-import type { ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
+import { missionNotice, type ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import { checkRefusal, runChecks } from "@/modules/missions/checks.ts";
 import { MISSION_GATEWAY_ID, MissionGateway } from "@/modules/missions/gateway.ts";
@@ -229,8 +229,10 @@ export function buildMissions(params: {
   /** The chat a mission reports to, on the connection its agent speaks on there. */
   const reportsTo = (mission: Mission) => ({ gatewayId: late ? late.voice(mission.agentId, mission.gatewayId) : mission.gatewayId, chatId: mission.chatId });
   /** What a mission said, as the dashboard's conversation shows it. */
-  const noted = (mission: Mission, text: string): void => {
-    params.chatEvents.record({ gatewayId: mission.gatewayId, chatId: mission.chatId, audience: "ui", kind: "note", text, agentId: mission.agentId, details: { mission: mission.id } });
+  // Kept with its mission and its agent: the dashboard's transcript shows it, and the agent reads it back with the next
+  // message in that chat (`ChatEventStore.toldByMissions`). A progress line says so: only a mission's newest is read back.
+  const noted = (mission: Mission, text: string, progress = false): void => {
+    params.chatEvents.record(missionNotice(mission, text, progress));
   };
   const drafted = draftTelling(params.notifier, reportsTo, noted);
   const gateway = new MissionGateway();
@@ -309,7 +311,7 @@ export function buildMissions(params: {
     tellDraft: drafted.tell,
     progress: async (mission, text) => {
       await progressed.say(mission.id, reportsTo(mission), text);
-      noted(mission, text);
+      noted(mission, text, true);
     },
     queueTurn: (envelope) => late?.queueTurn(envelope) ?? false,
     stopTurn: (mission) => late?.cancelTurn(mission.agentId, mission.id),

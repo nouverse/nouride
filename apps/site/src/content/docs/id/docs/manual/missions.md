@@ -332,6 +332,13 @@ menghentikannya, dan ia tetap melapor ke sana. Percakapan itu ada di halaman mis
 berakhir, misi disimpan selama percakapan disimpan, `[retention] session_days` (30 hari), lalu dihapus; misi yang
 masih berjalan gak pernah dihapus, selama apa pun ia berjalan.
 
+Semua yang dikabarkan misi ke chat-nya dikirim atas nama agent-nya: ia antre atau mulai, sudah sampai mana, hampir
+kena batas, butuh apa dari kamu, lanjut lagi, selesai, dengan hasilnya. Agent di chat itu membaca kabar yang sama
+bersama pesanmu berikutnya di sana (0.8.42), sekali, persis seperti yang kamu baca: apa pun yang dikabarkan sejak ia
+terakhir menjawabmu di sana. Sebelumnya ia hanya tahu pernah memulai misi, dan bisa menjawab bahwa misi yang sudah
+selesai masih berjalan. Dari baris progres sebuah misi ia membaca yang terbaru. Setelah `/new` ia mulai dari nol,
+seperti hal lainnya, dan bisa melihat daftar misinya sendiri.
+
 Di dalam misi, agent bisa menyerahkan satu bagian terpisah ke agent lain sebagai misi tersendiri (satu tingkat, gak
 lebih dalam), dan diberi tahu bagaimana hasilnya.
 
