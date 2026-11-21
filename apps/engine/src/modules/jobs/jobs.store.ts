@@ -29,7 +29,7 @@
  */
 
 import { agentReadableMode, type BackgroundHandle, ensureDir, isProcessAlive, join, readTextFile, removePath, setFileMode, type SqliteDb, statFile, type TextFilter } from "@nouride/runtime";
-import { contained, createLogger, newId, type ExecPolicySection, type SandboxOptions, type Port } from "@nouride/shared";
+import { contained, createLogger, newId, type ExecPolicySection, type LeftRunning, type SandboxOptions, type Port } from "@nouride/shared";
 import type { AuditLog } from "@/commons/audit.store.ts";
 import type { SubAgentHandoff } from "@/modules/tools/handoff.ts";
 import type { HelperBrief } from "@/modules/tools/builtins/delegate-brief.ts";
@@ -280,6 +280,17 @@ export class JobStore {
     this.onComplete = handler;
   }
 
+  /**
+   * Who is told what a job left running in its own process group as it ended by itself: asked as each job starts, and
+   * a taker is given for a mission's job alone, so its end can end what was left (`missions/left-running.ts`). Wired
+   * second, as `setOnComplete` is: the missions are built with this store.
+   */
+  setLeftBy(taker: (job: { agentId: string; gatewayId: string; chatId: string }) => ((left: LeftRunning) => void) | undefined): void {
+    this.leftBy = taker;
+  }
+
+  private leftBy?: (job: { agentId: string; gatewayId: string; chatId: string }) => ((left: LeftRunning) => void) | undefined;
+
   private onComplete?: (completion: JobCompletion) => void;
 
   private get now(): number {
@@ -496,7 +507,8 @@ export class JobStore {
     const startedAt = this.now;
 
     const secrets = params.mask ? { ...this.options.secrets?.(params.agentId), ...params.mask } : this.options.secrets?.(params.agentId);
-    const handle = spawnJob(params, logPath, { secrets, policy: this.options.limits?.(), ...(params.filter ? { filter: params.filter } : {}) });
+    const onLeft = this.leftBy?.(params);
+    const handle = spawnJob(params, logPath, { secrets, policy: this.options.limits?.(), ...(params.filter ? { filter: params.filter } : {}), ...(onLeft ? { onLeft } : {}) });
     // The log can contain anything the command printed, including tokens it was given. Same reasoning
     // as the database and inbound attachments: the daemon's, and its agent's where that agent is its own user.
     setFileMode(logPath, agentReadableMode());

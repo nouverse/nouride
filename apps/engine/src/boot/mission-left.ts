@@ -4,7 +4,7 @@
  */
 
 import { signalGroup, stillLeft } from "@nouride/runtime";
-import { createLogger, type LeftRunning, type ToolContext } from "@nouride/shared";
+import { createLogger, type LeftRunning } from "@nouride/shared";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { leftEndedNotice, MissionLeft } from "@/modules/missions/left-running.ts";
 import { called } from "@/modules/missions/notices.ts";
@@ -17,7 +17,7 @@ export function missionLeft(deps: {
   asAgent: (agentId: string) => (argv: string[]) => Promise<unknown>;
   /** A word to the chat a mission reports to, kept as its notices are. */
   tell: (mission: Mission, text: string) => Promise<void>;
-}): { endLeft: (mission: Mission) => void; commandLeft: (ctx: ToolContext) => ((left: LeftRunning) => void) | undefined } {
+}): { endLeft: (mission: Mission) => void; commandLeft: (at: { gatewayId: string; chatId: string }) => ((left: LeftRunning) => void) | undefined } {
   const left = new MissionLeft({
     stillLeft,
     signal: signalGroup,
@@ -32,7 +32,7 @@ export function missionLeft(deps: {
         // Its chat is told what was ended, as any notice of the mission's: said, never done in silence.
         .then((ended) => (ended.length > 0 ? deps.tell(mission, leftEndedNotice(called(mission), ended)) : undefined))
         .catch((err: unknown) => log.warn("what a mission's commands left running could not be ended", { mission: mission.id, error: String(err) })),
-    // A taker for a mission's own turn alone: any other turn's commands are read for nothing.
-    commandLeft: (ctx) => (ctx.gatewayId === MISSION_GATEWAY_ID ? (seen) => left.note(ctx.chatId, seen) : undefined),
+    // A taker for a mission's own turn and its own jobs alone: nobody else's commands are read for it.
+    commandLeft: (at) => (at.gatewayId === MISSION_GATEWAY_ID ? (seen) => left.note(at.chatId, seen) : undefined),
   };
 }

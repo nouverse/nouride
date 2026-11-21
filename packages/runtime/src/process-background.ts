@@ -15,11 +15,12 @@
  */
 
 import { constants } from "node:os";
-import type { SandboxOptions } from "@nouride/shared";
+import type { LeftRunning, SandboxOptions } from "@nouride/shared";
 import { commandLine, withOomKills } from "./process.ts";
 import { trackCommand, untrackCommand } from "./process-agents.ts";
 import { commandsOomKills } from "./process-cgroup.ts";
-import { ownGroupSpawnOptions, signalTree } from "./process-group.ts";
+import { leadsOwnGroup, ownGroupSpawnOptions, signalTree } from "./process-group.ts";
+import { leftRunning } from "./process-left.ts";
 
 /**
  * How long a job is given to stop on SIGTERM before the group is killed outright.
@@ -63,6 +64,12 @@ export interface BackgroundOptions {
    * not when the log is read back. Without one, the bytes go to the file as they came.
    */
   filter?: () => TextFilter;
+  /**
+   * Told what the job left running in its own process group as it ended by itself (`process-left.ts`), as a
+   * foreground command's run is. A long command is made a job without being asked, a build above all, so what a
+   * build leaves behind is left here. Never called for a job that was stopped: its whole group was ended.
+   */
+  onLeft?: (left: LeftRunning) => void;
 }
 
 /** Text in, what may be written out — holding back what the next piece decides, released by `end`. */
@@ -103,6 +110,8 @@ export function startBackgroundCommand(
     stderr: "pipe",
   });
   trackCommand(proc.pid, line.pidFile);
+  /** Whether it was signalled from here: then its group was ended, and nothing of it is left to read. */
+  let stopped = false;
 
   // Interleaved into one file rather than two. The ordering a person expects from a terminal is the
   // ordering that makes a failure readable — stderr split into its own file loses which command it
@@ -124,11 +133,17 @@ export function startBackgroundCommand(
     await Promise.all([pump(proc.stdout), pump(proc.stderr)]);
     const exitCode = await proc.exited;
     await log.end();
+    // Read while its group can still be found, and only of a job that ended by itself.
+    if (opts.onLeft && !stopped) {
+      const left = leftRunning(proc.pid, leadsOwnGroup());
+      if (left) opts.onLeft(left);
+    }
     untrackCommand(proc.pid);
     return { exitCode, signal: signalName(proc.signalCode), ...withOomKills(oomBefore) };
   })();
 
   const stop = async (graceMs = STOP_GRACE_MS): Promise<void> => {
+    stopped = true;
     signalTree(proc, "SIGTERM");
     let timer: ReturnType<typeof setTimeout> | undefined;
     const graceOver = new Promise<"grace">((resolve) => {
@@ -144,7 +159,10 @@ export function startBackgroundCommand(
   return {
     pid: proc.pid,
     exited,
-    kill: (signal = "SIGTERM") => signalTree(proc, signal),
+    kill: (signal = "SIGTERM") => {
+      stopped = true;
+      signalTree(proc, signal);
+    },
     stop,
   };
 }

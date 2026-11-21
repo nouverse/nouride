@@ -14,6 +14,8 @@ import type { LeftRunning, ToolContext } from "@nouride/shared";
 import { groupMembers, runCommand, signalGroup, stillLeft } from "@nouride/runtime";
 import { GRACE_MS, GROUPS_KEPT, leftEndedNotice, MissionLeft, type LeftDeps } from "@/modules/missions/left-running.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
+import { openAndMigrate } from "@/db/index.ts";
+import { JobStore, type JobCompletion } from "@/modules/jobs/jobs.store.ts";
 import { createExecTool } from "@/modules/tools/builtins/exec.ts";
 import { missionLeft } from "@/boot/mission-left.ts";
 import { childEnvOf } from "../helpers.ts";
@@ -183,6 +185,35 @@ describe("the mission and the command", () => {
     }
   });
 
+  // A long command is made a job without being asked, a build above all: on the box's sandbox a hundred jobs of one
+  // mission each ended leaving a process, and the mission's end ended none of them.
+  test("a mission's job that ends by itself hands over what it left; another chat's job, and one that was stopped, hand over nothing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "nouride-left-jobs-"));
+    const db = await openAndMigrate(join(dir, "nouride.db"));
+    const completions: JobCompletion[] = [];
+    const jobs = new JobStore({ db, logDir: join(dir, "logs"), maxConcurrentPerAgent: 5, onComplete: (completion) => void completions.push(completion) });
+    const taken: { chat: string; left: LeftRunning }[] = [];
+    jobs.setLeftBy((job) => (job.gatewayId === MISSION_GATEWAY_ID ? (left) => void taken.push({ chat: job.chatId, left }) : undefined));
+    const start = (gatewayId: string, chatId: string, script: string) => jobs.start({ agentId: "nova", gatewayId, chatId, argv: ["sh", "-c", script], sandbox: { cwd: dir, env: { PATH: process.env.PATH ?? "" } } });
+    try {
+      start(MISSION_GATEWAY_ID, "msn_a", "sleep 55 > /dev/null 2>&1 & echo built");
+      await eventually(() => completions.length === 1, 8_000, "the mission's job over");
+      expect(taken.map((one) => `${one.chat} ${one.left.members.map((member) => member.name).join()}`)).toEqual(["msn_a sleep"]);
+      groups.push(taken[0]!.left.group);
+      const other = start("telegram:main", "814", "sleep 56 > /dev/null 2>&1 & echo $!");
+      await eventually(() => completions.length === 2, 8_000, "another chat's job over");
+      strays.push(Number(readFileSync(other.logPath, "utf8").match(/\d+/)?.[0]));
+      // Stopped while it runs: its whole group is ended, and there is nothing of it to hand over.
+      const running = start(MISSION_GATEWAY_ID, "msn_a", "sleep 57 > /dev/null 2>&1 & sleep 58");
+      jobs.kill(running.id, "the test");
+      await eventually(() => completions.length === 3, 12_000, "the stopped job over");
+      expect(taken).toHaveLength(1);
+    } finally {
+      db.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   // The daemon's own wiring (`boot/mission-left.ts`), with a real process: noted from a mission's turn alone, ended at
   // the mission's end, and its chat told.
   test("the daemon notes what a mission's own turn left, ends it as the mission ends, and tells its chat", async () => {
@@ -205,6 +236,8 @@ describe("the mission and the command", () => {
     const machine = readFileSync(join(import.meta.dir, "../../src/boot/turn-machine.ts"), "utf8");
     // Both builders of `exec`: every agent's shared one, and a pack's own with its blocked patterns.
     expect(machine.match(/commandLeft: missions\.commandLeft,/g)).toHaveLength(2);
+    // And the jobs: a long command is made one without being asked.
+    expect(machine).toContain("wireJobs({ jobs, registry, config: () => ctx.config, pipeline, commandLeft: missions.commandLeft })");
     expect(told).toHaveLength(1);
   }, 15_000);
 });

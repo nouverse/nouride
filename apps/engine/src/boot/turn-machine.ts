@@ -365,7 +365,7 @@ export async function buildTurnMachine(
 
   // The job store and the pipeline, joined now that both exist: completions, and the watchdog for the
   // ones still running. The jobs the previous daemon left behind wait for the inbox. See `boot/jobs.ts`.
-  ctx.backgroundTimers.push(wireJobs({ jobs, registry, config: () => ctx.config, pipeline }));
+  ctx.backgroundTimers.push(wireJobs({ jobs, registry, config: () => ctx.config, pipeline, commandLeft: missions.commandLeft }));
   // What an external agent's CLI says by itself, between turns, wakes its chat as a job's end does.
   externalAgents.onOwnWords = (chat) => pipeline.wakeForOwnWords(chat);
   // What a mission's CLI turn has spent, as the CLI says it: its limits read then, not only at the minute's check.

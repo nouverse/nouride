@@ -1,8 +1,8 @@
 /**
  * What a mission's commands left running, kept while the mission is open and ended when it ends.
  *
- * A mission's background jobs end with it (`Missions.end`). What one of its commands started and did not wait for was
- * nobody's: on a live box three build workers of a mission that had ended done ran on for eighteen hours, each at a
+ * A mission's background jobs end with it (`Missions.end`), the ones still running. What one of its commands, or a
+ * job of its own that had ended, started and did not wait for was nobody's: on a live box three build workers of a mission that had ended done ran on for eighteen hours, each at a
  * whole core, with no job on record. A command that ends with something still in its own process group is noted here
  * (`@nouride/runtime` `leftRunning`), and at the mission's end what is provably still that group is ended: asked
  * first, then made to. A program that set itself apart, a process manager or a daemon in a session of its own, is in
@@ -16,8 +16,11 @@ import { createLogger, type LeftProcess, type LeftRunning } from "@nouride/share
 
 const log = createLogger("missions.left");
 
-/** Groups kept for one mission at most: past it the oldest goes, with a line in the log. */
-export const GROUPS_KEPT = 64;
+/**
+ * Groups kept for one mission at most: past it the oldest goes, with a line in the log. A mission whose every command
+ * leaves something is a hundred groups in an hour (seen on the box's sandbox), so the bound is well past that.
+ */
+export const GROUPS_KEPT = 512;
 /** How long what was asked to end is given before it is made to. */
 export const GRACE_MS = 3_000;
 
