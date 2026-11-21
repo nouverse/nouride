@@ -54,6 +54,21 @@ export interface Tuning {
    * in a week. Six hours is a choice: the rest of a sitting.
    */
   refusedRestMs: number;
+  /**
+   * How many times the work a chat must do before the next look may double, after looks there that gave nothing.
+   *
+   * A look that ends in "nothing to write down" says the next one in the same chat is likelier to end the same way:
+   * on a live box six in ten did. So one doubles the rounds of work asked before the next, and a draft kept, or the
+   * chat put down for `breakMs`, sets it back.
+   *
+   * Once, and the number is measured. Replayed over that box's fifteen days (1,397 turns in 88 chats, the 19 drafts
+   * that came of a chat): doubling once makes 261 looks where 383 were made, and of those drafts 5 come minutes later
+   * and 3 a day later. Doubling twice makes 210 and puts 5 off by a day: thirteen points fewer looks for two more
+   * lessons a day late, which is the strictness this module keeps losing to.
+   */
+  maxDoublings: number;
+  /** A chat left alone this long starts again at `reflectAfter`: the work after a break is not the work before it. */
+  breakMs: number;
 }
 
 export const TUNING: Tuning = {
@@ -64,4 +79,6 @@ export const TUNING: Tuning = {
   cooldownMs: 60_000,
   maxPending: 20,
   refusedRestMs: 6 * 3_600_000,
+  maxDoublings: 1,
+  breakMs: 6 * 3_600_000,
 };

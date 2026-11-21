@@ -53,6 +53,8 @@ interface CatalogEntry {
     notForCli?: string[];
   }[];
   lastUsedAt: number | null;
+  reads: number;
+  readsSinceChange: number;
 }
 
 export function registerSkillRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -541,5 +543,7 @@ async function catalog(deps: ControlDeps, agents: LoadedAgent[]): Promise<Catalo
       decided: skill.name in agent.config.skills,
     })),
     lastUsedAt: usage.get(skill.path)?.readAt ?? null,
+    reads: usage.get(skill.path)?.reads ?? 0,
+    readsSinceChange: usage.get(skill.path)?.readsSinceChange ?? 0,
   }));
 }

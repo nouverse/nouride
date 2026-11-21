@@ -17,7 +17,7 @@
  * accident of position.
  */
 
-import type { LearningSettings, SkillDraft } from "@nouride/wire";
+import type { LearningEvent, LearningSeen, LearningSettings, SkillDraft } from "@nouride/wire";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { SkillDraft as StoredDraft } from "@/modules/reflection/types.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
@@ -32,6 +32,19 @@ const LEARNING_FIELDS: Record<LearningField, string> = {
   model: "the model for the pass",
   notifyChat: "whether new drafts are announced",
 };
+
+/** The audit rows that say what learning did, and what each is to a person (`LearningEvent.kind`). */
+const LEARNING_ACTIONS = {
+  skill_pass_nothing: "nothing",
+  skill_candidate_held: "held",
+  skill_draft_refused: "refused",
+  skill_draft_created: "drafted",
+  skill_draft_approved: "written",
+  skill_draft_updated: "improved",
+} as const satisfies Record<string, LearningEvent["kind"]>;
+
+/** How many of them the page is given: what happened lately, not a history. */
+const LEARNING_RECENT = 12;
 
 /** The draft as a client sees it. Same fields, minus nothing — there is nothing secret in a draft. */
 function toJson(draft: StoredDraft): SkillDraft {
@@ -102,6 +115,89 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
       /** Pending right now, so the form can say what the current setting has actually produced. */
       pending: deps.reflection?.pending().length ?? 0,
     } satisfies LearningSettings);
+  });
+
+  /**
+   * What learning holds and what it did lately: the answer to "why was nothing learned".
+   *
+   * Until this, a pass that looked and wrote nothing left one line in the log, and a kind of work held until it came
+   * back was a row nobody could see. On a live box 44 of 45 new kinds of work were held over fifteen days, and what the
+   * page showed for it was an empty queue.
+   *
+   * A draft that was approved is one event, not two: its "drafted" row is left out once the same draft was written.
+   */
+  control.get("/skills/learning/seen", (c) => {
+    const rows = deps.audit.ofActions(Object.keys(LEARNING_ACTIONS) as (keyof typeof LEARNING_ACTIONS)[], LEARNING_RECENT * 4);
+    const decided = new Set(rows.filter((row) => row.action !== "skill_draft_created").map((row) => row.details?.draft).filter(Boolean));
+    const text = (value: unknown): string => (typeof value === "string" ? value : "");
+    const recent = rows
+      .filter((row) => !(row.action === "skill_draft_created" && decided.has(row.details?.draft)))
+      .slice(0, LEARNING_RECENT)
+      .map((row) => ({
+        at: row.timestamp,
+        agentId: row.agentId ?? null,
+        kind: LEARNING_ACTIONS[row.action],
+        skill: text(row.details?.skill) || null,
+        why: text(row.details?.why) || text(row.details?.reason) || text(row.details?.description),
+      }));
+    const seen = (deps.reflection?.candidates() ?? []).map((held) => ({
+      name: held.name,
+      description: held.description,
+      why: held.why,
+      agentId: held.agentId,
+      firstSeenAt: held.firstSeenAt,
+      lastSeenAt: held.lastSeenAt,
+      sightings: held.sightings,
+      canWrite: held.kept,
+    }));
+    return c.json({ seen, recent } satisfies LearningSeen);
+  });
+
+  /**
+   * Write a held kind of work as a skill now, without waiting for it to come back. Operator: it costs the agent's
+   * model a call and puts a draft in the queue, as the pass itself does. Long: the writing call is a model's.
+   */
+  control.post("/skills/learning/seen/:name/write", async (c) => {
+    if (!deps.reflection) return c.json({ error: "self-improvement is not wired" }, 501);
+    const principal = c.get("principal");
+    if (!atLeast(principal, "operator")) return c.json({ error: "operator only" }, 403);
+    c.env?.keepOpen?.(LONG_REQUEST_SECONDS);
+    const outcome = await deps.reflection.writeCandidate(c.req.param("name"), principal.actor);
+    if (!outcome.ok) {
+      // The agent's or the daemon's own reason is the error, read under Details; what happened is said here.
+      const plain =
+        outcome.why === "not_held"
+          ? "That kind of work is not held any more."
+          : outcome.why === "gone"
+            ? "The conversation it was seen in is gone, so there is nothing to write it from. It is written when the work comes back."
+            : "The agent looked at that conversation again and no skill was kept from it.";
+      return c.json({ error: outcome.error, plain }, outcome.why === "not_held" ? 404 : 409);
+    }
+    return c.json({ ok: true, draft: toJson(outcome.draft) } satisfies { ok: true; draft: SkillDraft });
+  });
+
+  /** Not a skill: the held kind of work is forgotten. Seen again, it is held again. */
+  control.delete("/skills/learning/seen/:name", (c) => {
+    if (!deps.reflection) return c.json({ error: "self-improvement is not wired" }, 501);
+    const principal = c.get("principal");
+    if (!atLeast(principal, "operator")) return c.json({ error: "operator only" }, 403);
+    if (!deps.reflection.forgetCandidate(c.req.param("name"), principal.actor)) return c.json({ error: "no such kind of work is held" }, 404);
+    return c.json({ ok: true } satisfies { ok: true });
+  });
+
+  /**
+   * What learning would do with a conversation, with nothing kept: for measuring a change to the pass on recorded
+   * conversations (`ReflectionEngine.tryOut`). Admin: it spends the agent's model on text the caller supplies.
+   */
+  control.post("/skills/learning/try", async (c) => {
+    if (!deps.reflection) return c.json({ error: "self-improvement is not wired" }, 501);
+    if (!atLeast(c.get("principal"), "admin")) return c.json({ error: "admin only" }, 403);
+    const body = (await jsonBody(c)) ?? {};
+    const said = (key: string): string => (typeof body[key] === "string" ? body[key] : "");
+    if (!said("agent") || !said("transcript").trim()) return c.json({ error: "agent and transcript are required" }, 400);
+    c.env?.keepOpen?.(LONG_REQUEST_SECONDS);
+    const out = await deps.reflection.tryOut({ agentId: said("agent"), transcript: said("transcript"), reason: said("reason"), model: said("model"), triageModel: said("triageModel"), decideOnly: body.decideOnly === true });
+    return "error" in out ? c.json(out, 400) : c.json(out);
   });
 
   /**

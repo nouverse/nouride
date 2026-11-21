@@ -13,13 +13,13 @@
  * different agent on a different task.
  */
 
-import { createLogger, cutAtWord, keepEnds, messageText, type ChatMessage, type LLMProvider, oneLine, type ToolDefinition } from "@nouride/shared";
+import { createLogger, cutAtWord, type ChatMessage, type LLMProvider, oneLine, type ToolDefinition } from "@nouride/shared";
 import { extractJson } from "@/modules/llm/json-answer.ts";
 import { outputCap } from "@/modules/llm/output-cap.ts";
 import { parseFrontmatter, skillBodyIsEnglish, VALID_SKILL_NAME } from "@nouride/persona";
 import { BODY_CHARS } from "./draft-lint.ts";
-import { AUTHOR_INSTRUCTION, REVISE_INSTRUCTION, TRIAGE_INSTRUCTION, renderCandidates, renderSkillList } from "./prompts.ts";
-import { redact } from "@nouride/secrets";
+import { patched, readEdits } from "./patch.ts";
+import { AUTHOR_INSTRUCTION, REVISE_INSTRUCTION, REWRITE_INSTRUCTION, TRIAGE_INSTRUCTION, renderCandidates, renderInPlay, renderSkillList } from "./prompts.ts";
 import type { SkillFile, Trigger } from "./types.ts";
 
 const log = createLogger("reflection.synthesis");
@@ -35,36 +35,6 @@ const TRIAGE_OUTPUT_TOKENS = 1400;
 const skillOutputTokens = (model: string): number => outputCap(0, model, SKILL_OUTPUT_CEILING);
 /** The most one skill answer may cost, whatever the model allows. */
 const SKILL_OUTPUT_CEILING = 32_000;
-
-/**
- * Characters of transcript the pass reads.
- *
- * Raised from 24,000, which was too small for the trigger that fires most often. Watched live: a
- * 22-turn session scaffolding a video project ran 35,680 characters of prompts and replies **before
- * counting a single tool result**, and one of its turns made 25 tool calls. `sustained_effort` fires
- * *because* the conversation was long, and then showed triage only its last third — so the eight
- * turns where the work was decided and the failures happened were invisible, and the pass declined
- * eight times describing the tail as routine.
- *
- * One triage call at this size is roughly 15k tokens, against agent turns on the same box measured
- * at 53k-110k input. The pass reading less than the agent did is the wrong economy.
- */
-const MAX_TRANSCRIPT_CHARS = 60_000;
-
-/** One recent tool result, before the transcript is budgeted. A 200KB log teaches nothing extra. */
-const MAX_MESSAGE_CHARS = 2_000;
-
-/**
- * The floor for an older message, so the whole arc survives instead of its last fifth.
- *
- * The head used to be dropped outright, and that is the wrong half to lose: "this failed, then this
- * failed, then *this* worked" is the shape of a lesson. Cutting the head leaves only the part where
- * everything already works, which reads as routine and gets skipped.
- */
-const MIN_MESSAGE_CHARS = 320;
-
-/** Messages kept at full width. Older ones are compressed rather than dropped. */
-const FULL_WIDTH_MESSAGES = 24;
 
 export interface SynthesisResult {
   name: string;
@@ -137,6 +107,19 @@ export interface SynthesisInput {
   /** Whether a skill is being left alone, its last draft refused a moment ago: no revision of it is paid for. */
   resting?: (skill: string) => boolean;
   /**
+   * The model that decides (triage), where it is not the one that writes: a replay's, to measure what another model
+   * would decide (`try-out.ts`). A pass decides on `model`: see `ReflectionEngine.pass` for the measurement.
+   */
+  triageModel?: string;
+  /** The skills this conversation read, by name: the ones in play, which a lesson about their ground goes to first. */
+  inPlay?: readonly string[];
+  /** Told when the pass ends with nothing and can say why: what a person is shown when they ask why nothing was learned. */
+  nothing?: (why: string) => void;
+  /** Told what triage decided, before anything is written: what a replay of a conversation reports (`ReflectionEngine.tryOut`). */
+  triaged?: (triage: Triage) => void;
+  /** Stop once triage has decided: a replay that compares what two models decide pays for no writing. */
+  decideOnly?: boolean;
+  /**
    * Reads a skill's current body, for the second call.
    *
    * Injected rather than done here so this module still needs nothing but a provider — the pass is
@@ -178,6 +161,7 @@ export async function synthesizeSkill(input: SynthesisInput): Promise<SynthesisR
   const context = [
     `Why this turn was flagged: ${input.trigger.reason}.`,
     renderSkillList(input.existing),
+    ...(input.inPlay?.length ? ["", renderInPlay(input.inPlay)] : []),
     ...(input.candidates?.length ? ["", renderCandidates(input.candidates)] : []),
     "",
     "Transcript:",
@@ -187,9 +171,12 @@ export async function synthesizeSkill(input: SynthesisInput): Promise<SynthesisR
   const triaged = parseTriage(
     await askWithFiles(input, TRIAGE_INSTRUCTION, context, [
       { tool: READ_SKILL_TOOL, read: (name) => input.readSkill(name) },
-    ], TRIAGE_OUTPUT_TOKENS),
+    ], TRIAGE_OUTPUT_TOKENS, input.triageModel),
+    input.nothing,
   );
   if (!triaged) return null;
+  input.triaged?.(triaged);
+  if (input.decideOnly) return null;
 
   if (triaged.decision === "create") {
     if (input.gate && !input.gate(triaged)) return null;
@@ -206,15 +193,17 @@ export async function synthesizeSkill(input: SynthesisInput): Promise<SynthesisR
       decision: triaged.decision,
       why: triaged.why,
     });
+    input.nothing?.(owner === "nouride" ? `the lesson belongs to ${triaged.target}, which ships with Nouride and is not changed` : `the lesson belongs to ${triaged.target}, which a person wrote and is not changed`);
     return null;
   }
   if (input.resting?.(triaged.target)) {
     log.info("reflection left a skill alone: its last draft was refused a moment ago", { skill: triaged.target });
+    input.nothing?.(`${triaged.target} is left alone for a while: its last draft was refused`);
     return null;
   }
   // `attach` is a revision asked to land in a file rather than in the body — same call, same output
   // shape, one extra sentence of steer. A third prompt for it would be a third thing to keep in step.
-  return await revise(input, triaged.target, triaged.why, triaged.decision === "attach");
+  return await revise(input, triaged.target, triaged.why, triaged.decision === "attach" ? "attach" : "edit");
 }
 
 export type Triage =
@@ -238,7 +227,7 @@ export type Triage =
  * a provider: a model that answers `create` while naming a target, or names a target that is not a
  * valid skill name, must end as nothing rather than as a draft pointed at a file that does not exist.
  */
-export function parseTriage(text: string | null): Triage | null {
+export function parseTriage(text: string | null, nothing?: (why: string) => void): Triage | null {
   if (text === null) return null;
   const parsed = extractJson(text);
   if (!parsed) {
@@ -250,7 +239,9 @@ export function parseTriage(text: string | null): Triage | null {
   const why = typeof parsed.why === "string" ? cutAtWord(oneLine(parsed.why), 200) : "";
 
   if (decision === "skip") {
-    log.info("reflection pass declined", { reason: String(parsed.reason ?? "no reason given") });
+    const reason = cutAtWord(oneLine(String(parsed.reason ?? "no reason given")), 240);
+    log.info("reflection pass declined", { reason });
+    nothing?.(reason);
     return null;
   }
 
@@ -285,11 +276,8 @@ export function parseTriage(text: string | null): Triage | null {
   return null;
 }
 
-/** One answer of a writing call, with the draft read from it. */
-interface Written {
-  answer: string;
-  draft: SynthesisResult;
-}
+/** One answer of a writing call, with the draft read from it, or why no draft could be made of it. */
+type Written = { answer: string; draft: SynthesisResult } | { answer: string; unplaced: string };
 
 /**
  * A draft the daemon refuses goes back to its writer once, with the reason.
@@ -306,11 +294,16 @@ interface Written {
 async function handedBackOnce(input: SynthesisInput, write: (note?: string) => Promise<Written | null>): Promise<SynthesisResult | null> {
   const first = await write();
   if (!first) return null;
-  const reason = (await input.refusal?.(first.draft)) ?? null;
-  if (reason === null) return first.draft;
-  log.info("reflection draft refused, handed back to be put right", { skill: first.draft.name, reason });
+  // An edit that could not be placed is a refusal with no draft behind it: the same hand-back, and nothing if it fails.
+  const reason = "unplaced" in first ? first.unplaced : ((await input.refusal?.(first.draft)) ?? null);
+  if (reason === null) return "draft" in first ? first.draft : null;
+  log.info("reflection draft refused, handed back to be put right", { ...("draft" in first ? { skill: first.draft.name } : {}), reason });
   const second = await write(refusedNote(first.answer, reason));
-  return second?.draft ?? first.draft;
+  if (second && "draft" in second) return second.draft;
+  if ("draft" in first) return first.draft;
+  log.info("reflection revision could not be placed, so nothing was drafted", { reason: second && "unplaced" in second ? second.unplaced : reason });
+  input.nothing?.(`its change could not be placed in the skill (${reason})`);
+  return null;
 }
 
 /** What the writer is told with its refused answer. The words carry the rule: one thing fixed, the rest kept. */
@@ -328,8 +321,18 @@ export const refusedNote = (answer: string, reason: string): string =>
     "",
     "Answer again in the same JSON shape, with that put right and everything else kept. A fact about this",
     "environment becomes a placeholder (`<host>`, `<account>`) or is left out. A body past its size keeps its",
-    "procedure and gives its detail to a file under `references/`, with a one-line pointer in the body.",
+    "procedure and gives its detail to a file under `references/`, with a one-line pointer in the body. An",
+    "edit whose `old` was not found is copied again from the skill, exactly as it is written there.",
   ].join("\n");
+
+/**
+ * Write the skill for a class of work already named, with no triage before it: a candidate a person asked to have
+ * written now (`candidates.store.ts`). `input.transcript` is the conversation it was last seen in.
+ */
+export async function authorSkill(input: SynthesisInput, named: { name: string; description: string; why: string }): Promise<SynthesisResult | null> {
+  const context = [renderSkillList(input.existing), "", "Transcript:", input.transcript, "", `This class of work was named \`${named.name}\`: ${named.description} Keep that name unless it is wrong.`].join("\n");
+  return await author(input, context, named.why);
+}
 
 /** Second call, create branch. */
 async function author(input: SynthesisInput, context: string, why: string): Promise<SynthesisResult | null> {
@@ -398,8 +401,11 @@ async function revise(
   input: SynthesisInput,
   target: string,
   why: string,
-  /** Triage judged the lesson bulky: it belongs beside the skill rather than inside it. */
-  preferSupportFile = false,
+  /**
+   * `edit`: the lesson as edits to the body (`patch.ts`). `attach`: triage judged it bulky, so it belongs beside the
+   * skill rather than inside it. `rewrite`: the weekly review's, which exists to shorten the whole and returns it whole.
+   */
+  how: "edit" | "attach" | "rewrite" = "edit",
 ): Promise<SynthesisResult | null> {
   const current = await input.readSkill(target);
   if (current === null) {
@@ -407,7 +413,8 @@ async function revise(
     return null;
   }
 
-  const bodyChars = (current.startsWith("---") ? parseFrontmatter(current).body : current).trim().length;
+  const currentBody = (current.startsWith("---") ? parseFrontmatter(current).body : current).trim();
+  const bodyChars = currentBody.length;
   const chars = (n: number) => n.toLocaleString("en-US");
   const content = [
     `Skill: ${target}`,
@@ -425,7 +432,7 @@ async function revise(
         "mean to rewrite that one, and prefer extending one of these over starting a third.",
       ];
     })()),
-    ...(preferSupportFile
+    ...(how === "attach"
       ? [
           "",
           "This lesson was judged bulky: put it in a support file under `references/`, `scripts/`",
@@ -443,22 +450,27 @@ async function revise(
   const readers = [{ tool: READ_FILE_TOOL, read: async (path: string) => (path === "SKILL.md" ? current : ((await input.readSkillFile?.(target, path)) ?? null)) }];
 
   return await handedBackOnce(input, async (note = "") => {
-    const answer = await askWithFiles(input, REVISE_INSTRUCTION, content + note, readers, skillOutputTokens(input.model));
+    const answer = await askWithFiles(input, how === "rewrite" ? REWRITE_INSTRUCTION : REVISE_INSTRUCTION, content + note, readers, skillOutputTokens(input.model));
     if (answer === null) return null;
-    const draft = revised(answer, target, why);
-    return draft ? { answer, draft } : null;
+    const draft = revised(answer, target, why, currentBody);
+    return draft === null ? null : "unplaced" in draft ? { answer, unplaced: draft.unplaced } : { answer, draft };
   });
 }
 
 /** The revision a reviser's answer holds, or nothing. */
-function revised(answer: string, target: string, why: string): SynthesisResult | null {
+function revised(answer: string, target: string, why: string, current: string): SynthesisResult | { unplaced: string } | null {
   const parsed = extractJson(answer);
   if (!parsed) {
     log.warn("reflection revision did not answer with JSON", { skill: target, head: answer.slice(0, 120) });
     return null;
   }
 
-  const body = typeof parsed.body === "string" ? parsed.body.trim() : "";
+  // Edits where it gave them; a whole body where it gave that (the weekly review's rewrite, or a model that wrote the
+  // skill again whatever it was asked); the body as it stands where all it added is a file beside it.
+  const edits = readEdits(parsed.edits);
+  const made = edits.length > 0 ? patched(current, edits) : null;
+  if (made && "failed" in made) return { unplaced: made.failed };
+  const body = made ? made.body : typeof parsed.body === "string" && parsed.body.trim() ? parsed.body.trim() : readFiles(parsed.files).length > 0 ? current : "";
   if (!body) {
     log.warn("reflection revision came back with no body", { skill: target });
     return null;
@@ -482,7 +494,7 @@ function revised(answer: string, target: string, why: string): SynthesisResult |
 
 /** A revision asked for by the weekly review rather than a conversation: `input.transcript` holds its reason. */
 export async function reviseSkill(input: SynthesisInput, target: string, why: string): Promise<SynthesisResult | null> {
-  return await revise(input, target, why);
+  return await revise(input, target, why, "rewrite");
 }
 
 /**
@@ -598,6 +610,8 @@ async function askWithFiles(
    */
   readers: { tool: ToolDefinition; read: (arg: string) => Promise<string | null> }[],
   maxTokens: number,
+  /** The model this call runs on, where it is not the writer's (`SynthesisInput.triageModel`). */
+  model = input.model,
 ): Promise<string | null> {
   const messages: ChatMessage[] = [
     { role: "system", content: instruction, timestamp: Date.now() },
@@ -608,7 +622,7 @@ async function askWithFiles(
     let response;
     try {
       response = await input.provider.chat({
-        model: input.model,
+        model,
         maxTokens,
         temperature: 0,
         messages,
@@ -624,7 +638,7 @@ async function askWithFiles(
     const calls = response.toolCalls ?? [];
     if (response.cutAtLimit) {
       // Said for what it is: an answer cut at the output limit is not one that "did not answer with JSON".
-      log.warn("reflection answer was cut at the output limit: no draft from this turn", { model: input.model, limit: maxTokens });
+      log.warn("reflection answer was cut at the output limit: no draft from this turn", { model, limit: maxTokens });
       return null;
     }
     if (calls.length === 0) return response.text;
@@ -663,73 +677,3 @@ async function askWithFiles(
   log.warn("reflection spent every round reading and never answered", { rounds: MAX_READ_ROUNDS });
   return null;
 }
-
-
-/**
- * The turn, flattened into something a model can read — and scrubbed on the way out.
- *
- * Redaction happens here rather than at the call site so there is exactly one path from a turn to a
- * transcript, and it is not possible to build one that skips it. The same string is what gets stored
- * on the draft, so what the reviewer inspects is what the model was shown.
- *
- * Long tool results are cut in the middle rather than at the end: an error message is usually at the
- * top of a failing command's output and the recovery at the bottom, and keeping only the head loses
- * the half the reflection is about.
- *
- * The conversation is budgeted so the whole of it is visible.
- *
- * Recent messages keep their full width; older ones are compressed to fit, and dropped only when
- * even the floor will not. That ordering is the point: the tail holds the method that finally
- * worked, the head holds the failures that make it worth writing down, and losing either leaves the
- * pass reading a different conversation from the one that happened.
- *
- * No attempt is made to *find* the failures and keep those. That needs a guess about what a failure
- * looks like in free text, and a wrong guess quietly changes what the pass sees — the trap a
- * language check for skills already fell into once. Compressing evenly needs no such guess.
- */
-export function buildTranscript(messages: ChatMessage[]): { text: string; redactions: string[] } {
-  const label = (message: ChatMessage) => (message.role === "tool" ? "tool result" : message.role);
-  /** The blank line between entries, plus the label and its colon. */
-  const overhead = (message: ChatMessage) => label(message).length + 4;
-
-  const recentFrom = Math.max(0, messages.length - FULL_WIDTH_MESSAGES);
-  const recent = messages.slice(recentFrom);
-  const older = messages.slice(0, recentFrom);
-
-  const spend = (list: ChatMessage[], width: number) =>
-    list.reduce((total, m) => total + Math.min(m.content.length, width) + overhead(m), 0);
-
-  /**
-   * What the older half may spend, once the recent half has taken what it needs.
-   *
-   * The recent half is never squeezed to make room for the older one: a lesson is written from the
-   * method that worked, and that is at the end.
-   */
-  const budget = MAX_TRANSCRIPT_CHARS - spend(recent, MAX_MESSAGE_CHARS);
-  let kept = older;
-  let width = MAX_MESSAGE_CHARS;
-
-  if (budget <= 0) {
-    kept = [];
-  } else {
-    // Widest that fits, down to the floor. Halved rather than solved for: the content lengths are
-    // arbitrary, so this converges in a few steps and needs no arithmetic anybody has to trust.
-    while (width > MIN_MESSAGE_CHARS && spend(kept, width) > budget) width = Math.floor(width / 2);
-    width = Math.max(width, MIN_MESSAGE_CHARS);
-    // Still over at the floor: drop from the oldest end, the only end that can go.
-    while (kept.length > 0 && spend(kept, width) > budget) kept = kept.slice(1);
-  }
-
-  const dropped = older.length - kept.length;
-  const lines = [
-    ...(dropped > 0 ? [`[${dropped} earlier message(s) dropped for length]`] : []),
-    ...kept.map((m) => `${label(m)}: ${keepEnds(messageText(m.content), width, CUT)}`),
-    ...recent.map((m) => `${label(m)}: ${keepEnds(messageText(m.content), MAX_MESSAGE_CHARS, CUT)}`),
-  ];
-
-  const scrubbed = redact(lines.join("\n\n"));
-  return { text: scrubbed.text, redactions: scrubbed.hits };
-}
-
-/** The line where a message's middle was cut. */
-const CUT = (left: number) => `…[${left} characters cut]…`;

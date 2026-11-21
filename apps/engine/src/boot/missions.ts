@@ -218,6 +218,8 @@ export function buildMissions(params: {
   linkFor?: LinkFor;
   /** Where a mission started on a person's words is recorded, with the words (0.8.11, `now` and `work` start). */
   audit?: Pick<AuditPort, "record">;
+  /** Where a mission that ended done is looked at for a skill (`ReflectionEngine.observeMission`), with its own conversation's id. */
+  learn?: (mission: Mission, sessionId: string) => void;
 }) {
   const store = new MissionStore(params.db);
   /** What *Approve similar from this mission* allowed, per open mission (0.8.7, `missions/similar.ts`). */
@@ -357,6 +359,7 @@ export function buildMissions(params: {
     },
     // One another agent started: kept as it ends, so the agent that ran it and the one that started it are told of it.
     helped: (mission) => keepDone(new WorkDoneStore(params.db), missionDone(mission)),
+    learn: (mission) => params.learn?.(mission, sessionIdFor({ agentId: mission.agentId, gatewayId: MISSION_GATEWAY_ID, chatId: mission.id })),
     remember: async (mission) => {
       if (!params.memory) return;
       const person = personFor(params.config().people, mission.gatewayId, mission.startedBy)?.key ?? `${mission.gatewayId}:${mission.startedBy}`;

@@ -37,6 +37,8 @@ export interface SkillCandidate {
   sessionId: string;
   firstSeenAt: number;
   lastSeenAt: number;
+  /** How many passes named it, the first included. */
+  sightings: number;
 }
 
 interface Row {
@@ -47,6 +49,7 @@ interface Row {
   session_id: string;
   first_seen_at: number;
   last_seen_at: number;
+  sightings: number;
 }
 
 const fromRow = (row: Row): SkillCandidate => ({
@@ -57,6 +60,7 @@ const fromRow = (row: Row): SkillCandidate => ({
   sessionId: row.session_id,
   firstSeenAt: row.first_seen_at,
   lastSeenAt: row.last_seen_at,
+  sightings: row.sightings,
 });
 
 export class CandidateStore {
@@ -90,9 +94,15 @@ export class CandidateStore {
       .prepare(
         `INSERT INTO skill_candidates (name, description, why, agent_id, session_id, first_seen_at, last_seen_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (name) DO UPDATE SET description = excluded.description, why = excluded.why, last_seen_at = excluded.last_seen_at`,
+         ON CONFLICT (name) DO UPDATE SET description = excluded.description, why = excluded.why, last_seen_at = excluded.last_seen_at,
+           sightings = skill_candidates.sightings + 1`,
       )
       .run(candidate.name, candidate.description, candidate.why, candidate.agentId, candidate.sessionId, at, at);
+  }
+
+  /** One candidate still held, by name. */
+  get(name: string): SkillCandidate | null {
+    return this.list().find((candidate) => candidate.name === name) ?? null;
   }
 
   /** Done with: its skill is being written. */

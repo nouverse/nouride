@@ -42,7 +42,7 @@ describe("when a skill was last read", () => {
     h.audit.flush();
     h.clock.now = NOW + 20 * DAY;
     expect(h.audit.sweep(14)).toBe(1);
-    expect(h.audit.skillReads([SKILL]).get(SKILL)).toEqual({ readAt: NOW, since: NOW });
+    expect(h.audit.skillReads([SKILL]).get(SKILL)).toEqual({ readAt: NOW, since: NOW, reads: 1, readsSinceChange: 1 });
   });
 
   test("the newest read wins, and a read seconds ago is not missed in the buffer", () => {
@@ -62,16 +62,29 @@ describe("when a skill was last read", () => {
     row.run("aud_2", NOW - 3 * DAY, JSON.stringify({ args: { path: SKILL } }));
     const reads = h.audit.skillReads([SKILL, OTHER]);
     expect(reads.get(SKILL)?.readAt).toBe(NOW - 3 * DAY);
-    expect(reads.get(OTHER)).toEqual({ readAt: null, since: NOW - 14 * DAY });
+    expect(reads.get(OTHER)).toEqual({ readAt: null, since: NOW - 14 * DAY, reads: 0, readsSinceChange: 0 });
     // Kept: asked again after the audit rows are gone, the watch has not restarted.
     h.clock.now = NOW + 30 * DAY;
     h.audit.sweep(14);
-    expect(h.audit.skillReads([OTHER]).get(OTHER)).toEqual({ readAt: null, since: NOW - 14 * DAY });
+    expect(h.audit.skillReads([OTHER]).get(OTHER)).toEqual({ readAt: null, since: NOW - 14 * DAY, reads: 0, readsSinceChange: 0 });
+  });
+
+  test("reads are counted, and counted again from the skill's last change", () => {
+    const h = harness();
+    for (let read = 0; read < 3; read += 1) {
+      h.read(SKILL);
+      h.audit.flush();
+    }
+    expect(h.audit.skillReads([SKILL]).get(SKILL)).toMatchObject({ reads: 3, readsSinceChange: 3 });
+    h.audit.skillChanged(SKILL);
+    expect(h.audit.skillReads([SKILL]).get(SKILL)).toMatchObject({ reads: 3, readsSinceChange: 0 });
+    h.read(SKILL);
+    expect(h.audit.skillReads([SKILL]).get(SKILL)).toMatchObject({ reads: 4, readsSinceChange: 1 });
   });
 
   test("an audit log with nothing in it starts the watch now", () => {
     const h = harness();
-    expect(h.audit.skillReads([OTHER]).get(OTHER)).toEqual({ readAt: null, since: NOW });
+    expect(h.audit.skillReads([OTHER]).get(OTHER)).toEqual({ readAt: null, since: NOW, reads: 0, readsSinceChange: 0 });
   });
 
   test("only a tool call reads a skill — an approval naming the path does not", () => {

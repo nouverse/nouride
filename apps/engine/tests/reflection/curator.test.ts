@@ -44,12 +44,13 @@ async function library(options: { merge?: unknown; rewritten?: string | string[]
   const drafts = new DraftStore(db, () => NOW);
   const reviews = new ReviewStore(db, () => clock.now);
   const clock = { now: NOW };
-  const asked = { merge: 0, rewrite: 0 };
+  const asked = { merge: 0, rewrite: 0, instructions: [] as string[] };
   const rewrites = Array.isArray(options.rewritten) ? options.rewritten : [options.rewritten ?? "## Procedure\n1. Check the service.\n2. Restart it when it is stuck."];
   const provider = {
     async chat(request: { messages: { content: string }[] }) {
       const instruction = request.messages[0]?.content ?? "";
       const merge = instruction.includes("You review a library of skills");
+      asked.instructions.push(instruction);
       if (merge) asked.merge += 1;
       else asked.rewrite += 1;
       const text = merge
@@ -70,7 +71,7 @@ async function library(options: { merge?: unknown; rewritten?: string | string[]
       new Map(
         paths.map((path) => {
           const read = Object.entries(options.read ?? {}).find(([name]) => path.includes(`/${name}/`));
-          return [path, { readAt: read?.[1] ?? null, since: options.watchedSince ?? Date.UTC(2026, 0, 1) }] as const;
+          return [path, { readAt: read?.[1] ?? null, since: options.watchedSince ?? Date.UTC(2026, 0, 1), reads: 0, readsSinceChange: 0 }] as const;
         }),
       ),
     registry: { get: (id: string) => (id === agent.config.id ? agent : undefined), enabled: () => [agent], reloadAll: async () => {} } as unknown as AgentRegistry,
@@ -93,6 +94,17 @@ describe("what the review proposes", () => {
     const [draft] = h.drafts.pending();
     expect(draft).toMatchObject({ name: "home-pc-ops", target: "home-pc-ops", triggerKind: "curation", retire: [] });
     expect(draft!.body.length).toBeLessThan(procedure(300).length);
+  });
+
+  // A lesson from a conversation comes back as edits; a review exists to shorten the whole, and asks for the whole.
+  test("a tightening is asked for as the skill rewritten, not as edits to it", async () => {
+    const h = await library();
+    await h.skill("home-pc-ops", procedure(300));
+    await h.engine.library.run();
+    const rewrite = h.asked.instructions.find((instruction) => !instruction.includes("You review a library of skills"))!;
+    expect(rewrite).toContain("This skill is to be rewritten.");
+    expect(rewrite).toContain('"body": "the whole improved markdown body, in English"');
+    expect(rewrite).not.toContain("Change it with edits");
   });
 
   test("a skill naming a machine's address is tightened too, whatever its size", async () => {

@@ -119,6 +119,17 @@ export class SessionStore {
     return { ...toSession(row), messages: this.messagesOf(id) };
   }
 
+  /** Whether a conversation still holds anything said in it. */
+  kept(id: string): boolean {
+    return this.db.prepare<{ one: number }>("SELECT 1 AS one FROM session_messages WHERE session_id = ? LIMIT 1").get(id) !== undefined;
+  }
+
+  /** A conversation by its id, with its messages, or null where there is none: for what holds only the id. */
+  byId(id: string): LoadedSession | null {
+    const row = this.db.prepare<SessionRow>("SELECT * FROM sessions WHERE id = ?").get(id);
+    return row ? { ...toSession(row), messages: this.messagesOf(id) } : null;
+  }
+
   save(key: SessionKey, messages: ChatMessage[], tokenCount: number): void {
     this.write(key, messages, tokenCount, false);
   }

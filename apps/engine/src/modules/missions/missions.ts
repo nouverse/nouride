@@ -726,6 +726,8 @@ export class Missions implements TurnShaper {
     // One that never started did no work to remember: a draft dropped or deleted left "Mission stopped" in its person's
     // memory, for a mission that never ran.
     if (mission.startedAt !== null) void this.deps.remember?.(mission).catch((err: unknown) => log.warn("a mission's episode could not be filed", { mission: mission.id, error: String(err) }));
+    // Only work that ended done: what stopped or failed found no method to write down.
+    if (status === "done" && mission.startedAt !== null) this.deps.learn?.(mission);
     this.deps.helped?.(mission);
     this.tellParent(mission);
     this.tidy(mission);

@@ -55,8 +55,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, which jobs are services, and who is told what a job left running",
   },
   "apps/engine/src/boot/missions.ts": {
-    lines: 409,
-    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches; what its commands left running is bound in a file of its own",
+    lines: 411,
+    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches, skill learning at its end too; what its commands left is its own file",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 453,
@@ -79,8 +79,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 595,
-    why: "the missions' one service (start, the dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, the slots, its jobs, what its commands left) over its own state",
+    lines: 596,
+    why: "the missions' one service (start, the dispatcher, a turn's shape and its end with what learns from it, ask, stop, pause, continue, going on after tries, the slots, its jobs, what its commands left)",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 433,
@@ -111,8 +111,8 @@ export const TEST_BUDGET: Record<string, Budget> = {
     why: "the pipeline's first suite, from before the pipeline was split, its cases on the one `harness` this file builds; new cases go beside the module they test",
   },
   "apps/engine/tests/persona/reflection.test.ts": {
-    lines: 2_076,
-    why: "reflection end to end, written before `modules/reflection` was split, on its `enginePointedAt` harness; new cases go to tests/reflection/. Grew by its fixture's line for a new dial",
+    lines: 2_079,
+    why: "reflection end to end, written before `modules/reflection` was split, on its `enginePointedAt` harness; new cases go to tests/reflection/. Grew by its fixture's lines for new dials and an import",
   },
   "apps/dashboard/tests/mount.test.ts": {
     lines: 1_495,

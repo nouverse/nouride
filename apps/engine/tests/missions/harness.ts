@@ -93,6 +93,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   /** What reached the chat, in order: a notice, a `report.md`, the files. */
   const sent: string[] = [];
   const remembered: string[] = [];
+  /** Each mission handed to skill learning as it ended. */
+  const learned: string[] = [];
   /** Every mission handed on as it ended, with how: what keeps a mission another agent started for both agents' chats. */
   const helped: string[] = [];
   /** Each draft's `BRIEF.md`, by mission (0.8.11): what `draftFolder` wrote; the folders it made. */
@@ -151,6 +153,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     check: (mission) => checks(mission),
     review: (mission, earlier) => (review ? review(mission, earlier) : Promise.resolve({ pass: true, findings: "", tokens: 0 })),
     remember: async (mission) => void remembered.push(mission.id),
+    learn: (mission) => void learned.push(mission.id),
     helped: (mission) => void helped.push(`${mission.id} ${mission.status} by ${mission.byAgent ?? "a person"}`),
     remove: async (mission, how) => {
       if (how?.keepUnsaved) keepingUnsaved.push(mission.id);
@@ -192,6 +195,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     setReportRefused: (why: string | null) => void (reportRefused = why),
     sent,
     remembered,
+    learned,
     helped,
     briefs,
     folders,

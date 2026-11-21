@@ -24,6 +24,10 @@ import { useSaved } from "@/commons/hooks/use-saved";
 import { BADGE_WRAPS } from "@/commons/components/ui/Tag";
 import { TextLoading } from "@/commons/components/ui/Skeleton";
 
+/** How often a skill was read, and how often since learning last changed it: whether what was written into it is used. */
+export const readsSaid = (reads: number, sinceChange: number): string =>
+  `read ${reads === 1 ? "once" : `${reads} times`}${sinceChange < reads ? `, ${sinceChange === 0 ? "not yet" : sinceChange === 1 ? "once" : `${sinceChange} times`} since it was changed` : ""}`;
+
 export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editable: boolean }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
@@ -216,6 +220,8 @@ function SkillRow({
             {on.length}/{skill.agents.length} on
           </div>
           <div>{skill.lastUsedAt ? `read ${new Date(skill.lastUsedAt).toISOString().slice(0, 10)}` : "no read on record"}</div>
+          {/* Counted from the release that began counting, so a number is said only once there is one. */}
+          {skill.reads > 0 ? <div>{readsSaid(skill.reads, skill.readsSinceChange)}</div> : null}
         </div>
 
         {/*

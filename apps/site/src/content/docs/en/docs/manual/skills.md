@@ -168,6 +168,9 @@ turn where something actually happened:
   for every round of tool use, plus one more if your reply arrived within three minutes of the agent's
   last word, which is how "you were steering" gets counted without reading a word of what you said.
 - **It got something new working**: a tool this agent had never used successfully before.
+- **A mission ended done.** Once, from its goal, its last turn and its report. A mission's own turns are
+  never looked at one by one: they are a work log, and a mission of hours would be dozens of looks. A
+  mission that was stopped or failed found no method to write down, and is left alone.
 
 These are all about the *shape* of what happened, not its meaning. Nothing has been judged yet. The
 numbers are the daemon's own, not settings.
@@ -175,7 +178,13 @@ numbers are the daemon's own, not settings.
 The daemon deliberately does not try to judge it either. An earlier version matched phrases like
 "still broken", which fails silently for anyone whose wording nobody anticipated. Counting is dumb,
 free and language-agnostic; the judgement belongs to the model. That is the agent's own model, unless
-`[skills.learning] model` names a cheaper one.
+`[skills.learning] model` names another. A cheaper model there costs less and decides more strictly:
+on one install's own conversations a small model found something worth writing down in 1 of 13 where
+the agents' own model found it in 7.
+
+**After a look that wrote nothing, the next one in that chat waits for twice the work.** Sixteen
+round-trips instead of eight. A draft kept, or the chat put down for six hours, sets it back to eight.
+Asking for a skill in words is never made to wait.
 
 ## What it decides
 
@@ -199,7 +208,7 @@ Four possible answers, first one that fits:
 
 | | |
 |---|---|
-| **Update** | A skill already covers this. Add the missing step or the pitfall to it. |
+| **Update** | A skill already covers this. Add the missing step or the pitfall to it, as an edit: the text it replaces and what replaces it. The rest of the skill stays as it was, word for word. |
 | **Attach** | A skill covers it, but what was learned is bulky, a long command, a config that worked, an error and its cause. Put it in a file beside the skill instead of swelling the skill. |
 | **Create** | Nothing covers this kind of work. Propose a new skill, and say which existing one came closest, and why it should not just absorb this. |
 | **Skip** | There is genuinely nothing here. |
@@ -213,6 +222,9 @@ no body and no second model call. The skill is written when the same kind of wor
 another conversation, or in the same chat once it has been put down for six hours or more. Work that
 goes on in one sitting is not the work coming back. Somebody asking for a skill in words gets it at
 once. A candidate that does not come back within 30 days lapses.
+
+**A skill the conversation read comes first.** When the agent opened a skill during the work, a lesson
+about what that skill covers goes to it, not to a new one.
 
 ## How much runs without you
 
@@ -261,13 +273,28 @@ own approves everything waiting, or the Skills Workshop, whose tabs are one work
 | Tab | Shows |
 |---|---|
 | **Live** | the pool: what the agents are actually carrying. Opened first when nothing waits on you |
-| **Pending** | the queue, plus what was recently decided. Opened first when something waits on you |
+| **Pending** | the queue, plus what was recently decided, and under it what learning holds and did lately. Opened first when something waits on you |
 | **Explore** | Nouverse's list of public skills, its picks first, with one search over it. Installing one puts it on Pending |
 
 Each draft row opens into the whole `SKILL.md`, editable in place, plus the scrubbed transcript of
 the turn it came from, or, for an install, where it came from and what was adjusted. Both are on the
 row rather than behind a navigation, because the decision is "do I want this in my agents' prompts"
 and the evidence for it is the turn.
+
+**Seen once, not a skill yet.** Under the queue, each kind of work an agent did once and is holding:
+its name, when to use it, which agent saw it, how many times and when last. **Write it now** has the
+agent write the skill from the conversation it was seen in, without waiting for the work to come back;
+the draft then waits in the queue, or goes to the pool where learning is set to run without you.
+**Forget** drops it. Where that conversation has been deleted or started over, there is nothing to
+write from, and the page says so.
+
+**What learning did lately** is under that: the last twelve things it did or decided not to, each with
+its reason. "Looked, and found nothing to write down: a question answered, nothing done." This is where
+to look when you expected a skill and none came.
+
+**How often a skill is read** is on its row in **Live**: "read 12 times, 3 times since it was
+changed". The second number is how often it was opened since learning last changed it, which is what
+says a lesson written into it is being used. Reads are counted from 0.8.42 on.
 
 **A draft is not an approval.** It blocks nothing and it never expires. That is why it lives in the
 Workshop and not in the approvals queue, putting them together would give one of them the wrong

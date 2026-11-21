@@ -35,6 +35,7 @@ import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { PoolList } from "./pool.list";
 import { DecidedStrip, DraftList } from "./drafts.panel";
+import { SeenPanel } from "./seen.panel";
 import { LearningSettingsPanel } from "./learning-settings";
 import { ExplorePanel } from "./explore.panel";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
@@ -59,6 +60,10 @@ export default function SkillWorkshopPage() {
   const tab: Tab = chosen ?? (pending.length > 0 ? "pending" : "live");
   const decided = drafts.data?.recent ?? [];
   const editable = Boolean(catalog.data?.editable) && canWrite(me.data ?? null);
+
+  // An agent by the name people know it by, where the catalog has it: an id is the pack's folder.
+  const names = new Map(skills.flatMap((skill) => skill.agents.map((agent) => [agent.id, agent.displayName] as const)));
+  const agentName = (id: string) => names.get(id) ?? id;
 
   const visibleSkills = useTextFilter(skills, poolQuery, (skill) => [skill.name, skill.description]);
   const visiblePending = useTextFilter(pending, pendingQuery, (draft) => [draft.name, draft.description, draft.triggerReason, draft.agentId]);
@@ -132,6 +137,9 @@ export default function SkillWorkshopPage() {
           <DecidedStrip drafts={decided.slice(0, 5)} />
         </ListCard>
       ) : null}
+
+      {/* Under the queue, on the same tab: what is not in the queue yet, and why the queue is as short as it is. */}
+      {showPending ? <SeenPanel editable={editable} agentName={agentName} /> : null}
 
       {showPool ? (
         <ListCard title={`${skills.length} skill${skills.length === 1 ? "" : "s"} live`}>
