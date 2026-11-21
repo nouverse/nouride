@@ -139,7 +139,7 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
           ) : tab === "pending" ? (
             <PendingTab senders={pending} agentOf={agentOf} pairingOn={mode !== "allowlist"} />
           ) : tab === "approved" ? (
-            <ApprovedTab senders={approved} allowlist={allowlist} blocked={blocked} agentOf={agentOf} total={approvedTotal} found={found} onFind={setFound} />
+            <ApprovedTab senders={approved} allowlist={allowlist} blocked={blocked} agentOf={agentOf} total={approvedTotal} found={found} onFind={setFound} gateways={gateways.data?.gateways} />
           ) : tab === "denied" ? (
             <DeniedTab senders={denied} agentOf={agentOf} />
           ) : tab === "blocked" ? (

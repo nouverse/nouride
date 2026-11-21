@@ -15,13 +15,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Ban, Search, ShieldCheck, Users, UserX } from "lucide-react";
 import { api } from "@/commons/lib/api";
-import type { PersonRecord, SenderAnswer, SenderRecord } from "@nouride/wire";
-import { canWrite, useMe } from "@/commons/lib/session";
+import type { GatewayInstance, PersonRecord, SenderAnswer, SenderRecord } from "@nouride/wire";
+import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
 import { ListCard } from "@/commons/components/ui/ListCard";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { ago } from "@/commons/lib/format";
+import { ImportList } from "./import-list";
 import { BUTTON, NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
 
 /**
@@ -98,6 +99,7 @@ export function ApprovedTab({
   total = senders.length,
   found = "",
   onFind,
+  gateways,
 }: {
   senders: SenderRecord[];
   /** How many are approved in all: more than `senders` once a list was let in from a file. */
@@ -110,6 +112,8 @@ export function ApprovedTab({
   /** Blocked senders: a block beats the config's list, and its chip says so. */
   blocked: SenderRecord[];
   agentOf: (gatewayId: string) => string | undefined;
+  /** The connections a list can be let in on: "Let in a list" is offered where the page hands them over. */
+  gateways?: readonly GatewayInstance[];
 }) {
   const me = useMe();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -137,6 +141,8 @@ export function ApprovedTab({
         // Another card stands under this one: a long list is cut short, and opens in full with one press.
         maxHeight="max-h-[32rem]"
         description="Answered by the agent whose connection they wrote to. Each account says which person in People it is."
+        // An admin's, as letting one person in by a code is: a list hands every agent to everybody on it.
+        actions={gateways && isAdmin(me.data ?? null) ? <ImportList gateways={gateways} /> : undefined}
         {...search}
       >
         <ErrorNote error={answer.error} />

@@ -81,6 +81,21 @@ describe("a list of numbers, on WhatsApp", () => {
     expect(access.get(WA, "6281300000001@s.whatsapp.net")).toMatchObject({ senderName: "Bu Rina", status: "approved", resolvedBy: "gading" });
   });
 
+  // The Access page hands over what a person pasted or picked, as written: no reader of lines in the browser.
+  test("the list as written, as a page sends it, is read as a file is: a comment, a row's quotes, a name, the same counts", async () => {
+    const text = '# our contacts\r\n+62 812-3456-7890\r\n\r\n"62 813 0000 0001","Bu Rina"\n6281234567890\n081234567890\nnot a number\n14155550123\n';
+    const dry = await imported({ gateway: WA, text, dryRun: true });
+    expect(dry).toEqual({ gateway: WA, dryRun: true, read: 6, added: 3, already: 0, blocked: 0, duplicates: 1, invalid: { count: 2, examples: ["081234567890", "not a number"] } });
+    expect(access.list()).toEqual([]);
+    expect(await imported({ gateway: WA, text })).toMatchObject({ dryRun: false, read: 6, added: 3 });
+    expect(access.get(WA, "6281300000001@s.whatsapp.net")).toMatchObject({ senderName: "Bu Rina", status: "approved" });
+    // Nothing but comments and empty lines names nobody.
+    const empty = await send({ gateway: WA, text: "# nobody yet\n\n" });
+    expect(empty.status).toBe(400);
+    expect(((await empty.json()) as { plain: string }).plain).toBe("The list names nobody. Check it, and send it again.");
+    expect((await send({ gateway: WA, text: Array.from({ length: 50_001 }, (_, i) => `62812${String(i).padStart(8, "0")}`).join("\n") })).status).toBe(400);
+  });
+
   test("the reply of somebody on it gets through under the hidden id WhatsApp delivers them by, with no code", async () => {
     // Before the list: a stranger, given a code, and listed as asking.
     expect(door(WA, LID, [NUMBER])).toBe("pair");

@@ -12,28 +12,13 @@
 
 import type { AccessImported } from "@nouride/wire";
 import { type Client, BOLD, DIM, GREEN, RESET, YELLOW, fail, say, usageError } from "@nouride/cli-kit";
+import { sendersIn } from "@nouride/shared";
 import { readStdin, readTextFile } from "@nouride/runtime";
 
 /** What a line holds, by where the connection is: said beside the lines that could not be read. */
 const HOW = "WhatsApp: a phone number with its country code (+62 812…, not 0812…). Telegram and Discord: an account's id or its @username.";
 
 const USAGE = "nouride access allow --from <file|-> --gateway <connection> [--dry-run]";
-
-/** The senders a list names, a line each: its id as written, and the name after it where one is given. */
-export function sendersIn(text: string): { id: string; name?: string }[] {
-  const senders: { id: string; name?: string }[] = [];
-  for (const raw of text.replace(/^﻿/, "").split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line || line.startsWith("#")) continue;
-    const cut = line.search(/[,;\t]/);
-    // A spreadsheet's export wraps a cell in quotes.
-    const unquoted = (cell: string) => cell.trim().replace(/^"(.*)"$/, "$1").trim();
-    const id = unquoted(cut < 0 ? line : line.slice(0, cut));
-    const name = cut < 0 ? "" : unquoted(line.slice(cut + 1));
-    if (id) senders.push({ id, ...(name ? { name } : {}) });
-  }
-  return senders;
-}
 
 const count = (n: number) => n.toLocaleString("en-US");
 

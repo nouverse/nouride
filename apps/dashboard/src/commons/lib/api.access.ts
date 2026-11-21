@@ -12,7 +12,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { AccessEvent, AccessListing, AccessMode, SenderAnswer } from "@nouride/wire";
+import type { AccessEvent, AccessImported, AccessListing, AccessMode, SenderAnswer } from "@nouride/wire";
 
 const senderQuery = (gatewayId: string, senderId: string) =>
   `gateway=${encodeURIComponent(gatewayId)}&sender=${encodeURIComponent(senderId)}`;
@@ -28,4 +28,6 @@ export const accessApi = {
   answerSender: (action: SenderAnswer, gatewayId: string, senderId: string) =>
     post<{ ok: boolean }>(`${control}/access/${action}?${senderQuery(gatewayId, senderId)}`),
   accessHistory: () => request<{ entries: AccessEvent[] }>(`${control}/access/history`),
+  /** A whole list let in ahead, as it was written or pasted: the daemon reads its lines. `dryRun` counts and writes nothing. An admin's. */
+  importSenders: (list: { gateway: string; text: string; dryRun: boolean }) => post<AccessImported>(`${control}/access/import`, list),
 };
