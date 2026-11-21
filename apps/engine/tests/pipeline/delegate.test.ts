@@ -193,7 +193,16 @@ describe("a brief", () => {
     expect(parseBriefs("go", 4)).toMatchObject({ error: expect.stringContaining("non-empty array") });
     expect(parseBriefs([task("a"), { context: "x", deliverable: "y" }], 4)).toMatchObject({ error: expect.stringContaining("Task 2 has no `goal`") });
     expect(parseBriefs([{ goal: "a", context: "x" }], 4)).toMatchObject({ error: expect.stringContaining("Task 1 has no `deliverable`") });
-    expect(parseBriefs([{ goal: "a", context: "x".repeat(6_000), deliverable: "y" }], 4)).toMatchObject({ error: expect.stringContaining("name its path") });
+    // Only its parts are asked for, never its length: the goal is the one sentence that heads the job's row.
+    expect(parseBriefs([{ goal: "a".repeat(301), context: "x", deliverable: "y" }], 4)).toMatchObject({ error: expect.stringContaining("keep it to one sentence") });
+  });
+
+  // A lead that wrote out every part of a scaffold was refused at 6,000 characters and told to write less.
+  test("is as long as the work needs: one of sixty thousand characters is taken whole", () => {
+    const long = { goal: "Scaffold the repository", context: `The parts, each in full. ${"One more part of the plan. ".repeat(2_200)}`, constraints: "Keep to the plan.", deliverable: "The paths written." };
+    const parsed = parseBriefs([long], 4);
+    expect("briefs" in parsed && parsed.briefs[0]?.context.length).toBeGreaterThan(59_000);
+    expect("briefs" in parsed && renderBrief(parsed.briefs[0]!)).toContain("One more part of the plan. One more part of the plan.");
   });
 
   test("reaches the helper as its parts under their names, constraints only when given", () => {
