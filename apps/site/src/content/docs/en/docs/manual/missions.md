@@ -320,6 +320,12 @@ last answered you there. Before, it knew only that it had started a mission, and
 still at work. Of a mission's progress lines it reads the newest. After `/new` it starts from nothing, as with
 everything else, and can look its missions up.
 
+When a mission ends, what it was running ends with it: its background jobs, and (0.8.42) whatever one of its commands
+started and did not wait for, a build's workers left behind, say. Each is asked to end and, after a moment, made to,
+and the chat is told what was ended. A program that sets itself apart keeps running: a process manager, a container,
+a system service. That is how to keep something up past a mission. This covers the commands Nouride runs for an
+agent; what an agent on a coding CLI starts from the CLI's own shell is the CLI's.
+
 Inside a mission, an agent can hand a separate piece to another agent as a mission of its own (one level, no deeper)
 and is told how it ended.
 

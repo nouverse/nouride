@@ -54,13 +54,17 @@ export const BUDGET: Record<string, Budget> = {
     lines: 519,
     why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, and which running jobs are services, for what waits on a job's end",
   },
+  "apps/engine/src/boot/missions.ts": {
+    lines: 409,
+    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches; what its commands left running is bound in a file of its own",
+  },
   "apps/engine/src/modules/tools/registry.ts": {
-    lines: 450,
-    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, and what its prompt is told it was resolved with, in the one place to read it",
+    lines: 453,
+    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, what its prompt is told; three lines pass exec who is told what a command left",
   },
   "apps/engine/src/modules/tools/builtins/exec.ts": {
-    lines: 426,
-    why: "the exec tool's gate and run: each check a command passes before it starts, made in its order and rechecked in `execute` in the same order; the checks themselves live beside it",
+    lines: 429,
+    why: "the exec tool's gate and run: each check a command passes before it starts, in its order and rechecked in `execute`; the checks live beside it; three lines hand over what a command left running",
   },
   "apps/engine/src/modules/tools/builtins/files.ts": {
     lines: 428,
@@ -75,8 +79,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 594,
-    why: "the missions' one service (start, the dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, the slots, its jobs) over state this class alone holds",
+    lines: 595,
+    why: "the missions' one service (start, the dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, the slots, its jobs, what its commands left) over its own state",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 433,

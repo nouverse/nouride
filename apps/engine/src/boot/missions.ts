@@ -24,6 +24,7 @@ import { gateSide } from "@/modules/missions/gate-side.ts";
 import { OptionPresses } from "@/modules/missions/options.ts";
 import { ActionPresses } from "@/modules/missions/actions.ts";
 import { DraftNotices } from "@/modules/missions/draft-notices.ts";
+import { missionLeft } from "./mission-left.ts";
 import { ProgressLines } from "@/modules/missions/progress-line.ts";
 import { toldBy } from "@/modules/missions/types.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
@@ -240,6 +241,15 @@ export function buildMissions(params: {
 
   const asTheAgent = (agentId: string): AsAgent => agentCommand(params.config().daemon.workspaceDir, agentId);
 
+  // What a mission's commands left running in their own process groups, ended at its end (`mission-left.ts`).
+  const left = missionLeft({
+    asAgent: asTheAgent,
+    tell: async (mission, text) => {
+      await params.notifier.toChat(reportsTo(mission), text);
+      noted(mission, text);
+    },
+  });
+
   /**
    * What a command of the mission's agent runs with: its folders, its user, nobody waiting on it. A mission not yet
    * started has no id or folder of its own: its checks are judged at the start against the folder they will run in.
@@ -299,6 +309,7 @@ export function buildMissions(params: {
       drafted.forget(mission.id);
     },
     letGoCli: (mission) => params.forgetCliSession?.(mission.agentId, MISSION_GATEWAY_ID, mission.id),
+    endLeft: left.endLeft,
     tell: async (mission, text, buttons) => {
       const to = reportsTo(mission);
       // With buttons — a question's options, or what can be done about a wait — where the chat carries them, saying so;
@@ -459,6 +470,8 @@ export function buildMissions(params: {
     }),
     /** A worktree for a writing helper of a mission in one (`delegate` `isolated`). */
     isolateHelper,
+    /** Who is told what a command left running: a mission's own turn alone, so its end can end it. */
+    commandLeft: left.commandLeft,
     /** The table itself, for what reads across missions — the morning lines (0.8.0). */
     store,
     gateway,

@@ -13,7 +13,8 @@ export const withOomKills = (before: number | null): { oomKills?: number } => {
   const kills = oomKillsSince(before);
   return kills ? { oomKills: kills } : {};
 };
-import { ownGroupSpawnOptions, signalTree, withOwnProcessGroup } from "./process-group.ts";
+import { leadsOwnGroup, ownGroupSpawnOptions, signalTree, withOwnProcessGroup } from "./process-group.ts";
+import { leftRunning } from "./process-left.ts";
 import { outputBuffer, terminalCommand } from "./process-terminal.ts";
 
 export { shellQuote } from "./process-terminal.ts";
@@ -39,6 +40,7 @@ export async function runCommand(cmd: string[], opts: SandboxOptions): Promise<S
   const oomBefore = commandsOomKills();
 
   const line = commandLine(cmd, opts);
+  const ownGroup = leadsOwnGroup();
   const proc = Bun.spawn({
     cmd: line.cmd,
     ...ownGroupSpawnOptions(),
@@ -117,6 +119,12 @@ export async function runCommand(cmd: string[], opts: SandboxOptions): Promise<S
       proc.exited,
     ]);
 
+    // What it started and did not wait for, read while its group can still be found: a command stopped or out of
+    // time had its whole group ended, so only one that ended by itself can have left anything.
+    if (opts.onLeft && !timedOut && !aborted) {
+      const left = leftRunning(proc.pid, ownGroup);
+      if (left) opts.onLeft(left);
+    }
     return {
       stdout: stdout.text,
       stderr: stderr.text,

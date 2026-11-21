@@ -30,6 +30,7 @@ export * from "./process-memory.ts";
 export * from "./process-activity.ts";
 export * from "./process-commands.ts";
 export * from "./process-agents.ts";
+export * from "./process-left.ts";
 export * from "./process-agent-files.ts";
 export * from "./process-background.ts";
 export * from "./process-dumpable.ts";

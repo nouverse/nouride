@@ -324,6 +324,7 @@ export async function buildTurnMachine(
     notes: stores.notes,
     shaper: missions.missions,
     missionCommands: missions.missions,
+    commandLeft: missions.commandLeft,
     scheduleCommands: proposals.cards,
     missionTools: missions.tools,
     scheduleTool: proposals.tool,
@@ -389,6 +390,7 @@ export async function buildTurnMachine(
     reflection: parts.reflection, mcp, mcpCatalog, skillsCatalog, notes: stores.notes, linkFor: parts.linkFor,
     configPath: input.configPath,
     isolateHelper: missions.isolateHelper,
+    commandLeft: missions.commandLeft,
     missionReportsTo: missions.reportsTo,
     // Fresh each time: a CLI installed a minute ago is one an agent can be made on now.
     clis: () => externalAgents.scan(true),

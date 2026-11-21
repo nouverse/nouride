@@ -339,6 +339,13 @@ terakhir menjawabmu di sana. Sebelumnya ia hanya tahu pernah memulai misi, dan b
 selesai masih berjalan. Dari baris progres sebuah misi ia membaca yang terbaru. Setelah `/new` ia mulai dari nol,
 seperti hal lainnya, dan bisa melihat daftar misinya sendiri.
 
+Saat misi berakhir, yang sedang dijalankannya ikut berakhir: job latar belakangnya, dan (0.8.42) apa pun yang
+dimulai salah satu perintahnya tanpa ditunggu, misalnya worker build yang tertinggal. Masing-masing diminta berhenti
+dan, sesaat kemudian, dihentikan, lalu chat-nya diberi tahu apa yang dihentikan. Program yang sengaja memisahkan diri
+tetap jalan: process manager, container, service sistem. Begitulah cara membuat sesuatu tetap hidup setelah misi
+selesai. Ini berlaku untuk perintah yang dijalankan Nouride bagi agent; yang dimulai agent di coding CLI dari shell
+CLI-nya sendiri adalah urusan CLI itu.
+
 Di dalam misi, agent bisa menyerahkan satu bagian terpisah ke agent lain sebagai misi tersendiri (satu tingkat, gak
 lebih dalam), dan diberi tahu bagaimana hasilnya.
 

@@ -32,6 +32,11 @@ function groupMode(): "setsid" | "detached" | null {
   return process.platform === "darwin" ? "detached" : null;
 }
 
+/** Whether a command started here leads a process group of its own: where it does not, its group is the daemon's. */
+export function leadsOwnGroup(): boolean {
+  return groupMode() !== null;
+}
+
 /** What to spread into `Bun.spawn`'s options beside {@link withOwnProcessGroup}'s argv: `detached` on macOS. */
 export function ownGroupSpawnOptions(): { detached?: true } {
   return groupMode() === "detached" ? { detached: true } : {};

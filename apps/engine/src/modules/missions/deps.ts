@@ -54,6 +54,12 @@ export interface MissionsDeps {
    */
   letGoCli?: (mission: Mission) => void;
   /**
+   * End what its commands left running in their own process groups, and tell its chat what was ended
+   * (`left-running.ts`): its jobs end with it, and what a command started and did not wait for was nobody's. Never
+   * throws.
+   */
+  endLeft?: (mission: Mission) => void;
+  /**
    * Say something in the chat a mission reports to, as its agent — with buttons under it where the chat carries them
    * (a question's options, 0.8.7). Never throws.
    */

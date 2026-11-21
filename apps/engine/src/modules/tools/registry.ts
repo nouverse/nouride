@@ -204,6 +204,7 @@ export function createBuiltinTools(options: ToolRegistryOptions): Map<string, To
     ...(options.liveGrants ? { liveGrants: options.liveGrants } : {}),
     ...(options.canAsk ? { canAsk: options.canAsk } : {}),
     ...(options.startJob ? { startJob: options.startJob } : {}),
+    ...(options.leftBy ? { leftBy: options.leftBy } : {}),
     ...(options.childEnv ? { childEnv: options.childEnv } : {}),
     ...(options.heldSecrets ? { heldSecrets: options.heldSecrets } : {}),
     ...(options.ownSecrets ? { ownSecrets: options.ownSecrets } : {}),
@@ -403,6 +404,8 @@ export interface ToolsetDeps {
   canAsk?: () => boolean;
   /** Starts a background job. Absent means `exec` does not offer `background: true`. */
   startJob?: ExecToolOptions["startJob"];
+  /** Who is told what a turn's command left running (`ExecToolOptions.leftBy`). A pack's own `exec` needs it too. */
+  leftBy?: ExecToolOptions["leftBy"];
   /**
    * Tools from this agent's MCP servers, already named and gated.
    *
@@ -558,6 +561,7 @@ export function resolveToolset(
             ...(deps?.liveGrants ? { liveGrants: deps.liveGrants } : {}),
             ...(deps?.canAsk ? { canAsk: deps.canAsk } : {}),
             ...(deps?.startJob ? { startJob: deps.startJob } : {}),
+            ...(deps?.leftBy ? { leftBy: deps.leftBy } : {}),
             // Rebuilt here too, not only in the registry. A pack with blocked patterns gets a fresh `exec`, and leaving
             // this off meant that agent's commands ran with no credentials at all — the same footgun `startJob` hit once.
             ...(deps?.childEnv ? { childEnv: deps.childEnv } : {}),

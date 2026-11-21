@@ -78,6 +78,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   const killed: string[] = [];
   /** The missions whose CLI session was let go. */
   const letGo: string[] = [];
+  /** The missions asked to end what their commands had left running, as they ended. */
+  const endedLeft: string[] = [];
   const stopped: string[] = [];
   const removed: string[] = [];
   /** The removals that asked to keep a folder holding work nobody committed. */
@@ -119,6 +121,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     settled: (mission) => settled.get(mission.id) ?? [],
     withdraw: (mission) => void parked.delete(mission.id),
     letGoCli: (mission) => void letGo.push(mission.id),
+    endLeft: (mission) => void endedLeft.push(`${mission.id} ${mission.status}`),
     tell: async (mission, text, buttons) => void (told.push({ mission: mission.id, text, ...(buttons ? { buttons } : {}) }), sent.push("notice")),
     queueTurn: (envelope) => (queued.push(envelope), true),
     stopTurn: (mission) => {
@@ -177,6 +180,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     queued,
     killed,
     letGo,
+    endedLeft,
     stopped,
     removed,
     keepingUnsaved,

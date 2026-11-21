@@ -707,6 +707,7 @@ export class Missions implements TurnShaper {
     for (const job of this.jobsOf(mission)) this.deps.jobs?.kill(job.id, `mission ${mission.id} ${status}`);
     this.deps.withdraw?.(mission);
     this.deps.letGoCli?.(mission);
+    this.deps.endLeft?.(mission);
     this.deps.store.save(mission);
     this.deps.changed?.(mission);
     // What it kept in memory goes with it: each table had a row for every mission that ever ended a certain way.

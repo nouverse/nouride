@@ -6,7 +6,7 @@
  * not inherited, a hard timeout, and a capped output buffer.
  */
 
-import type { ExecPolicySection, GateAsk, GateDecision, SandboxOptions, Tool, ToolContext } from "@nouride/shared";
+import type { ExecPolicySection, GateAsk, GateDecision, LeftRunning, SandboxOptions, Tool, ToolContext } from "@nouride/shared";
 import { agentCommandsHaveOwnUsers, dirExists, join, resolveWithin, runCommand, type TextFilter } from "@nouride/runtime";
 import type { TransientSecrets } from "@nouride/secrets";
 import { autoApprovable, decideExec, sendDestinations, sendsOverNetwork, type ExecPolicy, type PolicyAsk } from "@nouride/policy";
@@ -59,6 +59,12 @@ export interface ExecToolOptions {
    * so tests can supply a set without a database.
    */
   liveGrants?: (agentId: string) => Set<string>;
+  /**
+   * What a command of this turn left running in its own process group is told to whoever ends it later: a mission's
+   * turn gives a taker, so the mission's end ends what its commands left (`missions/left-running.ts`); any other turn
+   * gives none, and nothing is read.
+   */
+  leftBy?: (ctx: ToolContext) => ((left: LeftRunning) => void) | undefined;
   /**
    * Starts a command that outlives the turn. Absent means `background: true` is not offered.
    *
@@ -433,6 +439,7 @@ export function createExecTool(options: ExecToolOptions): Tool {
         ...(printed ? { printed: printed.filter } : {}),
         diskCapChars: options.maxOutputBytes,
       });
+      const onLeft = options.leftBy?.(ctx);
       const sandbox: SandboxOptions = {
         cwd: cwd.path,
         // The agent's own user — but the daemon's CLI is the daemon's, run for the agent through the `nouride` tool.
@@ -465,6 +472,7 @@ export function createExecTool(options: ExecToolOptions): Tool {
          */
         env: commandEnv(ctx, { ...handed.env, ...handles.env, ...callerEnv(args.caller_env, ctx) }),
         onOutput: capture.push,
+        ...(onLeft ? { onLeft } : {}),
         limits: {
           memoryMb: options.policy.maxMemoryMb ?? 0,
           cpuSeconds: options.policy.maxCpuSeconds ?? 0,

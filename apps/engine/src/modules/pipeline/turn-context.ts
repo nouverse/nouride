@@ -633,6 +633,7 @@ export class TurnContext extends ActiveTurns {
             startJob: startJobFor(this.deps.jobs),
           }
         : {}),
+      ...(this.deps.commandLeft ? { leftBy: this.deps.commandLeft } : {}),
       ...(this.deps.grants ? { liveGrants: (agentId: string) => this.deps.grants!.liveKeys(agentId) } : {}),
       ...(this.deps.toolGrants
         ? { liveToolGrants: (agentId: string) => this.deps.toolGrants!.liveKeys(agentId) }
