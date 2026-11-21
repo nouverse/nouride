@@ -206,7 +206,7 @@ describe("a coding CLI's turn, steered while its prompt runs", () => {
     t.send("use the second tab");
     const result = await running;
     expect(result.text).toBe("Working.Steered: use the second tab");
-    expect(result.messages.filter((message) => message.role === "user").map((message) => message.content)).toEqual(["first", "use the second tab"]);
+    expect(result.messages.filter((message) => message.role === "user").map((message) => message.content)).toEqual([`first\n\n${CLOCK}`, "use the second tab"]);
     expect(await stderrSaid(await t.service.connection(t.agent), (line) => line.startsWith("steer:"), 1)).toEqual(["steer:use the second tab"]);
   });
 

@@ -12,7 +12,7 @@
 import { steeringOffered, type CliRow, type McpServer, type PlanEntry, type PromptAnswer, type RequestPermissionParams, type StopReason as AcpStopReason } from "@nouride/acp";
 import { contained, createLogger, NourideError, type ChatMessage, type ExternalPermissions, type LoadedAgent, type StopReason } from "@nouride/shared";
 import type { ExecutorDeps, TurnRequest, TurnResult } from "@/modules/llm/executor/types.ts";
-import { clockNote } from "@/modules/llm/executor/reminders.ts";
+import { clockNote, withReminders } from "@/modules/llm/executor/reminders.ts";
 import type { PlanStep } from "@/modules/notes/store.ts";
 import { writeInstruction } from "./instruction.ts";
 import { askPermission } from "./permission.ts";
@@ -343,7 +343,12 @@ export class ExternalTurnRunner {
           this.host.ownWords?.answers(ownKey(agentId, sessionId), chat);
           const first = prompts === 0;
           const opening = first && notYet.length > 0 ? { ...req, reminders: [...(req.reminders ?? []), notYetNote(notYet)] } : req;
-          const blocks = await promptOf(message, first ? opening : undefined, first ? untold(situation, this.host.told?.get(sessionId)) : "", promptTakes(cli.info), this.deps.maxImageBytes, first ? clockNote(this.deps.now?.() ?? new Date(), this.deps.timezone) : undefined);
+          // The time and the turn's notes, read by the CLI in this prompt, are kept with the message as a model's are
+          // (`reminders.ts`, "Kept as sent"). Kept without them, the conversation never held a note the turn had read,
+          // and each note said "where the conversation does not hold it yet" was said again on every message.
+          const clock = first ? clockNote(this.deps.now?.() ?? new Date(), this.deps.timezone) : undefined;
+          if (clock && message === req.userMessage) turnMessages[0] = withReminders(req.userMessage, [clock, ...(req.reminders ?? [])]);
+          const blocks = await promptOf(message, first ? opening : undefined, first ? untold(situation, this.host.told?.get(sessionId)) : "", promptTakes(cli.info), this.deps.maxImageBytes, clock);
           const before = chat ? (this.host.commandsOf?.(cli) ?? 0) : 0;
           // A message for the turn while the prompt runs goes into it (0.8.10, `steering.ts`) — where the CLI takes one.
           const open = sessionId;

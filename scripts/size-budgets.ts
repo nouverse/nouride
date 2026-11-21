@@ -39,8 +39,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, parts, versions, a turn's account and use, a helper's work kept from waking a chat; logic in files beside",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
-    lines: 403,
-    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage and the lookout for a turn held for helpers, in one loop whose steps share the turn's state",
+    lines: 405,
+    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, in one loop sharing the turn's state",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 481,
