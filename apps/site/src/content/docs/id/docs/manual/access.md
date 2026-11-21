@@ -157,13 +157,38 @@ nouride access allow --from contacts.txt --gateway whatsapp:main --dry-run   # m
 nouride access allow --from contacts.txt --gateway whatsapp:main
 ```
 
+File-nya teks biasa:
+
+- Satu orang per baris: id-nya dulu, lalu nama kalau ada, setelah koma, titik koma atau tab. Semua
+  setelah tanda pertama itu adalah namanya.
+- Spreadsheet yang disimpan sebagai CSV bisa langsung dipakai, id di kolom pertama dan nama di kolom
+  kedua, dengan atau tanpa tanda kutip di sel.
+- Baris kosong dilewati, begitu juga baris yang diawali `#`.
+- Baris yang bukan pengirim di koneksi itu, termasuk baris judul kolom, dihitung sebagai yang gak
+  terbaca dan disebutkan di jawabannya. Sisanya tetap masuk.
+
 ```text
-# contacts.txt: satu per baris, dan nama setelah koma kalau ada
+# WhatsApp: nomor telepon dengan kode negara
 +62 812-3456-7890, Bu Rina
 62 813 0000 0001
+6281400000002;Pak Budi
 ```
 
-Isi satu baris tergantung koneksinya di mana:
+```text
+# Telegram: id akun atau username
+123456789, Sam
+@sam_lee
+t.me/budi_santoso
+```
+
+```text
+# Discord: id akun atau username
+123456789012345678, Sam
+sam.lee
+```
+
+Satu file untuk satu koneksi: daftar untuk `whatsapp:main` berisi nomor, daftar untuk bot Telegram
+berisi id atau username. Isi satu baris tergantung koneksinya di mana:
 
 | Koneksi | Satu baris berisi | Bukan |
 |---|---|---|

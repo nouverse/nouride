@@ -147,13 +147,38 @@ nouride access allow --from contacts.txt --gateway whatsapp:main --dry-run   # c
 nouride access allow --from contacts.txt --gateway whatsapp:main
 ```
 
+The file is plain text:
+
+- One person a line: their id first, then a name if you have one, after a comma, a semicolon or a tab.
+  Everything after that first mark is the name.
+- A spreadsheet saved as CSV works as it is, the id in its first column and the name in its second,
+  with or without quotes around a cell.
+- An empty line is passed over, and so is a line that starts with `#`.
+- A line that is not a sender on that connection, a header row among them, is counted as one that
+  could not be read and named in the answer. The rest still goes in.
+
 ```text
-# contacts.txt: one a line, and a name after a comma if you have one
+# WhatsApp: phone numbers with the country code
 +62 812-3456-7890, Bu Rina
 62 813 0000 0001
+6281400000002;Pak Budi
 ```
 
-What a line holds depends on where the connection is:
+```text
+# Telegram: account ids or usernames
+123456789, Sam
+@sam_lee
+t.me/budi_santoso
+```
+
+```text
+# Discord: account ids or usernames
+123456789012345678, Sam
+sam.lee
+```
+
+One file is for one connection: a list for `whatsapp:main` holds numbers, one for a Telegram bot ids
+or usernames. What a line holds depends on where the connection is:
 
 | Connection | A line is | Not |
 |---|---|---|
