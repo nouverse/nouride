@@ -75,6 +75,25 @@ describe("the opening line before long work", () => {
     expect(stored.split(OPENING)).toHaveLength(2);
   });
 
+  // On a live box, in thirty days, every one of 155 lines held back was a status under 200 characters, and one text of
+  // 3,149 was held with them: a whole answer written beside a `notes` call, in the conversation and in no chat.
+  test("more than a line written beside a call is no status: it goes out whatever the gap, and the short one after it is still held", async () => {
+    const REPORT = "Gw udah baca README-nya. Menurut gw ada 4 poin:\n\n1. Yang pertama.\n2. Yang kedua.";
+    const { texts } = await run([step("c1", OPENING), step("c2", REPORT), step("c3", STATUS), { text: ANSWER }]);
+    expect(texts).toContain(OPENING);
+    expect(texts).toContain(REPORT);
+    expect(texts).not.toContain(STATUS);
+    expect(texts.indexOf(REPORT)).toBeLessThan(texts.indexOf(ANSWER));
+  });
+
+  // A person's turn that ends on a dot: what it wrote beside its last call is its answer, sent once.
+  test("a turn that ends on no word at all sends what it wrote beside a call and nobody was sent", async () => {
+    const { texts } = await run([step("c1", OPENING), step("c2", STATUS), { text: "." }]);
+    expect(texts.filter((text) => text === OPENING)).toHaveLength(1);
+    expect(texts).toContain(STATUS);
+    expect(texts).not.toContain(".");
+  });
+
   test("a later one goes out once the gap has passed", async () => {
     const { texts } = await run([step("c1", OPENING), step("c2", STATUS), { text: ANSWER }], { gapMs: 0 });
     expect(texts.indexOf(STATUS)).toBeGreaterThan(texts.indexOf(OPENING));
@@ -122,6 +141,28 @@ describe("the opening line before long work", () => {
     expect(texts).toContain(ANSWER);
   });
 
+  // Live, in a WhatsApp chat: a helper came back having failed. The agent wrote its whole report and a question for the
+  // person in the same step as a `notes` call, then ended on "." ("already reported"). The daemon sent nothing: the
+  // person waited nine minutes on a promise of news, and the agent on an answer to a question nobody had been sent.
+  test("a system event's turn that wrote its report beside a call and ended on a full stop: the report is the answer, sent once and recorded", async () => {
+    const REPORT = "Belum ada yang berubah di file-nya.\n\nSebelum aku tulis, ada satu hal yang mau aku pastiin: bener gitu?";
+    const { bench, texts } = await run([step("c1", REPORT), { text: "." }], {
+      gateway: new PlainGateway(),
+      from: { senderId: SYSTEM_SENDER, text: "Background helper job_7 finished", raw: { via: "job completion", job: "job_7", outcome: "finished", helper: true } },
+    });
+    expect(texts).toEqual([REPORT]);
+    // What the record says the person was told: the dashboard shows it, and nothing is owed again after a restart.
+    expect(bench.turns.forChat("whatsapp:main", "chat-1").at(-1)?.reply).toBe(REPORT);
+  });
+
+  test("a system event's turn that ends on a full stop having written nothing says nothing, as it may", async () => {
+    const { texts } = await run([step("c1"), { text: "." }], {
+      gateway: new PlainGateway(),
+      from: { senderId: SYSTEM_SENDER, text: "Background job job_7 finished", raw: { via: "job completion", job: "job_7", outcome: "ok" } },
+    });
+    expect(texts).toEqual([]);
+  });
+
   test("is not sent when the chat is told nothing of the work", async () => {
     const { texts } = await run([step("c1", OPENING), { text: ANSWER }], { gateway: new PlainGateway(), progress: false });
     expect(texts).toEqual([ANSWER]);
@@ -144,6 +185,20 @@ describe("when a later line may go out", () => {
     expect(sent).toEqual([OPENING, STATUS]);
     expect(preamble.alreadySaid(` ${STATUS}\n`)).toBe(true);
     expect(preamble.alreadySaid("held back")).toBe(false);
+  });
+
+  test("inside the gap one line is held and more than a line is not", async () => {
+    let now = 1_000_000;
+    const sent: string[] = [];
+    const preamble = new Preamble(async (words) => void sent.push(words), { now: () => now });
+    expect(await preamble.offer(OPENING)).toBe(true);
+    now += 1_000;
+    expect(await preamble.offer("one line, held")).toBe(false);
+    expect(await preamble.offer("two lines:\nthe second")).toBe(true);
+    // And it counts as the last one sent: the status after it waits its two minutes from here.
+    now += PREAMBLE_GAP_MS - 1;
+    expect(await preamble.offer("held again")).toBe(false);
+    expect(sent).toEqual([OPENING, "two lines:\nthe second"]);
   });
 
   test("a message of its own goes whatever the gap — a coding CLI's words between its steps (0.8.5)", async () => {
