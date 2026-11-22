@@ -35,26 +35,47 @@ describe("what /mission lists", () => {
   test("three stages in the order a chat reads them, each with its count, the newest first, an empty one left out", () => {
     const text = missionsSaid([draft({ title: "Later" }), mission({ title: "Older work" }), mission({ title: "Newer work" }), mission({ status: "waiting", waitKind: "input", title: "A question" })], isHere);
     const lines = text.split("\n");
-    expect(lines.filter((line) => /^[A-Z]/.test(line))).toEqual(["Needs you (1)", "Working (2)", "Backlog (1): /mission accept <id> starts one"]);
-    expect(lines.indexOf("Needs you (1)")).toBe(0);
-    expect(lines.findIndex((line) => line.endsWith("Newer work"))).toBeLessThan(lines.findIndex((line) => line.endsWith("Older work")));
-    expect(missionsSaid([mission({})], isHere).split("\n")[0]).toBe("Working (1)");
+    expect(lines.filter((line) => line.startsWith("**"))).toEqual(["**Needs you** (1)", "**Working** (2)", "**Backlog** (1) · /mission accept <id> starts one"]);
+    expect(lines.findIndex((line) => line.startsWith("• Newer work"))).toBeLessThan(lines.findIndex((line) => line.startsWith("• Older work")));
+    expect(missionsSaid([mission({})], isHere).split("\n")[0]).toBe("**Working** (1)");
+  });
+
+  test("laid out to be read: a stage's name stands out, a blank line parts the stages, a mission is one line that leads with its name", () => {
+    const question = mission({ status: "waiting", waitKind: "input", title: "A question" });
+    const work = mission({ title: "Some work" });
+    expect(missionsSaid([question, work], isHere).split("\n")).toEqual([
+      "**Needs you** (1)",
+      `• A question · \`${question.id.slice(0, 10)}\` · needs you (input)`,
+      "",
+      "**Working** (1)",
+      `• Some work · \`${work.id.slice(0, 10)}\` · running`,
+    ]);
+  });
+
+  test("a room's list says whose each is; a direct chat's does not repeat the agent it is talking to", () => {
+    const work = mission({ title: "Some work" });
+    expect(missionsSaid([work], isHere, true)).toContain(`• Some work · \`${work.id.slice(0, 10)}\` · nouva · running`);
+    expect(missionsSaid([work], isHere)).not.toContain("nouva");
   });
 
   test("a draft is said as a draft, not as a result to accept", () => {
     const text = missionsSaid([draft({ title: "Later" })], isHere);
-    expect(text).toContain("· draft · Later");
+    expect(text).toMatch(/^• Later · `msn_[0-9a]+` · draft$/m);
     expect(text).not.toContain("needs you");
   });
 
   test("one started in another chat says so, and is not offered a start from here", () => {
     const text = missionsSaid([draft({ chatId: "999", title: "Elsewhere" })], isHere);
-    expect(text.split("\n")).toEqual(["Backlog (1)", expect.stringMatching(/· draft · Elsewhere · started in another chat$/)]);
+    expect(text.split("\n")).toEqual(["**Backlog** (1)", expect.stringMatching(/^• Elsewhere · `msn_[0-9a]+` · draft · started in another chat$/)]);
+  });
+
+  test("a mission with no name is still a line", () => {
+    expect(missionsSaid([mission({ title: "  " })], isHere)).toMatch(/^• untitled · `msn_/m);
   });
 
   test("nothing open says so, with how the command is used", () => {
     const text = missionsSaid([], isHere);
-    expect(text.split("\n")[0]).toBe("No mission is in the backlog, at work or waiting here.");
+    expect(text.split("\n").slice(0, 2)).toEqual(["No mission is in the backlog, at work or waiting here.", ""]);
     expect(text).toContain("/mission <goal>");
   });
 });
@@ -101,7 +122,12 @@ describe("whose missions a chat is shown", () => {
     expect(titles(text)).toEqual(["Here, at work", "Mine, another chat"]);
     expect(asked).toEqual(["nouva"]);
     expect(text.match(/Here, at work/g)).toHaveLength(1);
-    expect(text).toContain("Mine, another chat · started in another chat");
+    expect(text).toMatch(/^• Mine, another chat · `msn_[0-9a]+` · running · started in another chat$/m);
+  });
+
+  test("a room's lines say whose each mission is, a direct chat's do not", async () => {
+    expect(await reply({ chatType: "group" })).toMatch(/^• Here, at work · `msn_[0-9a]+` · nouva · running$/m);
+    expect(await reply({ chatType: "dm" })).toMatch(/^• Here, at work · `msn_[0-9a]+` · running$/m);
   });
 
   test("an admin in a direct chat is shown all of the agent's", async () => {

@@ -206,7 +206,7 @@ describe("every place that names a mission to a person", () => {
           envelope: { chatType: "dm", senderName: "Gading" },
         } as unknown as HookContext)
       ).reply ?? "";
-    expect(await typed("/mission")).toContain(`${id} · nova · running · The viewers for 0.8.39`);
+    expect(await typed("/mission")).toContain(`• The viewers for 0.8.39 · \`${id}\` · running`);
     expect(await typed("/mission")).not.toContain("groups A, C and E");
     const shown = await typed(`/mission show ${id}`);
     expect(shown).toStartWith(`The viewers for 0.8.39 · ${id} · nova · running\nGoal: ${LONG}`);

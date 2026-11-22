@@ -58,11 +58,6 @@ export function draftAsked(goal: string): string {
   );
 }
 
-/** One mission in one line, as a list shows it. */
-function line(mission: Mission): string {
-  return `${shortId(mission.id)} · ${mission.agentId} · ${state(mission)} · ${mission.title}`;
-}
-
 function state(mission: Mission): string {
   // A draft waits for its start, not on anybody: "needs you (accept)" read as a result to accept.
   if (isDraft(mission)) return "draft";
@@ -112,23 +107,27 @@ function listed(missions: MissionCommands, ctx: HookContext): Mission[] {
   return [...here, ...elsewhere];
 }
 
-/** The list a chat reads: what has not ended, by stage, a stage with nothing in it left out. Ended ones are not listed. */
-export function missionsSaid(open: readonly Mission[], isHere: (mission: Mission) => boolean): string {
-  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n${USAGE}`;
-  const out: string[] = [];
+/**
+ * The list a chat reads: what has not ended, by stage, a stage with nothing in it left out. Ended ones are not listed.
+ * A stage's name stands out and a blank line parts the stages; a mission is one line that leads with its name, the
+ * words a person knows it by, then its id and where it stands. `roomy` adds whose it is: a room holds several agents'.
+ */
+export function missionsSaid(open: readonly Mission[], isHere: (mission: Mission) => boolean, roomy = false): string {
+  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n\n${USAGE}`;
+  const stages: string[] = [];
   for (const stage of STAGES) {
     const inIt = open.filter((mission) => stageOf(mission) === stage.id).sort((a, b) => b.createdAt - a.createdAt);
     if (inIt.length === 0) continue;
-    if (out.length > 0) out.push("");
-    // A draft started from here is started from here; the way is said once, under the stage's name.
-    const start = stage.id === "backlog" && inIt.some(isHere) ? ": /mission accept <id> starts one" : "";
-    out.push(`${stage.title} (${inIt.length})${start}`, ...inIt.map((mission) => `${line(mission)}${isHere(mission) ? "" : " · started in another chat"}`));
+    // A draft started from here is started from here; the way is said once, beside the stage's name.
+    const start = stage.id === "backlog" && inIt.some(isHere) ? " · /mission accept <id> starts one" : "";
+    const lines = inIt.map((mission) => `• ${mission.title.trim() || "untitled"} · \`${shortId(mission.id)}\`${roomy ? ` · ${mission.agentId}` : ""} · ${state(mission)}${isHere(mission) ? "" : " · started in another chat"}`);
+    stages.push([`**${stage.title}** (${inIt.length})${start}`, ...lines].join("\n"));
   }
-  return out.join("\n");
+  return stages.join("\n\n");
 }
 
 function list(missions: MissionCommands, ctx: HookContext): string {
-  return missionsSaid(listed(missions, ctx), (mission) => mission.gatewayId === ctx.gatewayId && mission.chatId === ctx.chatId);
+  return missionsSaid(listed(missions, ctx), (mission) => mission.gatewayId === ctx.gatewayId && mission.chatId === ctx.chatId, ctx.envelope.chatType !== "dm");
 }
 
 /**

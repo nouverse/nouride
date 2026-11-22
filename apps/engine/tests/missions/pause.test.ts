@@ -315,7 +315,7 @@ describe("the ways a person pauses one", () => {
     const paused = await hook(h, ["pause", short(mission)]);
     expect(paused).toEqual({ handled: true });
     expect(now(h, mission)).toMatchObject({ status: "waiting", waitKind: "paused", pausedBy: "Gading" });
-    expect((await hook(h, [])).reply).toContain(`${short(mission)} · nova · paused · write the report`);
+    expect((await hook(h, [])).reply).toContain(`• write the report · \`${short(mission)}\` · paused`);
     expect((await hook(h, ["show", short(mission)])).reply).toContain(`Paused by Gading: /mission continue ${short(mission)} goes on from its checklist.`);
     expect((await hook(h, ["continue", short(mission)])).reply).toBe(`Mission ${short(mission)} goes on.`);
     expect(now(h, mission).status).toBe("running");

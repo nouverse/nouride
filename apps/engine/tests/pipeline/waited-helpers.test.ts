@@ -355,7 +355,7 @@ describe("a helper in the foreground", () => {
       },
     });
     say(d.gateway, "/helpers", "m0");
-    await eventually(() => replies(d.gateway).includes("Nobody is working for Nouva in the background now."), 4_000, "nobody yet");
+    await eventually(() => replies(d.gateway).includes("No helper is working for Nouva now."), 4_000, "nobody yet");
 
     say(d.gateway, "check everything", "m1");
     await eventually(() => d.jobs.backgroundTurns("nouva").length === 1 && replies(d.gateway).includes("masih jalan"), 4_000, "a helper moved");
@@ -363,19 +363,45 @@ describe("a helper in the foreground", () => {
     const requests = d.asked.length;
 
     say(d.gateway, "/helpers", "m2");
-    await eventually(() => replies(d.gateway).some((text) => text?.startsWith("1 at work for Nouva in the background:")), 4_000, "the list");
-    const listed = replies(d.gateway).find((text) => text?.startsWith("1 at work for Nouva in the background:"))!;
-    expect(listed.split("\n")[1]).toMatch(new RegExp(`^1\\. A helper, \\d+s so far, (last step \\d+s ago|no step yet): A very long check \\(${job!.id}\\)$`));
-    expect(listed).toContain("/stop ends what was started from this chat.");
+    await eventually(() => replies(d.gateway).some((text) => text?.startsWith("**Helpers working for Nouva** (1)")), 4_000, "the list");
+    const listed = replies(d.gateway).find((text) => text?.startsWith("**Helpers working for Nouva** (1)"))!;
+    const lines = listed.split("\n");
+    expect(lines[2]).toMatch(/^\*\*1\. A helper\*\* · \d+s · (last step \d+s ago|no step yet)$/);
+    expect(lines.slice(3, 5)).toEqual(["A very long check", `\`${job!.id}\``]);
+    expect(listed).toContain("/stop ends the ones started from this chat.");
     // The daemon answers it: no model is asked, and the helper is left at work.
     expect(d.asked.length).toBe(requests);
     expect(d.jobs.get(job!.id)?.status).toBe("running");
 
     say(d.gateway, "/stop", "m3");
     await eventually(() => d.jobs.get(job!.id)?.status === "killed", 4_000, "the helper stopped");
-    const before = replies(d.gateway).filter((text) => text === "Nobody is working for Nouva in the background now.").length;
+    const before = replies(d.gateway).filter((text) => text === "No helper is working for Nouva now.").length;
     say(d.gateway, "/helpers", "m4");
-    await eventually(() => replies(d.gateway).filter((text) => text === "Nobody is working for Nouva in the background now.").length === before + 1, 4_000, "nobody again");
+    await eventually(() => replies(d.gateway).filter((text) => text === "No helper is working for Nouva now.").length === before + 1, 4_000, "nobody again");
+  });
+
+  // Found live: told "run sleep 30 in the background", an agent did, and `/helpers` said twice that nobody was working.
+  test("/backgrounds lists a command the agent left running, and /helpers says one runs and where to see it", async () => {
+    const d = await daemon({ answer: async () => ({ text: "ok" }) });
+    const sent = envelope({});
+    const job = d.jobs.start({ agentId: "nouva", gatewayId: sent.gatewayId, chatId: sent.chatId, argv: ["sleep", "30"], sandbox: { cwd: d.bench.dataDir, env: {} } });
+    try {
+      expect(d.jobs.running("nouva").map((one) => one.kind)).toEqual(["command"]);
+      say(d.gateway, "/helpers", "m1");
+      await eventually(() => replies(d.gateway).includes("No helper is working for Nouva now.\n\n1 command runs in the background: /backgrounds"), 4_000, "the pointer");
+      say(d.gateway, "/backgrounds", "m2");
+      await eventually(() => replies(d.gateway).some((text) => text?.startsWith("**Running in the background for Nouva** (1)")), 4_000, "the list");
+      const lines = replies(d.gateway).find((text) => text?.startsWith("**Running in the background for Nouva** (1)"))!.split("\n");
+      expect(lines[2]).toMatch(/^\*\*1\. A command\*\* · \d+s · (last output \d+s ago|no output yet)$/);
+      expect(lines.slice(3, 5)).toEqual(["`sleep 30`", `\`${job.id}\``]);
+      // The daemon answers both: no model is asked.
+      expect(d.asked.length).toBe(0);
+    } finally {
+      d.jobs.kill(job.id, "the test's end");
+    }
+    await eventually(() => d.jobs.running("nouva").length === 0, 4_000, "the command ended");
+    say(d.gateway, "/backgrounds", "m3");
+    await eventually(() => replies(d.gateway).includes("No command of Nouva's runs in the background now."), 4_000, "nothing again");
   });
 });
 

@@ -104,18 +104,27 @@ export function slashCommands(parts: {
   return hooks;
 }
 
-/** An agent's helpers and asks at work, for `/helpers`: each job with what it was given and when its log was last written. */
-function workingFor(jobs: Pick<JobsPort, "backgroundTurns" | "getSnapshot">, agentId: string): WorkingInBackground[] {
-  return jobs.backgroundTurns(agentId).map((job) => ({
-    id: job.id,
-    asked: job.ask?.agent ?? null,
-    what: job.ask?.task ?? job.brief?.goal ?? job.command,
-    gatewayId: job.gatewayId,
-    chatId: job.chatId,
-    senderId: job.senderId,
-    startedAt: job.startedAt,
-    lastWroteAt: jobs.getSnapshot(job.id)?.logUpdatedAt ?? null,
-  }));
+/**
+ * Everything of an agent's that runs in the background, for `/helpers`: its helpers, its asks and its commands, each
+ * with what it was given and when its log was last written. Every kind of job: a command left out read as nothing
+ * running.
+ */
+function workingFor(jobs: Pick<JobsPort, "running" | "getSnapshot">, agentId: string): WorkingInBackground[] {
+  return jobs.running(agentId).map((job) => {
+    const snapshot = jobs.getSnapshot(job.id);
+    return {
+      id: job.id,
+      kind: job.kind,
+      asked: job.ask?.agent ?? null,
+      service: snapshot?.service === true,
+      what: job.ask?.task ?? job.brief?.goal ?? job.command,
+      gatewayId: job.gatewayId,
+      chatId: job.chatId,
+      senderId: job.senderId,
+      startedAt: job.startedAt,
+      lastWroteAt: snapshot?.logUpdatedAt ?? null,
+    };
+  });
 }
 
 /**
