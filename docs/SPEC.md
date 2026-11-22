@@ -458,6 +458,7 @@ interface GatewayResilienceConfig {
 5. Periodic health check: each gateway pings its upstream every `healthCheckIntervalMs`. If 3 consecutive health checks fail, trigger reconnect cycle.
 6. **WhatsApp-specific:** Session expiry (QR re-auth needed) marks the gateway `dead` with a `session_expired` event → the operator is alerted, and the number is linked again from the dashboard.
 7. **Credentials refused** (0.7.4): a connect the platform answers with a refused token — Telegram's 401 or 404 on `getMe`, Discord's `TokenInvalid` or 401 at login — throws `GatewayAuthError`. One more connect is tried, since Telegram answers a 401 now and then for a token that is fine; a second refusal marks the gateway `dead` with `auth_failed` at once, and the alert says the token was refused rather than that reconnecting gave up.
+8. **A connect that waits says why** (0.8.43, `commons/connect-wait.ts`): an adapter that learns its platform makes the connect wait calls `waitingFor(reason, until?)`; the supervisor keeps it as `Gateway.waiting` until the status next changes, and logs it once per new reason ("waiting to connect"). Telegram's reads every answer to the bot it is starting (a transformer, `telegram/waits.ts`): a 429 with its `retry_after`, a 5xx, no answer at all. grammY's `init` retried those by itself, in silence, and with a pause a thousand times the one it means (1.45.1 counts it in milliseconds and sleeps it in seconds: the second failure in a row waited a hundred seconds, the third two hundred). So the adapter takes the retry: the answer is thrown past the library (`StartWait`), and `TelegramGateway.started` waits what Telegram named, or the connection's own backoff from a second to a minute, and asks again, until Telegram answers or the connect is given up. Discord's reads its REST client's `rateLimited` while it logs in, and a login that times out says what it waited on. A connect nothing has answered for thirty seconds says "It has not answered yet." by itself. Shown on the connection's card (`GatewayInstance.waiting`), in `nouride status` (`/status` `gateways[].waiting`) and among `/health`'s issues.
 
 **Outbound pacing** (0.7.4, `commons/pace.ts`): every part of an answer — each chunk of text, each file — waits its turn in a token bucket per chat, and per bot where the platform has a limit of its own, so a long answer does not run into the platform's limit part-way. Telegram: one message a second in a chat, twenty a minute in a group, thirty a second in all; a 429 is waited out for the `retry_after` it names and the same message sent again, twice at most, rather than resent as plain text into the same limit. Discord: five messages in five seconds in a channel, its client already waiting out a 429 itself. WhatsApp's bridge paces its own chunks. Edits are not paced: the progress line is edited in place, and sharing a bucket with the answer would starve it.
 
@@ -1919,7 +1920,8 @@ dropped, 43 for size and 21 for an account's address, two skills nineteen times 
 how often it was seen (`skill_candidates.sightings`, `093_skill_learning_seen.sql`, backfilled from the audit log's
 `skill_candidate_held` rows) and whether the conversation it was seen in is still kept; and the last twelve things
 learning did, read from its own audit rows, a look that kept nothing among them with triage's reason
-(`skill_pass_nothing`). A held kind of work is written now on an operator's word
+(`skill_pass_nothing`); the same thing done again, by one agent about one skill, is one line with how often
+(`LearningEvent.times`, 0.8.43), the newest shown. A held kind of work is written now on an operator's word
 (`POST /skills/learning/seen/:name/write`: the author call over that conversation as it stands, no triage) or
 forgotten (`DELETE`). A skill's reads are counted (`skill_reads.reads`), and again from the last change learning made
 to it (`reads_since_change`).
@@ -2087,6 +2089,33 @@ repository, it works in a worktree of its own instead (`missions/worktree.ts`):
   changes nobody committed: then nothing is removed, and the log names them. An agent working in a worktree is told to
   commit. A folder a person gave a mission is theirs and never removed. The branches stay in the repository: nothing
   deletes a `mission/*` branch.
+
+### 13.6 What a Mission Left Running (0.8.42, 0.8.43)
+
+A mission's background jobs still running are stopped as it ends (`Missions.end`). What one of its commands, or a
+job of its own that had ended, started and did not wait for was nobody's: on a live box three build workers of a
+finished mission ran eighteen hours, each at a whole core.
+
+- **The daemon's own commands** (0.8.42, `runtime/process-left.ts`, `missions/left-running.ts`). A command leads a
+  process group; as it ends, what is still in that group is noted for the mission (`SandboxOptions.onLeft`, a
+  mission's turn and its jobs alone). At the mission's end each group still provably the one noted (a process seen in
+  it still there, by pid and start time) is sent `SIGTERM`, then `SIGKILL` after three seconds, as the agent's own
+  user where agents have one. A program in a session of its own making is in no command's group and is never noted.
+- **A coding CLI's commands** (0.8.43, `runtime/process-work-group.ts`, `external-agents/session-groups.ts`). The
+  CLI runs them from its own shell: the daemon holds none, and what one left is reparented to init in a session whose
+  leader is gone. So where the commands have a cgroup (`process-cgroup.ts`: a unit that hands its own over),
+  the process the CLI starts for a mission's session is moved into a child cgroup, `commands/m-<mission>`, as the
+  session opens: told apart as the child born while that one session was opened, and not at all where two opened
+  together. Everything it starts is born there. At the mission's end, its session let go (`letGoCli`), the daemon
+  waits for that process to end (eight seconds at most) and three seconds more for what it kept, then sorts what is
+  still in the group (`sortLeft`): what descends from a session process still running is the CLI's; what leads a
+  session of its own, or sits in one whose leader is there, set itself apart and is left, and named; the rest, in a
+  session whose leader is gone, is a command's leftovers, given by process group and ended as above. A group shared
+  with anything outside the cgroup is never signalled. The group is then removed, what is left in it moved back to
+  `commands/`. Not followed: a chat's session, a CLI that serves every session from one process, an install with no
+  commands cgroup (a container). After a restart nothing is followed until a session opens again.
+- **Said** (`leftEndedNotice`): the mission's chat is told what was ended, by name and count, and what set itself
+  apart and was left.
 
 ---
 
