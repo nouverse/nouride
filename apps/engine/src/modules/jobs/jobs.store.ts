@@ -82,7 +82,10 @@ export interface JobRecord {
   ask: AskedWork | null;
   /** What a helper or an asked agent handed back when it ended — or stopped for a restart. Null for a command, and while it runs. */
   report: SubAgentHandoff | null;
-  /** The turn that started it, and the person that turn answered — kept for a helper and an ask. */
+  /**
+   * The turn that started it, and the person that turn answered. A command kept no person, and `/backgrounds` in a
+   * direct chat never listed what that person had left running from a room.
+   */
   turnId: string | null;
   senderId: string | null;
 }
@@ -449,6 +452,8 @@ export class JobStore {
      * this is how its job's end finds its way back to the agent that asked (`pipeline/job-wakes.ts`).
      */
     turnId?: string;
+    /** The person whose turn starts it: who is shown it in their own chat with the agent (`/backgrounds`). */
+    senderId?: string;
   }): JobRecord & { limitMs: number } {
     const command = params.argv.join(" ");
     const duplicate = this.options.db
@@ -516,8 +521,8 @@ export class JobStore {
     this.options.db
       .prepare(
         `INSERT INTO jobs
-           (id, agent_id, gateway_id, chat_id, command, cwd, status, pid, log_path, started_at, on_complete, turn_id)
-         VALUES (?, ?, ?, ?, ?, ?, 'running', ?, ?, ?, ?, ?)`,
+           (id, agent_id, gateway_id, chat_id, command, cwd, status, pid, log_path, started_at, on_complete, turn_id, sender_id)
+         VALUES (?, ?, ?, ?, ?, ?, 'running', ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -531,6 +536,7 @@ export class JobStore {
         startedAt,
         params.onComplete ?? null,
         params.turnId ?? null,
+        params.senderId ?? null,
       );
 
     this.handles.set(id, handle);
@@ -880,7 +886,7 @@ export function startJobFor(jobs: Pick<JobsPort, "start">) {
   return (params: {
     argv: string[];
     cwd: string;
-    ctx: { agentId: string; gatewayId: string; chatId: string; turnId?: string };
+    ctx: { agentId: string; gatewayId: string; chatId: string; turnId?: string; senderId?: string };
     env: Record<string, string>;
     agent?: string;
     onComplete?: string;
@@ -893,6 +899,7 @@ export function startJobFor(jobs: Pick<JobsPort, "start">) {
       gatewayId: params.ctx.gatewayId,
       chatId: params.ctx.chatId,
       ...(params.ctx.turnId ? { turnId: params.ctx.turnId } : {}),
+      ...(params.ctx.senderId ? { senderId: params.ctx.senderId } : {}),
       argv: params.argv,
       sandbox: { cwd: params.cwd, env: params.env, ...(params.agent ? { agent: params.agent } : {}) },
       ...(params.onComplete ? { onComplete: params.onComplete } : {}),

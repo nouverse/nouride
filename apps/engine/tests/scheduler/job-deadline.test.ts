@@ -343,5 +343,8 @@ describe("exec's way in", () => {
     const ctx = { agentId: "nouva", gatewayId: "telegram:main", chatId: "chat-1" };
     expect(start({ argv: ["make"], cwd: "/w", ctx, env: { A: "1" }, onComplete: "deploy", service: true })).toEqual({ id: "job_1", logPath: "/tmp/1.log", limitMs: 60_000 });
     expect(asked).toEqual([{ ...ctx, argv: ["make"], sandbox: { cwd: "/w", env: { A: "1" } }, onComplete: "deploy", service: true }]);
+    // And who started it and in which turn, where the tool knows: a command's job kept neither person nor list to show them it in.
+    start({ argv: ["make"], cwd: "/w", ctx: { ...ctx, turnId: "turn_1", senderId: "user-1" }, env: {} });
+    expect(asked[1]).toEqual({ ...ctx, turnId: "turn_1", senderId: "user-1", argv: ["make"], sandbox: { cwd: "/w", env: {} } });
   });
 });

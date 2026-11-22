@@ -74,7 +74,8 @@ export interface ExecToolOptions {
   startJob?: (params: {
     argv: string[];
     cwd: string;
-    ctx: { agentId: string; gatewayId: string; chatId: string; turnId?: string };
+    /** `senderId`: the person whose turn starts it, for the lists that show a person what they started. */
+    ctx: { agentId: string; gatewayId: string; chatId: string; turnId?: string; senderId?: string };
     env: Record<string, string>;
     /** Whose own user it runs as: the agent's — absent for the daemon's CLI, run through the `nouride` tool. */
     agent?: string;
@@ -394,7 +395,7 @@ export function createExecTool(options: ExecToolOptions): Tool {
           const job = options.startJob({
             argv: command.argv,
             cwd: cwd.path,
-            ctx: { agentId: ctx.agentId, gatewayId: ctx.gatewayId, chatId: ctx.chatId, ...(ctx.turnId ? { turnId: ctx.turnId } : {}) },
+            ctx: { agentId: ctx.agentId, gatewayId: ctx.gatewayId, chatId: ctx.chatId, ...(ctx.turnId ? { turnId: ctx.turnId } : {}), ...(ctx.senderId ? { senderId: ctx.senderId } : {}) },
             ...(ctx.ownCliTool ? {} : { agent: ctx.agentId }),
             /**
          * `caller_env` — who is calling, for a command that has to schedule its own way back.
