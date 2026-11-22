@@ -55,16 +55,29 @@ describe("/approvals and the names from before 0.7.23", () => {
   test("moving to balanced says what still asks — 0.8.0's few, and `trusted` refused with what it switches off", async () => {
     const { say } = await chat();
     const reply = await say("/approvals balanced");
+    // Two lists, a line to each thing: one sentence broken by hand at five places read ragged on a phone.
     expect(reply).toContain(
       [
-        "Still asks, every time: changing a config.toml, giving someone access, stopping this",
-        "daemon, replacing or deleting a stored secret, a credential leaving this machine, and",
-        "changing its system packages. Like every level, it also asks about a program installed",
-        "for every agent, a change to an agent's own persona or to who People says a person is,",
-        "and work nobody watches sending somewhere its job did not name.",
+        "**Still asks, every time:**",
+        "• changing a config.toml",
+        "• giving someone access",
+        "• stopping this daemon",
+        "• replacing or deleting a stored secret",
+        "• a credential leaving this machine",
+        "• changing its system packages",
+        "",
+        "**Like every level, it also asks about:**",
+        "• a program installed for every agent",
+        "• a change to an agent's own persona, or to who People says a person is",
+        "• work nobody watches sending somewhere its job did not name",
       ].join("\n"),
     );
+    // No sentence is broken in its middle.
+    const midSentence = (text: string | undefined) => (text ?? "").split("\n").filter((line) => /^[a-z]/.test(line));
+    expect(midSentence(reply)).toEqual([]);
     expect(reply).not.toContain("recursive deletes");
-    expect(await say("/approvals trusted")).toContain("switches off every gate, config changes and stopping");
+    const trusted = await say("/approvals trusted");
+    expect(trusted).toContain("switches off every gate, config changes and stopping this daemon included");
+    expect(midSentence(trusted)).toEqual([]);
   });
 });

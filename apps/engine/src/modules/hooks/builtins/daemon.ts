@@ -17,7 +17,7 @@ const RESTARTED_NOTICE = "✓ Restarted, I'm back.";
 
 const daemonRestart: Hook = {
   command: "/daemon-restart",
-  description: "Restart the daemon once nothing is running (`/daemon-restart now` to not wait)",
+  description: "Restart the daemon once nothing is running; with now, at once",
   // It is the daemon that restarts, not this agent, so pausing the agent has nothing to say about it.
   worksWhilePaused: true,
   handler: async (ctx) => {

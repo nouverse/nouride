@@ -24,11 +24,16 @@
 
 import type { Hook, HookContext, MentionSource } from "../types.ts";
 import { isPlatformMention } from "../parse.ts";
+import { uses } from "../format.ts";
 
 const DM_REFUSAL = "/mention only works in a group. A DM always gets an answer, no tag needed.";
 const NOT_ADMIN = "Only an admin can change this for the group.";
-const USAGE =
-  "`/mention` shows who answers here · `/mention <agent>` that agent answers every message that tags nobody · `/mention required` a tag is needed · `/mention default` follow the gateway or daemon again";
+const USAGE = uses([
+  ["/mention", "who answers here"],
+  ["/mention <agent>", "that agent answers every message that tags nobody"],
+  ["/mention required", "a tag is needed"],
+  ["/mention default", "follow the gateway or the daemon again"],
+]);
 
 const FROM: Record<MentionSource, string> = {
   group: "set for this group with /mention",
@@ -70,7 +75,7 @@ const listed = (agents: Agents): string => agents.map((agent) => (agent.tag && a
 const mention: Hook = {
   command: "/mention",
   // Within the hundred characters the shortest platform menu takes (Discord's).
-  description: "Who answers without a tag here: `/mention <agent>`, `/mention required`, `/mention default`",
+  description: "Who answers a message that tags nobody in this group",
   // The group's setting, not this agent's: pausing the agent that happens to receive it has nothing to say about it.
   worksWhilePaused: true,
   aboutTheGroup: true,
@@ -98,11 +103,11 @@ function reply(ctx: HookContext): { reply?: string } {
     // In words a person can type: a handle where the platform's tag is one (`@NovelistBot`), else the agent's id.
     const typed = mine?.tag?.startsWith("@") ? mine.tag : mine?.id;
     const teach = ctx.envelope.mentionsSelf && mine && here.answers !== mine.id ? `\nTo have ${mine.name} answer everything here: \`/mention ${typed}\`.` : "";
-    return { reply: `${sentence(here, agents)} (${FROM[here.source]})${teach}\n${USAGE}` };
+    return { reply: `${sentence(here, agents)} (${FROM[here.source]})${teach}\n\n${USAGE}` };
   }
 
   const agent = keyword ? undefined : named(agents, words);
-  if (!keyword && !agent) return { reply: `No agent here is called "${words}". The agents: ${listed(agents)}.\n${USAGE}` };
+  if (!keyword && !agent) return { reply: `No agent here is called "${words}". The agents: ${listed(agents)}.\n\n${USAGE}` };
   if (!port.mayChange(ctx.envelope)) return { reply: NOT_ADMIN };
 
   const actor = `${ctx.gatewayId}:${ctx.senderId}`;

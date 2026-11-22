@@ -12,19 +12,20 @@
  */
 
 import type { Hook, HookContext } from "../types.ts";
+import { titled, uses } from "../format.ts";
 
-const USAGE = [
-  "`/secret set <name> <value>`: keep a value under a name, for good (admins)",
-  "`/secret replace <name> <value>`: the same, over a name already set (admins)",
-  "`/secret undo`: your last message the daemon took something from, back as you wrote it",
-].join("\n");
+const USAGE = uses([
+  ["/secret set <name> <value>", "keep a value under a name, for good (admins)"],
+  ["/secret replace <name> <value>", "the same, over a name already set (admins)"],
+  ["/secret undo", "your last message the daemon took something from, back as you wrote it"],
+]);
 
 const ADMIN =
   "an admin: someone paired with me whose person, under People, is linked to an admin's dashboard account. The dashboard's Secrets page can too.";
 
 const secret: Hook = {
   command: "/secret",
-  description: "Credentials sent here: `/secret`, `/secret set <name> <value>`, `/secret undo`",
+  description: "The credentials sent in this chat, and keeping one under a name",
   // Nothing here runs the agent: what is held, and the store, are the daemon's.
   worksWhilePaused: true,
   // In a group it is about the group's messages, whichever bot was handed them: typed with no tag in a room several
@@ -61,7 +62,7 @@ function status(ctx: HookContext): string {
   // The message's own conversation: in a room, the room's handles (`secretScope`).
   const held = port.held(ctx.envelope);
   const lines = held.length
-    ? ["Held in this chat, each for an hour after it was sent:", ...held.map((secret) => `• ${secret.handle}: ${secret.label}, ${secret.minutesLeft} min left`)]
+    ? [titled("Held in this chat, each for an hour after it was sent", held.length), ...held.map((secret) => `• \`${secret.handle}\`: ${secret.label}, ${secret.minutesLeft} min left`)]
     : ["Nothing held in this chat."];
   return [...lines, "", USAGE].join("\n");
 }

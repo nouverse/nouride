@@ -315,7 +315,7 @@ describe("the ways a person pauses one", () => {
     const paused = await hook(h, ["pause", short(mission)]);
     expect(paused).toEqual({ handled: true });
     expect(now(h, mission)).toMatchObject({ status: "waiting", waitKind: "paused", pausedBy: "Gading" });
-    expect((await hook(h, [])).reply).toContain(`${short(mission)} · nova · paused · write the report`);
+    expect((await hook(h, [])).reply).toContain(`• write the report · \`${short(mission)}\` · paused`);
     expect((await hook(h, ["show", short(mission)])).reply).toContain(`Paused by Gading: /mission continue ${short(mission)} goes on from its checklist.`);
     expect((await hook(h, ["continue", short(mission)])).reply).toBe(`Mission ${short(mission)} goes on.`);
     expect(now(h, mission).status).toBe("running");
@@ -330,7 +330,13 @@ describe("the ways a person pauses one", () => {
 
   test("the usage names it", async () => {
     const h = await missionsHarness();
-    expect((await hook(h, [])).reply).toContain("/mission pause <id>: stop its work for now and keep everything; /mission continue <id> goes on from its checklist, whenever you like.");
+    // Where the usage is said whole: a verb with no mission named. An empty list says only how one is asked for.
+    const usage = (await hook(h, ["pause"])).reply ?? "";
+    expect(usage.split("\n")).toContain("`/mission pause <id>`: stop its work for now and keep everything");
+    expect(usage.split("\n")).toContain("`/mission continue <id>`: go on from its checklist, whenever you like");
+    // A use to a line: none holds two.
+    expect(usage.split("\n").filter((line) => (line.match(/\/mission /g) ?? []).length > 1)).toEqual([]);
+    expect((await hook(h, [])).reply).not.toContain("/mission pause");
   });
 
   test("the dashboard's route pauses it, says who in the answer, and words a refusal plainly", async () => {

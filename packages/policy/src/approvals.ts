@@ -106,7 +106,10 @@ export function skipsApproval(level: ApprovalLevel, hardlineClass: HardlineClass
   return false;
 }
 
-/** One line for a person: what is set, and who set it. */
+/**
+ * For a person: what is set, what that means, and who set it, a line each. One sentence held all three, the last in
+ * brackets, and a chat showed it as a block four lines deep.
+ */
 export function describeApprovalLevel(resolution: ApprovalResolution): string {
   const what: Record<ApprovalLevel, string> = {
     careful: "a new command or change asks once, and deletes, teardowns, force-pushes and the rest of the fixed list every time",
@@ -118,5 +121,6 @@ export function describeApprovalLevel(resolution: ApprovalResolution): string {
     person: "set by you, and it follows you across agents that do not decide for themselves",
     daemon: "the daemon default, because neither this agent nor you have set one",
   };
-  return `\`${resolution.level}\`, where ${what[resolution.level]} (${who[resolution.source]}).`;
+  const sentence = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
+  return [`\`${resolution.level}\``, sentence(what[resolution.level]), sentence(who[resolution.source])].join("\n");
 }

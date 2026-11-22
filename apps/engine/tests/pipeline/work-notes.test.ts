@@ -80,7 +80,7 @@ describe("work notes in a conversation", () => {
     expect(String(lastOf(h.requests.at(-1)!).content)).toContain("Verify 52 documents");
 
     await h.say("/reset");
-    expect(h.gateway.lastText()).toContain("1 work-notes task(s) cleared");
+    expect(h.gateway.lastText()).toContain("1 work-notes task cleared");
     await h.say("halo");
     expect(said(h.requests.at(-1)!)).not.toContain("WORK NOTES");
   });
@@ -89,9 +89,9 @@ describe("work notes in a conversation", () => {
     const h = await bench([{ toolCalls: [{ id: "n1", name: "notes", args: WRITE }] }, { text: "Noted." }]);
     await h.say("mulai");
     await h.say("/notes");
-    expect(h.gateway.lastText()).toContain("Work notes (1 task):\n\n## Verify 52 documents");
+    expect(h.gateway.lastText()).toContain("**Work notes** (1)\n\n## Verify 52 documents");
     await h.say("/notes clear");
-    expect(h.gateway.lastText()).toBe("Cleared 1 task(s) from the work notes.");
+    expect(h.gateway.lastText()).toBe("Cleared 1 task from the work notes.");
     expect(h.notes.tasks({ agentId: "nouva", gatewayId: h.gateway.id, chatId: "chat-1" })).toEqual([]);
   });
 

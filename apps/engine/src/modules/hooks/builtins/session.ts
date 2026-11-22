@@ -40,7 +40,7 @@ export const sessionHooks: Hook[] = [
 
     {
       command: "/compact",
-      description: "Summarize the conversation so far, keeping the recent turns",
+      description: "Summarise the conversation so far, the recent turns kept",
       handler: async (ctx) => {
         if (!ctx.deps.compactSession) {
           return { handled: true, reply: "Compaction is not available in this process." };
@@ -73,7 +73,7 @@ export const sessionHooks: Hook[] = [
         return {
           handled: true,
           reply:
-            `Compacted ${result.turns} earlier turn(s) into a summary. ` +
+            `Compacted ${result.turns} earlier ${plural(result.turns, "turn")} into a summary. ` +
             `Context went from about ${result.before} to ${result.after} tokens, freeing ${saved}.`,
         };
       },
@@ -81,7 +81,7 @@ export const sessionHooks: Hook[] = [
 
     {
       command: "/reset",
-      description: "Hard reset: clear conversation, expire approvals, reload config",
+      description: "Start over: the conversation cleared, approvals expired, config read again",
       worksWhilePaused: true,
       handler: async (ctx) => {
         // `/new`, and the session-level state with it: a `/model` override — or the chat stays on a model the config
@@ -107,7 +107,7 @@ export const sessionHooks: Hook[] = [
         return {
           handled: true,
           reply:
-            `Reset. ${cleared}${ended.tasks > 0 ? `, ${ended.tasks} work-notes task(s) cleared` : ""}${failure ? "" : ", config reloaded"}${expired > 0 ? `, ${expired} approval(s) expired` : ""}${wasPaused ? ", resumed" : ""}.${failure}` +
+            `Reset. ${cleared}${ended.tasks > 0 ? `, ${ended.tasks} work-notes ${plural(ended.tasks, "task")} cleared` : ""}${failure ? "" : ", config reloaded"}${expired > 0 ? `, ${expired} ${plural(expired, "approval")} expired` : ""}${wasPaused ? ", resumed" : ""}.${failure}` +
             memoryNote(ended.cut),
         };
       },
@@ -173,7 +173,7 @@ export const sessionHooks: Hook[] = [
 
     {
       command: "/start",
-      description: "Wake this agent (as /wake)",
+      description: "Wake this agent, as /wake does",
       worksWhilePaused: true,
       handler: async (ctx) => {
         const woke = ctx.deps.registry.resume(ctx.agent.config.id);
@@ -183,7 +183,7 @@ export const sessionHooks: Hook[] = [
 
     {
       command: "/status",
-      description: "Show agent status",
+      description: "What this agent is doing, its model and what this chat has used",
       worksWhilePaused: true,
       handler: async (ctx) => {
         const key = sessionKey(ctx);

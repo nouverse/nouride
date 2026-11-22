@@ -246,7 +246,7 @@ describe("when it tries again, said", () => {
       agent: { config: { id: "nova" } },
       envelope: { chatType: "dm", senderName: "Gading" },
     } as unknown as HookContext);
-    expect(listed.reply).toContain(`${mission.id.slice(0, 10)} · nova · held up, tries again by itself · write the report`);
+    expect(listed.reply).toContain(`• write the report · \`${mission.id.slice(0, 10)}\` · held up, tries again by itself`);
     expect(listed.reply).not.toContain("needs you");
 
     const row = { id: "msn_1", agentId: "nix", title: "write the report", goal: "write the report", status: "waiting", waitKind: "retry", seen: "needs_you", turnsUsed: 3, limits: { turns: 50 } };

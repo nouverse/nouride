@@ -138,11 +138,17 @@ describe("what a person is told", () => {
   test("the line says what is set and who set it", () => {
     // "Why am I being asked" and "why am I not" are the same question, and the answer is the source.
     const agentSet = describeApprovalLevel({ level: "trusted", source: "agent" });
-    expect(agentSet).toContain("nothing asks");
+    expect(agentSet).toContain("othing asks");
     expect(agentSet).toContain("everyone talking to it");
+    // A line each: what is set, what it means, who set it. One sentence held all three, the last in brackets.
+    expect(agentSet.split("\n")).toEqual([
+      "`trusted`",
+      "Nothing asks, but a program installed for every agent, a change to an agent's own persona and a change to who People says a person is still do.",
+      "Set on this agent, so it applies to everyone talking to it.",
+    ]);
 
     expect(describeApprovalLevel({ level: "balanced", source: "person" })).toContain("follows you");
-    expect(describeApprovalLevel({ level: "careful", source: "daemon" })).toContain("daemon default");
+    expect(describeApprovalLevel({ level: "careful", source: "daemon" })).toContain("The daemon default");
   });
 
   test("balanced names this machine's packages, and never claims its list is all that asks", () => {

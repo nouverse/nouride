@@ -14,11 +14,12 @@
 import { plural, approvedSentence, draftVerb } from "@nouride/shared";
 import type { SkillDraft } from "@/modules/reflection/types.ts";
 import type { Hook } from "../types.ts";
+import { titled, uses } from "../format.ts";
 
 export const draftHooks: Hook[] = [
   {
     command: "/drafts",
-    description: "Skills I have drafted and want your call on: `show`, `approve`, `deny`",
+    description: "The skills I drafted and want your word on",
     handler: async (ctx) => {
       const drafts = ctx.deps.drafts;
       if (!drafts) {
@@ -107,8 +108,13 @@ export const draftHooks: Hook[] = [
 
       return {
         handled: true,
-        reply:
-          "`/drafts` · `/drafts show <name>` · `/drafts approve <name>` · `/drafts approve` (all) · `/drafts deny <name>`",
+        reply: uses([
+          ["/drafts", "what is waiting"],
+          ["/drafts show <name>", "read one"],
+          ["/drafts approve <name>", "add it to the skills"],
+          ["/drafts approve", "add all of them"],
+          ["/drafts deny <name>", "drop it"],
+        ]),
       };
     },
   },
@@ -149,20 +155,23 @@ function renderList(pending: SkillDraft[]): string {
     const age = describeAge(Date.now() - draft.createdAt);
     // What approving moves, first: `/drafts approve` takes the whole queue, and an archive must not read as a new skill.
     const verb = draftVerb(draft);
-    return `• ${verb ? `${verb} ` : ""}**${draft.name}**: ${draft.description}\n  _${draft.agentId}, ${age}_`;
+    return `• ${verb ? `${verb} ` : ""}**${draft.name}**\n${draft.description}\n_${draft.agentId}, ${age}_`;
   });
 
   return [
-    `${pending.length} skill ${plural(pending.length, "draft")} waiting on you:`,
+    titled(`Skill ${plural(pending.length, "draft")} waiting on you`, pending.length),
     "",
-    ...rows,
+    ...rows.flatMap((row, index) => (index === 0 ? [row] : ["", row])),
     "",
-    // `approve` on its own is offered here and not on a single-draft view: it only means anything
-    // when there is a queue, and this is the only screen that shows one.
-    pending.length > 1
-      ? "`/drafts show <name>` · `/drafts approve <name>` · `/drafts deny <name>` · `/drafts approve` takes all " +
-        `${pending.length}`
-      : "`/drafts show <name>` to read one · `/drafts approve <name>` · `/drafts deny <name>`",
+    uses([
+      ["/drafts show <name>", "read one"],
+      ["/drafts approve <name>", "add it to the skills"],
+      ["/drafts deny <name>", "drop it"],
+      // `approve` on its own is offered here and not on a single-draft view: it only means anything
+      // when there is a queue, and this is the only screen that shows one.
+      ...(pending.length > 1 ? [["/drafts approve", `add all ${pending.length}`] as const] : []),
+    ]),
+    "",
     "Nothing expires. They wait until you decide.",
   ].join("\n");
 }
@@ -186,7 +195,11 @@ function renderDraft(draft: {
     draft.body,
     "",
     "---",
-    `\`/drafts approve ${draft.name}\` · \`/drafts deny ${draft.name}\``,
+    "",
+    uses([
+      [`/drafts approve ${draft.name}`, "add it to the skills"],
+      [`/drafts deny ${draft.name}`, "drop it"],
+    ]),
   ].join("\n");
 }
 

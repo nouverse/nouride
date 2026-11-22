@@ -6,16 +6,20 @@
 
 import type { ProposalCards } from "@/modules/cron/proposal-cards.ts";
 import type { Hook } from "../types.ts";
+import { uses } from "../format.ts";
 
 /** What `/schedule` reaches of the proposals. */
 export type ScheduleCommands = Pick<ProposalCards, "answer">;
 
-const USAGE = "/schedule on <id> turns on a job proposed here; /schedule discard <id> lets it go.";
+const USAGE = uses([
+  ["/schedule on <id>", "turn on a job proposed here"],
+  ["/schedule discard <id>", "let it go"],
+]);
 
 export const scheduleHooks: Hook[] = [
   {
     command: "/schedule",
-    description: "Turn on, or discard, a scheduled job an agent proposed here: /schedule on <id>",
+    description: "Turn on, or let go, a scheduled job proposed here",
     handler: async (ctx) => {
       const cards = ctx.deps.proposals;
       if (!cards) return { handled: true, reply: "Scheduled jobs are not run in this process." };
