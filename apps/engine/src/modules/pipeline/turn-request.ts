@@ -224,6 +224,8 @@ export function turnRequest(
       ...turnReminders(turn.text, toolset.definitions, { running: ctx.helpersRunning(agent.config.id, envelope), now: Date.now() }, ctx.loadNow(agent)),
       // The other agents of this chat, and what else is at work on the box (`work-now.ts`).
       ...workNotes(sourcesFrom(ctx, agent, envelope, reader), now),
+      // And how full the box is, where it is short of room (`commons/box-full.ts`).
+      ...[ctx.deps.full?.() ?? null].filter((note): note is string => note !== null),
       // What it did for another agent lately, and what one that worked for it has since said to this person (`work-done.ts`).
       ...doneNotes(doneSources(ctx.deps.workDone, { me: agent.config.id, at: envelope, reader, people: ctx.deps.config.people, now, timeZone: ctx.deps.config.daemon.timezone, held: (line) => heldIn(turn.history, line) })),
       // What its own missions in this chat wait for the person to answer (`mission-questions.ts`).

@@ -36,7 +36,12 @@ Selain itu, operator atau viewer tidak pernah melihat milik orang lain: tidak di
 yang dijawab seolah automation itu tidak ada. Admin memilih milik siapa lewat dropdown di samping pencarian: **Mine**
 (awalnya di sini), **Everyone**, yang memisahkan daftar per orang, satu orang (ketik sebagian namanya), atau
 **Nobody's**. Nobody's adalah yang dibuat dari command line dan yang dari sebelum 0.8.35 yang pembuatnya tidak bisa
-Nouride kenali. Di halaman satu automation, admin bisa menyerahkannya ke seseorang, atau ke tidak siapa pun.
+Nouride kenali. Di halaman satu automation, admin bisa menyerahkannya ke seseorang, atau ke tidak siapa pun: lewat
+menu di kepala halaman, **Whose it is**.
+
+Milikmu sendiri juga bisa kamu serahkan ke orang lain di sana (0.8.44), tapi tidak ke "tidak siapa pun". Kamu ditanya
+dulu: setelah itu automation-nya jadi milik orang itu untuk diubah, bukan milikmu lagi, dan kamu hanya masih
+melihatnya kalau ia melapor ke chat-mu.
 
 Perubahan yang diusulkan agent atas automation yang sudah ada hanya bisa dinyalakan pemiliknya, atau admin: melihat
 kartunya di sebuah chat belum cukup untuk mengubah milik orang lain.
@@ -57,10 +62,10 @@ Automation mengerjakan satu hal, atau beberapa hal dengan urutan yang tetap. Tia
 |---|---|---|
 | **Kirim pesan** | mengirim teks apa adanya ke chat automation itu | tidak |
 | **Minta ke agent** | satu giliran agent pemilik automation, atau agent lain yang kamu pilih | ya, satu giliran |
-| **Jalankan perintah** | menjalankan satu baris shell di workspace agent | tidak |
+| **Jalankan skrip** (*Run a script*) | menjalankan program kecil di workspace agent: [skrip](#skrip) yang disimpan automation itu, atau satu baris | tidak |
 | **Mulai mission** | pekerjaan panjang yang dicek; automation menunggunya selesai | ya, seperti [mission](/id/docs/manual/missions/) |
 | **Tunggu persetujuan** | bertanya ke orang, dan lanjut setelah dijawab ya | tidak |
-| **Beberapa sekaligus** | memulai dua sampai lima giliran agent atau perintah bersamaan, lalu menggabung apa yang dikatakan masing-masing | ya, satu giliran untuk tiap agent di dalamnya |
+| **Beberapa sekaligus** | memulai dua sampai lima giliran agent atau skrip bersamaan, lalu menggabung apa yang dikatakan masing-masing | ya, satu giliran untuk tiap agent di dalamnya |
 
 Nouride menjalankan langkah-langkah itu sesuai urutannya, setiap kali. Tiap langkah menerima apa yang
 dikatakan langkah sebelumnya, dan agent hanya mengerjakan langkah yang diberikan kepadanya: ia gak
@@ -68,33 +73,83 @@ melompat, gak mengubah urutan, dan gak menentukan sendiri apa berikutnya. Itu be
 [mission](/id/docs/manual/missions/), di mana agent merencanakan sendiri pekerjaannya. Kata-kata langkah
 terakhir adalah yang dikirim automation ke chat-nya.
 
-Di halaman automation, langkah-langkahnya berupa kartu sesuai urutan jalannya. Tekan kartu untuk
-mengubahnya, tekan tanda plus di antara dua kartu untuk menambah langkah, dan seret kartu untuk
-memindahkannya. Gak ada yang berubah sebelum kamu menekan **Save**.
+Halaman automation menggambarnya sebagai kanvas (0.8.44): satu kotak untuk bagaimana ia mulai, satu kotak untuk
+tiap langkah sesuai urutan jalannya, dan satu kotak untuk ke mana hasilnya dikirim. Tekan sebuah kotak dan isiannya
+terbuka di samping kanvas kalau jendelanya lebar, atau di dalam kotak itu sendiri kalau lebih sempit dan di ponsel;
+kalau gak ada yang ditekan, run-run terakhir ada di sana. **Add a step** ada di bawah langkah terakhir, tanda plus muncul di garis antara dua kotak,
+dan kotak bisa diseret untuk dipindah. Gak ada yang berubah sebelum kamu menekan **Save**.
 
-![Halaman satu automation: pemicunya, langkah-langkahnya sebagai kartu dengan jalur di antaranya, dan run terakhirnya](/media/dashboard-automation-steps.png)
+![Halaman satu automation: kotak untuk awalnya, kotak untuk tiap langkah beserta apa yang terjadi kalau gagal, dan run terakhirnya](/media/dashboard-automation-steps.png)
 
 ### Ke mana automation lanjut
 
-Tiap langkah bisa menentukan ke mana automation lanjut saat ia selesai, saat ia gagal, dan saat ia gak
-punya apa-apa untuk dikatakan: ke langkah berikutnya, selesai di situ, atau ke langkah yang lebih bawah.
-Automation hanya bisa maju, jadi ia pasti selesai.
+Langkah yang selesai lanjut ke langkah berikutnya. Apa yang terjadi kalau ia **gagal** ditanyakan di langkah itu
+sendiri, dengan empat jawaban (0.8.44):
 
-Kalau dibiarkan apa adanya: langkah yang selesai lanjut ke langkah berikutnya, langkah yang gagal
-mengakhiri automation sebagai gagal dan mengabarkannya di chat, dan langkah yang gak punya apa-apa untuk
-dikatakan (perintah yang gak mencetak apa pun, agent yang gak punya laporan) mengakhirinya dengan diam.
-Jadi pengecekan yang gak menemukan apa-apa gak membangunkan siapa pun.
+| Kalau gagal (*If it fails*) | |
+|---|---|
+| **Stop and tell me** | automation berakhir sebagai gagal, dan chat-nya dikabari kenapa. Ini yang terjadi kalau kamu gak memilih yang lain |
+| **Go on anyway** | automation lanjut ke langkah berikutnya, yang menerima apa yang tadinya diberikan ke langkah yang gagal. Langkah agent juga diberi tahu apa yang gagal, dan kenapa |
+| **Ask me first** | kamu ditanya, beserta kenapa ia gagal. Ya berarti lanjut, tidak berarti berhenti di situ |
+| **Do something else** | langkah lain jalan menggantikannya. Langkah-langkah itu digambar di samping langkahnya (di bawahnya, menjorok, kalau gak ada ruang di samping), dan berakhir dengan salah satu dari dua cara: kembali ke langkah-langkah di bawah, atau berhenti |
+
+"Go on anyway" dan "Ask me first" ditulis di kotak langkah itu sendiri, lengkap dengan pertanyaannya dan ke mana tiap
+jawaban membawa. Jawaban **tidak** pada langkah yang menunggu persetujuan ditanyakan dengan cara yang sama: berhenti
+di situ, lanjut saja, atau kerjakan hal lain.
+
+Langkah yang **gak punya apa-apa untuk dikatakan** (skrip yang gak mencetak apa pun, agent yang gak punya laporan)
+mengakhiri automation dengan diam, jadi pengecekan yang gak menemukan apa-apa gak membangunkan siapa pun. Di bawah
+**More about this step**, ia bisa dibuat lanjut saja, atau mengerjakan hal lain.
+
+Automation hanya bisa maju, jadi ia pasti selesai. Automation yang ditulis dari command line atau oleh agent bisa
+punya jalur yang gak punya gambarnya di halaman ini, misalnya lompatan dari satu langkah ke langkah yang lebih bawah:
+jalur itu ditampilkan sebagai label kecil di bawah langkahnya dengan garis ke tempat ia mendarat, dan tetap seperti
+itu sampai kamu memilih jawaban lain.
 
 Contoh, pengecekan toko:
 
-1. **Jalankan perintah**: `curl -sf https://shop.example.com/health`. Kalau selesai: berhenti di sini.
-   Kalau gagal: lanjut.
-2. **Minta ke agent**: "Tokonya mati: cari tahu kenapa."
-3. **Tunggu persetujuan**: "Restart tokonya?"
-4. **Mulai mission**: "Restart toko dan pastikan ia menjawab."
+1. **Jalankan skrip** yang menanyakan apakah toko menjawab: ia gak mencetak apa pun selama toko menjawab, dan gagal
+   kalau tidak. Kalau gagal, **Do something else**:
+   - **Minta ke agent**: "Tokonya mati: cari tahu kenapa."
+   - **Tunggu persetujuan**: "Restart tokonya?"
+   - **Mulai mission**: "Restart toko dan pastikan ia menjawab."
 
 Selama toko menjawab, automation berhenti di langkah 1 dan gak ada model yang dipanggil. Saat toko mati,
 agent memeriksanya, kamu ditanya, dan baru dengan jawaban ya dari kamu sesuatu di-restart.
+
+### Skrip
+
+**Run a script** menjalankan program kecil tanpa model (0.8.44): beberapa baris shell, Python atau JavaScript yang
+mengambil sebuah halaman, membandingkan angka, memanggil layanan, atau mengubah bentuk sesuatu, dengan cara yang sama
+setiap kali. Skripnya disimpan oleh automation itu sendiri. Jadi yang jalan adalah yang kamu baca sebelum
+menyalakannya, dan mengubahnya sama seperti mengubah automation: perubahan yang diusulkan agent menunggu sebagai
+**Suggested**, dengan teks skripnya bisa dibaca dalam bentuk sekarang dan bentuk usulannya.
+
+- Ia **membaca** apa yang dikatakan langkah sebelumnya (untuk langkah pertama, apa yang dikirim ke webhook), dan apa
+  yang ia **cetak** diteruskan ke langkah berikutnya.
+- Gak mencetak apa pun berarti "gak punya apa-apa untuk dikatakan". Berakhir dengan error berarti gagal, dengan apa
+  yang ia tulis sebagai alasannya. Jadi pengecekan yang belum punya apa-apa untuk dilaporkan harus berakhir tanpa
+  error: di skrip shell, `if [ -f done ]; then cat done; fi`, bukan `test -f done && cat done`, yang berakhir dengan
+  error selama file-nya belum ada.
+- Ia jalan di workspace agent, seperti perintah agent itu, tanpa model dan tanpa bertanya dulu. Ia diberi kunci
+  tersimpan yang kamu sebut di langkahnya, di antara yang memang boleh dipakai perintah agent itu; skrip membaca
+  tiap kunci lewat namanya dalam huruf besar, `notes_key` jadi `NOTES_KEY`.
+- Bahasa penulisannya dicek saat kamu menyimpan: program yang gak ada di mesin disebut saat itu, bukan jam 07:00.
+
+Di halaman, skrip dibaca dengan kata-kata dulu: apa yang ia kerjakan, siapa penulisnya, ditulis dengan apa dan
+seberapa panjang, serta kunci yang ia pakai. **Show the script** membuka teksnya, untuk dibaca atau diubah. **Try it**
+menjalankannya sekali dengan apa yang dikatakan langkah sebelumnya di run terakhir, atau dengan yang kamu ketik, lalu
+menampilkan apa yang ia cetak, paling lama satu menit. Itu jalan sungguhan: skrip yang mengirim atau menyimpan sesuatu
+benar-benar melakukannya. Tombol di sampingnya meminta orchestrator menulis atau mengubah skrip itu, dengan langkah
+dan automation-nya disebut di permintaannya.
+
+Kamu gak harus menulisnya sendiri. Minta automation-nya ke agent, dan kalau pekerjaannya sama setiap kali, agent
+menulis skripnya, mencobanya, lalu [mengusulkannya](#diminta-ke-agent): kartunya menyebut apa yang dikerjakan skrip
+itu, dijalankan dengan apa, seberapa panjang, dan kunci yang diberikan kepadanya, serta menampilkan teksnya. Halaman
+automation yang belum dinyalakan menampilkan hal yang sama, di bawah **Show the script**.
+
+Automation dari sebelum 0.8.44 berisi perintah satu baris di tempat skrip. Ia jalan seperti biasanya, dan gak
+menerima apa yang dikatakan langkah sebelumnya. Langkahnya menawarkan **Write it as a script instead**.
 
 ### Beberapa sekaligus
 
@@ -180,10 +235,15 @@ nouride cron add --name "morning-brief" \
 | `--message <prompt>` | bangunkan agent dengan ini |
 | `--text <pesan>` | kirim teks biasa. Tanpa panggilan model, tanpa biaya |
 | `--command <shell>` | jalankan sebuah perintah. Tanpa panggilan model |
+| `--script <file> --about <kata-kata>` | jalankan [skrip](#skrip) yang disimpan automation itu: teks file-nya, dan satu baris tentang apa yang ia kerjakan. Tanpa panggilan model |
+| `--run <program>` | …dijalankan dengan apa: `sh` kalau gak disebut, `python3`, `bun` |
+| `--secrets <nama,nama>` | …secret milik agent yang diberikan kepadanya, lewat namanya |
 | `--then agent` | …lalu bangunkan agent dengan apa yang dicetaknya, kalau ia mencetak sesuatu |
 | `--mission <goal>` | jalankan setiap kali sebagai mission. Dengan `--check <perintah>` untuk satu cek, `--no-review` tanpa reviewer; cek lebih banyak dari dashboard |
 | `--steps <file.json>` | beberapa hal di atas dengan urutan tetap: daftarnya, dalam JSON (di bawah) |
 | `--session <fresh\|isolated\|chat>` | riwayat apa yang dilihat giliran itu |
+| `--once` | mengabari sekali, lalu mematikan dirinya ([Mengawasi sesuatu](#mengawasi-sesuatu)) |
+| `--for <6h>` | berhenti sendiri setelah selama itu, dan mengabarkannya di tempat ia melapor |
 | `--quiet` | gak mengirim apa pun, termasuk kabar gagal; hasilnya tetap ada di `nouride cron runs` |
 | `--keep` | simpan job sekali-jalan setelah menyala: dimatikan, dan tercatat sebagai `fired` |
 
@@ -213,6 +273,13 @@ berisi dua sampai lima `agentTurn` dan `command`, ditulis seperti langkah-langka
 menerima `agentId` untuk agent lain, dan `approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak
 langkah yang gak bisa dijalankannya, dengan menyebut langkahnya.
 
+Langkah `command` yang menyimpan skrip (0.8.44) hanya menyebut programnya di `argv` dan menaruh teksnya di sampingnya:
+
+```json
+{ "name": "Save it", "kind": "command", "argv": ["python3"],
+  "script": { "about": "Saves the summary as today's page.", "text": "import sys\nprint(len(sys.stdin.read()))\n", "secrets": ["notes_key"] } }
+```
+
 ```json
 { "kind": "parallel", "whenFailed": "next", "steps": [
   { "name": "News", "kind": "agentTurn", "message": "Read today's news and say what matters.", "agentId": "nix" },
@@ -232,6 +299,10 @@ pesannya memang intinya.
 "ini pemakaian disk" dengan "disk mulai penuh, ini yang memakannya". Run yang tidak mencetak apa pun
 tidak mengirim apa pun, dan dengan `--then agent` tidak membangunkan siapa pun: cek yang hanya mencetak
 saat ada masalah tidak memakan biaya selama semuanya baik. Perintah yang gagal tetap dikabarkan di chat.
+
+**`--script`** adalah perintah yang lebih dari satu baris, disimpan di automation-nya (0.8.44): `nouride cron add
+--name "backup-watch" --every 30m --script check.sh --about "Says once the backup is done." --once --for 6h …`.
+Biayanya sama dengan perintah, yaitu nol. Lihat [Skrip](#skrip) untuk apa yang ia baca dan cetak.
 
 **`--message`** membangunkan agent dengan sebuah prompt. Satu giliran, dengan tool, dengan biaya biasa.
 
@@ -269,6 +340,13 @@ Results: here
 It stays off until somebody turns it on.          [Turn on] [Discard]
 ```
 
+Kalau pekerjaannya sama setiap kali (mengambil halaman, membandingkan angka, memanggil layanan), agent
+menulisnya sebagai [skrip](#skrip), mencobanya sekali, dan mengusulkan itu (0.8.44): gak ada model yang dipanggil
+saat ia jalan. Kartunya menyebut apa yang dikerjakan skrip itu, dijalankan dengan apa, seberapa panjang, dan kunci
+yang diberikan kepadanya, serta menampilkan teksnya; kalau terlalu panjang untuk satu pesan, kartunya bilang begitu,
+dan teksnya dibaca di halaman automation itu sebelum kamu menyalakannya. Pekerjaan yang butuh membaca, menilai, atau
+menulis tetap jadi giliran agent.
+
 Gak ada yang jalan sebelum ada yang menjawab. **Turn on** menyalakan jadwalnya, dan mission-nya jalan
 atas nama orang yang menekannya. **Discard** membuang usulannya. Di chat satu lawan satu, orang di chat
 itu yang menjawab; di grup, orang yang meminta atau admin. Kalau chat-nya gak punya tombol, seperti
@@ -296,7 +374,8 @@ membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia be
 ## Mengawasi sesuatu
 
 "Kabari aku kalau disk hampir penuh" adalah pengecekan berkala. Kalau dibiarkan begitu saja, ia mengabari setiap kali
-jalan, selama disk masih penuh, termasuk jam tiga pagi. Tiga tanda membuatnya jadi pengawas (0.8.35).
+jalan, selama disk masih penuh, termasuk jam tiga pagi. Tiga tanda membuatnya jadi pengawas (0.8.35), dan tanda
+keempat mengakhiri pengawas yang saatnya gak pernah datang (0.8.44).
 
 **Langkah yang lanjut hanya kalau ada yang berubah.** Tandai sebuah langkah (perintah, giliran agent, atau misi) dengan
 **Go on only when this changes**. Apa yang ia katakan dibandingkan dengan yang ia katakan terakhir kali automation itu
@@ -318,8 +397,17 @@ Nyalakan lagi kalau mau dikabari sekali lagi. Jalan yang kamu mulai sendiri tida
 dari misi ke chat-nya ikut dihitung sebagai mengabari, jadi automation yang berisi misi mati setelah jalan pertama yang
 sampai ke misi itu.
 
+**Automation yang berhenti sendiri.** Pengawas untuk sesuatu yang gak pernah terjadi akan mengecek selamanya. **Stop by
+itself after** (0.8.44), di bagian tempat ia melapor, memberinya batas waktu: satu jam, enam jam, satu hari, satu
+minggu, atau tiga puluh hari, dihitung sejak ia dinyalakan. Saat waktunya habis ia mematikan dirinya dan mengabarkannya
+di chat-nya, termasuk bahwa yang ia awasi gak terjadi, dan halamannya juga bilang begitu. Nyalakan lagi untuk memberinya
+waktu yang sama sekali lagi. Hanya automation yang jalan berulang sesuai jam yang bisa punya batas ini, dan batasnya
+harus cukup panjang untuk memuat satu jalan.
+
 **Minta ke agent.** "Kabari aku kalau disk lewat 90%" di chat: agent mengusulkan pengecekan berkala dengan tanda-tanda
-ini, kartunya menyebutkannya dengan kata-kata, dan kamu yang menyalakannya.
+ini, berupa skrip kalau bisa, kartunya menyebutkannya dengan kata-kata, dan kamu yang menyalakannya. Pengawas yang
+diusulkan agent untuk mengabari sekali selalu menyebut berapa lama ia berjalan, jadi gak ada yang dibiarkan mengecek
+selamanya.
 
 ### Jam tenang
 

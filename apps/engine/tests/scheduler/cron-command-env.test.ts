@@ -58,3 +58,17 @@ test("where each agent is its own user, a scheduled command's HOME is its agent'
     runAgentCommandsThrough(null);
   }
 });
+
+test("a script is handed the secrets it names, of those its agent holds, though its program is bound to none", async () => {
+  const { pipeline } = await pipelineWith(true);
+  const sandbox = (secrets?: string[]) =>
+    pipeline.cronExecutors().commandSandbox({ agentId: "nouva", payload: { kind: "command", argv: ["sh"], script: { text: "echo", about: "deploys", ...(secrets ? { secrets } : {}) }, then: "deliver" } });
+  // Named on the step, so listed on the card a person turned it on from: handed, under the variable it arrives as.
+  expect(sandbox(["deploy_token"])?.env.DEPLOY_TOKEN).toBe("from-exec-secrets");
+  // Not named: `sh` alone is bound to nothing, as before.
+  expect(sandbox()?.env.DEPLOY_TOKEN).toBeUndefined();
+  // A name the agent does not hold hands nothing, and nothing of another's.
+  const other = sandbox(["someone_elses"]);
+  expect(other?.env.SOMEONE_ELSES).toBeUndefined();
+  expect(other?.env.DEPLOY_TOKEN).toBeUndefined();
+});

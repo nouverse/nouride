@@ -1,24 +1,18 @@
-# Continuous deployment for the documentation and landing site (apps/site) to Cloudflare Pages.
+# The documentation and landing site (apps/site), deployed to Cloudflare Pages when a release is tagged.
 
 name: deploy-site
 
-# The paths are what the site's build reads: its own tree, the brand assets and the two installers
-# `sync-installer.ts` publishes — `install-bundle-router.sh` was missing, so get.nouride.com served a
-# stale one — plus the manifests and the Bun it is built with. A pull request builds it and deploys
-# nothing, so a site that does not build is found before main.
+# At a release's tag, not at a push to main: a release branch reaches main by a pull request, and its tag is made only
+# once the suite has run there. The site went out at that merge, so its manuals described a release nobody could
+# install yet. The tag's own tree is what is built: the manuals, the brand assets and the two installers
+# `sync-installer.ts` publishes, as that release holds them. A pull request builds the site and deploys nothing
+# (pr.yml), so a site that does not build is found before main.
+#
+# By hand, for a fix to the site between two releases: it deploys the branch or tag it is run on, so run it on main
+# only when main holds nothing unreleased.
 on:
   push:
-    branches: ["main"]
-    paths: &site
-      - "apps/site/**"
-      - "packages/shared/assets/**"
-      - "scripts/install.sh"
-      - "scripts/install-bundle-router.sh"
-      - "scripts/sync-brand.ts"
-      - "package.json"
-      - "bun.lock"
-      - ".bun-version"
-      - ".github/workflows/deploy-site.yml"
+    tags: ["v*"]
   workflow_dispatch:
 
 concurrency:
@@ -53,18 +47,40 @@ jobs:
       - name: Start without the last job's submodules
         run: if git config --get-regexp '^submodule\.' >/dev/null; then git submodule deinit --force --all; fi
 
+      # A patch to a long-term line is tagged on its own branch, and its manuals are an older release's. The site is
+      # the newest release's, so only a tag main holds deploys it: `ahead` or `identical` says main is at this commit
+      # or past it. Run by hand, it deploys what it was run on.
+      - name: Is this the newest line's release?
+        id: line
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then echo "deploys=yes" >> "$GITHUB_OUTPUT"; exit 0; fi
+          status=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${GITHUB_SHA}...main" --jq .status)
+          case "$status" in
+            ahead | identical) echo "deploys=yes" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "deploys=no" >> "$GITHUB_OUTPUT"
+              echo "::notice::${GITHUB_REF_NAME} is not on main (${status}): the site stays as it is."
+              ;;
+          esac
+
       - name: Setup Bun
+        if: steps.line.outputs.deploys == 'yes'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version
 
       - name: Install Dependencies
+        if: steps.line.outputs.deploys == 'yes'
         run: bun install --frozen-lockfile
 
       - name: Build Site
+        if: steps.line.outputs.deploys == 'yes'
         run: bun run build:site
 
       - name: Deploy to Cloudflare Pages
+        if: steps.line.outputs.deploys == 'yes'
         uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

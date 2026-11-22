@@ -6,7 +6,8 @@
 
 import { Bot, Clock, Hand, MessageSquare, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
-import { APPROVAL_WAIT_MS, canWatch, exitOf, exitsOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind } from "./steps";
+import type { Choice, PathExit } from "./paths";
+import { canWatch, exitOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind } from "./steps";
 
 export interface KindLook {
   icon: LucideIcon;
@@ -21,7 +22,7 @@ export interface KindLook {
 /** A soft colour a kind: peach for an agent's work, mint for what is sent, lavender for a mission, pink for what waits on you. */
 export const KIND: Record<StepKind, KindLook> = {
   agentTurn: { icon: Bot, label: "Ask an agent", hint: "An agent works on it with its tools, and hands on what it found.", tile: "bg-primary/15 text-primary" },
-  command: { icon: Terminal, label: "Run a command", hint: "A command on this server, with no AI. What it prints goes to the next step.", tile: "bg-base-content/[0.07] text-base-content/80" },
+  command: { icon: Terminal, label: "Run a script", hint: "A small program on this server, with no AI. What it prints goes to the next step.", tile: "bg-base-content/[0.07] text-base-content/80" },
   systemEvent: { icon: MessageSquare, label: "Send a message", hint: "Your words, sent as written to where it reports. No AI.", tile: "bg-info/15 text-info" },
   mission: { icon: Target, label: "Start a mission", hint: "Long work, checked. The run waits until the mission ends.", tile: "bg-secondary/10 text-secondary" },
   approval: { icon: Hand, label: "Wait for your OK", hint: "The run stops and asks you. It goes on when you say yes.", tile: "bg-accent/15 text-accent" },
@@ -41,7 +42,8 @@ export function stepTitle(step: Step, agent: string): string {
     case "agentTurn":
       return `${agent} works on it`;
     case "command":
-      return "Run a command";
+      // A script is called by what it is said to do: its own line is only the program that runs it.
+      return step.script?.about.trim() || "Run a script";
     case "systemEvent":
       return "Send a message";
     case "mission":
@@ -59,13 +61,50 @@ export function stepTitle(step: Step, agent: string): string {
  */
 export function partTitle(part: Part, agent: string): string {
   if (part.name?.trim()) return part.name.trim();
-  return part.kind === "command" ? shellLine(part.argv) : agent;
+  return part.kind === "command" ? (part.script?.about.trim() || shellLine(part.argv)) : agent;
 }
 
-/** The one line under a step's title: the start of what it says, asks or runs. */
-export function stepLine(step: Step): string {
+/**
+ * Who wrote a script, as a box says it: the agent's name for one an agent wrote, and nothing for one a person typed,
+ * which a page read by several people cannot call "yours".
+ */
+export function scriptWriter(by: string | undefined, agentName: (id: string) => string): string | null {
+  return by?.startsWith("agent:") ? agentName(by.slice("agent:".length)) : null;
+}
+
+/**
+ * The one line under a step's title: the start of what it says, asks or runs. A script says what it is and who wrote
+ * it, since its title already says what it does and its text is behind a button.
+ */
+export function stepLine(step: Step, agentName?: (id: string) => string): string {
+  if (step.kind === "command" && step.script) {
+    const writer = agentName ? scriptWriter(step.script.by, agentName) : null;
+    return writer ? `A script ${writer} wrote · no AI` : "A script · no AI";
+  }
   return mainText(step).trim().replace(/\s+/g, " ");
 }
+
+/** One of the four answers a path can be given, as the panel offers it: what it is called and what it does. */
+export function choiceWords(step: Pick<Step, "kind">, exit: PathExit, choice: Choice, jumpsTo = ""): { label: string; hint: string } {
+  const waits = step.kind === "approval";
+  switch (choice) {
+    case "stop":
+      if (exit === "whenEmpty") return { label: "Stop quietly", hint: "The run ends, and nobody is told." };
+      return waits ? { label: "Stop there", hint: "The run ends. Nothing is counted as failed." } : { label: "Stop and tell me", hint: "The run ends, and its chat is told why." };
+    case "goOn":
+      if (exit === "whenEmpty") return { label: "Go on anyway", hint: "The next step runs with nothing handed to it." };
+      return { label: "Go on anyway", hint: waits ? "The next step is told the answer was no." : "The next step gets what this step was given. An agent is also told why it failed." };
+    case "ask":
+      return { label: "Ask me first", hint: "Yes goes on, no stops here." };
+    case "lane":
+      return { label: "Do something else", hint: "Other steps run in its place." };
+    case "jump":
+      return { label: `Go to ${jumpsTo}`, hint: "Set from elsewhere. Pick another answer to change it." };
+  }
+}
+
+/** A step's own rule as its box says it, after the path's name: "the run goes on anyway." */
+export const GOES_ON = "the run goes on anyway.";
 
 /** A path's question in a step's editor: what happened for the run to take it. */
 export function exitAsks(step: Step, exit: ExitName): string {
@@ -97,58 +136,21 @@ export function endWords(exit: ExitName): string {
 }
 
 /**
- * What happens after the last step, in place of its paths: the run ends, and how that end is counted. Said and not
- * chosen, since every choice there ends the run the same way.
- */
-export function lastStepWords(step: Step): string {
-  const ways = exitsOf(step);
-  return [
-    "This is the last step, so the run ends after it.",
-    ...(ways.includes("whenFailed") ? [step.kind === "approval" ? "If you say no, or nobody answers, it ends there." : "If it fails, the run ends as failed."] : []),
-    ...(ways.includes("whenEmpty") ? ["With nothing to say, it ends quietly."] : []),
-  ].join(" ");
-}
-
-/** How long a wait is, in the unit a person says it in: "5 minutes", "1 hour", "3 days". */
-function waitWords(ms: number): string {
-  const [count, unit] = ms % 86_400_000 === 0 ? [ms / 86_400_000, "day"] : ms % 3_600_000 === 0 ? [ms / 3_600_000, "hour"] : [Math.round(ms / 60_000), "minute"];
-  return `${count} ${unit}${count === 1 ? "" : "s"}`;
-}
-
-/**
  * The line under "Go on only when this changes": what the run does when the step says what it said the last time. It
  * takes the step's path for nothing to say, which ends the run quietly unless the step sends it elsewhere. A mission's
  * run ends there too, and not quietly: the mission has told its chat how it went by then, as every mission does.
  */
 export function sameAgainWords(steps: readonly Step[], index: number): string {
   const step = steps[index]!;
-  if (landsAt(steps, index, "whenEmpty") !== "end") return `If it says the same as last time, the run goes where "${exitAsks(step, "whenEmpty")}" sends it.`;
+  if (landsAt(steps, index, "whenEmpty") !== "end") return `If it says the same as last time, the run goes where "${exitChip(step, "whenEmpty")}" sends it.`;
   return step.kind === "mission" ? "If it says the same as last time, the run ends here." : "If it says the same as last time, the run ends here quietly.";
 }
 
 /**
- * A few quiet words under a step's line: what it costs, what it is handed, or what it waits for, and that it goes on
- * only when what it says changes, where it is marked so. `reads` is the agent a lone command hands its output to,
- * where it does.
+ * What a step's box says under its words besides its paths, each a sentence: who a lone command hands what it printed
+ * to, and that the step goes on only when what it says changes, where it is marked so. Both change what a run does, so
+ * neither is left to the step's fields. `reads`: that agent's name, where the command hands its output on.
  */
-export function stepNote(step: Step, index: number, reads?: string): string {
-  const note = kindNote(step, index, reads);
-  return step.onlyChanged && canWatch(step) ? `${note} It goes on only when what it says changes.` : note;
-}
-
-function kindNote(step: Step, index: number, reads?: string): string {
-  switch (step.kind) {
-    case "command":
-      return reads ? `No AI runs it. Then ${reads} reads what it printed and reports.` : "No AI is used for this step.";
-    case "systemEvent":
-      return "Sent as written to where it reports. No AI.";
-    case "agentTurn":
-      return index === 0 ? "It works with its tools, and what it says goes on." : "It is handed what the step before said.";
-    case "mission":
-      return "The run waits here until the mission ends.";
-    case "approval":
-      return `The run waits up to ${waitWords(step.timeoutMs ?? APPROVAL_WAIT_MS)} for your answer.`;
-    case "parallel":
-      return "They start together. What each says is joined, each under its name, and goes on once the last one is done.";
-  }
+export function stepFacts(step: Step, reads?: string): string[] {
+  return [...(step.kind === "command" && reads ? [`Then ${reads} reads what it printed and reports.`] : []), ...(step.onlyChanged && canWatch(step) ? ["It goes on only when what it says changes."] : [])];
 }

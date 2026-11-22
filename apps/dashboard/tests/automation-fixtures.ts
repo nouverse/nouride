@@ -40,6 +40,10 @@ export const stepCard = (host: HTMLElement, id: string) => host.querySelector<HT
 export const labelled = (host: HTMLElement, label: string) => host.querySelector<HTMLElement>(`[aria-label="${label}"]`)!;
 export const flowDrawn = (host: HTMLElement, steps = 4) => eventually(() => drawn(host).length === steps, 3_000, "the steps");
 
+/** A step's box on the main line, by its place: the button that opens its fields, and the same once they are open. */
+export const editStep = (host: HTMLElement, place: number) => host.querySelector<HTMLElement>(`[aria-label^="Edit step ${place}:"]`)!;
+export const closeStep = (host: HTMLElement, place: number) => host.querySelector<HTMLElement>(`[aria-label^="Close step ${place}:"]`)!;
+
 /** A press on one item of the menu a step's "⋯" opens: Move up, Move down, Duplicate, Delete. */
 export async function stepMenu(host: HTMLElement, step: number, item: string): Promise<void> {
   labelled(host, `More for step ${step}`).click();
@@ -54,6 +58,17 @@ export async function addStep(host: HTMLElement, plus: string, kind: string): Pr
   const kinds = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add a step"] button')];
   await eventually(() => kinds().length > 0, 2_000, "the picker");
   kinds().find((button) => button.querySelector("span span")?.textContent === kind)!.click();
+}
+
+/** Whose it is, opened from the menu at the head of the page: the panel it opens in. */
+export async function openWhose(host: HTMLElement, name = "Shop check"): Promise<HTMLElement> {
+  labelled(host, `More for ${name}`).click();
+  const item = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="menu"] button')].find((button) => button.textContent?.trim() === "Whose it is");
+  await eventually(() => item() !== undefined, 2_000, "the menu's Whose it is");
+  item()!.click();
+  const panel = () => host.querySelector<HTMLElement>('main section[aria-label="Whose it is"]');
+  await eventually(() => panel() !== null, 2_000, "whose it is");
+  return panel()!;
 }
 
 /** The bar that saves, and its buttons. */

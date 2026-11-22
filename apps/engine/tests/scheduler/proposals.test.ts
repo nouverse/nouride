@@ -75,31 +75,36 @@ describe("proposing one that watches", () => {
   test("the tool says when to reach for the two marks, in the words a model reads", () => {
     const words = tool.definition.description;
     expect(words).toContain('To watch something ("tell me when…"), check it on a schedule with `only_changed`: it speaks when what it found changes and is quiet otherwise.');
-    expect(words).toContain("Add `once` when it should tell one time and then stop.");
+    // A watch that tells once has an end, said with it: with none, one whose moment never came checked for good.
+    expect(words).toContain("Add `once` when it should tell one time and then stop, and `for`, how long it watches before it gives up and says so.");
     const fields = tool.definition.parameters.properties as Record<string, { description?: string; items?: { properties: Record<string, unknown> } }>;
-    expect(fields.only_changed?.description).toBe("A `command` or `prompt` (or a step): goes on only when what it said differs from the last run.");
-    expect(fields.once?.description).toBe("Turns itself off after the first run that tells somebody.");
+    expect(fields.only_changed?.description).toBe("A `script`, `command` or `prompt` (or a step): goes on only when what it said differs from the last run.");
+    expect(fields.once?.description).toBe("Turns itself off after the first run that tells somebody. On a schedule it needs `for`.");
+    expect(fields.for?.description).toBe('How long it runs before it turns itself off and says so: "6h", "30d".');
     expect(Object.keys(fields.steps!.items!.properties)).toContain("only_changed");
   });
 
   test("one check that speaks only when it changes is a list of one marked step, and `once` is kept on where it reports", async () => {
-    const result = await propose({ ...watch, only_changed: true, once: true });
+    const result = await propose({ ...watch, only_changed: true, once: true, for: "6h" });
     expect(result.isError).toBe(false);
     const job = only();
     expect(job.payload).toEqual({ kind: "steps", steps: [{ id: "s1", kind: "command", argv: ["sh", "-lc", watch.command], onlyChanged: true }] });
-    expect(job.delivery).toEqual({ mode: "announce", once: true });
+    // How long it lasts is kept; when that ends is written once it is on, not while it waits for a person's yes.
+    expect(job.delivery).toEqual({ mode: "announce", once: true, lasts: 6 * 3_600_000 });
     expect(job.enabled).toBe(false);
   });
 
   test("its card says both, in words a person reads", async () => {
-    await propose({ ...watch, only_changed: true, once: true });
+    await propose({ ...watch, only_changed: true, once: true, for: "6h" });
     const card = asked[0]!.text;
-    expect(card).toContain("1. runs `sh -lc df -h / | awk 'NR==2 {print $5}'` on this machine, with no model. It goes on only when this differs from the last run. With nothing to say, the run ends there.");
+    expect(card).toContain("Does: runs `sh -lc df -h / | awk 'NR==2 {print $5}'` on this machine, with no model. It goes on only when this differs from the last run. With nothing to say, the run ends there.");
     expect(card).toContain("Tells once: after the first run that tells you something, it turns itself off.");
+    expect(card).toContain("Lasts: 6 hours from when it is turned on. Then it turns itself off and says so, if it has told nothing by then.");
     // One that does neither says neither.
     await propose({ ...watch, name: "Plain" });
     expect(asked[1]!.text).not.toContain("only when this differs");
     expect(asked[1]!.text).not.toContain("Tells once");
+    expect(asked[1]!.text).not.toContain("Lasts:");
   });
 
   test("a step of a list is marked by itself, and the steps beside it are not", async () => {
@@ -110,16 +115,20 @@ describe("proposing one that watches", () => {
 
   test("words that are the same every run cannot be marked", async () => {
     const one = await propose({ only_changed: true });
-    expect(one).toMatchObject({ isError: true, content: "A `text` is the same words every run, so there is nothing that could change: watch with a `command` or a `prompt` that looks at something." });
+    expect(one).toMatchObject({ isError: true, content: "A `text` is the same words every run, so there is nothing that could change: watch with a `script`, a `command` or a `prompt` that looks at something." });
     const listed = await propose({ text: undefined, steps: [{ text: "Hello.", only_changed: true }] });
     expect(listed).toMatchObject({ isError: true, content: expect.stringContaining("only a command, an agent's turn or a mission can go on only when what it said has changed") });
     expect(store.list({ includeDisabled: true })).toEqual([]);
   });
 
   test("turned on from its card, it is on with both marks", async () => {
-    await propose({ ...watch, only_changed: true, once: true });
+    await propose({ ...watch, only_changed: true, once: true, for: "6h" });
+    const before = Date.now();
     await cards.press(press(`job:on:${only().id}`));
-    expect(only()).toMatchObject({ enabled: true, delivery: { mode: "announce", once: true }, payload: { steps: [{ onlyChanged: true }] } });
+    expect(only()).toMatchObject({ enabled: true, delivery: { mode: "announce", once: true, lasts: 6 * 3_600_000 }, payload: { steps: [{ onlyChanged: true }] } });
+    // Its six hours count from the press, not from when the agent proposed it.
+    expect(only().delivery.endsAt).toBeGreaterThanOrEqual(before + 6 * 3_600_000);
+    expect(only().delivery.endsAt).toBeLessThanOrEqual(Date.now() + 6 * 3_600_000);
   });
 });
 

@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AutomationStep } from "@nouride/wire";
 import { answer, buttons, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
-import { AS_VIEWER, STEPS, automation, detail, drawn, flowDrawn, ok, saveBar, stepCard } from "./automation-fixtures.ts";
+import { AS_VIEWER, automation, detail, drawn, editStep, flowDrawn, ok, saveBar, stepCard, STEPS } from "./automation-fixtures.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -33,7 +33,7 @@ describe("a suggested change", () => {
       seen.tags = tags(host);
       seen.states = Object.fromEntries(drawn(host).map((id) => [id, stepCard(host, id).dataset.state]));
       // It runs as it is until then, and is still the person's to change.
-      seen.editable = host.querySelector('[aria-label="Edit step 1"]') !== null;
+      seen.editable = editStep(host, 1) !== null;
     });
     expect(seen.text).toContain("Nouva suggests a change");
     expect(seen.text).toContain("Adds step 4. Changes step 2. Removes step 3 of the ones it runs now. Nothing changes until you accept it.");

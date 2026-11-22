@@ -312,7 +312,7 @@ describe("an agent proposes a list", () => {
     });
     const card = proposalCard(posted[0]!, "cron 0 9 * * 1", { buttons: true });
     expect(card).toContain("Does: in order, each handed what the one before said:");
-    expect(card).toContain("1. runs `sh -lc curl -sf https://shop.example.com/health` on this machine, with no model Once done, the run ends there. If it fails, the run goes to step 2. With nothing to say, the run ends there.");
+    expect(card).toContain("1. runs `sh -lc curl -sf https://shop.example.com/health` on this machine, with no model. Once done, the run ends there. If it fails, the run goes to step 2. With nothing to say, the run ends there.");
     expect(card).toContain('2. nix works on: "The shop is down: find out why." With nothing to say, the run goes to step 4.');
     expect(card).toContain('3. waits for a person\'s yes to: "Restart the shop?" On a no, or no answer, the run ends.');
     expect(card).toContain('4. a mission for nix: "Restart the shop.", then a reviewer agrees');
@@ -347,13 +347,13 @@ describe("an agent proposes a list", () => {
 
   test("the tool refuses a list beside one thing, a step with two things or none, an unknown agent, a jump back, and a command on a webhook", async () => {
     const { propose } = tool();
-    expect((await propose({ text: "hi", steps: [{ prompt: "x" }] })).content).toBe("Give `steps`, or one of `text`, `command`, `prompt` and `mission`: not both.");
+    expect((await propose({ text: "hi", steps: [{ prompt: "x" }] })).content).toBe("Give `steps`, or one of `text`, `command`, `script`, `prompt` and `mission`: not both.");
     expect((await propose({ steps: [] })).content).toBe("`steps` is a list of at least one step.");
-    expect((await propose({ steps: [{ prompt: "x" }, { prompt: "y", text: "z" }] })).content).toBe("Step 2: Give exactly one of `text`, `command`, `prompt`, `mission`, `ask` or `together`.");
-    expect((await propose({ steps: [{ name: "nothing" }] })).content).toBe("Step 1: Give exactly one of `text`, `command`, `prompt`, `mission`, `ask` or `together`.");
+    expect((await propose({ steps: [{ prompt: "x" }, { prompt: "y", text: "z" }] })).content).toBe("Step 2: Give exactly one of `text`, `command`, `script`, `prompt`, `mission`, `ask` or `together`.");
+    expect((await propose({ steps: [{ name: "nothing" }] })).content).toBe("Step 1: Give exactly one of `text`, `command`, `script`, `prompt`, `mission`, `ask` or `together`.");
     expect((await propose({ steps: [{ prompt: "x", agent: "ghost" }] })).content).toBe("Step 1: there is no agent called ghost.");
     expect((await propose({ steps: [{ prompt: "x" }, { prompt: "y", then: 1 }] })).content).toBe("Not proposed: step 2: `then` points at step 1, which is not after it. A run only goes forward.");
-    expect((await propose({ when: "webhook", steps: [{ prompt: "x" }, { command: "date" }] })).content).toBe("A webhook that runs a command is made by an admin from the dashboard, not proposed.");
+    expect((await propose({ when: "webhook", steps: [{ prompt: "x" }, { command: "date" }] })).content).toBe("A webhook that runs a command or a script is made by an admin from the dashboard, not proposed.");
     // What a step's agent is woken with is working text, in English, as a job's own prompt is.
     expect((await propose({ steps: [{ prompt: "Rangkum semua isu yang masih terbuka minggu ini untuk tim." }] })).content).toStartWith("Step 1: ");
     // A question a person reads is theirs, in their own language.

@@ -5,8 +5,16 @@
 
 import type { KnownChat } from "@nouride/wire";
 
+/**
+ * Whether a person's name is one: somebody the install has no name for is sent as the id they write from, and an id
+ * is what this label is here not to show. A one-to-one on Discord read "DM · 1200000000000000042" at the head of an
+ * automation's page.
+ */
+const named = (name: string | undefined): name is string => name !== undefined && name.trim() !== "" && !/^[+\-\d\s]+$/.test(name);
+
 export function chatLabel(chat: Pick<KnownChat, "kind" | "title" | "people">): string {
-  if (chat.kind === "dm") return `DM · ${chat.people[0] ?? "someone"}`;
+  const people = chat.people.filter(named);
+  if (chat.kind === "dm") return `DM · ${people[0] ?? "someone"}`;
   if (chat.title) return `Group · ${chat.title}`;
-  return chat.people.length > 0 ? `Group with ${chat.people.slice(0, 3).join(", ")}` : "Group";
+  return people.length > 0 ? `Group with ${people.slice(0, 3).join(", ")}` : "Group";
 }

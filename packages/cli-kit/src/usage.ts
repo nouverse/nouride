@@ -202,9 +202,13 @@ ${BOLD}Talking to a running daemon${RESET}
                                    --text <message> a plain reminder, no model call; --message <prompt>
                                    wakes the agent; --command <shell> runs a command (--cwd <dir>, and
                                    --then agent to wake the agent with what it printed; a run that
-                                   prints nothing sends nothing); --mission <goal>
+                                   prints nothing sends nothing); --script <file> --about <words> runs a
+                                   script the job keeps (--run <program>: sh, python3, bun; --secrets
+                                   <name,name> it is handed); --mission <goal>
                                    runs each time as a mission (--check <command>, --no-review);
                                    --steps <file.json> runs several of these in a fixed order.
+                                   --once tells once, then turns it off; --for <6h> stops it by itself
+                                   after that long.
                                    --agent <id>, --tz <zone>, --session fresh|isolated|chat, --quiet, --keep
   nouride cron update <id> [--name …] [--at|--every|--cron …] [--tz <zone>] [--text <message> | --message <prompt> | --steps <file.json>] [--agent <id>]
   nouride cron run|runs|enable|disable|rm <id>

@@ -1,7 +1,12 @@
 /**
- * One automation, laid out as a flow: how it starts, its steps in order, where it reports. The same view makes a new
- * one. Three things can be drawn over the steps, one at a time: the steps themselves, to be changed; a run, with how
+ * One automation, drawn as a canvas: how it starts, its steps in order, where its results go. The same view makes a new
+ * one. Three things can be drawn on the canvas, one at a time: the steps themselves, to be changed; a run, with how
  * each step went and the path it took; and a change an agent suggested, beside the steps as they run now.
+ *
+ * Beside the canvas is one panel. A pressed box opens its fields there, the canvas staying in view; with nothing
+ * pressed it holds the last runs. On a screen with no room beside the canvas a box opens in place, under itself: no
+ * sheet over the page. Whose the automation is opens there too, from the head's menu: it was two cards of explanation
+ * beside the steps on every visit.
  *
  * What is typed is a draft (`useEditor`): the page saves nothing until Save, and a run's polling never moves a draft.
  *
@@ -9,43 +14,37 @@
  * that changes it: its steps and its runs are read, and what a run waits for is its own person's to answer.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { AutomationSummary, JobRunSummary } from "@nouride/wire";
-import { Allowed } from "@/commons/components/jobs/Allowances";
+import type { JobRunSummary } from "@nouride/wire";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { useToast } from "@/commons/components/ui/toast";
 import { useKnownChats } from "@/commons/hooks/use-known-chats";
+import { useDesktop } from "@/commons/hooks/use-wide";
 import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { useWaitingSteps } from "@/commons/hooks/use-waiting-steps";
 import { api } from "@/commons/lib/api";
 import { answeredBy, readsOnly } from "@/commons/lib/by-person";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useOrchestratorFirst } from "@/commons/components/agents/AgentName";
-import { useEditor, type Editor } from "../hooks/use-editor";
+import { useDrawn, type AutomationDetail } from "../hooks/use-drawn";
+import { OPEN_OWNER, useEditor, type Editor } from "../hooks/use-editor";
 import { useSave, type Saving } from "../hooks/use-save";
-import { deliveryOf, draftOf, draftProblems, stepsOf, turnsIntoList, type Draft } from "../lib/draft";
-import { live, outcomesOf, whenWords } from "../lib/runs";
-import type { StepProblem } from "../lib/steps";
-import { stepMarks } from "../lib/suggested";
+import { draftOf, draftProblems, turnsIntoList, type Draft } from "../lib/draft";
+import { pathsOf } from "../lib/paths";
+import { outcomesOf, whenWords } from "../lib/runs";
+import type { Step, StepProblem } from "../lib/steps";
+import { stepTitle } from "../lib/words";
+import { AutomationCanvas } from "./AutomationCanvas";
 import { AutomationHeader } from "./AutomationHeader";
-import { Flow } from "./Flow";
 import type { AgentChoice } from "./KindFields";
-import { RecentRuns } from "./RecentRuns";
+import { OpenFields, opensFields } from "./OpenFields";
+import { AtRest, PanelCard, Whose } from "./Panel";
 import { SaveBar } from "./SaveBar";
-import { StartCard } from "./StartCard";
 import type { FlowMode } from "./StepItem";
-import { SuggestedBanner, type Side } from "./SuggestedBanner";
-import { WhoCard } from "./WhoCard";
-import { WhoseItIs } from "./WhoseItIs";
-
-export interface AutomationDetail {
-  automation: AutomationSummary;
-  runs: JobRunSummary[];
-  suggested?: AutomationSummary;
-  timezone: string;
-}
+import { SuggestedBanner } from "./SuggestedBanner";
+import { reportsWords } from "./WhoCard";
 
 /** What the step a run waits in was handed: the waiting list's own words, or what the step reached before it said. */
 function saidBefore(run: JobRunSummary, listed: string | undefined): string | undefined {
@@ -60,31 +59,6 @@ function editing(editor: Editor, agents: readonly AgentChoice[], issues: readonl
   return { kind: "edit", editor, agents, problems, refused, onRemove };
 }
 
-/** Beside the flow, under it on a phone: its runs, what its runs may send without asking, and who may change it. */
-function Beside({ automation, runs, picked, onPick, canAllow }: { automation: AutomationSummary | null; runs: JobRunSummary[]; picked: string | null; onPick: (run: JobRunSummary) => void; canAllow: boolean }) {
-  // On one the reader only reads: whose it is to change, as a sentence starts.
-  const theirs = automation && readsOnly(automation) ? (automation.person?.name ?? "An admin") : null;
-  return (
-    <aside className="w-full space-y-4 lg:w-80 lg:shrink-0">
-      {automation && !automation.proposal ? <RecentRuns jobId={automation.id} runs={runs} picked={picked} onPick={onPick} canAllow={canAllow} whom={answeredBy(automation)} /> : null}
-      {automation?.allowed?.length ? (
-        <section className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft">
-          <Allowed job={automation} canEdit={canAllow} />
-        </section>
-      ) : null}
-      {/* Not for one an agent proposed: it is nobody's until somebody turns it on, and theirs from then. */}
-      {automation && !automation.proposal ? <WhoseItIs automation={automation} /> : null}
-      <section className="space-y-2 rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft">
-        <h2 className="text-lg text-base-content">Who may change it</h2>
-        <p className="text-sm text-base-content/85">
-          {theirs ? `${theirs} changes its steps and answers what it asks. You can read them, and how each run went.` : "You change the steps here. An agent can suggest a change, and it waits for your yes."}
-        </p>
-        <p className="text-xs text-base-content/65">Nouride runs the steps in this order every time. An agent only does the step it is given, with what the step before it said.</p>
-      </section>
-    </aside>
-  );
-}
-
 export function AutomationView({ detail, blank, home }: { detail: AutomationDetail | null; blank: Draft; home: string }) {
   const automation = detail?.automation ?? null;
   // What the floating chat tells an agent this page is about: the automation by its name; nothing while one is made.
@@ -94,6 +68,9 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const queryClient = useQueryClient();
   const toast = useToast();
   const me = useMe();
+  // Whether there is room beside the canvas for a pressed box's fields: without it they open in the box. A desktop's
+  // width: on a laptop's the menu and a panel left the canvas 300px, and its boxes too narrow for their own titles.
+  const laptop = useDesktop();
   // Whether this page may change it: the account may change automations, and this one is not another person's.
   const [writable, admin] = [canWrite(me.data ?? null) && !(automation && readsOnly(automation)), isAdmin(me.data ?? null)];
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
@@ -105,38 +82,57 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
 
   const loaded = useMemo(() => (automation ? draftOf(automation, home) : blank), [automation, blank, home]);
   const editor = useEditor(loaded, fresh);
-  const runs = detail?.runs ?? [];
-  const [view, setView] = useState<"steps" | "run">(() => (live(runs[0]) ? "run" : "steps"));
-  const [runId, setRunId] = useState<string | null>(null);
-  const [side, setSide] = useState<Side>("current");
+  const { draft, open } = editor;
+  const { runs, view, setView, runId, side, setSide, suggested, run, showsSuggested, shown, marks, showRun } = useDrawn(detail, loaded, draft, home);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["automations"] });
-  const saving = useSave(automation?.id ?? null, loaded, editor.draft, (id) => {
+  const saving = useSave(automation?.id ?? null, loaded, draft, (id) => {
     if (fresh) void navigate({ to: "/automations/$id", params: { id } });
     else editor.discard();
   });
 
-  const { draft } = editor;
-  const suggested = detail?.suggested ?? null;
-  const run = view === "run" ? (runs.find((one) => one.id === runId) ?? runs[0]) : undefined;
-  const showsSuggested = suggested !== null && side === "suggested" && view === "steps";
-  const shown = showsSuggested ? draftOf(suggested, home) : run && automation ? loaded : draft;
-  const marks = suggested && automation && view === "steps" ? stepMarks(stepsOf(automation.payload), stepsOf(suggested.payload)) : null;
   const editable = writable && !automation?.proposal && view === "steps" && !showsSuggested;
   const { problems, steps: stepIssues } = draftProblems(draft);
-  // The card that holds what a save lacks first says so, in the bar's own words: one thing at a time.
-  const lacking = (part: (typeof problems)[number]["part"]) => (problems[0]?.part === part ? problems[0].message : undefined);
+  const removed = (kept: Draft, said: string) => toast.show({ kind: "info", message: said, duration: 7_000, action: { label: "Undo", onPress: () => editor.restore(kept) } });
+  const remove = (index: number) => {
+    const kept = editor.remove(index);
+    const place = pathsOf(kept.steps, false).line.indexOf(index);
+    removed(kept, place >= 0 ? `Step ${place + 1} deleted` : "Step deleted");
+  };
 
   const mode: FlowMode = run
     ? { kind: "run", run, outcomes: outcomesOf(shown.steps, run), name: automation?.name ?? "", before: saidBefore(run, waiting.data?.waiting.find((step) => step.runId === run.id)?.said), canAnswer: writable, whom: automation ? answeredBy(automation) : undefined }
     : editable
-      ? editing(editor, agents, stepIssues, saving.refused, (index) => {
-          const kept = editor.remove(index);
-          toast.show({ kind: "info", message: `Step ${index + 1} deleted`, duration: 7_000, action: { label: "Undo", onPress: () => editor.restore(kept) } });
-        })
+      ? editing(editor, agents, stepIssues, saving.refused, remove)
       : { kind: "read" };
 
-  const delivery = deliveryOf(shown);
-  const reportChat = shown.chatId.trim() ? (labelOf(delivery.gatewayId ?? shown.gatewayId, delivery.chatId ?? shown.chatId.trim()) ?? shown.chatId.trim()) : null;
+  // What is open, as its fields: a step's, how it starts, where its results go. Only while the steps can be changed.
+  const close = () => editor.setOpen(null);
+  const titleOf = (step: Step) => stepTitle(step, agentName(("agentId" in step && step.agentId) || draft.agentId));
+  const fields: ReactNode =
+    editable && opensFields(editor) ? (
+      <OpenFields
+        editor={editor}
+        automation={automation}
+        runs={runs}
+        home={home}
+        writable={writable}
+        admin={admin}
+        agents={agents}
+        agentName={agentName}
+        gateways={gateways.data?.gateways ?? []}
+        titleOf={titleOf}
+        onChanged={refresh}
+        onRemove={remove}
+        onWent={(kept) => removed(kept, "The steps of its last answer went with it")}
+      />
+    ) : null;
+  const gone = () => {
+    refresh();
+    void navigate({ to: "/automations" });
+  };
+  const whose = open === OPEN_OWNER && automation && !automation.proposal ? <Whose automation={automation} onHanded={gone} onDone={close} /> : null;
+  // A webhook's standing yes is an admin's to give, as making the webhook was.
+  const atRest = <AtRest automation={automation} runs={runs} picked={run?.id ?? null} onPick={(picked) => showRun(picked.id)} canAllow={automation?.start === "webhook" ? admin : writable} />;
 
   return (
     <div className="space-y-5">
@@ -144,7 +140,8 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
         automation={automation}
         draft={draft}
         home={home}
-        reports={delivery.mode === "announce" ? reportChat : null}
+        reports={reportsWords(shown, labelOf)}
+        onWhose={() => editor.setOpen(open === OPEN_OWNER ? null : OPEN_OWNER)}
         agentName={agentName}
         canName={writable && !automation?.proposal}
         writable={writable}
@@ -152,15 +149,8 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
         dirty={editor.dirty}
         onName={(name) => editor.set({ name })}
         onChanged={refresh}
-        onRan={(outcome) => {
-          if (outcome.status === "unavailable") return;
-          setRunId(null);
-          setView("run");
-        }}
-        onGone={() => {
-          refresh();
-          void navigate({ to: "/automations" });
-        }}
+        onRan={(outcome) => (outcome.status === "unavailable" ? undefined : showRun(null))}
+        onGone={gone}
       />
 
       {automation && !automation.proposal && runs.length > 0 ? (
@@ -192,46 +182,24 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
         />
       ) : null}
 
-      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-7">
-        <div className="w-full min-w-0 lg:max-w-[44rem] lg:flex-1">
-          <Flow
-            // Drawn anew for each way of showing it, so one view's open card or lit jump is not carried into the next.
-            key={`${mode.kind} ${showsSuggested ? "suggested" : "current"}`}
-            steps={shown.steps}
-            own={shown.agentId}
-            agentName={agentName}
-            mode={mode}
-            marks={showsSuggested ? marks?.suggested : marks?.current}
-            head={
-              <StartCard
-                draft={shown}
-                automation={automation}
-                home={home}
-                editable={editable}
-                writable={writable}
-                admin={admin}
-                note={run ? `This run started ${whenWords(run.startedAt).replace(/^Today/, "today").replace(/^Yesterday/, "yesterday")}.` : undefined}
-                missing={editable ? lacking("start") : undefined}
-                set={editor.set}
-                onChanged={refresh}
-              />
-            }
-            foot={<WhoCard draft={shown} fresh={fresh} editable={editable} agents={agents} gateways={gateways.data?.gateways ?? []} missing={editable ? lacking("who") : undefined} set={editor.set} />}
-          />
-        </div>
+      {/* Whose it is, over the canvas where there is no room beside it. */}
+      {whose && !laptop ? <PanelCard label="Whose it is">{whose}</PanelCard> : null}
 
-        <Beside
-          automation={automation}
-          runs={runs}
-          picked={run?.id ?? null}
-          onPick={(picked) => {
-            setRunId(picked.id);
-            setView("run");
-          }}
-          // A webhook's standing yes is an admin's to give, as making the webhook was.
-          canAllow={automation?.start === "webhook" ? admin : writable}
-        />
-      </div>
+      <AutomationCanvas
+        shown={shown}
+        home={home}
+        agentName={agentName}
+        mode={mode}
+        marks={marks}
+        drawn={`${mode.kind} ${showsSuggested ? "suggested" : "current"}`}
+        editor={editor}
+        editable={editable}
+        laptop={laptop}
+        fields={fields}
+        run={run}
+        lacks={problems[0]}
+        beside={laptop && whose ? <PanelCard label="Whose it is">{whose}</PanelCard> : laptop && fields ? <PanelCard label="Change this box">{fields}</PanelCard> : atRest}
+      />
 
       {editor.dirty && view === "steps" && !showsSuggested && writable ? (
         <SaveBar

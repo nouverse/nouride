@@ -7,12 +7,33 @@
  * exit may name a step by its number.
  */
 
-import type { JobStep, StepGo, TogetherStep } from "@nouride/shared";
+import type { CommandRuns, JobScript, JobStep, StepGo, TogetherStep } from "@nouride/shared";
 import { CronValidationError, STEP_IS } from "./validate.ts";
 
 const KINDS = ["systemEvent", "agentTurn", "command", "mission", "approval", "parallel"] as const;
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "");
+
+/**
+ * A script as somebody wrote it, or nothing where there is none. Who wrote it (`by`) is never read from here: the
+ * store writes that (`scripts.ts`), so a caller cannot sign a script with another's name.
+ */
+function scriptFrom(raw: unknown): { script: JobScript } | Record<string, never> {
+  if (!raw || typeof raw !== "object") return {};
+  const script = raw as Record<string, unknown>;
+  const secrets = Array.isArray(script.secrets) ? script.secrets.map(String).map((name) => name.trim()).filter(Boolean) : [];
+  return { script: { text: text(script.text), about: text(script.about).trim(), ...(secrets.length > 0 ? { secrets } : {}) } };
+}
+
+/** What a command runs, as written: its line, a script with it, where and for how long. */
+export function commandFrom(step: Record<string, unknown>): CommandRuns {
+  return {
+    argv: Array.isArray(step.argv) ? step.argv.map(String) : [],
+    ...scriptFrom(step.script),
+    ...(text(step.cwd) ? { cwd: text(step.cwd) } : {}),
+    ...(typeof step.timeoutMs === "number" ? { timeoutMs: step.timeoutMs } : {}),
+  };
+}
 
 /** The steps of a job of several, from an untrusted list. */
 export function stepsFrom(raw: unknown): JobStep[] {
@@ -54,13 +75,7 @@ function stepFrom(step: Record<string, unknown>, index: number, ids: readonly st
     case "agentTurn":
       return { ...common, kind, message: text(step.message), ...(text(step.model).trim() ? { model: text(step.model).trim() } : {}), ...agent };
     case "command":
-      return {
-        ...common,
-        kind,
-        argv: Array.isArray(step.argv) ? step.argv.map(String) : [],
-        ...(text(step.cwd) ? { cwd: text(step.cwd) } : {}),
-        ...(typeof step.timeoutMs === "number" ? { timeoutMs: step.timeoutMs } : {}),
-      };
+      return { ...common, kind, ...commandFrom(step) };
     case "mission": {
       const checks = Array.isArray(step.checks) ? step.checks.map(String).map((check) => check.trim()).filter(Boolean) : [];
       return {
@@ -88,7 +103,7 @@ function partFrom(raw: unknown, of: string, at: number): TogetherStep {
   const part = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const common = { id: text(part.id).trim() || `${of.slice(0, 21)}-${at + 1}`, ...(text(part.name).trim() ? { name: text(part.name).trim().slice(0, 80) } : {}) };
   if (part.kind === "command") {
-    return { ...common, kind: "command", argv: Array.isArray(part.argv) ? part.argv.map(String) : [], ...(text(part.cwd) ? { cwd: text(part.cwd) } : {}), ...(typeof part.timeoutMs === "number" ? { timeoutMs: part.timeoutMs } : {}) };
+    return { ...common, kind: "command", ...commandFrom(part) };
   }
   const turn = { message: text(part.message), ...(text(part.model).trim() ? { model: text(part.model).trim() } : {}), ...(text(part.agentId).trim() ? { agentId: text(part.agentId).trim() } : {}) };
   return { ...common, ...turn, kind: part.kind === "agentTurn" ? "agentTurn" : (text(part.kind) as "agentTurn") };

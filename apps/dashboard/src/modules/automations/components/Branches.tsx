@@ -1,7 +1,8 @@
 /**
- * Where the run goes from a step that says so for itself, under its card: one chip a path, "If it fails → step 4, Tell
- * me". What a step does by default (on when it is done, the end when it failed or said nothing) is not drawn: the line
- * to the next card already says it.
+ * Where the run goes from a step by a path the canvas has no drawing for, under its box: one chip a path, "If it fails
+ * → step 4, Tell me". A step's own rule and a lane are drawn (`PathRules.tsx`), and what a step does by default is the
+ * line to the next box. What is left for a chip is what an automation written elsewhere can hold: a jump to another
+ * step of the main line, a path to a step two paths reach (`lib/paths.ts`, `chipExits`).
  *
  * A path that jumps past the next step is also a line at the flow's side (`FlowLinks`), from its chip to the card it
  * lands on. The chip is where that line is pointed at: the pointer or the focus on it lights the line and the card, and
@@ -10,7 +11,7 @@
 
 import { ArrowRight, CornerDownRight } from "lucide-react";
 import { cn } from "@/commons/lib/utils";
-import { branchesOf, type ExitName, type Step } from "../lib/steps";
+import { landsAt, type ExitName, type Step } from "../lib/steps";
 import { exitChip, exitGoes } from "../lib/words";
 
 /** A step's card and a path's chip, as `FlowLinks` finds them, and a jump's own name. */
@@ -21,6 +22,7 @@ export const jumpKey = (id: string, exit: ExitName): string => `${id}:${exit}`;
 export function Branches({
   steps,
   index,
+  exits,
   titleOf,
   active,
   onActive,
@@ -29,6 +31,8 @@ export function Branches({
 }: {
   steps: readonly Step[];
   index: number;
+  /** The paths to say: those the canvas does not draw. */
+  exits: readonly ExitName[];
   titleOf: (step: Step) => string;
   /** The jump the pointer or the focus is on, by its key. */
   active: string | null;
@@ -39,11 +43,11 @@ export function Branches({
   onShow: (to: number) => void;
 }) {
   const step = steps[index]!;
-  const branches = branchesOf(steps, index);
-  if (branches.length === 0) return null;
+  if (exits.length === 0) return null;
   return (
-    <ul aria-label={`Where the run goes from step ${index + 1}`} className="mt-2 flex list-none flex-col items-start gap-1.5 pl-3 sm:pl-[3.75rem]">
-      {branches.map(({ exit, to }) => {
+    <ul aria-label={`Where the run goes from step ${index + 1}`} className="mt-2 flex list-none flex-col items-start gap-1.5 pl-3">
+      {exits.map((exit) => {
+        const to = landsAt(steps, index, exit);
         const key = jumpKey(step.id, exit);
         const lit = active === key;
         const went = taken === exit;

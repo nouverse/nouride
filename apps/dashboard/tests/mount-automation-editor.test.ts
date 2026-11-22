@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { AutomationStep } from "@nouride/wire";
 import { answer, dropdown, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
-import { AS_VIEWER, STEPS, TWO_AGENTS, addStep, automation, barButton, detail, drawn, field, flowDrawn, labelled, ok, saveBar, stepCard, stepMenu } from "./automation-fixtures.ts";
+import { addStep, AS_VIEWER, automation, barButton, closeStep, detail, drawn, editStep, field, flowDrawn, labelled, ok, saveBar, stepCard, stepMenu, STEPS, TWO_AGENTS } from "./automation-fixtures.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -118,37 +118,39 @@ describe("each kind, written in its card", () => {
     const seen = { titles: [] as string[], agents: [] as string[], kinds: [] as string[] };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      labelled(host, "Edit step 1").click();
+      editStep(host, 1).click();
       await eventually(() => host.textContent?.includes("Give up after (seconds)") === true, 2_000, "the command's fields");
       type(field(host, "Command"), "ls -la");
       type(field(host, "Give up after (seconds)"), "30");
 
-      labelled(host, "Edit step 2").click();
+      editStep(host, 2).click();
       await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "the agent's fields");
       type(field(host, "What to ask"), "Look into it.");
       seen.agents = await dropdown(host, "Who does it").open();
       await dropdown(host, "Who does it").pick("Nix");
 
-      labelled(host, "Edit step 3").click();
+      editStep(host, 3).click();
       await eventually(() => host.textContent?.includes("Wait for an answer for") === true, 2_000, "the wait's fields");
       type(field(host, "Question"), "Post it?");
       await dropdown(host, "Wait for an answer for").pick("1 hour");
 
-      labelled(host, "Edit step 4").click();
+      editStep(host, 4).click();
       await eventually(() => field(host, "Name") !== null && host.textContent?.includes("Sent as written") === true, 2_000, "the message's fields");
       type(field(host, "Name"), "Say so");
-      seen.kinds = await dropdown(host, "What it does").open();
-      await dropdown(host, "What it does").pick("Start a mission");
+      // What kind of step it is, with the rest that is set once: under "More about this step".
+      seen.kinds = await dropdown(host, "Kind of step").open();
+      await dropdown(host, "Kind of step").pick("Start a mission");
       await eventually(() => host.textContent?.includes("The run waits here until the mission ends") === true, 2_000, "the mission's fields");
-      seen.titles = STEPS.map((step) => stepCard(host, step.id).querySelector("button, div > div")?.textContent ?? "");
+      seen.titles = STEPS.map((step) => stepCard(host, step.id).querySelector("button")?.textContent ?? "");
       sent = await saved(host);
     });
     expect(seen.agents).toEqual(["Nouva, who runs this automation", "Nix"]);
-    expect(seen.kinds).toEqual(["Ask an agent", "Run a command", "Send a message", "Start a mission", "Wait for your OK", "Several at the same time"]);
-    expect(seen.titles[0]).toContain("Step 1 · Run a commandls -la");
+    expect(seen.kinds).toEqual(["Ask an agent", "Run a script", "Send a message", "Start a mission", "Wait for your OK", "Several at the same time"]);
+    // A box is a title and one line: what its kind does or its name, then the start of its words.
+    expect(seen.titles[0]).toBe("Run a scriptls -la");
     // Another agent's step says whose it is.
-    expect(seen.titles[1]).toContain("Step 2 · Nix works on itLook into it.");
-    expect(seen.titles[3]).toContain("Step 4 · Say soThe shop was down.");
+    expect(seen.titles[1]).toBe("Nix works on itLook into it.");
+    expect(seen.titles[3]).toBe("Say soThe shop was down.");
     expect(steps(sent)).toEqual([
       { id: "check", kind: "command", argv: ["sh", "-lc", "ls -la"], timeoutMs: 30_000 },
       { id: "find", kind: "agentTurn", message: "Look into it.", agentId: "nix" },
@@ -163,12 +165,12 @@ describe("each kind, written in its card", () => {
     const seen = { card: "", state: "", bar: "", after: "" };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      labelled(host, "Edit step 2").click();
+      editStep(host, 2).click();
       await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "the fields");
       type(field(host, "What to ask"), " ");
       // Still being written: not told. Left behind: told.
       expect(stepCard(host, "find").querySelector('[role="alert"]')).toBeNull();
-      labelled(host, "Close step 2").click();
+      closeStep(host, 2).click();
       await eventually(() => stepCard(host, "find").querySelector('[role="alert"]') !== null, 2_000, "the card's problem");
       seen.card = stepCard(host, "find").querySelector('[role="alert"]')?.textContent ?? "";
       seen.state = stepCard(host, "find").dataset.state ?? "";
@@ -178,7 +180,8 @@ describe("each kind, written in its card", () => {
       seen.after = stepCard(host, "find").textContent ?? "";
     });
     expect(seen.card).toBe("Write what to ask the agent.");
-    expect(seen.state).toBe("failed");
+    // Its own mark, apart from a step that failed in a run.
+    expect(seen.state).toBe("lacking");
     expect(seen.bar).toContain("Step 2: Write what to ask the agent.");
     expect(seen.after).toContain("Find out why the shop is down.");
   });
@@ -232,82 +235,249 @@ describe("another order", () => {
   });
 });
 
+/** One of a step's paths as the open fields ask it: its answers by what each is called, and a press on one. */
+type Asked = "whenFailed" | "whenEmpty";
+const pathOf = (host: HTMLElement, exit: Asked) => host.querySelector<HTMLElement>(`[data-path="${exit}"]`);
+const answers = (host: HTMLElement, exit: Asked) => [...(pathOf(host, exit)?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])];
+const called = (one: HTMLElement) => one.querySelector("span")?.textContent ?? "";
+const answerNames = (host: HTMLElement, exit: Asked) => answers(host, exit).map(called);
+const chosen = (host: HTMLElement, exit: Asked) => answers(host, exit).filter((one) => one.getAttribute("aria-checked") === "true").map(called);
+const choose = (host: HTMLElement, exit: Asked, name: string) => answers(host, exit).find((one) => called(one) === name)!.click();
+const pressed = (host: HTMLElement, label: string) => [...host.querySelectorAll<HTMLElement>("button")].find((button) => button.textContent?.trim() === label);
+
 describe("where the run goes from a step", () => {
-  test("set from its card: only later steps are offered, the path is a chip under the card and a line to where it lands", async () => {
+  test("what a failure does is asked with four answers; going on and asking first are said in the step's own box, and saved as the shape that runs them", async () => {
     shown();
     let sent: { path: string; body: unknown }[] = [];
-    const seen = { before: 0, offered: [] as string[], chips: [] as string[], links: [] as (string | null)[], lit: "", target: "", last: "", lastPaths: 0 };
+    const seen = { before: 0, offered: [] as string[], first: [] as string[], goOn: "", unwritten: "", ask: "", boxes: [] as string[] };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      // Nothing a step says for itself: no chip, no line.
-      seen.before = host.querySelectorAll("[data-branch], [data-flow-link]").length;
-      labelled(host, "Edit step 1").click();
-      await eventually(() => host.textContent?.includes("Where the run goes from here") === true, 2_000, "the paths");
-      seen.offered = await dropdown(host, "When it fails").open();
-      await dropdown(host, "When it fails").pick("Jump to step 4, Tell the group");
-      await dropdown(host, "When it is done").pick("End the run here");
+      // Nothing a step says for itself: no strip, no lane, no chip, no line.
+      seen.before = host.querySelectorAll("[data-rule], [data-lane], [data-branch], [data-flow-link]").length;
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      seen.offered = answerNames(host, "whenFailed");
+      seen.first = chosen(host, "whenFailed");
+
+      choose(host, "whenFailed", "Go on anyway");
+      await eventually(() => stepCard(host, "check").querySelector('[data-rule-kind="goOn"]') !== null, 2_000, "the strip");
+      seen.goOn = stepCard(host, "check").querySelector("[data-rule]")?.textContent ?? "";
+
+      choose(host, "whenFailed", "Ask me first");
+      await eventually(() => stepCard(host, "check").querySelector('[data-rule-kind="ask"]') !== null, 2_000, "the question's strip");
+      seen.unwritten = stepCard(host, "check").querySelector("[data-rule]")?.textContent ?? "";
+      type(labelled(host, "Question to ask if it fails") as HTMLTextAreaElement, "The shop check failed. Go on anyway?");
+      await eventually(() => stepCard(host, "check").querySelector("[data-rule]")?.textContent?.includes("Go on anyway?") === true, 2_000, "the question in the box");
+      seen.ask = stepCard(host, "check").querySelector("[data-rule]")?.textContent ?? "";
+      // The wait it asks with is no box of its own: the steps drawn are the four there were.
+      seen.boxes = drawn(host);
+      sent = await saved(host);
+    });
+    expect(seen.before).toBe(0);
+    expect(seen.offered).toEqual(["Stop and tell me", "Go on anyway", "Ask me first", "Do something else"]);
+    expect(seen.first).toEqual(["Stop and tell me"]);
+    expect(seen.goOn).toBe("If it fails, the run goes on anyway.");
+    expect(seen.unwritten).toContain("Write the question to ask.");
+    // The question, and where each answer leads, in the box.
+    expect(seen.ask).toBe("If it fails, it asks you:“The shop check failed. Go on anyway?”Yes goes onNo stops here");
+    expect(seen.boxes).toEqual(["check", "find", "ok", "tell"]);
+    // The wait stands right after its step, which passes it over when done: the main line never falls into it.
+    expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "s5" } }, { id: "s5", kind: "approval", ask: "The shop check failed. Go on anyway?", then: { to: "find" } }, FIND, OK, TELL]);
+  });
+
+  test("a question nobody wrote is said on its step's box once the step is left, and Save waits for it", async () => {
+    shown();
+    const seen = { card: "", state: "", bar: "", disabled: false };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      choose(host, "whenFailed", "Ask me first");
+      await eventually(() => stepCard(host, "check").querySelector('[data-rule-kind="ask"]') !== null, 2_000, "the question's strip");
+      closeStep(host, 1).click();
+      await eventually(() => stepCard(host, "check").querySelector('[role="alert"]') !== null, 2_000, "the box's problem");
+      seen.card = stepCard(host, "check").querySelector('[role="alert"]')?.textContent ?? "";
+      seen.state = stepCard(host, "check").dataset.state ?? "";
+      seen.bar = saveBar(host)?.textContent ?? "";
+      seen.disabled = barButton(host, "Save")?.disabled === true;
+    });
+    expect(seen.card).toBe("Write the question to ask.");
+    expect(seen.state).toBe("lacking");
+    expect(seen.bar).toContain("Write the question to ask.");
+    expect(seen.disabled).toBe(true);
+  });
+
+  test("other steps in its place hang in a lane at its side that ends in a mark; another answer takes them along, with a way back", async () => {
+    shown();
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { boxes: [] as string[], lane: "", kicker: "", told: "", back: "", stop: "", toast: "", gone: [] as string[], undone: [] as string[] };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      choose(host, "whenFailed", "Do something else");
+      // Its first step is drawn beside the step, and opened to be written.
+      await flowDrawn(host, 5);
+      seen.boxes = drawn(host);
+      const lane = () => host.querySelector<HTMLElement>('[data-lane="whenFailed"]')!;
+      seen.lane = lane().querySelector("p")?.textContent ?? "";
+      await eventually(() => host.querySelector('[data-step-fields="s5"]') !== null, 2_000, "the lane's step open");
+      seen.kicker = host.querySelector('[data-step-fields="s5"] header p')?.textContent ?? "";
+      // A step of a lane is asked nothing of where the run goes: that is its owner's to say.
+      seen.told = host.querySelector('[data-step-fields="s5"]')?.querySelector("[data-path]") === null ? "not asked" : "asked";
+      type(field(host, "What to ask"), "Look into why it failed.");
+      seen.back = lane().querySelector("[data-lane-end]")?.textContent ?? "";
+
+      editStep(host, 1).click();
+      await eventually(() => pressed(host, "Then stop") !== undefined, 2_000, "the lane's end");
+      pressed(host, "Then stop")!.click();
+      await eventually(() => lane().querySelector('[data-lane-end="stop"]') !== null, 2_000, "the stop");
+      seen.stop = lane().querySelector("[data-lane-end]")?.textContent ?? "";
+
+      choose(host, "whenFailed", "Stop and tell me");
+      await flowDrawn(host, 4);
+      seen.gone = drawn(host);
+      await eventually(() => pressed(host.ownerDocument.body, "Undo") !== undefined, 2_000, "the Undo");
+      seen.toast = pressed(host.ownerDocument.body, "Undo")!.parentElement?.textContent ?? "";
+      pressed(host.ownerDocument.body, "Undo")!.click();
+      await flowDrawn(host, 5);
+      seen.undone = drawn(host);
+      sent = await saved(host);
+    });
+    // In the list right after its step; on the canvas beside it, off the main line.
+    expect(seen.boxes).toEqual(["check", "s5", "find", "ok", "tell"]);
+    expect(seen.lane).toBe("If it fails");
+    expect(seen.kicker).toBe("If it fails · Ask an agent");
+    expect(seen.told).toBe("not asked");
+    expect(seen.back).toBe("Then back to “Nouva works on it”");
+    expect(seen.stop).toBe("The run stops here");
+    expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "s5" } }, { id: "s5", kind: "agentTurn", message: "Look into why it failed.", then: "end" }, FIND, OK, TELL]);
+    expect(seen.gone).toEqual(["check", "find", "ok", "tell"]);
+    expect(seen.toast).toContain("went with it");
+    expect(seen.undone).toEqual(["check", "s5", "find", "ok", "tell"]);
+  });
+
+  test("a question changed for other steps: the wait goes, and the lane's first step opens to be written though it takes the id the wait had", async () => {
+    shown();
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { asked: [] as string[], open: "", kicker: "", boxes: [] as string[] };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      choose(host, "whenFailed", "Ask me first");
+      await eventually(() => stepCard(host, "check").querySelector('[data-rule-kind="ask"]') !== null, 2_000, "the question's strip");
+      type(labelled(host, "Question to ask if it fails") as HTMLTextAreaElement, "Go on anyway?");
+      choose(host, "whenFailed", "Do something else");
+      // The wait was step s5, and so is the step that takes its place: found by what the choice made, not by an id
+      // the list did not hold before.
+      await eventually(() => host.querySelector('[data-lane="whenFailed"]') !== null, 2_000, "the lane");
+      await eventually(() => host.querySelector('[data-step-fields="s5"] header p')?.textContent === "If it fails · Ask an agent", 2_000, "the lane's step open");
+      seen.open = host.querySelector("main [data-step-fields]")?.getAttribute("data-step-fields") ?? "";
+      seen.kicker = host.querySelector('[data-step-fields="s5"] header p')?.textContent ?? "";
+      seen.asked = [...host.querySelectorAll("[data-rule]")].map((rule) => rule.textContent ?? "");
+      seen.boxes = drawn(host);
+      type(field(host, "What to ask"), "Look into why it failed.");
+      sent = await saved(host);
+    });
+    expect(seen.open).toBe("s5");
+    expect(seen.kicker).toBe("If it fails · Ask an agent");
+    expect(seen.asked).toEqual([]);
+    expect(seen.boxes).toEqual(["check", "s5", "find", "ok", "tell"]);
+    expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "s5" } }, { id: "s5", kind: "agentTurn", message: "Look into why it failed.", then: { to: "find" } }, FIND, OK, TELL]);
+  });
+
+  test("a path written elsewhere that the canvas has no drawing for is a chip and a line to where it lands, and is offered as it is until it is changed", async () => {
+    // A failure that leads to a step the main line reaches too, and a step that ends the run early.
+    shown([{ ...CHECK, whenFailed: { to: "tell" }, then: "end" }, FIND, OK, TELL]);
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { chips: [] as string[], links: [] as (string | null)[], lit: "", target: "", offered: [] as string[], now: [] as string[], done: [] as string[], after: 0 };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
       await eventually(() => host.querySelectorAll("[data-branch]").length === 2, 2_000, "the chips");
       seen.chips = [...host.querySelectorAll("[data-branch]")].map((chip) => chip.textContent ?? "");
       await eventually(() => host.querySelector("[data-flow-link]") !== null, 2_000, "the line");
       seen.links = [...host.querySelectorAll("[data-flow-link]")].map((link) => link.getAttribute("data-flow-link"));
-      // The pointer on the chip lights its line and the card it lands on.
+      // The pointer on the chip lights its line and the box it lands on.
       const chip = host.querySelector<HTMLElement>('[data-branch="whenFailed"]')!;
       chip.dispatchEvent(new (window as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent("mouseover", { bubbles: true }));
       await eventually(() => host.querySelector("[data-flow-link]")?.getAttribute("data-state") === "active", 2_000, "the line lit");
       seen.lit = host.querySelector("[data-flow-link]")?.getAttribute("data-state") ?? "";
       seen.target = stepCard(host, "tell").dataset.state ?? "";
-      // The last step has nothing after it: no path is offered, and its card says how the run ends.
-      labelled(host, "Edit step 4").click();
-      await eventually(() => host.textContent?.includes("This is the last step") === true, 2_000, "the last step's editor");
-      seen.last = [...host.querySelectorAll("p")].find((line) => line.textContent?.startsWith("This is the last step"))?.textContent ?? "";
-      seen.lastPaths = ["When it is done", "When it fails", "When it has nothing to say"].filter((label) => dropdown(host, label).button() !== undefined).length;
+
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      seen.offered = answerNames(host, "whenFailed");
+      seen.now = chosen(host, "whenFailed");
+      // Where it goes when done is asked only of a step that does not go on to the one drawn below.
+      seen.done = await dropdown(host, "When it is done").open();
+      await dropdown(host, "When it is done").pick("Go on to the next step");
+      await eventually(() => host.querySelectorAll("[data-branch]").length === 1, 2_000, "one chip left");
+      choose(host, "whenFailed", "Stop and tell me");
+      await eventually(() => host.querySelectorAll("[data-branch]").length === 0, 2_000, "the chips gone");
+      seen.after = host.querySelectorAll("[data-flow-link]").length;
       sent = await saved(host);
     });
-    expect(seen.before).toBe(0);
-    expect(seen.offered).toEqual(["Go on to step 2", "End the run, as failed", "Jump to step 3, Wait for your OK", "Jump to step 4, Tell the group"]);
     expect(seen.chips).toEqual(["Once doneend here", "If it failsstep 4, Tell the group"]);
     // Ending the run is no jump: only the path to a later step is a line.
     expect(seen.links).toEqual(["check:whenFailed"]);
     expect([seen.lit, seen.target]).toEqual(["active", "target"]);
-    // A message sent has one way out, so nothing more is said of it.
-    expect(seen.last).toBe("This is the last step, so the run ends after it.");
-    expect(seen.lastPaths).toBe(0);
-    expect(steps(sent)).toEqual([{ ...CHECK, then: "end", whenFailed: { to: "tell" } }, FIND, OK, TELL]);
+    // With the run ending after it, there is nothing to go on to: the answer it holds is the one more offered.
+    expect(seen.offered).toEqual(["Stop and tell me", "Do something else", "Go to step 4, Tell the group"]);
+    expect(seen.now).toEqual(["Go to step 4, Tell the group"]);
+    expect(seen.done).toEqual(["Go on to the next step", "End the run here", "Jump to step 3, Wait for your OK", "Jump to step 4, Tell the group"]);
+    expect(seen.after).toBe(0);
+    expect(steps(sent)).toEqual([CHECK, FIND, OK, TELL]);
   });
 
-  test("the last step ends the run whichever way it went: though it holds a path, none is drawn under it or offered on it", async () => {
+  test("the last step has nothing to go on to: a path that says to is no rule, and neither going on nor asking first is offered on it", async () => {
     // As an agent or the command line may write it, and as the page once let a person set it: "go on" with no step to go on to.
     shown([CHECK, { ...FIND, whenFailed: "next", whenEmpty: "next", then: "end" }]);
-    const seen = { chips: 0, says: "", paths: 0, middle: 0 };
+    const seen = { drawn: 0, last: [] as string[], lastNow: [] as string[], silent: [] as string[], middle: [] as string[] };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host, 2);
-      seen.chips = host.querySelectorAll("[data-branch]").length;
-      labelled(host, "Edit step 2").click();
-      await eventually(() => host.textContent?.includes("This is the last step") === true, 2_000, "the last step's editor");
-      seen.says = [...host.querySelectorAll("p")].find((line) => line.textContent?.startsWith("This is the last step"))?.textContent ?? "";
-      seen.paths = host.querySelectorAll('button[aria-haspopup="listbox"][aria-label^="When it"]').length;
-      // The step before it still has its three.
-      labelled(host, "Edit step 1").click();
-      await eventually(() => host.textContent?.includes("Where the run goes from here") === true, 2_000, "a middle step's paths");
-      seen.middle = host.querySelectorAll('button[aria-haspopup="listbox"][aria-label^="When it"]').length;
+      seen.drawn = host.querySelectorAll("[data-branch], [data-rule], [data-lane]").length;
+      editStep(host, 2).click();
+      await eventually(() => host.querySelector('[data-step-fields="find"]') !== null, 2_000, "the last step's fields");
+      seen.last = answerNames(host, "whenFailed");
+      seen.lastNow = chosen(host, "whenFailed");
+      seen.silent = answerNames(host, "whenEmpty");
+      // The step before it has a step to go on to.
+      editStep(host, 1).click();
+      await eventually(() => host.querySelector('[data-step-fields="check"]') !== null, 2_000, "a middle step's fields");
+      seen.middle = answerNames(host, "whenFailed");
     });
-    expect(seen.chips).toBe(0);
-    expect(seen.says).toBe("This is the last step, so the run ends after it. If it fails, the run ends as failed. With nothing to say, it ends quietly.");
-    expect(seen.paths).toBe(0);
-    expect(seen.middle).toBe(3);
+    expect(seen.drawn).toBe(0);
+    expect(seen.last).toEqual(["Stop and tell me", "Do something else"]);
+    expect(seen.lastNow).toEqual(["Stop and tell me"]);
+    expect(seen.silent).toEqual(["Stop quietly", "Do something else"]);
+    expect(seen.middle).toEqual(["Stop and tell me", "Go on anyway", "Ask me first", "Do something else"]);
   });
 
-  test("a move that would turn a path backward puts it back to its default, and the card says so", async () => {
+  test("a message has one way out, and is asked nothing of where the run goes", async () => {
+    shown();
+    let paths = -1;
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      editStep(host, 4).click();
+      await eventually(() => host.querySelector('[data-step-fields="tell"]') !== null, 2_000, "the message's fields");
+      paths = host.querySelectorAll("[data-path]").length;
+    });
+    expect(paths).toBe(0);
+  });
+
+  test("a move that would turn a path backward puts it back to its default, and the box says so", async () => {
     shown([{ ...CHECK, whenFailed: { to: "ok" } }, FIND, OK, TELL]);
     let sent: { path: string; body: unknown }[] = [];
-    const seen = { chips: 0, note: "", after: 0 };
+    const seen = { chips: 0, beside: "", note: "", after: 0 };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       seen.chips = host.querySelectorAll("[data-branch]").length;
       // The step it points at, carried above it.
       await stepMenu(host, 3, "Move up");
       await eventually(() => drawn(host)[1] === "ok", 2_000, "ok above find");
-      expect(host.querySelectorAll("[data-branch]").length).toBe(1);
+      // Right after its step, the step it led to is where the run goes anyway: no jump any more, a rule of its box.
+      seen.beside = `${host.querySelectorAll("[data-branch]").length} ${stepCard(host, "check").querySelector("[data-rule]")?.textContent}`;
       await stepMenu(host, 2, "Move up");
       await eventually(() => drawn(host)[0] === "ok", 2_000, "ok above check");
       await eventually(() => stepCard(host, "check").querySelector('[role="status"]') !== null, 2_000, "the note");
@@ -316,6 +486,7 @@ describe("where the run goes from a step", () => {
       sent = await saved(host);
     });
     expect(seen.chips).toBe(1);
+    expect(seen.beside).toBe("0 If it fails, the run goes on anyway.");
     expect(seen.note).toBe('"If it fails" led to a step that is no longer after this one, so it is back to: end the run, as failed.');
     expect(seen.after).toBe(0);
     expect(steps(sent)).toEqual([OK, CHECK, FIND, TELL]);

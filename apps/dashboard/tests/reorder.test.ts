@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { dropIndex, moved, shiftOf } from "@/commons/lib/reorder";
+import { dropIndex, shiftOf } from "@/commons/lib/reorder";
 import { useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -39,13 +39,13 @@ describe("where a dragged item lands", () => {
     expect([0, 1, 2, 3].map((index) => shiftOf(index, 3, 1, 80))).toEqual([0, 80, 80, 0]);
     expect([0, 1, 2].map((index) => shiftOf(index, 1, 1, 100))).toEqual([0, 0, 0]);
   });
-
-  test("an item taken from one place to another, the rest in their order; a move to nowhere changes nothing", () => {
-    expect(moved(["a", "b", "c", "d"], 0, 2)).toEqual(["b", "c", "a", "d"]);
-    expect(moved(["a", "b", "c", "d"], 3, 0)).toEqual(["d", "a", "b", "c"]);
-    for (const [from, to] of [[1, 1], [0, 4], [-1, 0], [4, 0]] as const) expect(moved(["a", "b", "c", "d"], from, to)).toEqual(["a", "b", "c", "d"]);
-  });
 });
+
+/** The mounted list's own mover: the list hands a place to take from and one to put at, and its owner moves the item. */
+function moved<T>(items: readonly T[], from: number, to: number): T[] {
+  const rest = items.filter((_, at) => at !== from);
+  return [...rest.slice(0, to), items[from]!, ...rest.slice(to)];
+}
 
 describe("the list, mounted", () => {
   let real: () => DOMRect;

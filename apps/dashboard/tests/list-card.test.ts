@@ -3,7 +3,7 @@
  * with one press. It scrolled inside the card before, a second thing to scroll under the page.
  */
 
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 import { eventually } from "./wait.ts";
 
@@ -12,12 +12,27 @@ let dom: Window;
 /** How tall the list is and how much of it shows: happy-dom lays nothing out, so a test says. */
 let tall = { scroll: 0, client: 0 };
 
+const MEASURED = ["scrollHeight", "clientHeight"] as const;
+let measuredBefore: (PropertyDescriptor | undefined)[] = [];
+const elementProto = () => (dom as unknown as { HTMLElement: { prototype: object } }).HTMLElement.prototype;
+
 beforeAll(() => {
   dom = new Window({ url: "http://localhost/dashboard/" });
   for (const key of GLOBALS) (globalThis as unknown as Record<string, unknown>)[key] = (dom as unknown as Record<string, unknown>)[key];
-  const proto = (dom as unknown as { HTMLElement: { prototype: object } }).HTMLElement.prototype;
+  const proto = elementProto();
+  measuredBefore = MEASURED.map((key) => Object.getOwnPropertyDescriptor(proto, key));
   Object.defineProperty(proto, "scrollHeight", { configurable: true, get: () => tall.scroll });
   Object.defineProperty(proto, "clientHeight", { configurable: true, get: () => tall.client });
+});
+
+// Put back: every window of a test run shares this prototype, and a file run after this one measured every element
+// as the last list here was (a card's "Show all" drawn where nothing was long).
+afterAll(() => {
+  MEASURED.forEach((key, at) => {
+    const was = measuredBefore[at];
+    if (was) Object.defineProperty(elementProto(), key, was);
+    else delete (elementProto() as Record<string, unknown>)[key];
+  });
 });
 
 async function mount(maxHeight?: string) {

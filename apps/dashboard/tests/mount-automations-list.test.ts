@@ -29,7 +29,7 @@ describe("the tabs and the old addresses", () => {
       seen.current = current(host);
     });
     await renderPage("/automations/cron_1", async (host) => {
-      await eventually(() => host.textContent?.includes("Who and where") === true, 3_000, "the automation");
+      await eventually(() => host.querySelector('main [aria-label="Who and where"]') !== null, 3_000, "the automation");
       seen.one = current(host);
     });
     expect(seen.tabs).toEqual(["Waiting for you", "Automations", "Missions", "Helpers"]);

@@ -15,6 +15,9 @@ import type { NotesPort } from "@/modules/notes/store.ts";
 import type { McpCatalog } from "@/modules/mcp-registry/index.ts";
 import type { McpLogins } from "@/modules/mcp-oauth/index.ts";
 import { requestRestart } from "@/boot/restart.ts";
+import { scriptFacts } from "@/boot/proposals.ts";
+import { tryCommand } from "@/modules/cron/try-step.ts";
+import { heldBack } from "@/modules/transfer/held.ts";
 import { createLogger, type GlobalConfig } from "@nouride/shared";
 import { WhatsAppGateway } from "@nouride/gateways";
 import type { Memory } from "@/modules/memory/index.ts";
@@ -404,7 +407,7 @@ export async function startControlPlane(deps: {
               ...(deps.mcpLogins ? { mcpLogins: deps.mcpLogins } : {}),
               ...(builtinSkillsDir ? { builtinSkillsDir } : {}),
               ...(config.cron.enabled
-                ? { cron: { store: cron, scheduler, timezone: config.daemon.timezone, tests: hookTests, ...(proposals ? { proposals } : {}) } }
+                ? { cron: { store: cron, scheduler, timezone: config.daemon.timezone, tests: hookTests, scripts: scriptFacts(registry, () => pipeline), tryCommand: (agentId, command, input) => tryCommand({ ...pipeline.cronExecutors(), ...(deps.state ? { held: () => heldBack(deps.state!) } : {}) }, config.cron, agentId, command, input), ...(proposals ? { proposals } : {}) } }
                 : {}),
               ...(users ? { users, devices: new DeviceTokenStore(db) } : {}),
               ...(setup ? { setup } : {}),

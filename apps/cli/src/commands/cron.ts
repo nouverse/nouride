@@ -1,7 +1,7 @@
 import { plural } from "@nouride/shared";
 import type { CronDetailResponse, CronJobRow, CronListResponse, CronRunOutcome, Client } from "@nouride/cli-kit";
 import { BOLD, DIM, GREEN, RED, RESET, say, usageError, usageLines, flagValue, hasFlag, sessionMode, knownAction } from "@nouride/cli-kit";
-import { answerStep, runMark, sayRunSteps, stepsFromFile } from "./cron-steps.ts";
+import { answerStep, runMark, sayRunSteps, scriptFromFile, stepsFromFile } from "./cron-steps.ts";
 
 /**
  * `nouride cron` — the operator's side of the scheduler.
@@ -9,7 +9,7 @@ import { answerStep, runMark, sayRunSteps, stepsFromFile } from "./cron-steps.ts
  * Two things here that an agent cannot reach without a human seeing the prompt, both for the same reason:
  * reaching this command means holding the control token or an operator account.
  *
- * - `--command` creates a job that runs argv on the host with no model and no approval gate.
+ * - `--command` and `--script` create a job that runs a program on the host with no model and no approval gate.
  * - `--gateway`/`--chat` point a job at any conversation, including one the creator is not in.
  *
  * And one thing that matters more than either: `nouride cron run <id>` fires a job immediately.
@@ -118,8 +118,9 @@ export async function cron(client: Client, args: string[]): Promise<void> {
       : job.trigger.kind === "manual" && job.enabled
         ? "when started"
         : job.disabledReason
-        ? // Red for what went wrong; `fired` is a one-shot kept by `--keep` after it ran, which did not.
-          `${job.disabledReason === "fired" ? DIM : RED}${job.disabledReason}${RESET}`
+        ? // Red for what went wrong. Nothing did where it did what it was set to: a one-shot kept by `--keep` after it
+          // ran, one told to tell once that told, one given a length of time that lasted it.
+          `${DONE_AS_SET.includes(job.disabledReason) ? DIM : RED}${job.disabledReason}${RESET}`
         : "paused";
     say(`${mark} ${BOLD}${job.name}${RESET} ${DIM}${job.id}${RESET}`);
     say(`    ${job.describes} ${DIM}·${RESET} next ${next}`);
@@ -136,6 +137,9 @@ export async function cron(client: Client, args: string[]): Promise<void> {
   say(`${DIM}a run that waits for a person: nouride cron continue <run id>  ·  stop <run id>${RESET}`);
 }
 
+/** Why a job is off where nothing went wrong: it did what it was set to do, and turned itself off. */
+const DONE_AS_SET = ["fired", "told", "ended"];
+
 /** `nouride cron add`: one thing, or with `--steps` a list of them, on a schedule or started by hand. */
 async function addJob(client: Client, args: string[]): Promise<void> {
   const flag = (name: string): string | undefined => flagValue(args, `--${name}`);
@@ -149,6 +153,9 @@ async function addJob(client: Client, args: string[]): Promise<void> {
         `  --text <message>                    a plain reminder, no model call\n` +
         `  --message <prompt>                  wake the agent with this instead\n` +
         `  --command <shell>                   run a command, no model call; a run that prints nothing sends nothing\n` +
+        `  --script <file> --about <words>     run a script the job keeps: its text, and a line of what it does\n` +
+        `  --run <program>                     …what runs it: sh (the default), python3, bun\n` +
+        `  --secrets <name,name>               …the agent's secrets it is handed, by name\n` +
         `  --then agent                        …and wake the agent with what it printed, when it printed something\n` +
         `  --mission <goal>                    long work: each run a mission, ended at the reviewer\n` +
         `  --check <command>                   …a command whose exit says a run is done\n` +
@@ -156,11 +163,14 @@ async function addJob(client: Client, args: string[]): Promise<void> {
         `  --steps <file.json>                 several of these in a fixed order: the list, as JSON\n` +
         `  --manual                            no time: it runs when somebody starts it\n` +
         `  --session <fresh|isolated|chat>     history: none (default), private, or the chat's\n` +
+        `  --once                              tell once, then turn itself off\n` +
+        `  --for <6h>                          stop by itself after that long, and say so where it reports\n` +
         `  --tz <zone> --quiet --keep${RESET}`,
     );
   }
 
   const command = flag("command");
+  const script = flag("script");
   const message = flag("message");
   const text = flag("text");
   const goal = flag("mission");
@@ -169,6 +179,19 @@ async function addJob(client: Client, args: string[]): Promise<void> {
     ? { kind: "steps", steps: await stepsFromFile(steps) }
     : goal
     ? { kind: "mission", goal, ...(flag("check") ? { checks: [flag("check")] } : {}), ...(has("no-review") ? { review: false } : {}) }
+    : script
+    ? {
+        kind: "command",
+        // The program alone: the daemon writes the text to a file of the run and hands that file to it.
+        argv: [flag("run") ?? "sh"],
+        script: {
+          text: await scriptFromFile(script),
+          about: flag("about") ?? "",
+          ...(flag("secrets") ? { secrets: flag("secrets")!.split(",").map((secret) => secret.trim()).filter(Boolean) } : {}),
+        },
+        then: flag("then") === "agent" ? "agentTurn" : "deliver",
+        ...(flag("cwd") ? { cwd: flag("cwd") } : {}),
+      }
     : command
     ? {
         kind: "command",
@@ -198,7 +221,8 @@ async function addJob(client: Client, args: string[]): Promise<void> {
       chatId: flag("chat") ?? process.env.NOURIDE_CHAT_ID ?? "",
     },
     session: sessionMode(flag("session")),
-    delivery: { mode: has("quiet") ? "none" : "announce" },
+    // `--for` as it was typed: the daemon reads a length of time, and says what one is where this is none.
+    delivery: { mode: has("quiet") ? "none" : "announce", ...(has("once") ? { once: true } : {}), ...(flag("for") ? { lasts: flag("for") } : {}) },
     keepAfterRun: has("keep"),
   });
 

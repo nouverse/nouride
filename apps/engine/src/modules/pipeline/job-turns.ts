@@ -34,6 +34,7 @@ import { brainFor } from "./brain.ts";
 import { capStoredTurns } from "@/modules/llm/context.ts";
 import { resolveToolset } from "@/modules/tools/registry.ts";
 import { buildEnv, ownHomeEnv } from "@/modules/tools/builtins/exec.ts";
+import { variableOf } from "@/modules/tools/exec-secrets.ts";
 import { postWebhook } from "@/modules/cron/webhook.ts";
 import { settleNotes } from "@/modules/tools/builtins/plan.ts";
 import { notesOf } from "@/modules/notes/tail.ts";
@@ -491,11 +492,14 @@ export class JobTurns {
       runTurn: (request) => this.runCronTurn(request),
       dispatchTurn: (job: Job, message: string, outsideContent?: string[]) => this.dispatchCronTurn(job, message, outsideContent),
       deliver: (target: JobTarget, text: string, said?: { agentId: string; job: string }) => this.deliverToChat(target, text, said),
-      commandSandbox: (job: Job) => {
+      commandSandbox: (job: Pick<Job, "agentId" | "payload">) => {
         if (!this.ctx.deps.registry.get(job.agentId)) return null;
-        // Every value, to mask what it prints with; in its environment only the secrets bound to its command.
+        // Every value, to mask what it prints with; in its environment only the secrets bound to its command, and for a
+        // script those it names: a person saw them listed when they turned the job on, and each is the agent's already.
         const secrets = this.ctx.deps.childEnv?.(job.agentId) ?? {};
-        const handed = job.payload.kind === "command" ? (this.ctx.deps.childEnv?.forCommand(job.agentId, job.payload.argv).env ?? {}) : {};
+        const command = job.payload.kind === "command" ? job.payload : null;
+        const named = Object.fromEntries((command?.script?.secrets ?? []).map(variableOf).flatMap((variable) => (secrets[variable] === undefined ? [] : [[variable, secrets[variable]] as const])));
+        const handed = command ? { ...(this.ctx.deps.childEnv?.forCommand(job.agentId, command.argv).env ?? {}), ...named } : {};
         const workspace = this.ctx.workspaceFor(job.agentId);
         const scratchpad = scratchpadFor(workspace.own);
         return {

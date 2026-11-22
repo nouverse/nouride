@@ -6,9 +6,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { addOnLine, addToLane, copyOnLine, insertOnLine, moveOnLine, removeDrawn } from "@/modules/automations/lib/paths";
 import {
-  DEFAULT_EXIT, STEPS_MAX, argvOf, asKind, blankStep, branchesOf, canWatch, duplicateStep, exitFrom, exitOf, exitValue, exitsOf, forward, insertStep, isLast, landsAt, mainText, moveStep, newStepId,
-  refusedStep, removeStep, replaceStep, setExit, shellLine, stepProblems, watching, type Step,
+  DEFAULT_EXIT, STEPS_MAX, argvOf, asKind, blankStep, canWatch, exitFrom, exitOf, exitValue, exitsOf, forward, landsAt, mainText, newStepId,
+  refusedStep, replaceStep, resetsBetween, setExit, shellLine, stepProblems, watching, type Step,
 } from "@/modules/automations/lib/steps";
 
 const say = (id: string, more: Partial<Step> = {}): Step => ({ id, kind: "systemEvent", text: `say ${id}`, ...more }) as Step;
@@ -42,24 +43,6 @@ describe("where a run goes from a step", () => {
     expect(exitsOf(say("a", { whenEmpty: "next" }))).toEqual(["then", "whenEmpty"]);
   });
 
-  test("the paths a step says for itself are its branches; a default written out is none, and only a jump past the next step is a line", () => {
-    const steps = [run("a", { then: "end", whenFailed: "next", whenEmpty: "end" }), say("b", { then: { to: "c" } }), say("c"), say("d")];
-    expect(branchesOf(steps, 0)).toEqual([{ exit: "then", to: "end", jump: false }, { exit: "whenFailed", to: 1, jump: false }]);
-    // To the step right after: a path of its own, and the line to it is the one already there.
-    expect(branchesOf(steps, 1)).toEqual([{ exit: "then", to: 2, jump: false }]);
-    expect(branchesOf([run("a", { whenFailed: { to: "d" } }), say("b"), say("c"), say("d")], 0)).toEqual([{ exit: "whenFailed", to: 3, jump: true }]);
-    expect(branchesOf(steps, 2)).toEqual([]);
-  });
-
-  test("the last step has no branch, whatever it holds: after it the run ends whichever way it went", () => {
-    const held = run("b", { then: "end", whenFailed: "next", whenEmpty: "next" });
-    expect(branchesOf([run("a"), held], 1)).toEqual([]);
-    expect(branchesOf([held], 0)).toEqual([]);
-    // The same step with one after it: each of its paths is a branch again.
-    expect(branchesOf([run("a"), held, say("c")], 1).map((branch) => branch.exit)).toEqual(["then", "whenFailed", "whenEmpty"]);
-    expect([isLast([run("a"), held], 1), isLast([run("a"), held], 0), isLast([held], 0)]).toEqual([true, false, true]);
-  });
-
   test("set: a later step, on, or the end; the default is left out, and a step that is not after it is not taken", () => {
     const steps = [run("a"), say("b"), say("c")];
     expect(setExit(steps, 0, "whenFailed", { to: "c" })[0]).toEqual(run("a", { whenFailed: { to: "c" } }));
@@ -77,24 +60,36 @@ describe("where a run goes from a step", () => {
 describe("a path kept forward", () => {
   test("a step moved above the one that points at it: that path is back to its default, and named", () => {
     const steps = [run("a", { whenFailed: { to: "c" } }), say("b"), say("c")];
-    const moved = moveStep(steps, 2, 0);
-    expect(ids(moved.steps)).toEqual(["c", "a", "b"]);
-    expect(moved.steps[1]).toEqual(run("a"));
-    expect(moved.reset).toEqual([{ id: "a", exit: "whenFailed", why: "moved" }]);
+    const moved = moveOnLine(steps, 2, 0);
+    expect(ids(moved)).toEqual(["c", "a", "b"]);
+    expect(moved[1]).toEqual(run("a"));
+    expect(resetsBetween(steps, moved)).toEqual([{ id: "a", exit: "whenFailed", why: "moved" }]);
   });
 
   test("a step moved below its own target loses the path; one still above it keeps it", () => {
     const steps = [run("a", { whenFailed: { to: "b" } }), say("b"), say("c")];
-    expect(moveStep(steps, 0, 2)).toEqual({ steps: [say("b"), say("c"), run("a")], reset: [{ id: "a", exit: "whenFailed", why: "moved" }] });
-    const kept = moveStep([run("a", { whenFailed: { to: "c" } }), say("b"), say("c")], 0, 1);
-    expect(kept).toEqual({ steps: [say("b"), run("a", { whenFailed: { to: "c" } }), say("c")], reset: [] });
+    const moved = moveOnLine(steps, 0, 2);
+    expect(moved).toEqual([say("b"), say("c"), run("a")]);
+    expect(resetsBetween(steps, moved)).toEqual([{ id: "a", exit: "whenFailed", why: "moved" }]);
+    const far = [run("a", { whenFailed: { to: "c" } }), say("b"), say("c")];
+    const kept = moveOnLine(far, 0, 1);
+    expect(kept).toEqual([say("b"), run("a", { whenFailed: { to: "c" } }), say("c")]);
+    expect(resetsBetween(far, kept)).toEqual([]);
   });
 
   test("a deleted step takes every path to it: each is back to its default, as removed", () => {
     const steps = [run("a", { whenFailed: { to: "c" }, whenEmpty: { to: "c" } }), say("b", { then: { to: "c" } }), say("c")];
-    const removed = removeStep(steps, 2);
-    expect(removed.steps).toEqual([run("a"), say("b")]);
-    expect(removed.reset).toEqual([{ id: "a", exit: "whenFailed", why: "removed" }, { id: "a", exit: "whenEmpty", why: "removed" }, { id: "b", exit: "then", why: "removed" }]);
+    const removed = removeDrawn(steps, 2);
+    expect(removed).toEqual([run("a"), say("b")]);
+    expect(resetsBetween(steps, removed)).toEqual([{ id: "a", exit: "whenFailed", why: "removed" }, { id: "a", exit: "whenEmpty", why: "removed" }, { id: "b", exit: "then", why: "removed" }]);
+  });
+
+  test("a path the page rewrote on purpose is no reset: it names a step that is there and still ahead", () => {
+    const steps = [run("a", { whenFailed: { to: "b" } }), say("b"), say("c")];
+    // A step put between the two: "go on anyway" goes on to the new step.
+    const wider = insertOnLine(steps, 1, say("x"));
+    expect(wider).toEqual([run("a", { whenFailed: { to: "x" } }), say("x"), say("b"), say("c")]);
+    expect(resetsBetween(steps, wider)).toEqual([]);
   });
 
   test("`forward` leaves `next`, `end` and every forward jump alone", () => {
@@ -102,9 +97,20 @@ describe("a path kept forward", () => {
     expect(forward(steps)).toEqual({ steps, reset: [] });
   });
 
-  test("a move to where it is, or out of the list, changes nothing", () => {
+  test("a move to where it is, or of a step that is not there, changes nothing; nor does a move of a lane's step, which stays with its owner", () => {
     const steps = [say("a"), say("b")];
-    for (const [from, to] of [[0, 0], [0, 2], [-1, 0], [2, 0]] as const) expect(moveStep(steps, from, to)).toEqual({ steps, reset: [] });
+    for (const [from, to] of [[0, 0], [1, 1], [-1, 0], [2, 0], [0, -1]] as const) expect(moveOnLine(steps, from, to)).toEqual(steps);
+    const laned = [run("a", { then: { to: "c" }, whenFailed: { to: "l" } }), say("l", { then: { to: "c" } }), say("c"), say("d")];
+    for (const to of [0, 1, 2]) expect(moveOnLine(laned, 1, to)).toEqual(laned);
+    // Its owner moves, and the lane with it.
+    expect(ids(moveOnLine(laned, 0, 1))).toEqual(["c", "a", "l", "d"]);
+  });
+
+  test("the first of a lane's steps deleted: the path leads to the next one, on purpose, and nothing is told as put back", () => {
+    const steps = [run("a", { then: { to: "c" }, whenFailed: { to: "l" } }), say("l"), say("m", { then: { to: "c" } }), say("c")];
+    const removed = removeDrawn(steps, 1);
+    expect(removed).toEqual([run("a", { then: { to: "c" }, whenFailed: { to: "m" } }), say("m"), say("c")]);
+    expect(resetsBetween(steps, removed)).toEqual([]);
   });
 });
 
@@ -113,35 +119,60 @@ describe("adding and copying", () => {
     expect(newStepId([])).toBe("s1");
     expect(newStepId([say("s1"), say("s2")])).toBe("s3");
     expect(newStepId([say("s3"), say("x")])).toBe("s4");
-    expect(blankStep("command", [say("s1")])).toEqual({ id: "s2", kind: "command", argv: [] });
+    // A script, to be written or asked for: the one-line form is only what an automation made before scripts holds.
+    expect(blankStep("command", [say("s1")])).toEqual({ id: "s2", kind: "command", argv: ["sh"], script: { text: "", about: "" } });
     expect(blankStep("approval", [])).toEqual({ id: "s1", kind: "approval", ask: "" });
     expect(blankStep("mission", [])).toEqual({ id: "s1", kind: "mission", goal: "" });
     expect(blankStep("agentTurn", [])).toEqual({ id: "s1", kind: "agentTurn", message: "" });
     expect(blankStep("systemEvent", [])).toEqual({ id: "s1", kind: "systemEvent", text: "" });
   });
 
-  test("inserted at a place, the paths around it still point forward; one whose id is taken gets its own", () => {
-    const steps = [run("a", { whenFailed: { to: "b" } }), say("b")];
-    expect(ids(insertStep(steps, 1, say("x")).steps)).toEqual(["a", "x", "b"]);
-    expect(insertStep(steps, 1, say("x")).reset).toEqual([]);
-    expect(ids(insertStep(steps, 99, say("b")).steps)).toEqual(["a", "b", "s3"]);
-  });
-
-  test("at the most a job runs, nothing is added: by a new step or by a copy", () => {
+  test("at the most a job runs, nothing is added: by a new step, by a copy, or to a lane", () => {
     const full = Array.from({ length: STEPS_MAX }, (_, n) => say(`s${n + 1}`));
     expect(STEPS_MAX).toBe(20);
-    expect(insertStep(full, 3, say("x")).steps).toEqual(full);
-    expect(duplicateStep(full, 0).steps).toEqual(full);
+    expect(addOnLine(full, 3, "systemEvent")).toEqual(full);
+    expect(addOnLine(full, null, "systemEvent")).toEqual(full);
+    expect(copyOnLine(full, 0)).toEqual(full);
+    // One short of it, each still adds one.
+    expect(addOnLine(full.slice(1), null, "systemEvent")).toHaveLength(STEPS_MAX);
+    expect(copyOnLine(full.slice(1), 0)).toHaveLength(STEPS_MAX);
+    const laned = [run("a", { then: { to: "c" }, whenFailed: { to: "l" } }), say("l", { then: { to: "c" } }), say("c"), ...full.slice(3)];
+    expect(addToLane(laned, 0, "whenFailed", "systemEvent").steps).toEqual(laned);
+    expect(addToLane(laned.slice(0, -1), 0, "whenFailed", "systemEvent").steps).toHaveLength(STEPS_MAX);
+  });
+
+  test("a new step stands where it was added, written from nothing, with an id no step has", () => {
+    const steps = [run("a"), say("b")];
+    expect(addOnLine(steps, 1, "approval")).toEqual([run("a"), { id: "s3", kind: "approval", ask: "" }, say("b")]);
+    expect(ids(addOnLine(steps, null, "command"))).toEqual(["a", "b", "s3"]);
+    expect(ids(addOnLine(steps, 0, "command"))).toEqual(["s3", "a", "b"]);
   });
 
   test("a copy stands right after its step with an id of its own, its name marked, its paths kept", () => {
     const steps = [run("a", { name: "Check", whenFailed: { to: "c" } }), say("b"), say("c")];
-    const copied = duplicateStep(steps, 0);
-    expect(ids(copied.steps)).toEqual(["a", "s4", "b", "c"]);
-    expect(copied.steps[1]).toEqual(run("a", { id: "s4", name: "Check copy", whenFailed: { to: "c" } }));
-    expect(copied.reset).toEqual([]);
-    expect(duplicateStep(steps, 9).steps).toEqual(steps);
+    const copied = copyOnLine(steps, 0);
+    expect(ids(copied)).toEqual(["a", "s4", "b", "c"]);
+    expect(copied[1]).toEqual(run("a", { id: "s4", name: "Check copy", whenFailed: { to: "c" } }));
+    expect(resetsBetween(steps, copied)).toEqual([]);
+    expect(copyOnLine(steps, 9)).toEqual(steps);
     expect(replaceStep(steps, 1, say("z"))).toEqual([steps[0]!, say("z"), steps[2]!]);
+  });
+
+  test("a copy of a step with steps of its own takes its words and not those steps: the run goes from the lane to the copy", () => {
+    const steps = [run("a", { then: { to: "c" }, whenFailed: { to: "l" } }), say("l", { then: { to: "c" } }), say("c")];
+    const copied = copyOnLine(steps, 0);
+    expect(ids(copied)).toEqual(["a", "l", "s4", "c"]);
+    // The copy has no path of its own into the first step's lane, and goes on to the step below.
+    expect(copied[2]).toEqual({ id: "s4", kind: "command", argv: ["sh", "-lc", "run a"] });
+    expect(copied[0]).toEqual(run("a", { then: { to: "s4" }, whenFailed: { to: "l" } }));
+    // The lane went back into the line at the step below: now at the copy, which is the step right after it.
+    expect(copied[1]).toEqual(say("l"));
+    // A step of a lane is copied by nothing: it is its owner's.
+    expect(copyOnLine(steps, 1)).toEqual(steps);
+    // One that ended the run when done, with two steps in its place where it fails: it goes on to its copy, which
+    // ends the run as it did, and the lane still stops where it stopped.
+    const ends = [run("a", { then: "end", whenFailed: { to: "l" } }), say("l"), say("c")];
+    expect(copyOnLine(ends, 0)).toEqual([run("a", { then: { to: "s4" }, whenFailed: { to: "l" } }), say("l"), say("c", { then: "end" }), run("a", { id: "s4", then: "end" })]);
   });
 });
 
@@ -196,7 +227,7 @@ describe("a step that goes on only when what it says changes", () => {
     expect(asKind(marked, "systemEvent")).toEqual({ id: "a", kind: "systemEvent", text: "run a" });
     expect(asKind(marked, "approval")).toEqual({ id: "a", kind: "approval", ask: "run a" });
     // A copy is marked as its step is; nothing in a marked list is something the server would refuse.
-    expect(duplicateStep([marked, say("b")], 0).steps[1]).toEqual({ ...marked, id: "s3" });
+    expect(copyOnLine([marked, say("b")], 0)[1]).toEqual({ ...marked, id: "s3" });
     expect(stepProblems([marked, watching(turn, true), watching(mission, true)])).toEqual([]);
   });
 });

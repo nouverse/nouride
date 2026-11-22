@@ -1,16 +1,17 @@
 /**
- * Whose an automation is, handed over by an admin on the automation's own page (`automations/components/WhoseItIs.tsx`).
- * Through the whole app.
+ * Whose an automation is, handed over on the automation's own page (`automations/components/WhoseItIs.tsx`), from the
+ * menu at its head. Through the whole app.
  *
  * An automation made from the command line, or from before automations were a person's, is nobody's: only an admin
- * sees it, and this is where one gives it to a person. Each case is a way the page would say or do something else
- * than the server does: the wrong person shown, a hand-over sent as another, one not shown once made, a refusal
- * swallowed, or the choice offered to someone the server refuses.
+ * sees it, and this is where one gives it to a person. Its own person hands theirs to somebody else, asked first.
+ * Each case is a way the page would say or do something else than the server does: the wrong person shown, a
+ * hand-over sent as another, one not shown once made, a refusal swallowed, or a choice offered that the server
+ * refuses.
  */
 
 import { describe, expect, test } from "bun:test";
-import { answer, dropdown, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
-import { automation, detail, flowDrawn, ok } from "./automation-fixtures.ts";
+import { answer, dom, dropdown, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
+import { automation, detail, flowDrawn, labelled, ok, openWhose } from "./automation-fixtures.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -27,14 +28,18 @@ const toasts = (host: HTMLElement) => host.ownerDocument.body.textContent ?? "";
 describe("an automation's page, as an admin", () => {
   test("one that is nobody's says so, and offers Nobody and each person in People by name", async () => {
     answer({ [PAGE]: detail(automation()) });
-    const seen = { holds: "" as string | null, options: [] as string[], hint: "" };
+    const seen = { before: true, holds: "" as string | null, options: [] as string[], hint: "" };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
+      // Not on the page until it is asked for: it was a card every admin scrolled past.
+      seen.before = card(host) !== null;
+      await openWhose(host);
       const pick = dropdown(card(host)!, LABEL);
       seen.holds = pick.holds();
       seen.hint = card(host)!.textContent ?? "";
       seen.options = await pick.open();
     });
+    expect(seen.before).toBe(false);
     expect(seen.holds).toBe("Nobody");
     expect(seen.options).toEqual(["Nobody", "Gading", "Kak Sam", "Raka"]);
     expect(seen.hint).toContain("Only an admin can change it. Pick a person to make it theirs.");
@@ -47,6 +52,7 @@ describe("an automation's page, as an admin", () => {
     try {
       await renderPage(PAGE, async (host) => {
         await flowDrawn(host);
+        await openWhose(host);
         // What the daemon says of it once it is handed over.
         answer({ [PAGE]: detail(automation({ person: SAM })) });
         await dropdown(card(host)!, LABEL).pick("Kak Sam");
@@ -70,6 +76,7 @@ describe("an automation's page, as an admin", () => {
     try {
       await renderPage(PAGE, async (host) => {
         await flowDrawn(host);
+        await openWhose(host);
         const pick = dropdown(card(host)!, LABEL);
         await pick.pick("Kak Sam");
         answer({ [PAGE]: detail(automation()) });
@@ -91,6 +98,7 @@ describe("an automation's page, as an admin", () => {
     try {
       await renderPage(PAGE, async (host) => {
         await flowDrawn(host);
+        await openWhose(host);
         await dropdown(card(host)!, LABEL).pick("Kak Sam");
         await eventually(() => card(host)!.querySelector('[role="alert"]') !== null, 4_000, "the refusal");
         seen.text = card(host)!.querySelector('[role="alert"]')?.textContent ?? "";
@@ -112,6 +120,7 @@ describe("an automation's page, as an admin", () => {
     const seen = { options: [] as string[], text: "" };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
+      await openWhose(host);
       await eventually(() => card(host)!.textContent?.includes("Not listed") === true, 3_000, "who is left out");
       seen.text = card(host)!.textContent ?? "";
       seen.options = await dropdown(card(host)!, LABEL).open();
@@ -124,6 +133,7 @@ describe("an automation's page, as an admin", () => {
     let plain = "";
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
+      await openWhose(host);
       await eventually(() => dropdown(card(host)!, LABEL).button() !== undefined, 3_000, "the choice");
       plain = card(host)!.textContent ?? "";
     });
@@ -135,6 +145,7 @@ describe("an automation's page, as an admin", () => {
     let holds = "" as string | null;
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
+      await openWhose(host);
       holds = dropdown(card(host)!, LABEL).holds();
     });
     expect(holds).toBe("Kak Sam");
@@ -145,39 +156,112 @@ describe("an automation's page, as an admin", () => {
     const seen = { proposed: true, fresh: true };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      seen.proposed = card(host) !== null;
+      seen.proposed = host.querySelector('[aria-label^="More for"]') !== null || card(host) !== null;
     });
     await renderPage("/automations/new", async (host) => {
       await eventually(() => host.querySelector('main [aria-label="Start"]') !== null, 3_000, "the new automation");
-      seen.fresh = card(host) !== null;
+      seen.fresh = host.querySelector('[aria-label^="More for"]') !== null || card(host) !== null;
     });
     expect(seen).toEqual({ proposed: false, fresh: false });
   });
 });
 
-describe("an automation's page, as someone who is not an admin", () => {
-  test("has no such choice, on their own automation or any other, and People is not asked for it", async () => {
-    const asked: string[] = [];
+const AS = (role: string) => ({ "/auth/me": ok({ ...ME, role, user: { ...ME.user, role } }) });
+const GADING = { key: "gading", name: "Gading" };
+const asked = () => dom.document.body.querySelector("dialog[open]");
+const answerWith = (label: string) => [...(asked()?.querySelectorAll("button") ?? [])].find((button) => button.textContent?.trim() === label)!.click();
+
+describe("an automation's page, as its own person who is not an admin", () => {
+  test("their own is theirs to hand to somebody else and never to nobody: asked first, sent by the key, and the page is left", async () => {
+    answer({ ...AS("operator"), [PAGE]: detail(automation({ person: GADING, changeable: true })) });
+    const posted = recordPosts({ [OWNER]: ok({ job: automation({ person: SAM, changeable: false }) }) });
+    const seen = { holds: "" as string | null, options: [] as string[], hint: "", question: "", afterNo: 0, at: "", said: "" };
+    try {
+      await renderPage(PAGE, async (host, app) => {
+        await flowDrawn(host);
+        await openWhose(host);
+        const pick = dropdown(card(host)!, LABEL);
+        seen.holds = pick.holds();
+        seen.hint = card(host)!.textContent ?? "";
+        seen.options = await pick.open();
+        await pick.pick("Kak Sam");
+        await eventually(() => asked() !== null, 2_000, "the question");
+        seen.question = asked()?.textContent ?? "";
+        // No is no: nothing is sent, and it is still theirs.
+        answerWith("Cancel");
+        await eventually(() => asked() === null, 2_000, "the question closed");
+        seen.afterNo = posted.posts.length;
+        await dropdown(card(host)!, LABEL).pick("Kak Sam");
+        await eventually(() => asked() !== null, 2_000, "the question again");
+        answerWith("Hand it over");
+        await eventually(() => app.location() === "/automations", 4_000, "the list");
+        seen.at = app.location();
+        seen.said = toasts(host);
+      });
+    } finally {
+      posted.restore();
+    }
+    expect(seen.holds).toBe("Gading");
+    expect(seen.options).toEqual(["Gading", "Kak Sam", "Raka"]);
+    expect(seen.hint).toContain("It is yours. Pick somebody else to hand it over: it is then theirs to change, and no longer yours.");
+    expect(seen.question).toContain('Hand "Shop check" to Kak Sam?');
+    expect(seen.question).toContain("It becomes Kak Sam's to change, and is no longer yours.");
+    expect(seen.afterNo).toBe(0);
+    expect(posted.posts).toEqual([{ path: OWNER, body: { person: "sam" } }]);
+    expect(seen.at).toBe("/automations");
+    expect(seen.said).toContain("Shop check is Kak Sam's now");
+  });
+
+  test("one kept under an account People does not name is shown as theirs, and a refusal is said in the server's words with the page kept", async () => {
+    answer({ ...AS("operator"), [PAGE]: detail(automation({ changeable: true })) });
+    const posted = recordPosts({ [OWNER]: { status: 403, body: { error: "only its owner or an admin hands an automation to somebody", plain: "Only the person it belongs to, or an admin, can hand this automation to somebody. Leaving it with nobody is an admin's." } } });
+    const seen = { holds: "" as string | null, options: [] as string[], text: "", at: "" };
+    try {
+      await renderPage(PAGE, async (host, app) => {
+        await flowDrawn(host);
+        await openWhose(host);
+        seen.holds = dropdown(card(host)!, LABEL).holds();
+        seen.options = await dropdown(card(host)!, LABEL).open();
+        await dropdown(card(host)!, LABEL).pick("Raka");
+        await eventually(() => asked() !== null, 2_000, "the question");
+        answerWith("Hand it over");
+        await eventually(() => card(host)?.querySelector('[role="alert"]') != null, 4_000, "the refusal");
+        seen.text = card(host)!.querySelector('[role="alert"]')?.textContent ?? "";
+        seen.at = app.location();
+      });
+    } finally {
+      posted.restore();
+    }
+    expect(seen.holds).toBe("You");
+    expect(seen.options).toEqual(["You", "Gading", "Kak Sam", "Raka"]);
+    expect(seen.text).toContain("Only the person it belongs to, or an admin, can hand this automation to somebody.");
+    expect(seen.at).toBe("/automations/cron_e");
+  });
+});
+
+describe("an automation's page, as someone who may not change it", () => {
+  test("has no such choice: an account that only looks, and a reader of another person's; People is not asked for it", async () => {
+    const calls: string[] = [];
     const harness = globalThis.fetch;
     globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
       const { pathname } = new URL(String(typeof input === "string" ? input : input instanceof URL ? input : input.url), "http://localhost");
-      asked.push(pathname.replace(/^\/api\/control/, ""));
+      calls.push(pathname.replace(/^\/api\/control/, ""));
       return harness(input, init);
     }) as typeof fetch;
     const seen: Record<string, boolean> = {};
     try {
-      for (const role of ["operator", "viewer"]) {
-        answer({ "/auth/me": ok({ ...ME, role, user: { ...ME.user, role } }), [PAGE]: detail(automation({ person: SAM, changeable: true })) });
+      for (const [who, role, changeable] of [["looks", "viewer", true], ["reads", "operator", false]] as const) {
+        answer({ ...AS(role), [PAGE]: detail(automation({ person: SAM, changeable })) });
         await renderPage(PAGE, async (host) => {
           await flowDrawn(host);
-          seen[role] = card(host) !== null;
+          seen[who] = labelled(host, "More for Shop check") !== null || card(host) !== null;
         });
       }
     } finally {
       globalThis.fetch = harness;
     }
-    expect(seen).toEqual({ operator: false, viewer: false });
-    expect(asked).toContain(PAGE);
-    expect(asked).not.toContain("/people");
+    expect(seen).toEqual({ looks: false, reads: false });
+    expect(calls).toContain(PAGE);
+    expect(calls).not.toContain("/people");
   });
 });

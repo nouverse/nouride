@@ -13,7 +13,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Ellipsis, Play, Trash2 } from "lucide-react";
+import { ArrowLeft, Ellipsis, Play, Trash2, UserRound } from "lucide-react";
 import type { AutomationSummary, RunNowOutcome } from "@nouride/wire";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { automationAsk, PAGE_ASKS } from "@/commons/components/agents/page-asks";
@@ -30,7 +30,7 @@ import { readsOnly } from "@/commons/lib/by-person";
 import { runOutcomeToast } from "@/commons/lib/run-outcome";
 import { cn } from "@/commons/lib/utils";
 import type { Draft } from "../lib/draft";
-import { toldAndOff } from "../lib/watch";
+import { endedAndOff, toldAndOff } from "../lib/watch";
 import { START } from "../lib/words";
 import { startOf } from "./StartCard";
 
@@ -42,6 +42,7 @@ function Controls({
   onChanged,
   onRan,
   onGone,
+  onWhose,
 }: {
   automation: AutomationSummary;
   writable: boolean;
@@ -49,6 +50,7 @@ function Controls({
   onChanged: () => void;
   onRan: (outcome: RunNowOutcome) => void;
   onGone: () => void;
+  onWhose: () => void;
 }) {
   const toast = useToast();
   const { ask, dialog } = useConfirm();
@@ -103,6 +105,19 @@ function Controls({
           menuClassName="rounded-2xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft"
         >
           {(close) => (
+            <>
+            <li>
+              <button
+                type="button"
+                className="min-h-10 gap-3 rounded-xl text-sm"
+                onClick={() => {
+                  close();
+                  onWhose();
+                }}
+              >
+                <UserRound size={15} aria-hidden="true" /> Whose it is
+              </button>
+            </li>
             <li>
               <button
                 type="button"
@@ -121,6 +136,7 @@ function Controls({
                 <Trash2 size={15} aria-hidden="true" /> Delete
               </button>
             </li>
+            </>
           )}
         </DropdownMenu>
       ) : null}
@@ -133,6 +149,7 @@ export function AutomationHeader({
   draft,
   home,
   reports,
+  onWhose,
   agentName,
   canName,
   writable,
@@ -147,8 +164,10 @@ export function AutomationHeader({
   automation: AutomationSummary | null;
   draft: Draft;
   home: string;
-  /** The chat it reports to, in words; none while it has none or stays quiet. */
+  /** Where its results go, after "runs it": "sends to Telegram, the team's group". None while no chat is picked. */
   reports: string | null;
+  /** Opens whose it is and who may change it, from the menu. */
+  onWhose: () => void;
   agentName: (id: string) => string;
   canName: boolean;
   writable: boolean;
@@ -176,9 +195,8 @@ export function AutomationHeader({
         </span>
         <div className="min-w-0 flex-[1_1_16rem]">
           <InlineTitle value={draft.name} onChange={onName} label="Name" placeholder="Name this automation" readOnly={!canName} />
-          <p className="text-sm text-base-content/65 [overflow-wrap:anywhere]">
-            Starts {startOf(draft, home)}.{reports ? ` Reports to ${reports}.` : ""}
-          </p>
+          {/* Who and where in a line: it was the last card under every step. */}
+          <p className="text-sm text-base-content/65 first-letter:uppercase [overflow-wrap:anywhere]">{[startOf(draft, home), draft.agentId ? `${agentName(draft.agentId)} runs it` : null, reports].filter(Boolean).join(" · ")}</p>
         </div>
 
         {only ? null : <AskAgentButton {...(automation ? automationAsk(automation.name) : PAGE_ASKS.automations)} variant="soft" />}
@@ -188,7 +206,7 @@ export function AutomationHeader({
             <ProposalBar job={automation} canAnswer={automation.start === "webhook" ? admin : writable} onAnswered={(on) => (on ? onChanged() : onGone())} />
           </div>
         ) : automation ? (
-          <Controls automation={automation} writable={writable} dirty={dirty} onChanged={onChanged} onRan={onRan} onGone={onGone} />
+          <Controls automation={automation} writable={writable} dirty={dirty} onChanged={onChanged} onRan={onRan} onGone={onGone} onWhose={onWhose} />
         ) : null}
       </div>
 
@@ -213,7 +231,12 @@ export function AutomationHeader({
           {automation.failStreak === 1 ? "Its last run failed." : `Its last ${automation.failStreak} runs failed.`} Last run shows which step, and why.
         </p>
       ) : null}
-      {automation && toldAndOff(automation) ? (
+      {automation && endedAndOff(automation) ? (
+        // Nothing went wrong either: it lasted the time it was given.
+        <p role="status" data-off="ended" className="rounded-[14px] bg-info/10 px-3 py-2 text-sm text-info">
+          {only ? "It ran for the time it was given, and turned itself off." : "It ran for the time it was given, and turned itself off. Turn it on to give it that time again."}
+        </p>
+      ) : automation && toldAndOff(automation) ? (
         // Nothing went wrong: it did what it was set to do. Said as information, with no reason to open.
         <p role="status" data-off="told" className="rounded-[14px] bg-info/10 px-3 py-2 text-sm text-info">
           {only ? "It told you, and turned itself off." : "It told you, and turned itself off. Turn it on to be told again."}

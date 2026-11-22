@@ -17,6 +17,8 @@ import type { DaemonContext } from "@/commons/context.ts";
 import { alertCooldownsState, spendAlertsState } from "@/commons/daemon-state.ts";
 import { Notifier } from "@/commons/notify.ts";
 import type { BoxBusy } from "@/commons/box-load.ts";
+import { boxFull } from "@/commons/box-full.ts";
+import { commandsCgroup, commandsMemory, diskSpace } from "@nouride/runtime";
 import type { Machine } from "@/commons/machine.ts";
 import { buildScheduler } from "./scheduler.ts";
 import { heldBack } from "@/modules/transfer/held.ts";
@@ -55,7 +57,7 @@ import type { SupervisorInfo } from "@/service/supervisor.ts";
 import { adminChatsOf } from "./admin-chats.ts";
 import { wireJobs } from "./jobs.ts";
 import { buildMissions } from "./missions.ts";
-import { buildProposals } from "./proposals.ts";
+import { buildProposals, scriptFacts } from "./proposals.ts";
 import { requestRestart } from "./restart.ts";
 import { secretKeepingFor } from "./secret-keeping.ts";
 import type { Stores } from "./stores.ts";
@@ -189,7 +191,7 @@ export function buildTurnParts(
     adminChats: adminChatsOf({ config: () => config, gateways, turns, isAdmin: (who) => input.pipeline().isAdmin(who) }),
   });
   // A proposed job's card, with Turn on and Discard, and the `schedule` tool that posts it (0.8.0).
-  const proposals = buildProposals({ cron, notifier, registry, timezone: () => config.daemon.timezone, people: () => config.people, pipeline: input.pipeline, linkFor });
+  const proposals = buildProposals({ cron, notifier, registry, timezone: () => config.daemon.timezone, people: () => config.people, pipeline: input.pipeline, linkFor, scripts: scriptFacts(registry, input.pipeline) });
   // Whether anyone could answer an approval now: a chat connected, or a client that just asked for them (`reachability.ts`).
   const reach = new ApprovalReach();
   const approvals = new SqliteApprovalGate({
@@ -315,6 +317,9 @@ export async function buildTurnMachine(
     users: stores.accounts,
     memory: input.memory,
     load: input.load,
+    // Read from the machine when a turn's message is built, and kept half a minute. The commands' memory only where
+    // they have a cgroup of their own: without one there is no cap to be near, and summing every process costs.
+    full: boxFull(() => ({ commands: commandsCgroup() ? commandsMemory() : null, disk: diskSpace(config.daemon.dataDir) })),
     cronJobs: stores.cron,
     jobWakes: stores.jobWakes,
     config,

@@ -67,7 +67,16 @@ const size = (name: string) => JSON.stringify(tools.get(name)!.definition).lengt
 // 3,550 for `mission`'s `title` (~170, at 3,544): a mission's name for its person, apart from its goal. The goal, an
 // instruction to the agent, was also what a person read as the name on every card and notice; the field has to say that
 // a title is what the work is called and not what to do, with one example, or a model writes the instruction again.
-const PER_TOOL = 3_550;
+// 4,800 for `schedule`'s script and a watch's end (~1,420, at 4,799): a program an agent writes and the job
+// keeps (`script`, what runs it, the line a person reads of it, its secrets), and how long a job lasts (`for`). The
+// words are the rule: what is the same every run is a script and a prompt is for judgement, a loop or a retry is one
+// script and not more steps, a script is tried before it is proposed, and telling once on a schedule has an end.
+// Unsaid, an agent asked to check a page every hour proposed an hourly turn of a model, and a watch whose moment never
+// came checked for good. `schedule` is the largest tool now: it writes six kinds of work, and each needs its sentence.
+// 4,840 for a watch's script that ends well until its moment comes (~40, at 4,839): `test -f done && cat done` ends in
+// an error while the file is not there, and a watch written that way told its chat it had failed once a minute where
+// it should have said nothing (seen on the box's sandbox, in a release's live run).
+const PER_TOOL = 4_840;
 /** All of them together, which no single agent holds but the default-rich ones come close to. */
 // 32,500 since exec's `service`: a server started as an ordinary job ended the turn and never woke it,
 // and the parameter that fixes it has to say when to use it instead of `background`. 32,800 since
@@ -174,7 +183,9 @@ const PER_TOOL = 3_550;
 // drafts not started and a "task" is often a mission, so it looks before it answers, and `mission` says a draft waits
 // in the Backlog. Asked what was in its backlog, an agent answered from its notes and never looked at its missions;
 // asked to put something in the backlog, it wrote a note. Not in the harness: the words are read where the tool is.
-const TOTAL = 51_130;
+// 52,550 for `schedule`'s script and a watch's end (~1,420, measured at 52,543): the reason is at `PER_TOOL`.
+// 52,590 for a watch's script that ends well until its moment comes (~40, measured at 52,583): at `PER_TOOL` too.
+const TOTAL = 52_590;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -182,9 +193,11 @@ const TOTAL = 51_130;
  * 45,740: measured at 45,734 against 50,565 for the tools themselves, the three skill tools of this set (5,525) sent
  * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls. 45,900 with
  * `schedule`'s `together` (measured at 45,896 against 50,727). 46,070 with `mission`'s `title` (measured at 46,068
- * against 50,899). 46,300 with the words a person has for a mission (measured at 46,290 against 51,121).
+ * against 50,899). 46,300 with the words a person has for a mission (measured at 46,290 against 51,121). 47,720 with
+ * `schedule`'s script and a watch's end (measured at 47,712 against 52,543). 47,760 with a watch's script that ends
+ * well until its moment comes (measured at 47,752 against 52,583).
  */
-const SENT = 46_300;
+const SENT = 47_760;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

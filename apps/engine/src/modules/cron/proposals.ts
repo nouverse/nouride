@@ -10,8 +10,10 @@
  * it runs with nobody there.
  */
 
-import type { Job, JobPayload, JobProposal, JobStep, MessageButton, StepGo, TogetherStep } from "@nouride/shared";
+import { oneLine, type CommandRuns, type Job, type JobPayload, type JobProposal, type JobStep, type MessageButton, type StepGo, type TogetherStep } from "@nouride/shared";
+import { variableOf } from "@/modules/tools/exec-secrets.ts";
 import type { CronPort, JobInput } from "./cron.store.ts";
+import { lastsWords } from "./parse.ts";
 
 /** Proposals an agent may have waiting at once: past it, the oldest is the person's to answer first. */
 const OPEN_PROPOSALS = 10;
@@ -43,7 +45,7 @@ function doesLine(agentId: string, payload: JobPayload | JobStep | TogetherStep)
     case "agentTurn":
       return `${("agentId" in payload && payload.agentId) || agentId} works on: "${payload.message}"`;
     case "command":
-      return `runs \`${payload.argv.join(" ")}\` on this machine, with no model`;
+      return payload.script ? scriptLine(payload) : `runs \`${payload.argv.join(" ")}\` on this machine, with no model`;
     case "mission": {
       const checks = payload.checks?.length ? `, done when \`${payload.checks.join("`, `")}\` pass` : "";
       const review = payload.review === false ? ", no reviewer" : ", then a reviewer agrees";
@@ -53,29 +55,70 @@ function doesLine(agentId: string, payload: JobPayload | JobStep | TogetherStep)
       return `waits for a person's yes to: "${payload.ask}"`;
     case "parallel":
       return ["at the same time, their words joined:", ...payload.steps.map((part) => `   - ${doesLine(agentId, part)}`)].join("\n");
-    case "steps":
-      return [
-        "in order, each handed what the one before said:",
-        ...payload.steps.map((step, index) => `${index + 1}. ${doesLine(agentId, step)}${step.onlyChanged ? ". It goes on only when this differs from the last run." : ""}${exitsLine(step, index, payload.steps)}`),
-      ].join("\n");
+    case "steps": {
+      const lines = payload.steps.map((step, index) => stepLine(agentId, step, index, payload.steps));
+      // A list of one is that one thing, said as it is: a watch is a single script, and its card read "in order,
+      // each handed what the one before said: 1." with nothing before it and nothing after.
+      return lines.length === 1 ? lines[0]! : ["in order, each handed what the one before said:", ...lines.map((line, index) => `${index + 1}. ${line}`)].join("\n");
+    }
   }
 }
 
-/** Where a run goes from a step, said only where it is not what a person would expect of a list. */
-function exitsLine(step: JobStep, index: number, steps: readonly JobStep[]): string {
+/** A line with what is said of it after: a full stop between them where the line does not end in one, inside a quote or not. */
+const withSaid = (line: string, said: readonly string[]): string => (said.length === 0 ? line : `${line}${/[.!?]["”]?$/.test(line) ? "" : "."} ${said.join(" ")}`);
+
+/**
+ * A step of a list on the card: what it does, then what is said of the step itself (that it goes on only when it
+ * differs, where the run goes from it). For a script those come before its text: a sentence after the end of a
+ * fence is no sentence to a chat app, and every script in a list lost its paths that way.
+ */
+function stepLine(agentId: string, step: JobStep, index: number, steps: readonly JobStep[]): string {
+  const said = [...(step.onlyChanged ? ["It goes on only when this differs from the last run."] : []), ...exitsOf(step, index, steps)];
+  if (step.kind === "command" && step.script) return scriptLine(step, said);
+  if (step.kind !== "parallel") return withSaid(doesLine(agentId, step), said);
+  // Said of all of them, so on their heading: after the last of them it read as that one's alone.
+  const [heading, ...each] = doesLine(agentId, step).split("\n");
+  return [said.length > 0 ? withSaid(heading!.replace(/:$/, ""), said) : heading!, ...each].join("\n");
+}
+
+/** The most of a script's text a card holds: a chat's message is a few thousand characters, and the card says the rest. */
+const SCRIPT_SHOWN = 2_400;
+
+/** A fence inside a script's text would end the card's own: said with straight quotes there, on the card only. */
+const FENCE = "```";
+
+/**
+ * A script on a card: what it is said to do, then what the daemon knows without being told (the program, how long the
+ * text is, which secrets it is handed, by the variables they arrive as), then the text whole. A text too long for a
+ * message is not shown in part: the part left out would be the part nobody read before saying yes.
+ */
+function scriptLine(command: Pick<CommandRuns, "argv" | "script">, said: readonly string[] = []): string {
+  const script = command.script!;
+  const lines = script.text.trimEnd().split("\n").length;
+  const secrets = script.secrets?.length ? `, handed ${script.secrets.map((name) => `$${variableOf(name)}`).join(", ")}` : "";
+  const facts = `a script run by \`${command.argv.join(" ")}\` on this machine, with no model: ${lines} ${lines === 1 ? "line" : "lines"}${secrets}`;
+  const text =
+    script.text.length <= SCRIPT_SHOWN
+      ? `${FENCE}\n${script.text.split(FENCE).join("'''").trimEnd()}\n${FENCE}`
+      : "(Its text is too long for a message: read it on the Automations page before you turn it on.)";
+  return `${withSaid(oneLine(script.about), said)}\n   ${facts}\n${text}`;
+}
+
+/** Where a run goes from a step, a sentence each, said only where it is not what a person would expect of a list. */
+function exitsOf(step: JobStep, index: number, steps: readonly JobStep[]): string[] {
   const place = (go: StepGo): string => (go === "end" ? "the run ends there" : `the run goes to step ${go === "next" ? index + 2 : steps.findIndex((one) => one.id === go.to) + 1}`);
   const last = index === steps.length - 1;
   const said: string[] = [];
   if (step.then !== undefined && step.then !== "next" && !last) said.push(`Once done, ${place(step.then)}.`);
   if (step.kind === "approval") {
     said.push(step.whenFailed === undefined || step.whenFailed === "end" || last ? "On a no, or no answer, the run ends." : `On a no, or no answer, ${place(step.whenFailed)}.`);
-    return ` ${said.join(" ")}`;
+    return said;
   }
   if (step.whenFailed !== undefined && step.whenFailed !== "end" && !last) said.push(`If it fails, ${place(step.whenFailed)}.`);
   if (step.kind === "command" || step.kind === "agentTurn" || step.kind === "parallel") {
     said.push(step.whenEmpty === undefined || step.whenEmpty === "end" || last ? "With nothing to say, the run ends there." : `With nothing to say, ${place(step.whenEmpty)}.`);
   }
-  return said.length > 0 ? ` ${said.join(" ")}` : "";
+  return said;
 }
 
 /** The card: who proposes what, when it runs, and where it reports — and how to answer it without buttons. */
@@ -88,6 +131,7 @@ export function proposalCard(job: Job, when: string, shown: { buttons: boolean; 
     // Named on the card a person turns on, since that is their yes to it: results sent elsewhere are not asked about again.
     `Results: ${shown.results ? `sent to ${shown.results}, not here` : "here"}`,
     ...(job.delivery.once ? ["Tells once: after the first run that tells you something, it turns itself off."] : []),
+    ...(job.delivery.lasts !== undefined ? [`Lasts: ${lastsWords(job.delivery.lasts)} from when it is turned on. Then it turns itself off and says so${job.delivery.once ? ", if it has told nothing by then" : ""}.`] : []),
     "It stays off until somebody turns it on.",
   ];
   if (!shown.buttons) lines.push(`Turn on: /schedule on ${job.id}, or /schedule discard ${job.id}`);

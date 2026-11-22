@@ -45,6 +45,7 @@ import { APPROVAL_WAIT_MS, type StepHands } from "./steps.ts";
 import { StepRuns, type Parked } from "./step-runs.ts";
 import type { MissionEnd } from "@/modules/missions/job-runs.ts";
 import { deliverResult, reportFailure, undelivered, type Delivered } from "./delivery.ts";
+import { endJob } from "./ending.ts";
 import { runJobCommand } from "./job-command.ts";
 import { Keeper, type Quiet } from "./quiet.ts";
 import type { WatchStore } from "./watch.store.ts";
@@ -107,7 +108,7 @@ export interface CronExecutors {
    * environment allowlist. `null` when the agent is no longer loaded, which is a job error
    * rather than a command run somewhere arbitrary.
    */
-  commandSandbox(job: Job): { cwd: string; env: Record<string, string>; secrets?: Record<string, string> } | null;
+  commandSandbox(job: Pick<Job, "agentId" | "payload">): { cwd: string; env: Record<string, string>; secrets?: Record<string, string> } | null;
   /** POST a finished-run payload. Absent means webhook delivery is unavailable. */
   webhook?(url: string, body: unknown): Promise<void>;
   /**
@@ -352,6 +353,11 @@ export class CronScheduler {
         continue;
       }
       if (!this.options.store.claim(job)) continue;
+      // Its time is up (`JobDelivery.lasts`): it came due to be ended, not run (`ending.ts`).
+      if (job.delivery.endsAt !== undefined && this.now >= job.delivery.endsAt) {
+        void endJob(job, { store: this.options.store, ...(this.options.audit ? { audit: this.options.audit } : {}), say: (ended, runId, text) => this.say(ended, runId, text, false) });
+        continue;
+      }
       // Not awaited: one slow `agentTurn` must not hold back every other job's tick. Errors are
       // handled inside `execute`, so nothing escapes here.
       void this.execute(job, "schedule");
@@ -593,7 +599,8 @@ export class CronScheduler {
       }
 
       case "command": {
-        const ran = await runJobCommand(this.options.executors, this.options.config, job, job.payload);
+        // A script reads the body of the call that set it off, as one in a list does. A line of arguments never did.
+        const ran = await runJobCommand(this.options.executors, this.options.config, job, job.payload, job.payload.script ? trigger?.body?.trim() || undefined : undefined);
         if ("error" in ran) return { status: "error", result: ran.error };
         const output = ran.output;
 
@@ -603,7 +610,8 @@ export class CronScheduler {
          * with an empty output each time. Its run says so. A failure above is not an empty run, and is reported as before.
          */
         if (!output.trim()) {
-          return { status: "success", result: job.payload.then === "deliver" ? "exit 0, no output" : "exit 0, no output: the agent was not woken" };
+          // In a person's words: a watch's page lists one of these for every time it looked and saw nothing.
+          return { status: "success", result: job.payload.then === "deliver" ? "it printed nothing, so nothing was sent" : "it printed nothing, so the agent was not woken" };
         }
 
         if (job.payload.then === "deliver") {

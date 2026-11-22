@@ -434,6 +434,8 @@ describe("this daemon's own CLI", () => {
     expect(cls(["nouride", "cron", "add", "--name", "x", "--command", "nouride access allow telegram:main:9"])).toBe("access");
     expect(classifyHardline(["nouride", "cron", "add", "--command", "rm -rf /srv/data"])?.reason).toContain("scheduled");
     expect(cls(["nouride", "cron", "update", "j1", "--command", "whoami"])).toBe("unattended");
+    // A script read from a file is not read here: the job that would run it with no model and no gate asks as a job.
+    expect(cls(["nouride", "cron", "add", "--name", "x", "--every", "1h", "--script", "check.sh", "--about", "Checks the shop."])).toBe("unattended");
   });
 
   test("a command run as the daemon's user is classified as itself, its own state included", () => {

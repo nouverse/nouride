@@ -5,8 +5,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { TOGETHER_MAX, argvOf, asKind, asPart, blankPart, blankStep, canWatch, duplicateStep, exitsOf, insertStep, mainText, parted, stepProblems, type Part, type Step } from "@/modules/automations/lib/steps";
-import { KIND, partTitle, stepLine, stepNote, stepTitle } from "@/modules/automations/lib/words";
+import { copyOnLine } from "@/modules/automations/lib/paths";
+import { TOGETHER_MAX, argvOf, asKind, asPart, blankPart, blankStep, canWatch, exitsOf, mainText, parted, stepProblems, type Part, type Step } from "@/modules/automations/lib/steps";
+import { KIND, partTitle, stepLine, stepTitle } from "@/modules/automations/lib/words";
 import { payloadOf } from "@/modules/automations/lib/draft";
 
 type Together = Extract<Step, { kind: "parallel" }>;
@@ -27,11 +28,9 @@ describe("the steps it starts", () => {
     // A long step id leaves room for the place.
     expect(group([news, tickets], { id: "a".repeat(24) }).steps[1]!.id).toBe(`${"a".repeat(21)}-2`);
     // A copy has an id of its own, and so have the steps it starts: the server refuses an id two steps share.
-    const copied = duplicateStep([group([news, tickets])], 0).steps;
+    const copied = copyOnLine([group([news, tickets])], 0);
     expect(copied.map((step) => step.id)).toEqual(["s1", "s2"]);
     expect((copied[1] as Together).steps.map((part) => part.id)).toEqual(["s2-1", "s2-2"]);
-    // And one put in where its id is taken.
-    expect((insertStep([group([news, tickets])], 1, group([news, tickets])).steps[1] as Together).steps.map((part) => part.id)).toEqual(["s2-1", "s2-2"]);
   });
 
   test("one changed to the other kind keeps its name and its words, and drops an agent with the turn it was for", () => {
@@ -72,7 +71,6 @@ describe("what it is called", () => {
     expect(stepTitle({ ...step, name: "Ask them" }, "Nouva")).toBe("Ask them");
     expect(stepLine(step)).toBe("Read the news. · gh issue list · Read the news.");
     expect(mainText(group([news, blankPart("agentTurn")]))).toBe("Read the news.");
-    expect(stepNote(step, 0)).toBe("They start together. What each says is joined, each under its name, and goes on once the last one is done.");
     expect(KIND.parallel.label).toBe("Several at the same time");
     // A person's name for it, or whose turn it is, or the command: what its words are joined under.
     expect([partTitle({ ...news, name: "News" }, "Nix"), partTitle(news, "Nix"), partTitle(tickets, "")]).toEqual(["News", "Nix", "gh issue list"]);

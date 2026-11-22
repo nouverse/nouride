@@ -49,19 +49,27 @@ describe("a run that waits for a person, as the engine answers it", () => {
     expect(seen.note).toContain("This run started");
   });
 
-  test("the path it took is drawn: the exit a step left by, and the lines it went along", async () => {
-    const seen = { taken: [] as string[], other: [] as string[], lines: -1 };
+  test("the path it took is drawn: the lane a failed step left by, lit, and the lines it went along", async () => {
+    const seen = { lanes: [] as (string | null)[], taken: [] as (string | null)[], inLane: [] as string[], chips: -1, end: "", into: -1, along: [] as boolean[] };
     await renderPage("/automations/cron_1", async (host) => {
       await flowDrawn(host);
-      seen.taken = [...host.querySelectorAll("[data-branch][data-taken]")].map((one) => one.textContent ?? "");
-      seen.other = [...host.querySelectorAll("[data-branch]:not([data-taken])")].map((one) => one.textContent ?? "");
-      seen.lines = host.querySelectorAll("[data-flow] [data-taken]:not([data-branch])").length;
+      seen.lanes = [...host.querySelectorAll("[data-lane]")].map((lane) => lane.getAttribute("data-lane"));
+      seen.taken = [...host.querySelectorAll("[data-lane][data-taken]")].map((lane) => lane.getAttribute("data-lane"));
+      seen.inLane = [...host.querySelectorAll<HTMLElement>('[data-lane] [data-flow-anchor^="step:"]')].map((box) => box.dataset.flowAnchor!.slice(5));
+      seen.chips = host.querySelectorAll("[data-branch]").length;
+      seen.end = host.querySelector("[data-lane-end]")?.textContent ?? "";
+      seen.into = host.querySelectorAll("[data-flow] [data-taken]:not([data-lane]):not([data-lane-line])").length;
+      seen.along = [...host.querySelectorAll("[data-lane-line]")].map((line) => line.hasAttribute("data-taken"));
     });
-    // The command failed and its own path for that is to go on; done would have ended the run.
-    expect(seen.taken).toEqual(["If it failsgo on"]);
-    expect(seen.other).toEqual(["Once doneend here"]);
-    // Into the first step, on to the second, on to the third; not past the step it waits in.
-    expect(seen.lines).toBe(3);
+    // The command failed, and what runs in its place stands at its side: done would have ended the run.
+    expect(seen.lanes).toEqual(["whenFailed"]);
+    expect(seen.taken).toEqual(["whenFailed"]);
+    expect(seen.inLane).toEqual(["find", "ok", "tell"]);
+    expect(seen.chips).toBe(0);
+    expect(seen.end).toBe("The run stops here");
+    // Into the first step; then down the lane from the step that is done, and not past the one it waits in.
+    expect(seen.into).toBe(1);
+    expect(seen.along).toEqual([true, false]);
   });
 
   test("the step it waits in carries what the step before said and the two answers, and each is sent as it is", async () => {
@@ -221,7 +229,7 @@ describe("following a run", () => {
 
   test("Recent runs lists them, newest first, and a press on one draws that run over the steps", async () => {
     const older = run("success", [out("check", "empty", { ms: 30 })], { id: "run_0", startedAt: Date.now() - 2 * 86_400_000, finishedAt: Date.now() - 2 * 86_400_000 + 30, result: "step 1 of 4 had nothing to say: the run ended there" });
-    const newest = run("success", [out("check", "done", { ms: 400 }), out("find", "done", { ms: 900 }), out("ok", "done", { ms: 5, by: "Gading" }), out("tell", "done", { ms: 5 })], { finishedAt: Date.now() - 50_000, result: "The shop was down." });
+    const newest = run("success", [out("check", "done", { ms: 400 }), out("find", "done", { ms: 900 }), out("ok", "done", { ms: 5, by: "Gading" }), out("tell", "done", { ms: 5 })], { finishedAt: Date.now() - 50_000, result: "**The shop** was `down`." });
     answer({ [PAGE]: detail(automation(), [newest, older]) });
     const seen = { rows: [] as string[], labels: [] as string[], picked: [] as (string | null)[], tab: "", chips: [] as string[], held: 0 };
     await renderPage(PAGE, async (host) => {
@@ -238,7 +246,9 @@ describe("following a run", () => {
       seen.chips = STEPS.map((step) => chip(host, step.id));
     });
     expect(seen.rows[0]).toContain("Done · 10 s");
+    // As words: an agent writes Markdown, and a row of one line draws none of it.
     expect(seen.rows[0]).toContain("The shop was down.");
+    expect(seen.rows[0]).not.toMatch(/[*`]/);
     expect(seen.rows[1]).toContain("step 1 of 4 had nothing to say");
     expect(seen.labels).toEqual(["Steps", "Last run"]);
     expect(seen.held).toBe(0);

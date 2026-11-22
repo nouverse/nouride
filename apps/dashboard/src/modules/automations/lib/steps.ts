@@ -9,7 +9,6 @@
  */
 
 import type { AutomationPart, AutomationStep, StepExit } from "@nouride/wire";
-import { moved } from "@/commons/lib/reorder";
 
 export type Step = AutomationStep;
 export type StepKind = Step["kind"];
@@ -79,32 +78,6 @@ export function landsAt(steps: readonly Step[], index: number, exit: ExitName): 
   return to > index ? to : "end";
 }
 
-/** A path a step says for itself, where the run would otherwise do what a step does by default. */
-export interface Branch {
-  exit: ExitName;
-  to: number | "end";
-  /** It lands further on than the step right after: drawn as a line at the side, where "go on" is the line already there. */
-  jump: boolean;
-}
-
-/** Whether a step is the last: after it the run ends whichever way the step went, and there is nothing to choose. */
-export const isLast = (steps: readonly Step[], index: number): boolean => index === steps.length - 1;
-
-/**
- * The paths a step says for itself: only these are drawn under its card. None for the last step, whatever it holds:
- * "go on" there has no step to go on to, and the run ends the same way as with "end" (as failed after a failure,
- * quietly after silence). It was drawn as "If it fails → go on" under the last card, which read as a branch.
- */
-export function branchesOf(steps: readonly Step[], index: number): Branch[] {
-  const step = steps[index]!;
-  return EXITS.flatMap((exit): Branch[] => {
-    const go = step[exit];
-    if (go === undefined || go === DEFAULT_EXIT[exit] || (isLast(steps, index) && typeof go !== "object")) return [];
-    const to = landsAt(steps, index, exit);
-    return [{ exit, to, jump: to !== "end" && to > index + 1 }];
-  });
-}
-
 /** An id no step has yet: `s` and the first free number, as the server names a step sent without one. */
 export function newStepId(steps: readonly Pick<Step, "id">[]): string {
   const taken = new Set(steps.map((step) => step.id));
@@ -114,8 +87,8 @@ export function newStepId(steps: readonly Pick<Step, "id">[]): string {
 /** One of the steps started at the same time, with nothing written in it yet. Its id is its step's to give (`parted`). */
 export const blankPart = (kind: Part["kind"]): Part => (kind === "command" ? { id: "", kind, argv: [] } : { id: "", kind, message: "" });
 
-/** What one of them asks or runs. */
-const partText = (part: Part): string => (part.kind === "command" ? shellLine(part.argv) : part.message);
+/** What one of them asks or runs: a script is said by what it does, since its line is only the program that runs it. */
+const partText = (part: Part): string => (part.kind === "command" ? (part.script ? part.script.about : shellLine(part.argv)) : part.message);
 
 /** The same one as the other kind: its name and its words kept, an agent of its own dropped with the turn it was for. */
 export function asPart(part: Part, kind: Part["kind"]): Part {
@@ -133,7 +106,7 @@ export function parted(step: Together, parts: readonly Part[] = step.steps): Tog
 }
 
 /** A step under another id, the steps it starts at the same time named after it. */
-const withId = (step: Step, id: string): Step => (step.kind === "parallel" ? parted({ ...step, id }) : { ...step, id });
+export const withId = (step: Step, id: string): Step => (step.kind === "parallel" ? parted({ ...step, id }) : { ...step, id });
 
 /** A new step of a kind, with nothing written in it yet. */
 export function blankStep(kind: StepKind, steps: readonly Step[]): Step {
@@ -146,7 +119,9 @@ export function blankStep(kind: StepKind, steps: readonly Step[]): Step {
     case "agentTurn":
       return { id, kind, message: "" };
     case "command":
-      return { id, kind, argv: [] };
+      // A script, to be written or asked for: a line typed into it is a script of one line. The one-line form is what
+      // an automation made before scripts holds, and is kept as it is.
+      return { id, kind, argv: ["sh"], script: { text: "", about: "" } };
     case "mission":
       return { id, kind, goal: "" };
     case "approval":
@@ -170,7 +145,7 @@ export function mainText(step: Step): string {
     case "agentTurn":
       return step.message;
     case "command":
-      return shellLine(step.argv);
+      return step.script ? step.script.about : shellLine(step.argv);
     case "mission":
       return step.goal;
     case "approval":
@@ -231,28 +206,23 @@ export function forward(steps: readonly Step[]): Changed {
   return { steps: kept, reset };
 }
 
-/** A step put in at a place. Past the most a job runs, nothing changes: the page offers no way to ask. */
-export function insertStep(steps: readonly Step[], at: number, step: Step): Changed {
-  if (steps.length >= STEPS_MAX) return { steps: [...steps], reset: [] };
-  const place = Math.max(0, Math.min(at, steps.length));
-  const taken = steps.some((one) => one.id === step.id);
-  return forward([...steps.slice(0, place), taken ? withId(step, newStepId(steps)) : step, ...steps.slice(place)]);
-}
-
-export function removeStep(steps: readonly Step[], index: number): Changed {
-  return forward(steps.filter((_, at) => at !== index));
-}
-
-/** A step taken from one place to another: `to` is where it ends up. */
-export function moveStep(steps: readonly Step[], from: number, to: number): Changed {
-  return forward(moved(steps, from, to));
-}
-
-/** A copy right after the step it copies, with an id of its own. Its exits still point at later steps, so they stay. */
-export function duplicateStep(steps: readonly Step[], index: number): Changed {
-  const step = steps[index];
-  if (!step) return { steps: [...steps], reset: [] };
-  return insertStep(steps, index + 1, { ...withId(step, newStepId(steps)), ...(step.name ? { name: `${step.name} copy`.slice(0, 80) } : {}) });
+/**
+ * The paths a change to the list put back to their default, read off the list before and after: one that named a step
+ * and now says nothing, where that step is gone or is no longer after it. A path the page rewrote on purpose names a
+ * step that is still there and still ahead, and is not one of these.
+ */
+export function resetsBetween(was: readonly Step[], now: readonly Step[]): ExitReset[] {
+  const before = new Map(was.map((step) => [step.id, step] as const));
+  const place = new Map(now.map((step, index) => [step.id, index] as const));
+  return now.flatMap((step, index) =>
+    EXITS.flatMap((exit): ExitReset[] => {
+      const go = before.get(step.id)?.[exit];
+      if (typeof go !== "object" || step[exit] !== undefined) return [];
+      const to = place.get(go.to);
+      if (to === undefined) return [{ id: step.id, exit, why: "removed" }];
+      return to <= index ? [{ id: step.id, exit, why: "moved" }] : [];
+    }),
+  );
 }
 
 /** One step changed, the rest as they were. */
@@ -282,6 +252,21 @@ export interface StepProblem {
   message: string;
 }
 
+/** A saved key's name, as the server takes one. */
+const KEY_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
+
+/**
+ * What a script lacks before the server would keep it: its text, the line that says what it does (a person turning the
+ * automation on reads that before the text), a program of one word to run it, and saved keys named as they are saved.
+ */
+function scriptProblem(script: NonNullable<Extract<Step, { kind: "command" }>["script"]>, argv: readonly string[]): string | null {
+  if (!script.text.trim()) return "Write the script, or ask an agent to write it.";
+  if (!script.about.trim()) return "Say what the script does, in one line.";
+  if (!argv[0]?.trim() || /\s/.test(argv[0])) return "Pick what the script is written in.";
+  if ((script.secrets ?? []).some((name) => !KEY_NAME.test(name))) return "Check the saved keys it uses: each is one name, as it is saved.";
+  return null;
+}
+
 function stepProblem(step: Step, own: string | undefined): string | null {
   if ((step.kind === "agentTurn" || step.kind === "mission") && step.agentId !== undefined && !step.agentId.trim()) return "Pick the agent for this step, or leave it to the automation's own.";
   switch (step.kind) {
@@ -290,6 +275,7 @@ function stepProblem(step: Step, own: string | undefined): string | null {
     case "agentTurn":
       return step.message.trim() ? null : "Write what to ask the agent.";
     case "command":
+      if (step.script) return scriptProblem(step.script, step.argv);
       return step.argv.every((part) => typeof part === "string") && shellLine(step.argv).trim() ? null : "Write the command to run.";
     case "mission": {
       if (!step.goal.trim()) return "Write the mission's goal: what should be true when it is done.";
@@ -307,6 +293,10 @@ function stepProblem(step: Step, own: string | undefined): string | null {
       if (step.steps.length < TOGETHER_MIN) return "Add at least two things to start at the same time.";
       if (step.steps.length > TOGETHER_MAX) return `At most ${TOGETHER_MAX} start at the same time.`;
       if (step.steps.some((part) => !partText(part).trim())) return "Write what each of them does: what to ask, or the command to run.";
+      for (const part of step.steps) {
+        const lacks = part.kind === "command" && part.script ? scriptProblem(part.script, part.argv) : null;
+        if (lacks) return lacks;
+      }
       // The automation's own agent stands for a part that names none: twice is twice either way.
       const agents = step.steps.flatMap((part) => (part.kind === "agentTurn" ? [part.agentId || own || ""] : []));
       return agents.some((agent, at) => agents.indexOf(agent) !== at) ? "An agent takes one of these at a time. Give each a different agent, or move one to a step of its own." : null;

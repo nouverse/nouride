@@ -12,18 +12,16 @@
  * throws at 3am into a log nobody is watching.
  */
 
-import { newId, createLogger, type Job, type JobRun, type JobStep, type TogetherStep, type StepOutcome, type JobTrigger, type JobPayload, type JobDelivery, type JobSessionMode, type JobTarget, type CronSection, type JobProposal, type Port, type ReachTest, type JobAllowance } from "@nouride/shared";
+import { newId, createLogger, type Job, type JobRun, type StepOutcome, type JobTrigger, type JobPayload, type JobDelivery, type JobSessionMode, type JobTarget, type CronSection, type JobProposal, type Port, type ReachTest, type JobAllowance } from "@nouride/shared";
 import { RunHistory, type RunOutcome, type RunState, type WaitingRun } from "./runs.store.ts";
 import { randomToken, type SqliteDb } from "@nouride/runtime";
 import type { AuditLog } from "@/commons/audit.store.ts";
 import { nextCronOccurrence, parseCronExpr } from "@/modules/cron/expr.ts";
-import { CronValidationError, validateJob, validateSteps, type ValidationRules } from "@/modules/cron/validate.ts";
+import { CronValidationError, validateDoes, validateJob, validateLasts, type ValidationRules } from "@/modules/cron/validate.ts";
+import { payloadAudit } from "./job-audit.ts";
+import { signScripts } from "./scripts.ts";
 
 const log = createLogger("cron.store");
-
-/** A step as the audit log keeps it: a command whole, any other by its kind, and the same of each step it starts together. */
-const stepAudit = (step: JobStep | TogetherStep): Record<string, unknown> =>
-  step.kind === "command" ? { kind: step.kind, argv: step.argv } : step.kind === "parallel" ? { kind: step.kind, steps: step.steps.map(stepAudit) } : { kind: step.kind };
 
 interface Row {
   id: string;
@@ -140,6 +138,15 @@ export class CronStore {
     }
   }
 
+  /**
+   * When a job is next due: its schedule's next time, or the instant it ends where that comes first. A job that lasts
+   * a set time comes due at its end, and the scheduler ends it there in place of running it.
+   */
+  private nextDue(trigger: JobTrigger, delivery: JobDelivery, after: number): number | null {
+    const next = this.nextRun(trigger, after);
+    return next !== null && delivery.endsAt !== undefined && delivery.endsAt < next ? delivery.endsAt : next;
+  }
+
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
   /**
@@ -233,7 +240,11 @@ export class CronStore {
     this.db.prepare("UPDATE cron_jobs SET reach_test = ? WHERE id = ?").run(JSON.stringify(test), id);
   }
 
-  create(input: JobInput): Job {
+  create(given: JobInput): Job {
+    // Each script signed with who wrote it: whoever makes the job, or for a change proposed to a job, whoever wrote the
+    // text that job already holds.
+    const replaced = given.proposal?.replaces ? this.get(given.proposal.replaces)?.payload : undefined;
+    const input: JobInput = { ...given, payload: signScripts(given.payload, given.createdBy, replaced) };
     validateJob(input, this.rules);
 
     const total = this.db.prepare<{ n: number }>("SELECT COUNT(*) AS n FROM cron_jobs").get();
@@ -244,6 +255,7 @@ export class CronStore {
     }
 
     const enabled = input.proposal ? false : (input.enabled ?? true);
+    const delivery = lastingFrom(input.delivery ?? { mode: "announce" }, enabled ? this.now : null);
     const job: Job = {
       id: newId("cron"),
       agentId: input.agentId,
@@ -251,7 +263,7 @@ export class CronStore {
       enabled,
       trigger: input.trigger,
       payload: input.payload,
-      delivery: input.delivery ?? { mode: "announce" },
+      delivery,
       target: input.target,
       // `fresh` when the caller said nothing: a job that never asked for a history should not be
       // given one, and until this default changed every scheduled job silently appended to the
@@ -262,7 +274,7 @@ export class CronStore {
       createdAt: this.now,
       // A disabled job has no next occurrence: it would be a time in the past by the time anyone
       // enabled it, and `enable` recomputes from the moment it is switched on.
-      ...(enabled ? { nextRunAt: this.nextRun(input.trigger, this.now) ?? undefined } : {}),
+      ...(enabled ? { nextRunAt: this.nextDue(input.trigger, delivery, this.now) ?? undefined } : {}),
       runCount: 0,
       failCount: 0,
       failStreak: 0,
@@ -311,12 +323,7 @@ export class CronStore {
         job: job.id,
         name: job.name,
         trigger: job.trigger,
-        payload_kind: job.payload.kind,
-        // The whole command, because that is what an audit log is for. An unattended argv is the
-        // single most important thing here to be able to read back later.
-        ...(job.payload.kind === "command" ? { argv: job.payload.argv } : {}),
-        // And every step's, for a job of several: each command whole, each other step by its kind.
-        ...(job.payload.kind === "steps" ? { steps: job.payload.steps.map(stepAudit) } : {}),
+        ...payloadAudit(job.payload),
         next_run_at: job.nextRunAt,
       },
     });
@@ -366,21 +373,27 @@ export class CronStore {
       agentId: patch.agentId ?? existing.agentId,
       name: patch.name ?? existing.name,
       trigger: patch.trigger ?? existing.trigger,
-      payload: patch.payload ?? existing.payload,
+      payload: patch.payload ? signScripts(patch.payload, actor, existing.payload) : existing.payload,
       target: patch.target ?? existing.target,
       session: patch.session ?? existing.session,
-      delivery: patch.delivery ?? existing.delivery,
+      // When it ends is the store's to say: kept where how long it lasts is as it was, counted from now where that
+      // changed on a job that is on, and never what a caller wrote.
+      delivery: patch.delivery ? lastingFrom(patch.delivery, existing.enabled ? this.now : null, existing.delivery) : existing.delivery,
       keepAfterRun: patch.keepAfterRun ?? existing.keepAfterRun,
       createdBy: existing.createdBy,
     };
     // `at` in the past is refused on create; on update the existing one may legitimately be in the
     // past already, so only a *changed* schedule is re-checked.
     if (patch.trigger || patch.agentId !== undefined) validateJob(merged, this.rules);
-    // A list of steps is what a change to such a job is nearly always about: held to its rules on every one.
-    else if (patch.payload || patch.session || patch.delivery) validateSteps(merged);
+    // A list of steps is what a change to such a job is nearly always about: held to its rules on every one. A job of
+    // one command is held to a command's, for the script it may now keep.
+    else if (patch.payload || patch.session || patch.delivery) {
+      validateDoes(merged);
+      validateLasts(merged);
+    }
 
     const nextRunAt = existing.enabled
-      ? (this.nextRun(merged.trigger, this.now) ?? null)
+      ? (this.nextDue(merged.trigger, merged.delivery ?? existing.delivery, this.now) ?? null)
       : null;
 
     this.db
@@ -407,7 +420,8 @@ export class CronStore {
       action: "cron_update",
       agentId: existing.agentId,
       actor,
-      details: { job: id, name: merged.name, next_run_at: nextRunAt },
+      // What it does is kept whole when that is what changed: a script's old text is nowhere else once it is replaced.
+      details: { job: id, name: merged.name, next_run_at: nextRunAt, ...(patch.payload ? payloadAudit(merged.payload) : {}) },
     });
     this.scheduleChanged();
     return this.get(id);
@@ -417,19 +431,21 @@ export class CronStore {
     const existing = this.get(id);
     if (!existing) return null;
 
+    // A job that lasts a set time lasts it from now, each time it is turned on: the time it was off is not counted.
+    const delivery = enabled ? lastingFrom(existing.delivery, this.now) : existing.delivery;
     // Recomputed from now, not resumed from the stored occurrence: a job paused for a week would
     // otherwise fire the instant it came back, for a time that has long passed.
-    const nextRunAt = enabled ? (this.nextRun(existing.trigger, this.now) ?? null) : null;
+    const nextRunAt = enabled ? (this.nextDue(existing.trigger, delivery, this.now) ?? null) : null;
 
     this.db
       .prepare(
         // Enabling clears the auto-disable reason *and* the streak. Leaving the streak would
         // re-disable the job after one more failure, which reads as "enable did not work".
-        `UPDATE cron_jobs SET enabled = ?, next_run_at = ?,
+        `UPDATE cron_jobs SET enabled = ?, next_run_at = ?, delivery = ?,
            disabled_reason = NULL, fail_streak = CASE WHEN ? = 1 THEN 0 ELSE fail_streak END
          WHERE id = ?`,
       )
-      .run(enabled ? 1 : 0, nextRunAt, enabled ? 1 : 0, id);
+      .run(enabled ? 1 : 0, nextRunAt, JSON.stringify(delivery), enabled ? 1 : 0, id);
 
     this.options.audit?.record({
       action: enabled ? "cron_enable" : "cron_disable",
@@ -580,7 +596,7 @@ export class CronStore {
 
     const streak = failed ? job.failStreak + 1 : success ? 0 : job.failStreak;
     const autoDisable = failed && streak >= this.options.config.failStreakLimit;
-    const nextRunAt = autoDisable ? null : (this.nextRun(job.trigger, now) ?? null);
+    const nextRunAt = autoDisable ? null : (this.nextDue(job.trigger, job.delivery, now) ?? null);
 
     this.db
       .prepare(
@@ -660,6 +676,17 @@ export class CronStore {
   reconcileInterrupted(): number {
     return this.history.reconcileInterrupted();
   }
+}
+
+/**
+ * A job's delivery with when it ends written by the store. `since` is when it was turned on, or null for one that is
+ * off, which has no end until it is on. With `was`, a change: the end it had is kept where how long it lasts is as it
+ * was, so saving a page does not give a watch its whole time again. What a caller wrote as the end is dropped.
+ */
+function lastingFrom(given: JobDelivery, since: number | null, was?: JobDelivery): JobDelivery {
+  const { endsAt: _written, ...delivery } = given;
+  if (delivery.lasts === undefined || since === null) return delivery;
+  return { ...delivery, endsAt: was?.lasts === delivery.lasts && was.endsAt !== undefined ? was.endsAt : since + delivery.lasts };
 }
 
 /** Whether a stored string is one of the three modes. Anything else is a row from another version. */

@@ -10,11 +10,24 @@ import type { Notifier } from "@/commons/notify.ts";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import { describeTrigger } from "@/modules/cron/parse.ts";
 import { ProposalCards } from "@/modules/cron/proposal-cards.ts";
+import { scriptFactsOf, type ScriptFacts } from "@/modules/cron/scripts.ts";
+import type { CronExecutors } from "@/modules/cron/scheduler.ts";
 import { senderIsOwner } from "@/modules/people/match.ts";
 import { createScheduleTool } from "@/modules/tools/builtins/schedule.ts";
 import { describeAddress, type SendMessageOptions } from "@/modules/tools/builtins/send-message.ts";
 import { readBrief } from "./missions.ts";
 import type { LinkFor } from "@/modules/web/links.ts";
+
+/**
+ * What a script is asked of this machine (`cron/scripts.ts`), for the agents as they are loaded now: the secrets an
+ * agent's pack names for its commands, and a program looked for where a job's command of that agent would run.
+ */
+export function scriptFacts(registry: Pick<AgentRegistry, "get">, pipeline: () => { cronExecutors(): Pick<CronExecutors, "commandSandbox"> }): ScriptFacts {
+  return scriptFactsOf({
+    secrets: (agentId) => registry.get(agentId)?.config.execSecrets.map((secret) => secret.name) ?? null,
+    sandbox: (job) => pipeline().cronExecutors().commandSandbox(job),
+  });
+}
 
 export function buildProposals(params: {
   cron: CronPort;
@@ -25,6 +38,8 @@ export function buildProposals(params: {
   people: () => readonly Person[];
   /** The job's card on the Schedule page, in the tool's answer (`web/links.ts`, 0.8.11). */
   linkFor?: LinkFor;
+  /** Whether a script an agent proposes could run here (`cron/scripts.ts`). */
+  scripts?: ScriptFacts;
   /** The pipeline's voice, admins and the chats an agent can reach — read when a card is posted or answered. */
   pipeline: () => { voiceGatewayId(agentId: string, gatewayId: string): string; isAdmin(who: { gatewayId: string; senderId: string }): boolean; messageSender(): Pick<SendMessageOptions, "targets"> };
 }): { cards: ProposalCards; tool: Tool } {
@@ -45,6 +60,7 @@ export function buildProposals(params: {
     post: (job) => cards.post(job),
     chats,
     ...(params.linkFor ? { linkFor: params.linkFor } : {}),
+    ...(params.scripts ? { scripts: params.scripts } : {}),
     readBrief,
   });
   return { cards, tool };

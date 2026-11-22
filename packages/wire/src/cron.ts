@@ -29,9 +29,10 @@ export interface JobSummary {
   payload: { kind: JobPayloadInput["kind"]; [key: string]: unknown };
   /**
    * `once`: it turns itself off after the first run on its own time that told somebody something. `atOnce`: what it
-   * says is not kept for the install's quiet hours.
+   * says is not kept for the install's quiet hours. `lasts`: how long it runs once it is on, in milliseconds, before
+   * it turns itself off and says so; `endsAt`: the instant that falls on, the daemon's to write.
    */
-  delivery: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; webhookUrl?: string; once?: true; atOnce?: true };
+  delivery: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; webhookUrl?: string; once?: true; atOnce?: true; lasts?: number; endsAt?: number };
   target: { gatewayId: string; chatId: string };
   session: JobSessionMode;
   createdBy: string;
@@ -42,8 +43,8 @@ export interface JobSummary {
   failCount: number;
   failStreak: number;
   /**
-   * Why it is off, where the daemon turned it off. `told`: it is one that tells once, and it told. Anything else is
-   * what it kept failing on, in words.
+   * Why it is off, where the daemon turned it off. `told`: it is one that tells once, and it told. `ended`: it lasted
+   * the time it was given. Anything else is what it kept failing on, in words.
    */
   disabledReason?: string;
   /** Proposed by an agent and not turned on yet (0.8.0): off until somebody turns it on. */
@@ -82,7 +83,7 @@ export interface JobPatch extends JobScheduleInput {
   name?: string;
   payload?: JobPayloadInput;
   target?: { gatewayId: string; chatId: string };
-  delivery?: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; once?: true; atOnce?: true };
+  delivery?: { mode: JobDeliveryMode; gatewayId?: string; chatId?: string; once?: true; atOnce?: true; lasts?: number };
   session?: JobSummary["session"];
   keepAfterRun?: boolean;
 }
@@ -189,6 +190,20 @@ export interface HeldAction {
   keys: string[];
   label: string;
   reason: string;
+}
+
+/** The body of `POST /cron/try`: a command step as it is written on the page, saved or not, and what it is given to read. */
+export interface TryStepInput {
+  agentId: string;
+  step: AutomationStep;
+  input?: string;
+}
+
+/** What a try answers: what a step's outcome is called, with what it printed or why it failed, and how long it took. */
+export interface TriedStep {
+  status: "done" | "empty" | "failed";
+  said: string;
+  ms: number;
 }
 
 /** What Run answers: how it ended, `running` when it outlasted the wait, `unavailable` when it was refused. */

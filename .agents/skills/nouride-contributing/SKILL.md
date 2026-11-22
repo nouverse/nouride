@@ -462,7 +462,7 @@ line, return the wrong value — and confirm a test goes red. Then put it back. 
 test is decoration and you have not tested the change. Do this before you claim it is done; it takes
 one command and it is the only evidence that the test is attached to the behaviour.
 
-Four ways a test passes for the wrong reason, all of them found in this repo:
+Five ways a test passes for the wrong reason, all of them found in this repo:
 
 - **The guard was never reached.** A traversal test asked for `../../../config.toml`, which does not
   exist from a temp directory, so it missed for the wrong reason and passed with the boundary
@@ -474,6 +474,9 @@ Four ways a test passes for the wrong reason, all of them found in this repo:
   failure actually took.
 - **The property was true anyway.** A stability test asserted that two identical queries return the
   same order — which SQLite does regardless. Assert the property only your change provides.
+- **The fixture held what the path that runs never writes.** `/backgrounds` was tested on records made
+  by hand, each naming who started it. A command's real job kept nobody, so "a person sees what they
+  started elsewhere" passed and was never true. Make the record the way the product makes it.
 
 **Test the decision, not the plumbing.** If reaching the behaviour means building five
 collaborators, that is the code telling you the decision wants to be a function. Extract it and test

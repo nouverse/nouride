@@ -43,16 +43,20 @@ export const BUDGET: Record<string, Budget> = {
     why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, who is told what its session started",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 481,
-    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves, what the audit keeps of a step; validation is `cron/validate.ts`, a watch's is `watch.store.ts`",
+    lines: 495,
+    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves and a lasting job's end is written; rules are `validate.ts`, audit shapes `job-audit.ts`",
+  },
+  "apps/engine/src/modules/cron/scheduler.ts": {
+    lines: 405,
+    why: "the ticker: claim, catch up, run now, each kind's dispatch, a step run's hands. Runs of steps are `step-runs.ts`, a job's end `ending.ts`, the quiet hours `quiet.ts`: what is left is one clock",
   },
   "packages/persona/src/config.ts": {
     lines: 492,
     why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field: one list, the pack's schema. Its MCP server readers are the seam if it grows by more than a field",
   },
   "apps/engine/src/modules/jobs/jobs.store.ts": {
-    lines: 524,
-    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, which jobs are services, and who is told what a job left running",
+    lines: 527,
+    why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, which are services, who started a command, who is told what one left",
   },
   "apps/engine/src/boot/missions.ts": {
     lines: 413,

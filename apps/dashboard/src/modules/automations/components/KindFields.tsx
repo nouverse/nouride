@@ -11,6 +11,7 @@ import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { MissionFields, missionDraft, type MissionDraft } from "@/commons/components/jobs/MissionFields";
 import type { Then } from "../lib/draft";
+import { ScriptFields } from "./ScriptFields";
 import { APPROVAL_WAIT_MS, TOGETHER_MAX, TOGETHER_MIN, argvOf, asPart, blankPart, parted, shellLine, type Part, type Step } from "../lib/steps";
 
 type Of<K extends Step["kind"]> = Extract<Step, { kind: K }>;
@@ -18,6 +19,17 @@ type Of<K extends Step["kind"]> = Extract<Step, { kind: K }>;
 export interface AgentChoice {
   id: string;
   name: string;
+}
+
+/** What a script's fields need of the page around them. */
+export interface ScriptContext {
+  /** The agent the automation runs as. */
+  agentId: string;
+  agentName: (id: string) => string;
+  /** What "Ask … to change it" writes in the chat, the automation and the step named. */
+  asks?: string | undefined;
+  /** What the step before said in the last run. */
+  sample?: string | undefined;
 }
 
 const AREA = "textarea w-full text-sm leading-relaxed";
@@ -108,11 +120,49 @@ function ApprovalStep({ step, onChange }: { step: Of<"approval">; onChange: (ste
   );
 }
 
-function CommandStep({ step, alone, onChange }: { step: Of<"command">; alone: { then: Then; agent: string; onThen: (then: Then) => void } | null; onChange: (step: Step) => void }) {
+function CommandStep({ step, alone, script, onChange }: { step: Of<"command">; alone: { then: Then; agent: string; onThen: (then: Then) => void } | null; script: ScriptContext; onChange: (step: Step) => void }) {
   const seconds = step.timeoutMs !== undefined ? String(step.timeoutMs / 1000) : "";
+  // How long it may take, and what a lone command's output is worth: for whoever writes the script, so with its text.
+  const limits = (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Field label="Give up after (seconds)" hint="Empty: the usual limit.">
+        <input
+          className="input w-full font-mono text-sm"
+          type="number"
+          min={1}
+          value={seconds}
+          placeholder="600"
+          onChange={(event) => {
+            const { timeoutMs: _was, ...rest } = step;
+            const typed = Number(event.target.value);
+            onChange(event.target.value && Number.isFinite(typed) && typed > 0 ? { ...rest, timeoutMs: Math.round(typed * 1000) } : rest);
+          }}
+        />
+      </Field>
+      {/* Only while the command is all the automation does: among other steps, what reads its output is the next step. */}
+      {alone ? (
+        <Field label="After it runs" hint="What its output is worth.">
+          <SearchSelect
+            label="After it runs"
+            align="start"
+            className="w-full"
+            options={[
+              { value: "deliver", label: "Send what it printed, as it is" },
+              { value: "agentTurn", label: `Hand what it printed to ${alone.agent}` },
+            ]}
+            value={alone.then}
+            onChange={alone.onThen}
+          />
+        </Field>
+      ) : null}
+    </div>
+  );
+  // A script the automation keeps: read in words first, its text behind a button (`ScriptFields`).
+  if (step.script) return <ScriptFields step={{ ...step, script: step.script }} agentId={script.agentId} agentName={script.agentName} asks={script.asks} sample={script.sample} more={limits} onChange={onChange} />;
+  // One line, as an automation made before scripts holds it, or one typed here.
   return (
     <>
-      <Field label="Command" hint="Runs on this server with no AI, and nobody is asked first. What it prints goes to the next step.">
+      <Field label="Command" hint="One line, run on this server with no AI, and nobody is asked first. What it prints goes to the next step.">
         <input
           className="input w-full font-mono text-[13px]"
           value={shellLine(step.argv)}
@@ -120,38 +170,10 @@ function CommandStep({ step, alone, onChange }: { step: Of<"command">; alone: { 
           onChange={(event) => onChange({ ...step, argv: argvOf(event.target.value) })}
         />
       </Field>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Give up after (seconds)" hint="Empty: the usual limit.">
-          <input
-            className="input w-full font-mono text-sm"
-            type="number"
-            min={1}
-            value={seconds}
-            placeholder="600"
-            onChange={(event) => {
-              const { timeoutMs: _was, ...rest } = step;
-              const typed = Number(event.target.value);
-              onChange(event.target.value && Number.isFinite(typed) && typed > 0 ? { ...rest, timeoutMs: Math.round(typed * 1000) } : rest);
-            }}
-          />
-        </Field>
-        {/* Only while the command is all the automation does: among other steps, what reads its output is the next step. */}
-        {alone ? (
-          <Field label="After it runs" hint="What its output is worth.">
-            <SearchSelect
-              label="After it runs"
-              align="start"
-              className="w-full"
-              options={[
-                { value: "deliver", label: "Send what it printed, as it is" },
-                { value: "agentTurn", label: `Hand what it printed to ${alone.agent}` },
-              ]}
-              value={alone.then}
-              onChange={alone.onThen}
-            />
-          </Field>
-        ) : null}
-      </div>
+      <button type="button" className="btn btn-ghost btn-xs -mt-1 self-start font-bold text-secondary" onClick={() => onChange({ ...step, argv: ["sh"], script: { text: shellLine(step.argv), about: "" } })}>
+        Write it as a script instead
+      </button>
+      {limits}
     </>
   );
 }
@@ -173,7 +195,7 @@ function TogetherStep({ step, own, agents, onChange }: { step: Of<"parallel">; o
               <SegmentedTabs
                 tabs={[
                   { value: "agentTurn" as const, label: "Ask an agent" },
-                  { value: "command" as const, label: "Run a command" },
+                  { value: "command" as const, label: "Run a script" },
                 ]}
                 value={part.kind}
                 onChange={(kind) => set(at, asPart(part, kind))}
@@ -189,8 +211,18 @@ function TogetherStep({ step, own, agents, onChange }: { step: Of<"parallel">; o
                 </Field>
                 <StepAgent value={part.agentId} own={own} agents={agents} onChange={(agentId) => set(at, withAgent(part, agentId))} />
               </>
+            ) : part.script ? (
+              // A script among them: its text, and the line that says what it does.
+              <>
+                <Field label="What it does">
+                  <input className="input w-full text-sm" value={part.script.about} onChange={(event) => set(at, { ...part, script: { ...part.script!, about: event.target.value } })} />
+                </Field>
+                <Field label="Script" hint="Runs on this server with no AI, and nobody is asked first. It reads what the step before said.">
+                  <textarea className="textarea min-h-32 w-full font-mono text-[13px]" value={part.script.text} spellCheck={false} onChange={(event) => set(at, { ...part, script: { ...part.script!, text: event.target.value } })} />
+                </Field>
+              </>
             ) : (
-              <Field label="Command" hint="Runs on this server with no AI, and nobody is asked first.">
+              <Field label="Command" hint="One line, run on this server with no AI, and nobody is asked first.">
                 <input
                   className="input w-full font-mono text-[13px]"
                   value={shellLine(part.argv)}
@@ -226,6 +258,7 @@ export function KindFields({
   own,
   agents,
   alone,
+  script,
   onChange,
 }: {
   step: Step;
@@ -234,6 +267,7 @@ export function KindFields({
   agents: readonly AgentChoice[];
   /** Set while this command is the one thing the automation does: what its output is worth is a choice of its own. */
   alone: { then: Then; agent: string; onThen: (then: Then) => void } | null;
+  script: ScriptContext;
   onChange: (step: Step) => void;
 }) {
   switch (step.kind) {
@@ -253,7 +287,7 @@ export function KindFields({
         </>
       );
     case "command":
-      return <CommandStep step={step} alone={alone} onChange={onChange} />;
+      return <CommandStep step={step} alone={alone} script={script} onChange={onChange} />;
     case "mission":
       return <MissionStep step={step} own={own} agents={agents} onChange={onChange} />;
     case "approval":

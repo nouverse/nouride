@@ -240,8 +240,8 @@ describe("an operator asking for another person's", () => {
     expect((await h.ask("POST", `/cron/${id}/disable`)).status).toBe(404);
     expect((await h.ask("POST", `/cron/${id}/run`)).status).toBe(404);
     expect((await h.ask("DELETE", `/cron/${id}`)).status).toBe(404);
-    // Whose it is is an admin's to set.
-    expect((await h.ask("POST", `/cron/${id}/owner`, { person: "rina" })).status).toBe(403);
+    // Nor is it hers to take: for her it is not there.
+    expect((await h.ask("POST", `/cron/${id}/owner`, { person: "rina" })).status).toBe(404);
     expect(h.ran).toEqual([]);
     expect(h.store.get(id)).toMatchObject({ name: "his", enabled: true, owner: "web:u1" });
     expect(h.store.get(id)?.allowed).toBeUndefined();
@@ -401,6 +401,41 @@ describe("an admin", () => {
     expect(await elsewhere("/automations")).toBeUndefined();
   });
 
+  test("an owner hands their own to another person, and from then it is that person's to change", async () => {
+    const h = await house();
+    const id = h.jobs.hers.id;
+    const handed = await h.ask("POST", `/cron/${id}/owner`, { person: "gading" });
+    expect(handed.status).toBe(200);
+    expect(handed.body.job).toMatchObject({ person: { key: "gading", name: "Gading" }, changeable: false });
+    expect(h.store.get(id)?.owner).toBe("web:u1");
+    // Hers no longer: she cannot rename it, nor hand it on or back.
+    expect((await h.ask("POST", `/cron/${id}`, { name: "mine again" })).status).toBe(404);
+    expect((await h.ask("POST", `/cron/${id}/owner`, { person: "rina" })).status).toBe(403);
+    expect(h.store.get(id)).toMatchObject({ name: "hers", owner: "web:u1" });
+  });
+
+  test("an owner cannot leave their own with nobody, hand over one they only read, or one nobody owns", async () => {
+    const h = await house();
+    // With nobody it would be an admin's alone to change: an admin's to decide.
+    expect(await h.ask("POST", `/cron/${h.jobs.hers.id}/owner`, { person: null })).toMatchObject({ status: 403, body: { error: "only an admin leaves an automation with nobody" } });
+    // The admin's, which tells her chat: she reads it, and it is not hers to give.
+    expect(await h.ask("POST", `/cron/${h.jobs.toHer.id}/owner`, { person: "rina" })).toMatchObject({
+      status: 403,
+      body: { error: "only its owner or an admin hands an automation to somebody", plain: "Only the person it belongs to, or an admin, can hand this automation to somebody. Leaving it with nobody is an admin's." },
+    });
+    // A proposal in her chat is answered, not handed on: nobody has said yes to it.
+    expect((await h.ask("POST", `/cron/${h.jobs.proposal.id}/owner`, { person: "gading" })).status).toBe(403);
+    expect(h.store.get(h.jobs.hers.id)?.owner).toBe("web:u2");
+    expect(h.store.get(h.jobs.toHer.id)?.owner).toBe("web:u1");
+    expect(h.store.get(h.jobs.proposal.id)?.owner).toBeUndefined();
+    // Somebody People holds nothing for cannot be handed one, by its owner as by an admin.
+    expect((await h.ask("POST", `/cron/${h.jobs.hers.id}/owner`, { person: "tamu" })).status).toBe(400);
+    // One who only looks hands nothing over.
+    as = "tamu";
+    expect([403, 404]).toContain((await h.ask("POST", `/cron/${h.jobs.hers.id}/owner`, { person: "gading" })).status);
+    expect(h.store.get(h.jobs.hers.id)?.owner).toBe("web:u2");
+  });
+
   test("changes anyone's, and hands one nobody owns to a person, or back to nobody", async () => {
     const h = await house();
     as = "gading";
@@ -448,6 +483,11 @@ const ROUTES = join(import.meta.dir, "../../src/modules/web/control/routes");
 const ASKS = /\b(thingsFor|jobFor)\(/;
 /** A path that names or lists an automation, a scheduled job, a webhook or a mission. */
 const DOOR = /^\/(automations|cron|webhooks|missions)(\/|$)/;
+/**
+ * Under such a path, and naming none: a step tried alone is an agent's command, run for whoever may make an
+ * automation. It reads no job and answers with none, so there is nobody's to ask after.
+ */
+const NAMES_NONE = new Set(["POST /cron/try"]);
 
 describe("every door asks", () => {
   test("each route that names or lists an automation, a job, a webhook or a mission asks whose it is", () => {
@@ -456,7 +496,7 @@ describe("every door asks", () => {
       const source = readFileSync(join(ROUTES, file), "utf8");
       const found = [...source.matchAll(/\bcontrol\.(get|post|put|patch|delete)\(\s*"([^"]+)"/g)];
       found.forEach((match, n) => {
-        if (!DOOR.test(match[2]!)) return;
+        if (!DOOR.test(match[2]!) || NAMES_NONE.has(`${match[1]!.toUpperCase()} ${match[2]!}`)) return;
         const body = source.slice(match.index, found[n + 1]?.index ?? source.length);
         doors.push({ route: `${match[1]!.toUpperCase()} ${match[2]!}`, asks: ASKS.test(body) });
       });

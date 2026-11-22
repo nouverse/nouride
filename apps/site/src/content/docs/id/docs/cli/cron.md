@@ -23,8 +23,8 @@ Jalan yang sedang menunggu ditampilkan `runs` dengan id-nya di sampingnya.
 nouride cron add --name <nama> \
   (--at 2h | --every 15m | --cron "0 9 * * *" | --manual) \
   --gateway <id> --chat <id> --agent <id> \
-  [--message <prompt> | --text <pesan> | --command <shell> | --mission <goal> | --steps <file.json>] \
-  [--then agent] [--session fresh|isolated|chat] [--tz <zona>] [--quiet] [--keep]
+  [--message <prompt> | --text <pesan> | --command <shell> | --script <file> --about <kata-kata> | --mission <goal> | --steps <file.json>] \
+  [--then agent] [--session fresh|isolated|chat] [--tz <zona>] [--once] [--for <6h>] [--quiet] [--keep]
 ```
 
 | | |
@@ -39,10 +39,13 @@ nouride cron add --name <nama> \
 | `--message <prompt>` | bangunkan agent dengan ini. Satu giliran, dengan tool |
 | `--text <pesan>` | teks biasa, tanpa panggilan model, tanpa biaya |
 | `--command <shell>` | jalankan satu baris shell, tanpa panggilan model |
+| `--script <file> --about <kata-kata>` | jalankan skrip yang disimpan job itu (0.8.44): teks file-nya, dan satu baris tentang apa yang ia kerjakan. Tanpa panggilan model. `--run <program>` menyebut dijalankan dengan apa (`sh` kalau gak disebut, `python3`, `bun`), `--secrets <nama,nama>` secret milik agent yang diberikan kepadanya. [Apa yang ia baca dan cetak](/id/docs/manual/schedule/#skrip) |
 | `--then agent` | …lalu bangunkan agent dengan apa yang dicetaknya. Run yang tidak mencetak apa pun tidak membangunkan siapa pun dan tidak mengirim apa pun |
 | `--mission <goal>` | jalankan setiap kali sebagai mission; `--check <perintah>` untuk satu cek, `--no-review` tanpa reviewer |
 | `--steps <file.json>` | beberapa hal di atas dengan urutan tetap, dibaca dari file: [daftarnya, dalam JSON](/id/docs/manual/schedule/#dari-cli) |
 | `--session` | `fresh` (default, tanpa riwayat), `isolated` (thread-nya sendiri), `chat` (percakapan chat tujuan) |
+| `--once` | mengabari sekali, lalu mematikan dirinya (di dashboard sejak 0.8.35; di sini sejak 0.8.44) |
+| `--for <6h>` | berhenti sendiri setelah selama itu, dan mengabarkannya di tempat ia melapor (0.8.44). Untuk job dengan `--every` atau `--cron`, dan cukup panjang untuk memuat satu jalan |
 | `--quiet` | catat run-nya, gak mengirim apa pun, bahkan peringatan gagal |
 | `--keep` | simpan job sekali-jalan setelah menyala: dimatikan, dan tercatat sebagai `fired` |
 
@@ -53,6 +56,11 @@ maupun `--command` gak ada satu pun, job-nya mengirim namanya sendiri.
 `--command` dijalankan lewat `sh -lc`, karena operator yang mengetiknya bermaksud satu baris shell,
 bukan argv. Dari agent, job `--command` selalu minta izin dulu: ia jalan belakangan tanpa model dan
 tanpa gerbang.
+
+`--script` disimpan di job-nya: Nouride menulisnya ke sebuah file untuk tiap run, memberikan file itu ke programnya,
+lalu menghapusnya. Programnya dicek ke mesin saat job disimpan. Di daftar, job yang mematikan dirinya karena sudah
+mengabari (`--once`) atau karena waktunya habis (`--for`) ditulis `told` atau `ended`, dan gak ditampilkan sebagai
+kegagalan.
 
 ### Contoh
 
@@ -66,6 +74,12 @@ nouride cron add --name standup --cron "0 9 * * 1-5" --tz Asia/Jakarta \
 nouride cron add --name disk --every 6h \
   --gateway telegram:nouva --chat 123456789 --agent nox \
   --command "df -h /" --then agent
+
+# Sebuah pengawas: skrip berkala yang mengabari sekali, dan menyerah sendiri setelah enam jam.
+nouride cron add --name backup-watch --every 30m \
+  --gateway telegram:nouva --chat 123456789 --agent nouva \
+  --script check-backup.sh --about "Says once last night's backup is in place." \
+  --once --for 6h
 
 # Job yang mengingat run-nya sendiri, dan gak lebih.
 nouride cron add --name inbox --cron "0 8 * * *" \

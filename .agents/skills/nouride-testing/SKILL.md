@@ -54,9 +54,9 @@ write, say so in the change and do the manual check — do not leave it implied.
 
 - **Sabotage per fix**, not per release: `git stash` the fix or invert its condition, run the one test file, see it
   fail, restore. Note it in the commit body ("sabotage: …").
-- **The four ways a test passes for the wrong reason** — the guard never reached, the loop never going round twice,
-  the first branch shadowing the one under test, the property true anyway — are in `nouride-contributing`. Check
-  each new test against them.
+- **The five ways a test passes for the wrong reason** — the guard never reached, the loop never going round twice,
+  the first branch shadowing the one under test, the property true anyway, the fixture holding what the path that
+  runs never writes — are in `nouride-contributing`. Check each new test against them.
 - **A mutation sweep** for a whole area whose tests were never reviewed one by one: mutate each decision (flip a
   condition, drop a statement, change a boundary), run the area's tests, and every mutant that survives is a missing
   test. The root helper (`packages/isolation/root`) has its sweep written down: `bun run mutate:helper` after any

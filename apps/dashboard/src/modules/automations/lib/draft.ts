@@ -57,7 +57,8 @@ function stepOfOne(payload: AutomationSummary["payload"]): Step {
     case "agentTurn":
       return { id: ONE, kind: "agentTurn", message: one.message ?? "", ...(one.model ? { model: one.model } : {}) };
     case "command":
-      return { id: ONE, kind: "command", argv: Array.isArray(one.argv) ? one.argv.map(String) : [], ...(one.cwd ? { cwd: one.cwd } : {}), ...(typeof one.timeoutMs === "number" ? { timeoutMs: one.timeoutMs } : {}) };
+      // A script it keeps goes with it: a page that dropped it would save a job that runs its program on nothing.
+      return { id: ONE, kind: "command", argv: Array.isArray(one.argv) ? one.argv.map(String) : [], ...(one.script ? { script: one.script } : {}), ...(one.cwd ? { cwd: one.cwd } : {}), ...(typeof one.timeoutMs === "number" ? { timeoutMs: one.timeoutMs } : {}) };
     case "mission":
       return { id: ONE, kind: "mission", goal: one.goal ?? "", ...(one.checks?.length ? { checks: one.checks } : {}), ...(one.review !== undefined ? { review: one.review } : {}) };
   }
@@ -134,7 +135,7 @@ export function payloadOf(draft: Pick<Draft, "steps" | "then" | "list">): JobPay
     case "agentTurn":
       return { kind: "agentTurn", message: step.message.trim(), ...(step.model ? { model: step.model } : {}) };
     case "command":
-      return { kind: "command", argv: step.argv, ...(step.cwd ? { cwd: step.cwd } : {}), ...(step.timeoutMs !== undefined ? { timeoutMs: step.timeoutMs } : {}), then: draft.then };
+      return { kind: "command", argv: step.argv, ...(step.script ? { script: step.script } : {}), ...(step.cwd ? { cwd: step.cwd } : {}), ...(step.timeoutMs !== undefined ? { timeoutMs: step.timeoutMs } : {}), then: draft.then };
     case "mission":
       return { kind: "mission", goal: step.goal.trim(), ...(step.checks?.length ? { checks: step.checks } : {}), ...(step.review !== undefined ? { review: step.review } : {}) };
     case "approval":
@@ -151,11 +152,34 @@ const hasMission = (draft: Pick<Draft, "steps">): boolean => draft.steps.some((s
  * And one that tells nobody is not sent as turning itself off once it has told: it never would, and the server refuses
  * the two together. The draft keeps the mark, so telling switched back on finds it as it was left.
  */
-export function deliveryOf(draft: Pick<Draft, "steps" | "delivery">): Delivery {
-  const delivery: Delivery = hasMission(draft) && draft.delivery.mode !== "announce" ? { ...draft.delivery, mode: "announce" } : draft.delivery;
+export function deliveryOf(draft: Pick<Draft, "steps" | "delivery"> & Partial<Pick<Draft, "start" | "trigger">>): Delivery {
+  const told: Delivery = hasMission(draft) && draft.delivery.mode !== "announce" ? { ...draft.delivery, mode: "announce" } : draft.delivery;
+  const delivery = onAClock(draft) ? told : notLasting(told);
   if (delivery.mode !== "none" || !delivery.once) return delivery;
   const { once: _once, ...tellsNobody } = delivery;
   return tellsNobody;
+}
+
+/**
+ * Whether it runs again and again at a time, which is the only thing that can last a set time: one that starts once,
+ * by hand or when its address is called has no clock to stop on, and the server refuses a length for it. Unknown where
+ * the caller did not say how it starts: left as it is.
+ */
+export function onAClock(draft: Partial<Pick<Draft, "start" | "trigger">>): boolean {
+  if (draft.start === undefined) return true;
+  return draft.start === "scheduled" && draft.trigger?.mode !== "once";
+}
+
+/** A delivery with no length to last: what one that is not on a clock is saved with. The draft keeps it, for a start put back. */
+function notLasting(delivery: Delivery): Delivery {
+  const { lasts: _lasts, endsAt: _endsAt, ...rest } = delivery;
+  return rest;
+}
+
+/** A delivery set to last a length of time, or with none. The moment it ends is the server's to write, and is left out. */
+export function withLasts(delivery: Delivery, lasts: number | undefined): Delivery {
+  const rest = notLasting(delivery);
+  return lasts === undefined ? rest : { ...rest, lasts };
 }
 
 /**
@@ -212,6 +236,9 @@ export function createBody(draft: Draft): JobInput | WebhookInput {
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
+/** A delivery's fields in one order: the same marks set in another order are the same delivery, and not a change to save. */
+const ordered = (delivery: Delivery): [string, unknown][] => Object.entries(delivery).sort(([a], [b]) => a.localeCompare(b));
+
 /** What a save sends for an automation that exists: each part that differs from what was loaded, and no other. */
 export function patchBody(was: Draft, now: Draft): JobPatch {
   const patch: JobPatch = {};
@@ -219,7 +246,7 @@ export function patchBody(was: Draft, now: Draft): JobPatch {
   if (!same(payloadOf(now), payloadOf(was))) patch.payload = payloadOf(now);
   if (now.start !== "webhook" && !same(startBody(now), startBody(was))) Object.assign(patch, startBody(now));
   if (now.gatewayId !== was.gatewayId || now.chatId.trim() !== was.chatId) patch.target = { gatewayId: now.gatewayId, chatId: now.chatId.trim() };
-  if (!same(deliveryOf(now), was.delivery)) patch.delivery = deliveryOf(now);
+  if (!same(ordered(deliveryOf(now)), ordered(was.delivery))) patch.delivery = deliveryOf(now);
   if (sessionOf(now) !== was.session) patch.session = sessionOf(now);
   return patch;
 }

@@ -36,7 +36,10 @@ An operator or a viewer never sees anyone else's otherwise: not in the list, and
 the automation were not there. An admin picks whose in the dropdown beside the search: **Mine** (where it starts),
 **Everyone**, which sets the list apart by person, one person (type part of their name), or **Nobody's**. Nobody's are
 the ones made from the command line and the ones from before 0.8.35 whose maker Nouride could not tell. On an
-automation's own page an admin hands it to a person, or to nobody.
+automation's own page an admin hands it to a person, or to nobody: the menu at the head of the page, **Whose it is**.
+
+Your own is yours to hand to somebody else there too (0.8.44), never to nobody. You are asked first: it is then the
+other person's to change and no longer yours, and you still see it only if it reports to a chat of yours.
 
 A change an agent proposes to an automation that is already there is its owner's to turn on, or an admin's: seeing its
 card in a chat is not enough to rewrite somebody else's.
@@ -56,39 +59,88 @@ An automation does one thing, or several in a fixed order. Each one is a step:
 |---|---|---|
 | **Send a message** | sends text as written to the automation's chat | no |
 | **Ask an agent** | one turn of the automation's agent, or of another agent you pick | yes, one turn |
-| **Run a command** | runs a shell line in the agent's workspace | no |
+| **Run a script** | runs a small program in the agent's workspace: [a script](#a-script) the automation keeps, or one line | no |
 | **Start a mission** | long work that is checked; the run waits for it | yes, as a [mission](/en/docs/manual/missions/) does |
 | **Wait for your OK** | asks a person, and goes on when they say so | no |
-| **Several at the same time** | starts two to five agents' turns or commands together, and joins what each said | yes, one turn for each agent in it |
+| **Several at the same time** | starts two to five agents' turns or scripts together, and joins what each said | yes, one turn for each agent in it |
 
 Nouride runs the steps in that order, every time. Each step is handed what the one before it said, and an agent does
 only the step it is given: it does not skip ahead, reorder the list or decide what comes next. That is the
 difference from a [mission](/en/docs/manual/missions/), where the agent plans the work itself. The words of the last
 step are what the automation sends to its chat.
 
-On the automation's page the steps are cards in the order they run. Press a card to change it, press the plus
-between two cards to add a step, and drag a card to move it. Nothing changes until you press **Save**.
+The automation's page draws it as a canvas (0.8.44): a box for how it starts, a box for each step in the order
+they run, and a box for where its results go. Press a box and its fields open beside the canvas on a wide window, or
+in the box itself on a narrower one and on a phone; with nothing pressed, the last runs are there. **Add a step** is under the last step,
+a plus shows on the line between two boxes, and a box is dragged to move it. Nothing changes until you press
+**Save**.
 
-![One automation's page: its start, its steps as cards with the paths between them, and its recent runs](/media/dashboard-automation-steps.png)
+![One automation's page: a box for how it starts, a box for each step with what happens if it fails, and its recent runs](/media/dashboard-automation-steps.png)
 
 ### Where a run goes next
 
-Each step can say where the run goes when it is done, when it failed, and when it had nothing to say: on to the next
-step, to the end, or to a later step. A run only ever goes forward, so it always ends.
+A step that is done goes on to the next one. What happens when it **fails** is asked on the step itself, with four
+answers (0.8.44):
 
-Left as they are, a step that is done goes on to the next one, a step that failed ends the run as failed and says so
-in the chat, and a step with nothing to say (a command that printed nothing, an agent with nothing to report) ends the
-run quietly. So a check that finds nothing wakes nobody.
+| If it fails | |
+|---|---|
+| **Stop and tell me** | the run ends as failed, and its chat is told why. What a step does unless you pick another |
+| **Go on anyway** | the run goes on to the next step, which is handed what the failed step had been given. An agent's step is also told what failed, and why |
+| **Ask me first** | you are asked, with why it failed. Yes goes on, no stops there |
+| **Do something else** | other steps run in its place. They are drawn beside the step (under it, set in, where there is no room beside), and end one of two ways: back into the steps below, or with a stop |
+
+"Go on anyway" and "Ask me first" are said in the step's own box, with the question and where each answer leads. A
+wait's **no** is asked the same way: stop there, go on anyway, or do something else.
+
+A step with **nothing to say** (a script that printed nothing, an agent with nothing to report) ends the run quietly,
+so a check that finds nothing wakes nobody. Under **More about this step** it can go on anyway, or do something else.
+
+A run only ever goes forward, so it always ends. An automation written at the command line or by an agent can hold a
+path the page has no drawing for, such as a jump from one step to a later one: it is shown as a small label under the
+step with a line to where it lands, and stays as it is until you pick another answer.
 
 A shop check, for example:
 
-1. **Run a command**: `curl -sf https://shop.example.com/health`. Once done: end here. If it fails: go on.
-2. **Ask an agent**: "The shop is down: find out why."
-3. **Wait for your OK**: "Restart the shop?"
-4. **Start a mission**: "Restart the shop and confirm it answers."
+1. **Run a script** that asks the shop whether it answers: it prints nothing while it does, and fails when it does
+   not. If it fails, **Do something else**:
+   - **Ask an agent**: "The shop is down: find out why."
+   - **Wait for your OK**: "Restart the shop?"
+   - **Start a mission**: "Restart the shop and confirm it answers."
 
 While the shop answers, the run ends at step 1 and no model is called. When it does not, the agent looks into it,
 you are asked, and only with your yes is anything restarted.
+
+### A script
+
+**Run a script** runs a small program with no model (0.8.44): a few lines of shell, Python or JavaScript that fetch a
+page, compare a number, call a service or put something in another shape, the same way every run. The automation
+keeps the script itself. So what runs is what you read before you turned it on, and a change to it is a change to the
+automation like any other: one an agent suggests waits as **Suggested**, with the script's text to read as it runs now
+and as it would be.
+
+- It **reads** what the step before said (for a first step, what a webhook was sent), and what it **prints** goes to
+  the next step.
+- Printing nothing is "nothing to say". Ending with an error is a failure, with what it wrote as the reason. So a
+  check that has nothing to report yet ends without an error: in a shell script, `if [ -f done ]; then cat done; fi`,
+  not `test -f done && cat done`, which ends in an error for as long as the file is not there.
+- It runs in the agent's workspace, as that agent's commands do, with no model and without asking first. It is handed
+  the saved keys you name on it, among those that agent's commands may already use; the script reads each by its name
+  in capitals, `notes_key` as `NOTES_KEY`.
+- What it is written in is checked when you save: a program that is not on the machine is said then, not at 07:00.
+
+On the page a script is read in words first: what it does, who wrote it, what it is written in and how long it is,
+and the keys it uses. **Show the script** opens its text, to read or to change. **Try it** runs it once on what the
+step before said in the last run, or on what you type, and shows what it printed, for up to a minute. That is a real
+run: a script that sends or saves something does so. The button beside them asks the orchestrator to write the script
+or change it, with the step and the automation named in the request.
+
+You do not have to write one. Ask an agent for the automation, and where the work is the same every run it writes the
+script, tries it, and [proposes](#asked-of-an-agent) it: the card says what the script does, what runs it, how long
+it is and the keys it is handed, and shows its text. The page of one that is not turned on yet shows the same, under
+**Show the script**.
+
+An automation from before 0.8.44 holds a one-line command where a script would be. It runs as it always did, and is
+not handed what the step before said. Its step offers **Write it as a script instead**.
 
 ### Several at the same time
 
@@ -170,10 +222,15 @@ nouride cron add --name "morning-brief" \
 | `--message <prompt>` | wake the agent with this |
 | `--text <message>` | deliver plain text instead. No model call, no cost |
 | `--command <shell>` | run a command. No model call |
+| `--script <file> --about <words>` | run [a script](#a-script) the automation keeps: the file's text, and a line of what it does. No model call |
+| `--run <program>` | …what runs it: `sh` unless said, `python3`, `bun` |
+| `--secrets <name,name>` | …the agent's secrets it is handed, by name |
 | `--then agent` | …and wake the agent with what it printed, when it printed something |
 | `--mission <goal>` | run each time as a mission. With `--check <command>` for one check, `--no-review` for no reviewer; more checks from the dashboard |
 | `--steps <file.json>` | several of these in a fixed order: the list, as JSON (below) |
 | `--session <fresh\|isolated\|chat>` | what history the turn sees |
+| `--once` | tell once, then turn itself off ([Watching something](#watching-something)) |
+| `--for <6h>` | stop by itself after that long, and say so where it reports |
 | `--quiet` | deliver nothing, failures included; the result stays in `nouride cron runs` |
 | `--keep` | keep a one-shot after it fires: switched off, and listed as `fired` |
 
@@ -203,6 +260,13 @@ The other kinds are `systemEvent` (a message, with `text`) and `parallel` (sever
 `agentId` for another agent, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run,
 naming it.
 
+A `command` step that keeps a script (0.8.44) names the program alone in `argv` and holds the text beside it:
+
+```json
+{ "name": "Save it", "kind": "command", "argv": ["python3"],
+  "script": { "about": "Saves the summary as today's page.", "text": "import sys\nprint(len(sys.stdin.read()))\n", "secrets": ["notes_key"] } }
+```
+
 ```json
 { "kind": "parallel", "whenFailed": "next", "steps": [
   { "name": "News", "kind": "agentTurn", "message": "Read today's news and say what matters.", "agentId": "nix" },
@@ -222,6 +286,10 @@ one: the agent reads the output and reports on it, which is the difference betwe
 usage" and "the disk is filling up, here is what is eating it". A run that prints nothing sends nothing,
 and with `--then agent` wakes nobody: a check that prints only when something is wrong costs nothing
 while all is well. A command that fails still says so in the chat.
+
+**`--script`** is a command of more than a line, kept in the automation (0.8.44): `nouride cron add --name
+"backup-watch" --every 30m --script check.sh --about "Says once the backup is done." --once --for 6h …`. It costs what
+a command costs, nothing. See [A script](#a-script) for what it reads and prints.
 
 **`--message`** wakes the agent with a prompt. One turn, with tools, at the usual cost.
 
@@ -257,6 +325,12 @@ Results: here
 It stays off until somebody turns it on.          [Turn on] [Discard]
 ```
 
+Where the work is the same every run (fetch a page, compare a number, call a service) the agent writes it as
+[a script](#a-script), tries it once, and proposes that (0.8.44): no model is called when it runs. The card says what
+the script does, what runs it, how long it is and the keys it is handed, and shows its text; one too long for a
+message says so, and is read on the automation's page before you turn it on. Work that needs reading, judging or
+writing stays an agent's turn.
+
 Nothing runs until someone answers. **Turn on** starts the schedule, and its missions run as the
 person who pressed it. **Discard** throws the proposal away. In a one-to-one chat the person in it
 answers; in a group, the person who asked or an admin. Where a chat has no buttons, as on WhatsApp,
@@ -283,7 +357,8 @@ allowed always does not carry over to its new shape: it asks again.
 ## Watching something
 
 "Tell me when the disk is nearly full" is a check on a clock. Left as it is, it tells you every time it runs, for as
-long as the disk stays full, and at three in the morning. Three marks make it a watch (0.8.35).
+long as the disk stays full, and at three in the morning. Three marks make it a watch (0.8.35), and a fourth ends one
+whose moment never comes (0.8.44).
 
 **A step that goes on only when something changed.** Mark a step (a command, an agent's turn or a mission) with
 **Go on only when this changes**. What it said is compared with what it said the last time the automation ran to its
@@ -303,8 +378,15 @@ on again to be told once more. A run you start by hand does not count: you are t
 is done" is this mark, on a check marked to go on only when it changes. A mission's own word to its chat counts as
 telling, so an automation with a mission in it turns off after the first run that reaches the mission.
 
+**An automation that stops by itself.** A watch for something that never happens would check for good. **Stop by
+itself after** (0.8.44), where it says where it reports, gives it a length of time: an hour, six hours, a day, a week
+or thirty days, counted from when it is turned on. When the time is up it turns itself off and says so in its chat,
+with that what it watched for did not happen, and its page says it too. Turn it on again to give it that time again.
+Only an automation that runs again and again on a clock can have one, and it must be long enough for a run to fit.
+
 **Ask an agent for one.** "Kabari aku kalau disk lewat 90%" in a chat: the agent proposes a check on a clock with
-these marks, its card says them in words, and you turn it on.
+these marks, as a script where it can be one, its card says them in words, and you turn it on. A watch an agent
+proposes to tell once always says how long it lasts, so none is left checking for good.
 
 ### Quiet hours
 

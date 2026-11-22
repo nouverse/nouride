@@ -188,12 +188,48 @@ describe("the CI path filters", () => {
     expect(read(".github/workflows/ci.yml")).not.toMatch(/paths(-ignore)?:/);
   });
 
-  test("the site's deploy watches both installers it publishes", () => {
-    const workflow = read(".github/workflows/deploy-site.yml");
+});
+
+describe("the site's deploy", () => {
+  const workflow = read(".github/workflows/deploy-site.yml");
+  /** A step of the workflow by its name: its own lines, up to the next step. */
+  const step = (name: string) => workflow.slice(workflow.indexOf(`      - name: ${name}\n`)).split(/\n {6}- /)[0]!;
+
+  test("starts at a release's tag or by hand, never at a push to a branch: a merge to main is not a release yet", () => {
+    const on = workflow.slice(workflow.indexOf("\non:\n"), workflow.indexOf("\nconcurrency:"));
+    // The same tags a release is built from.
+    expect(on).toContain('\n  push:\n    tags: ["v*"]\n');
+    expect(read(".github/workflows/release.yml")).toContain('\n  push:\n    tags: ["v*"]\n');
+    expect(on).toContain("\n  workflow_dispatch:\n");
+    expect(on.replace(/^#.*$/gm, "")).not.toMatch(/branches|paths|pull_request|schedule|workflow_run/);
+  });
+
+  test("builds the tag's own tree, which holds both installers it publishes", () => {
+    // No ref of its own: what is checked out is what was tagged, not main as it is that minute.
+    expect(step("Checkout")).not.toContain("ref:");
     const sync = read("apps/site/scripts/sync-installer.ts");
-    const published = [...sync.matchAll(/join\(ROOT, "([^"]+)"\)/g)].map((match) => match[1]!);
-    expect(published).toEqual(["scripts/install.sh", "scripts/install-bundle-router.sh"]);
-    for (const path of published) expect(covered(path, pathsOf(workflow, "push"))).toBe(true);
+    expect([...sync.matchAll(/join\(ROOT, "([^"]+)"\)/g)].map((match) => match[1]!)).toEqual(["scripts/install.sh", "scripts/install-bundle-router.sh"]);
+    expect(step("Build Site")).toContain("run: bun run build:site");
+    // The site's own build publishes them before it builds the pages.
+    const scripts = JSON.parse(read("apps/site/package.json")).scripts as Record<string, string>;
+    expect(scripts.build).toStartWith("bun run sync && ");
+    expect(scripts.sync).toContain("sync-installer.ts");
+  });
+
+  test("only a tag main holds deploys it: a long-term line's patch leaves the site as the newest release's", () => {
+    const line = step("Is this the newest line's release?");
+    expect(line).toContain("id: line");
+    expect(line).toContain('gh api "repos/${GITHUB_REPOSITORY}/compare/${GITHUB_SHA}...main" --jq .status');
+    expect(line).toContain('ahead | identical) echo "deploys=yes"');
+    expect(line).toContain('echo "deploys=no"');
+    // Run by hand it is not a tag, and deploys what it was run on.
+    expect(line).toContain('if [ "$GITHUB_REF_TYPE" != "tag" ]; then echo "deploys=yes"');
+    // Everything after the question waits for its answer; nothing before it builds or sends anything.
+    const names = [...workflow.matchAll(/^ {6}- name: (.+)$/gm)].map((match) => match[1]!);
+    const asked = names.indexOf("Is this the newest line's release?");
+    expect(names.slice(0, asked)).toEqual(["Checkout", "Start without the last job's submodules"]);
+    expect(names.slice(asked + 1)).toEqual(["Setup Bun", "Install Dependencies", "Build Site", "Deploy to Cloudflare Pages"]);
+    for (const name of names.slice(asked + 1)) expect({ name, waits: step(name).includes("        if: steps.line.outputs.deploys == 'yes'\n") }).toEqual({ name, waits: true });
   });
 });
 
