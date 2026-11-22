@@ -10,7 +10,7 @@ import { describe, expect, test } from "bun:test";
 import { answer, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { waitingSaid } from "@/modules/agents/components/gateway-waiting";
-import { markRestartPending } from "@/commons/lib/restart";
+import { markRestartPending, restartPending } from "@/commons/lib/restart";
 
 useMountHarness();
 
@@ -57,10 +57,14 @@ describe("an agent's connections", () => {
   });
 
   test("one that is connected says nothing of a wait", async () => {
+    // The strip the test before put up is gone: what one test saved waits for a restart in no other. Left there, it
+    // was above the mission's page in the next file on the private runner, which read it as the mission's own word.
+    expect(restartPending()).toEqual([]);
     answer({ "/gateways": { status: 200, body: connections({ status: "connected" }) } });
     await renderPage("/agents/nouva/gateways", async (host) => {
       await eventually(() => card(host)?.textContent?.includes("telegram:nouva") === true, 3_000, "the card");
       expect(card(host)?.querySelector('[role="status"]')).toBeNull();
+      expect(host.textContent).not.toContain("takes effect after a restart");
       expect(host.textContent).not.toContain("Connects in");
       expect(host.textContent).not.toContain("Not connected yet");
     });

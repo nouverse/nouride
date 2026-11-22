@@ -66,6 +66,9 @@ export const TEST_ONLY_EXPORTS: Readonly<Record<string, Readonly<Record<string, 
   "apps/cli/src/commands/access.ts": {
     ACCESS_CHANGES: "the verbs that change somebody's standing; own-cli-verbs.test.ts holds @nouride/policy's copy to it",
   },
+  "apps/dashboard/src/commons/lib/restart.ts": {
+    forgetRestartPending: "the saves that wait for a restart are module state; the mount harness clears them after each test",
+  },
   "apps/engine/src/db/keys.ts": {
     ON_CONVERSATION_DELETE: "what deleting a conversation does to each table that keys on one; key-columns.test.ts holds the schema to it",
   },

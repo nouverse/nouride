@@ -436,11 +436,14 @@ export function useMountHarness(): void {
     await asABrowser();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     console.error = realError;
     errors = [];
     answer({});
     painted = [];
+    // What a test saved does not wait for a restart in the next one, in this file or another. Imported here, as the
+    // pages are: the dashboard's modules are loaded once the browser's globals are in place.
+    (await import("@/commons/lib/restart")).forgetRestartPending();
   });
 
   afterAll(async () => {
