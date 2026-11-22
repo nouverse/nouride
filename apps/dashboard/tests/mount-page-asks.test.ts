@@ -66,6 +66,13 @@ describe("Ask Nouva on each page", () => {
     expect(KEYS.filter((key) => pagesAsking(key).length === 0)).toEqual([]);
   });
 
+  // The owner looked for a way to have a skill written and did not read "to find a skill" as one.
+  test("the Skills page asks for a skill to be written, in those words", () => {
+    expect(PAGE_ASKS.skills.task).toBe("to create a skill");
+    expect(PAGE_ASKS.skills.message.startsWith("Write a skill so my agents can …")).toBe(true);
+    expect(pagesAsking("skills")).toContain("/skills");
+  });
+
   for (const key of KEYS) {
     for (const path of pagesAsking(key)) {
       test(`${path}: opens the chat over the page, with the orchestrator and the page's request in the box, nothing sent`, async () => {

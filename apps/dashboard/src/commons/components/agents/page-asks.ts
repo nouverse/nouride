@@ -14,7 +14,8 @@ export interface PageAsk {
 
 export const PAGE_ASKS = {
   agents: { task: "to create an agent", message: "I'd like a new agent. What it should do: … Which chat app it should answer on: … Please set it up for me." },
-  skills: { task: "to find a skill", message: "Find a skill, or write one, so my agents can … Show me what you found before you add it." },
+  // To create, not to find: the page has its own search (Explore), and "find a skill" was not read as the way to have one written.
+  skills: { task: "to create a skill", message: "Write a skill so my agents can … Use what you learned from our work on it, or bring one in if a good one exists. Show me before you add it." },
   connectors: { task: "to connect a service", message: "Connect my agents to … so they can … Tell me what you need from me." },
   automations: { task: "to make an automation", message: "Make an automation for me: when …, do … and send me the result here. Or change one I have: …" },
   missions: { task: "to draft a mission", message: "Draft a mission: … I will start it once it looks right." },
