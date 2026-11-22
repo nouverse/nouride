@@ -392,7 +392,8 @@ describe("a helper in the foreground", () => {
       say(d.gateway, "/backgrounds", "m2");
       await eventually(() => replies(d.gateway).some((text) => text?.startsWith("**Running in the background for Nouva** (1)")), 4_000, "the list");
       const lines = replies(d.gateway).find((text) => text?.startsWith("**Running in the background for Nouva** (1)"))!.split("\n");
-      expect(lines[2]).toMatch(/^\*\*1\. A command\*\* · \d+s · (last output \d+s ago|no output yet)$/);
+      // `sleep` prints nothing: its log is empty, made when it started, and that is not an output.
+      expect(lines[2]).toMatch(/^\*\*1\. A command\*\* · \d+s · no output yet$/);
       expect(lines.slice(3, 5)).toEqual(["`sleep 30`", `\`${job.id}\``]);
       // The daemon answers both: no model is asked.
       expect(d.asked.length).toBe(0);

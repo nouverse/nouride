@@ -122,7 +122,8 @@ function workingFor(jobs: Pick<JobsPort, "running" | "getSnapshot">, agentId: st
       chatId: job.chatId,
       senderId: job.senderId,
       startedAt: job.startedAt,
-      lastWroteAt: snapshot?.logUpdatedAt ?? null,
+      // A log with nothing in it was made when the job started: its time is the start's, not an output's.
+      lastWroteAt: snapshot && snapshot.logBytes > 0 ? snapshot.logUpdatedAt : null,
     };
   });
 }

@@ -61,6 +61,14 @@ describe("what /helpers says", () => {
     expect(text).not.toContain("/stop");
   });
 
+  test("a log written only as it started is no step: one just begun does not say its last step was when it began", () => {
+    // The log opens with what it was given, at the start.
+    expect(said("helpers", [one({ startedAt: NOW - 13_000, lastWroteAt: NOW - 13_000 + 400 })])).toContain("**1. A helper** · 13s · no step yet\n");
+    expect(said("helpers", [one({ startedAt: NOW - 13_000, lastWroteAt: NOW - 5_000 })])).toContain("**1. A helper** · 13s · last step 5s ago\n");
+    // A command's log holds only what it printed: a write is output, however soon.
+    expect(said("commands", [command({ lastWroteAt: NOW - 19_000 })])).toContain("**1. A command** · 20s · last output 19s ago\n");
+  });
+
   test("a long brief is cut, not the entry dropped", () => {
     const lines = said("helpers", [one({ what: "word ".repeat(200) })]).split("\n");
     expect(lines[3]!.length).toBeLessThan(170);

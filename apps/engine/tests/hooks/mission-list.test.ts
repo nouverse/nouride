@@ -75,8 +75,8 @@ describe("what /mission lists", () => {
 
   test("nothing open says so, with how the command is used", () => {
     const text = missionsSaid([], isHere);
-    expect(text.split("\n").slice(0, 2)).toEqual(["No mission is in the backlog, at work or waiting here.", ""]);
-    expect(text).toContain("/mission <goal>");
+    // How one is asked for, and no more of the usage: there is no mission to stop, pause or answer.
+    expect(text.split("\n")).toEqual(["No mission is in the backlog, at work or waiting here.", "", expect.stringMatching(/^\/mission <goal>: this agent drafts one/)]);
   });
 });
 

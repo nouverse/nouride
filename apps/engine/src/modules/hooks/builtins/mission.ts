@@ -113,7 +113,8 @@ function listed(missions: MissionCommands, ctx: HookContext): Mission[] {
  * words a person knows it by, then its id and where it stands. `roomy` adds whose it is: a room holds several agents'.
  */
 export function missionsSaid(open: readonly Mission[], isHere: (mission: Mission) => boolean, roomy = false): string {
-  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n\n${USAGE}`;
+  // How one is asked for, and no more: the whole usage under an empty list was six long lines about missions there are none of.
+  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n\n${USAGE.split("\n")[0]}`;
   const stages: string[] = [];
   for (const stage of STAGES) {
     const inIt = open.filter((mission) => stageOf(mission) === stage.id).sort((a, b) => b.createdAt - a.createdAt);

@@ -44,6 +44,11 @@ export interface WorkingInBackground {
 type Which = "helpers" | "commands";
 
 const SHOWN = 160;
+/**
+ * A helper's and an asked agent's log opens with what it was given, written as it starts: a write that close to the
+ * start is that, and no step. Said as a step, one just started read "13s · last step 13s ago".
+ */
+const OPENING_MS = 2_000;
 
 /** One line of whatever it was given, short enough to read on a phone. */
 const brief = (text: string): string => clipTrimmed(oneLine(text), SHOWN);
@@ -88,7 +93,8 @@ export function backgroundSaid(input: {
     const who = one.kind === "ask" && one.asked ? `**${index + 1}. ${input.nameOf(one.asked)}**, asked` : `**${index + 1}. ${isCommand(one) ? (one.service ? "A server" : "A command") : "A helper"}**`;
     // A command writes its log as it prints; a helper and an asked agent, a line at each step.
     const made = isCommand(one) ? "output" : "step";
-    const last = one.lastWroteAt === null ? `no ${made} yet` : `last ${made} ${ago(one.lastWroteAt)} ago`;
+    const wrote = one.lastWroteAt !== null && (isCommand(one) || one.lastWroteAt - one.startedAt > OPENING_MS);
+    const last = wrote ? `last ${made} ${ago(one.lastWroteAt!)} ago` : `no ${made} yet`;
     const where = input.here(one) ? "" : " · started in another chat";
     // A command's own line is shown as code, with nothing in it that would end the code early.
     const what = isCommand(one) ? `\`${brief(one.what).replace(/`/g, "'")}\`` : brief(one.what);
