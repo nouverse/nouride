@@ -312,7 +312,7 @@ describe("an agent proposes a list", () => {
     });
     const card = proposalCard(posted[0]!, "cron 0 9 * * 1", { buttons: true });
     expect(card).toContain("Does: in order, each handed what the one before said:");
-    expect(card).toContain("1. runs `sh -lc curl -sf https://shop.example.com/health` on this machine, with no model Once done, the run ends there. If it fails, the run goes to step 2. With nothing to say, the run ends there.");
+    expect(card).toContain("1. runs `sh -lc curl -sf https://shop.example.com/health` on this machine, with no model. Once done, the run ends there. If it fails, the run goes to step 2. With nothing to say, the run ends there.");
     expect(card).toContain('2. nix works on: "The shop is down: find out why." With nothing to say, the run goes to step 4.');
     expect(card).toContain('3. waits for a person\'s yes to: "Restart the shop?" On a no, or no answer, the run ends.');
     expect(card).toContain('4. a mission for nix: "Restart the shop.", then a reviewer agrees');

@@ -97,7 +97,7 @@ describe("proposing one that watches", () => {
   test("its card says both, in words a person reads", async () => {
     await propose({ ...watch, only_changed: true, once: true, for: "6h" });
     const card = asked[0]!.text;
-    expect(card).toContain("1. runs `sh -lc df -h / | awk 'NR==2 {print $5}'` on this machine, with no model. It goes on only when this differs from the last run. With nothing to say, the run ends there.");
+    expect(card).toContain("Does: runs `sh -lc df -h / | awk 'NR==2 {print $5}'` on this machine, with no model. It goes on only when this differs from the last run. With nothing to say, the run ends there.");
     expect(card).toContain("Tells once: after the first run that tells you something, it turns itself off.");
     expect(card).toContain("Lasts: 6 hours from when it is turned on. Then it turns itself off and says so, if it has told nothing by then.");
     // One that does neither says neither.

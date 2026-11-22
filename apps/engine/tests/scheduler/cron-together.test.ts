@@ -331,7 +331,8 @@ describe("what steps at the same time must be", () => {
   test("a person asked to turn one on reads each of them, and what the run is weighed against names them", () => {
     const made = job(stepsFrom([{ kind: "parallel", steps: [a, { kind: "command", argv: ["gh", "issue", "list"] }] }, { kind: "agentTurn", message: "Sum up." }]));
     const card = proposalCard(made, "every morning", { buttons: false });
-    expect(card).toContain('1. at the same time, their words joined:\n   - nix works on: "A."\n   - runs `gh issue list` on this machine, with no model With nothing to say, the run ends there.');
+    // What holds for all of them is said on their heading, not after the last of them, where it read as that one's alone.
+    expect(card).toContain('1. at the same time, their words joined. With nothing to say, the run ends there.\n   - nix works on: "A."\n   - runs `gh issue list` on this machine, with no model\n2. nouva works on:');
     expect(jobGoal(made)).toBe('Scheduled job "morning": 1. at the same time: A.; report on the output of `gh issue list` 2. Sum up.');
   });
 });

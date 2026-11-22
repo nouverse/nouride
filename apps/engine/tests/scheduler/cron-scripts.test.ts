@@ -415,7 +415,24 @@ describe("a script on the card a person turns it on from", () => {
 
   test("says what it is said to do, what runs it, how long it is and what it is handed, then its text whole", () => {
     const shown = card('curl -s "$URL"\necho done', { secrets: ["notion_token"] });
-    expect(shown).toContain("1. Adds the summary to the notes page\n   a script run by `sh` on this machine, with no model: 2 lines, handed $NOTION_TOKEN\n```\ncurl -s \"$URL\"\necho done\n```");
+    // A list of one is said as the one thing it is: no "in order", no number.
+    expect(shown).toContain("Does: Adds the summary to the notes page. With nothing to say, the run ends there.\n   a script run by `sh` on this machine, with no model: 2 lines, handed $NOTION_TOKEN\n```\ncurl -s \"$URL\"\necho done\n```\nResults: here");
+    expect(shown).not.toContain("in order, each handed");
+  });
+
+  test("what is said of a script step stands before its text: nothing follows the end of its fence, where a chat app reads no sentence", () => {
+    const made = job(
+      [
+        script("check", "curl -sf https://shop.example.com/health", { about: "Asks the shop whether it answers.", onlyChanged: true, whenFailed: "next" } as never),
+        script("save", "cat > last.txt", { about: "Keeps what it was handed" }),
+        { id: "tell", kind: "systemEvent", text: "Done." },
+      ],
+      { createdBy: "agent:nouva", proposal: { by: "nouva", gatewayId: "telegram:main", chatId: "12345", for: "u1", at: 1 } },
+    );
+    const shown = proposalCard(made, "every minute", { buttons: true });
+    expect(shown).toContain("Does: in order, each handed what the one before said:\n1. Asks the shop whether it answers. It goes on only when this differs from the last run. If it fails, the run goes to step 2. With nothing to say, the run ends there.\n   a script run by `sh` on this machine, with no model: 1 line\n```\ncurl -sf https://shop.example.com/health\n```\n2. Keeps what it was handed. With nothing to say, the run ends there.\n   a script run by `sh` on this machine, with no model: 1 line\n```\ncat > last.txt\n```\n3. sends the text \"Done.\"");
+    // Every fence's end is a line of its own.
+    expect(shown.split("\n").filter((line) => line.includes("```") && line !== "```")).toEqual([]);
   });
 
   test("a text too long for a message is not shown in part", () => {
