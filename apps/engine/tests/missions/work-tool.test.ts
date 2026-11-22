@@ -76,6 +76,15 @@ describe("work: missions", () => {
     expect(tool.definition.description).toContain('"missions" lists them, your drafts in Backlog too');
   });
 
+  test("the tool's own words say what a person means by the backlog and by a task, and to look before answering", async () => {
+    // Asked "what is in your backlog", an agent answered from its notes and never called this: the words were nowhere.
+    const { tool } = await setup();
+    expect(tool.definition.description).toContain('A person\'s "backlog" is your drafts not started yet, and by a "task" or a "to-do" they often mean a mission:');
+    expect(tool.definition.description).toContain('asked what is in the backlog or how a task stands, look with "missions" before you answer.');
+    // A task of the chat at hand is not a mission: it says to look, never that every task is one.
+    expect(tool.definition.description).not.toMatch(/every task|always a mission/i);
+  });
+
   test("an old draft is listed behind any number of missions ended since, with the newest twenty of those", async () => {
     const { h, call } = await setup();
     const draft = await h.start("an idea kept for later", { startedBy: "nouride:system", byAgent: "nova", proposed: true });

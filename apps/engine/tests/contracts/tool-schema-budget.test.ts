@@ -170,7 +170,11 @@ const PER_TOOL = 3_550;
 // with their words joined. Unsaid, a model asked to have three agents each look at something writes three steps in a
 // row, each waiting for the one before, or a prompt that asks one agent to ask the others.
 // 50,900 for `mission`'s `title` (~170, measured at 50,899): the reason is at `PER_TOOL`.
-const TOTAL = 50_900;
+// 51,130 for the words a person has for a mission (~220, measured at 51,121): `work` says a person's "backlog" is the
+// drafts not started and a "task" is often a mission, so it looks before it answers, and `mission` says a draft waits
+// in the Backlog. Asked what was in its backlog, an agent answered from its notes and never looked at its missions;
+// asked to put something in the backlog, it wrote a note. Not in the harness: the words are read where the tool is.
+const TOTAL = 51_130;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -178,9 +182,9 @@ const TOTAL = 50_900;
  * 45,740: measured at 45,734 against 50,565 for the tools themselves, the three skill tools of this set (5,525) sent
  * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls. 45,900 with
  * `schedule`'s `together` (measured at 45,896 against 50,727). 46,070 with `mission`'s `title` (measured at 46,068
- * against 50,899).
+ * against 50,899). 46,300 with the words a person has for a mission (measured at 46,290 against 51,121).
  */
-const SENT = 46_070;
+const SENT = 46_300;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {
