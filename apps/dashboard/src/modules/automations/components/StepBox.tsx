@@ -84,7 +84,10 @@ export function StepBox({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span data-box-title className="min-w-0 text-[15px] leading-snug font-semibold text-base-content [overflow-wrap:anywhere]">
+          {/* A box that opens says its words whole in its fields, so here they are held to two lines: a script's
+              line of what it does is a sentence where an agent wrote it, and filled five. One that does not open (a
+              run, a proposal, somebody else's) has nowhere else to say them, and says them whole. */}
+          <span data-box-title className={cn("min-w-0 text-[15px] leading-snug font-semibold text-base-content [overflow-wrap:anywhere]", onPress && "line-clamp-2")}>
             {title}
           </span>
           {badge}

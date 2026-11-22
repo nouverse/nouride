@@ -610,7 +610,8 @@ export class CronScheduler {
          * with an empty output each time. Its run says so. A failure above is not an empty run, and is reported as before.
          */
         if (!output.trim()) {
-          return { status: "success", result: job.payload.then === "deliver" ? "exit 0, no output" : "exit 0, no output: the agent was not woken" };
+          // In a person's words: a watch's page lists one of these for every time it looked and saw nothing.
+          return { status: "success", result: job.payload.then === "deliver" ? "it printed nothing, so nothing was sent" : "it printed nothing, so the agent was not woken" };
         }
 
         if (job.payload.then === "deliver") {

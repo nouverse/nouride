@@ -666,9 +666,9 @@ describe("command payloads", () => {
 
         const outcome = await scheduler.runNow(job.id, "tester");
 
-        expect(outcome).toMatchObject({ status: "success", result: "exit 0, no output: the agent was not woken" });
+        expect(outcome).toMatchObject({ status: "success", result: "it printed nothing, so the agent was not woken" });
         expect(sent(h, webhooks)).toEqual({ delivered: 0, turns: 0, dispatched: 0, webhooks: 0 });
-        expect(store.runs(job.id)[0]).toMatchObject({ status: "success", result: "exit 0, no output: the agent was not woken" });
+        expect(store.runs(job.id)[0]).toMatchObject({ status: "success", result: "it printed nothing, so the agent was not woken" });
       }
     });
 
@@ -680,6 +680,13 @@ describe("command payloads", () => {
         expect((await scheduler.runNow(job.id, "tester")).status).toBe("success");
       }
       expect(sent(h, webhooks)).toEqual({ delivered: 0, turns: 0, dispatched: 0, webhooks: 0 });
+    });
+
+    test("its run says so in a person's words, which a watch's page lists for every time it looked and saw nothing", async () => {
+      const scheduler = new CronScheduler({ store, config: CONFIG, maxSleepMs: FAST, executors: executors().executors, now: () => clock });
+      const job = quiet("deliver");
+      expect(await scheduler.runNow(job.id, "tester")).toMatchObject({ status: "success", result: "it printed nothing, so nothing was sent" });
+      expect(store.runs(job.id)[0]?.result).toBe("it printed nothing, so nothing was sent");
     });
 
     test("a line on stderr is something printed: the agent is woken with it", async () => {

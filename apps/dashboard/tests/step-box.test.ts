@@ -35,6 +35,8 @@ test("a box at rest: its title and one line, its tile, and a state that rings it
     // A command as it is typed, on one line however long it is.
     expect(line.getAttribute("class")?.split(" ")).toEqual(expect.arrayContaining(["font-mono", "truncate"]));
     expect(root.querySelector("button")).toBeNull();
+    // And said whole, however long: it has no fields to say them in.
+    expect(root.querySelector("[data-box-title]")?.getAttribute("class")).not.toContain("line-clamp");
   } finally {
     box.done();
   }
@@ -50,6 +52,8 @@ test("a box that opens: its words are the button, named and saying whether it is
     const button = () => box.host.querySelector("button") as HTMLButtonElement;
     expect(button().getAttribute("aria-expanded")).toBe("false");
     expect(button().getAttribute("aria-label")).toBe("Edit step 1: Wait for your OK");
+    // A title that is a sentence is held to two lines where a press shows it whole.
+    expect(box.host.querySelector("[data-box-title]")?.getAttribute("class")).toContain("line-clamp-2");
     // A finger's height, whatever its words.
     expect(button().getAttribute("class")).toContain("min-h-16");
     button().click();

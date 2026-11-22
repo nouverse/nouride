@@ -123,7 +123,7 @@ describe("when a lasting job ends is the store's to write", () => {
     expect(made.nextRunAt).toBe(NOON + 10 * MINUTE);
     // Two runs in: the third would fall after its end, so it comes due at its end.
     clock = NOON + 20 * MINUTE;
-    store.settle(store.get(made.id)!, { status: "success", result: "exit 0, no output" });
+    store.settle(store.get(made.id)!, { status: "success", result: "it printed nothing, so nothing was sent" });
     expect(store.get(made.id)!.nextRunAt).toBe(NOON + 25 * MINUTE);
   });
 
