@@ -190,6 +190,11 @@ export class Missions implements TurnShaper {
     return this.deps.store.forChat(gatewayId, chatId);
   }
 
+  /** An agent's missions that have not ended, wherever each was started: its backlog, what is at work, what waits. */
+  openFor(agentId: string): Mission[] {
+    return this.deps.store.open().filter((mission) => mission.agentId === agentId);
+  }
+
   /** A mission by its id or a prefix of it that only it has — what a person types (`msn_3f2a91`). */
   find(idOrPrefix: string): Mission | null {
     const wanted = idOrPrefix.trim();

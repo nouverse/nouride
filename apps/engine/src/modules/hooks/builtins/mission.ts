@@ -1,7 +1,7 @@
 /**
  * `/mission` — a person's side of missions in the chat. `/mission <goal>` asks the agent addressed to draft one from
  * that goal, since every mission an agent starts is a draft first: a turn of its own that reads what it needs, writes
- * the brief and checks, or asks in the chat first when the goal is unclear; `/mission` lists what is running and waiting here, *needs you* first;
+ * the brief and checks, or asks in the chat first when the goal is unclear; `/mission` lists what has not ended, as the board has it: *Needs you*, Working, Backlog;
  * `/mission stop|pause|continue|accept <id>` and `/mission answer <id> <text>` act on one; `/mission tell <id> <words>` (0.8.10)
  * gives it words while it works. Most missions are started by the agent without a command — this is the explicit way, and
  * the way back in.
@@ -10,17 +10,18 @@
 import { clip } from "@nouride/shared";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { doneWhen, shortId } from "@/modules/missions/page.ts";
+import { isDraft } from "@/modules/missions/drafts.ts";
 import { isFinal, seenAs, type Mission } from "@/modules/missions/types.ts";
 import type { Hook, HookContext } from "../types.ts";
 
 /** What `/mission` reaches of the missions. */
-export type MissionCommands = Pick<Missions, "start" | "stop" | "pause" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "now" | "limitsLine" | "forStatus" | "load" | "running">;
+export type MissionCommands = Pick<Missions, "start" | "stop" | "pause" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "openFor" | "now" | "limitsLine" | "forStatus" | "load" | "running">;
 
 const VERBS = ["stop", "pause", "continue", "accept", "answer", "tell", "show"] as const;
 
 const USAGE =
   "/mission <goal>: this agent drafts one from your goal; it runs once you start it, and reports here.\n" +
-  "/mission: what is running and waiting here. /mission show <id>: one in full.\n" +
+  "/mission: what needs you, what is at work and the backlog. /mission show <id>: one in full, ended ones too.\n" +
   "/mission stop|continue|accept <id>, /mission answer <id> <answer>.\n" +
   "/mission pause <id>: stop its work for now and keep everything; /mission continue <id> goes on from its checklist, whenever you like.\n" +
   "/mission tell <id> <words>: tell it something while it works; it is read before its next step and followed, never a new goal.\n" +
@@ -63,6 +64,8 @@ function line(mission: Mission): string {
 }
 
 function state(mission: Mission): string {
+  // A draft waits for its start, not on anybody: "needs you (accept)" read as a result to accept.
+  if (isDraft(mission)) return "draft";
   if (mission.status === "waiting" && mission.waitKind === "paused") return "paused";
   // Held up for its model: it tries again by itself, and nothing is asked of anybody.
   if (mission.status === "waiting" && mission.waitKind === "retry") return "held up, tries again by itself";
@@ -75,14 +78,57 @@ function mayAct(ctx: HookContext, mission: Mission): boolean {
   return ctx.envelope.chatType === "dm" || mission.startedBy === ctx.senderId || ctx.deps.isAdmin?.(ctx.envelope) === true;
 }
 
+/** The board's three stages, in the order a chat reads them: what waits on a person first. */
+const STAGES = [
+  { id: "needs", title: "Needs you" },
+  { id: "working", title: "Working" },
+  { id: "backlog", title: "Backlog" },
+] as const;
+type Stage = (typeof STAGES)[number]["id"];
+
+/**
+ * The stage a mission that has not ended is in, as the dashboard's board has it: a draft is the backlog, whoever
+ * drafted it; one held up for its model tries again by itself and asks nothing of anybody, so it is at work.
+ */
+export function stageOf(mission: Pick<Mission, "status" | "waitKind" | "startedAt">): Stage {
+  if (isDraft(mission)) return "backlog";
+  if (mission.status === "waiting" && mission.waitKind !== "retry") return "needs";
+  return "working";
+}
+
+/**
+ * What `/mission` lists. In a room, the room's missions, as before. In a direct chat, the agent's own wherever each was
+ * started, for whoever may see them: the chat's and the ones this person started, and all of them for an admin. A
+ * mission's title can say what another chat asked for, so it is not shown to whoever writes to the agent.
+ */
+function listed(missions: MissionCommands, ctx: HookContext): Mission[] {
+  const here = missions.forChat(ctx.gatewayId, ctx.chatId).filter((mission) => !isFinal(mission.status));
+  if (ctx.envelope.chatType !== "dm") return here;
+  const admin = ctx.deps.isAdmin?.(ctx.envelope) === true;
+  const elsewhere = missions
+    .openFor(ctx.agent.config.id)
+    .filter((mission) => !here.some((one) => one.id === mission.id))
+    .filter((mission) => admin || (mission.gatewayId === ctx.gatewayId && mission.startedBy === ctx.senderId));
+  return [...here, ...elsewhere];
+}
+
+/** The list a chat reads: what has not ended, by stage, a stage with nothing in it left out. Ended ones are not listed. */
+export function missionsSaid(open: readonly Mission[], isHere: (mission: Mission) => boolean): string {
+  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n${USAGE}`;
+  const out: string[] = [];
+  for (const stage of STAGES) {
+    const inIt = open.filter((mission) => stageOf(mission) === stage.id).sort((a, b) => b.createdAt - a.createdAt);
+    if (inIt.length === 0) continue;
+    if (out.length > 0) out.push("");
+    // A draft started from here is started from here; the way is said once, under the stage's name.
+    const start = stage.id === "backlog" && inIt.some(isHere) ? ": /mission accept <id> starts one" : "";
+    out.push(`${stage.title} (${inIt.length})${start}`, ...inIt.map((mission) => `${line(mission)}${isHere(mission) ? "" : " · started in another chat"}`));
+  }
+  return out.join("\n");
+}
+
 function list(missions: MissionCommands, ctx: HookContext): string {
-  const here = missions.forChat(ctx.gatewayId, ctx.chatId);
-  if (here.length === 0) return `No missions here yet.\n${USAGE}`;
-  const order = { needs_you: 0, working: 1, done: 2, ended: 3 } as const;
-  const sorted = [...here].sort((a, b) => order[seenAs(a.status)] - order[seenAs(b.status)] || b.createdAt - a.createdAt);
-  const open = sorted.filter((mission) => !isFinal(mission.status));
-  const ended = sorted.filter((mission) => isFinal(mission.status)).slice(0, 5);
-  return [...open.map(line), ...(ended.length ? ["", "Ended:", ...ended.map(line)] : [])].join("\n");
+  return missionsSaid(listed(missions, ctx), (mission) => mission.gatewayId === ctx.gatewayId && mission.chatId === ctx.chatId);
 }
 
 /**
