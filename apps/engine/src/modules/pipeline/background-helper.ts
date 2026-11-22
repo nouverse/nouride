@@ -35,7 +35,7 @@ import type { JobRecord } from "@/modules/jobs/jobs.store.ts";
 import { helperAsking, logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
 import { helperView, moveToBackground } from "./background-move.ts";
 import { helperAgent, helperDeadline, helperExecutor, helperRunsOn, helperTurn, startSubagent } from "./subagent.ts";
-import { delegateNote, leadNudgeText, nudgeBaseMs, sinceSaid, watchTurn } from "./budget-nudges.ts";
+import { DelegateSteps, delegateNote, leadHears, leadNudgeText, nudgeBaseMs, watchTurn } from "./budget-nudges.ts";
 import type { TurnContext } from "./turn-context.ts";
 import { beginDelegated, type DelegatedEnd } from "./delegated-turn.ts";
 import { RoomWait } from "@/commons/room-wait.ts";
@@ -120,10 +120,14 @@ async function runBackgroundHelper(ctx: TurnContext, parent: LoadedAgent, reques
   const timer = setTimeout(() => controller.abort("deadline"), deadlineAt - startedAt);
   job.signal.addEventListener("abort", () => controller.abort(job.signal.reason), { once: true });
   // Run long, it is told to stop and report if stuck, and the parent hears how long it has run (`budget-nudges.ts`).
-  const nudges = watchTurn(nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes), delegateNote, (nudge) => {
-    job.log(`· ${sinceSaid(nudge.dueMs)} in: asked to report if stuck`);
-    ctx.nudgeLead?.(job.id, leadNudgeText({ who: "Your background helper", task: quotable(request.brief.goal), ms: nudge.dueMs, job: job.id }));
-  });
+  // Its lead only where it has gone quiet: one at work is left to it (`DelegateSteps`).
+  const baseMs = nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes);
+  const steps = new DelegateSteps(baseMs);
+  const nudges = watchTurn(baseMs, delegateNote, (nudge) =>
+    leadHears(steps, (line) => job.log(line), nudge.dueMs, () =>
+      ctx.nudgeLead?.(job.id, leadNudgeText({ who: "Your background helper", task: quotable(request.brief.goal), ms: nudge.dueMs, job: job.id })),
+    ),
+  );
 
   // A child of the parent's conversation, as a foreground helper's is: its spilled output lands where the parent opens it.
   const sessionId = childSessionId(request.ctx.sessionId, "sub");
@@ -141,6 +145,7 @@ async function runBackgroundHelper(ctx: TurnContext, parent: LoadedAgent, reques
   });
   const executor = helperExecutor(ctx, parent, request, {
     onActivity: (kind, text, detail) => {
+      steps.step(kind);
       const line = logLine(kind, text);
       if (line) job.log(line);
       record?.step(kind, text, detail);

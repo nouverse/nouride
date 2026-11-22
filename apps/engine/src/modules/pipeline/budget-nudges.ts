@@ -62,6 +62,45 @@ export function leadNudgeText(params: { who: string; task: string; ms: number; j
   ].join("\n");
 }
 
+/**
+ * Whether a delegate is at work: it made a step within the last `windowMs`. What decides if its lead is woken at a
+ * nudge (`leadHears`).
+ *
+ * The lead was woken at every point of the schedule, by the time alone. Over fourteen days on a live box 21 of 23
+ * such turns for a background helper ended with nothing said, at 3.3 million input tokens, and each that had looked
+ * anything up left a line of its steps in the person's chat. A delegate's steps all pass through the daemon, so that
+ * it is at work is known and not guessed: a step in the window, and its lead is left alone; none, and the lead hears,
+ * as before. Nothing is known of one that has made no step at all: its lead hears.
+ */
+export class DelegateSteps {
+  private lastAt: number | null = null;
+
+  constructor(
+    private readonly windowMs: number,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  /** A step of its work: a tool call begun or over. */
+  step(kind: string): void {
+    if (kind === "tool" || kind === "tool_done") this.lastAt = this.now();
+  }
+
+  /** Whether it made a step within the window: at work, where the window is the schedule's own first wait. */
+  get atWork(): boolean {
+    return this.lastAt !== null && this.now() - this.lastAt < this.windowMs;
+  }
+}
+
+/**
+ * A nudge for a delegate in the background: its job's log says it, and its lead is woken only where the delegate has
+ * gone quiet. `tell` is the lead's wake-up.
+ */
+export function leadHears(steps: DelegateSteps, log: (line: string) => void, ms: number, tell: () => void): void {
+  if (steps.atWork) return void log(`· ${sinceSaid(ms)} in: asked to report if stuck; at work, so its lead is not woken`);
+  log(`· ${sinceSaid(ms)} in: asked to report if stuck`);
+  tell();
+}
+
 /** A turn's pending note and its watch: the executor takes the note, the caller stops the watch when the turn ends. */
 export interface TurnNudges {
   take: () => string | null;

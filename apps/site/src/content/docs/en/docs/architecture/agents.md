@@ -494,8 +494,13 @@ of the time. Nothing is killed; `llm.limits.max_turn_duration_ms` stays the one 
 - **A helper, or an agent asked with `ask_agent`,** reads before its next step: it has been on this for N
   minutes, and if it is stuck, or it will take much longer, it should stop and report honestly: what is
   done, what is not, where it is stuck, what it would need.
-- **The agent waiting on one in the background** is told in your chat how long it has run and that it was
-  asked to report if stuck. It can wait, tell you, or stop it with `nouride jobs kill <id>`.
+- **The agent waiting on one in the background** is told how long it has run and that it was asked to
+  report if stuck, once the one it waits on has gone quiet: no step of its work in the last
+  `nudge_after_minutes`. It can wait, tell you, or stop it with `nouride jobs kill <id>`. One that is at
+  work wakes nobody (0.8.43): its steps pass through Nouride, so that is known, and its log says so. Before,
+  the agent was woken at every point of the schedule by the time alone, and nearly always had nothing to
+  say. A turn Nouride starts this way, or for a job's end, writes nothing in your chat unless the agent
+  speaks: no line of its steps either.
 - **A reply you are waiting on** is asked for a one-line status, and to say so and stop if it is stuck.
 
 ## Running agents

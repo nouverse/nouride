@@ -517,9 +517,14 @@ keras. `0` mematikannya.
 - **Helper, atau agent yang dimintai lewat `ask_agent`,** membaca sebelum langkah berikutnya: sudah N menit
   ia mengerjakan ini, dan kalau buntu atau masih bakal lama, ia sebaiknya berhenti dan melapor jujur: apa
   yang sudah, apa yang belum, buntunya di mana, apa yang ia butuhkan.
-- **Agent yang menunggunya di latar belakang** diberi tahu di chatmu sudah berapa lama ia berjalan dan bahwa
-  ia sudah diminta melapor kalau buntu. Agent itu bisa menunggu, memberitahumu, atau menghentikannya dengan
-  `nouride jobs kill <id>`.
+- **Agent yang menunggunya di latar belakang** diberi tahu sudah berapa lama ia berjalan dan bahwa ia sudah
+  diminta melapor kalau buntu, begitu yang ditunggunya diam: gak ada langkah kerja dalam
+  `nudge_after_minutes` terakhir. Agent itu bisa menunggu, memberitahumu, atau menghentikannya dengan
+  `nouride jobs kill <id>`. Yang sedang bekerja gak membangunkan siapa pun (0.8.43): langkah-langkahnya
+  lewat Nouride, jadi itu diketahui, dan log-nya mencatatnya. Sebelumnya agent itu dibangunkan di tiap titik
+  jadwal berdasarkan waktu saja, dan hampir selalu gak punya apa-apa untuk dikatakan. Giliran yang dimulai
+  Nouride dengan cara ini, atau karena sebuah job selesai, gak menulis apa pun di chatmu kecuali agent-nya
+  bicara: baris langkahnya pun gak.
 - **Balasan yang sedang kamu tunggu** diminta mengirim status satu baris, dan bilang kalau buntu lalu berhenti.
 
 ## Menjalankan agent
