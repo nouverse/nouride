@@ -24,12 +24,14 @@ const asWords = (name: string): string => name.replace(/-/g, " ").replace(/^./, 
 export function eventSaid(event: LearningEvent): string {
   const skill = event.skill ? asWords(event.skill) : "";
   const why = event.why ? `: ${event.why}` : "";
-  if (event.kind === "nothing") return `Looked, and found nothing to write down${why}`;
-  if (event.kind === "held") return `Saw a new kind of work once, and is waiting for it to come back: ${skill}`;
-  if (event.kind === "refused") return `Wrote a draft for ${skill || "a skill"} and it was not kept${why}`;
-  if (event.kind === "drafted") return `Wrote a draft, waiting on you: ${skill}`;
-  if (event.kind === "written") return `Added a skill: ${skill}`;
-  return `Improved a skill: ${skill}`;
+  // The same thing done again is one line: how often, after what it was.
+  const often = event.times && event.times > 1 ? ` (${event.times} times)` : "";
+  if (event.kind === "nothing") return `Looked, and found nothing to write down${why}${often}`;
+  if (event.kind === "held") return `Saw a new kind of work, not a skill yet: ${skill}${often}`;
+  if (event.kind === "refused") return `Wrote a draft for ${skill || "a skill"} and it was not kept${why}${often}`;
+  if (event.kind === "drafted") return `Wrote a draft, waiting on you: ${skill}${often}`;
+  if (event.kind === "written") return `Added a skill: ${skill}${often}`;
+  return `Improved a skill: ${skill}${often}`;
 }
 
 export function SeenPanel({ editable, agentName }: { editable: boolean; agentName: (id: string) => string }) {

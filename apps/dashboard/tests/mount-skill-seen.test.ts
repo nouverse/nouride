@@ -19,11 +19,16 @@ const event = (over: Partial<LearningEvent>): LearningEvent => ({ at: Date.now()
 describe("the words", () => {
   test("each thing learning did reads as a sentence, with its reason", () => {
     expect(eventSaid(event({ kind: "nothing", why: "a number looked up, nothing done" }))).toBe("Looked, and found nothing to write down: a number looked up, nothing done");
-    expect(eventSaid(event({ kind: "held", skill: "website-feature-development", why: "Use when changing the site." }))).toBe("Saw a new kind of work once, and is waiting for it to come back: Website feature development");
+    expect(eventSaid(event({ kind: "held", skill: "website-feature-development", why: "Use when changing the site." }))).toBe("Saw a new kind of work, not a skill yet: Website feature development");
     expect(eventSaid(event({ kind: "refused", skill: "site-contributing", why: "its body is 12,838 characters, past 12,000" }))).toBe("Wrote a draft for Site contributing and it was not kept: its body is 12,838 characters, past 12,000");
     expect(eventSaid(event({ kind: "drafted", skill: "invoice-reading" }))).toBe("Wrote a draft, waiting on you: Invoice reading");
     expect(eventSaid(event({ kind: "written", skill: "site-moving" }))).toBe("Added a skill: Site moving");
     expect(eventSaid(event({ kind: "improved", skill: "site-moving" }))).toBe("Improved a skill: Site moving");
+    // The same thing done again is one line, with how often after what it was; once says nothing of it.
+    expect(eventSaid(event({ kind: "held", skill: "website-feature-development", times: 7 }))).toBe("Saw a new kind of work, not a skill yet: Website feature development (7 times)");
+    expect(eventSaid(event({ kind: "nothing", why: "a question answered, nothing done", times: 3 }))).toBe("Looked, and found nothing to write down: a question answered, nothing done (3 times)");
+    expect(eventSaid(event({ kind: "refused", skill: "site-contributing", why: "its body is 12,838 characters, past 12,000", times: 19 }))).toBe("Wrote a draft for Site contributing and it was not kept: its body is 12,838 characters, past 12,000 (19 times)");
+    expect(eventSaid(event({ kind: "written", skill: "site-moving", times: 1 }))).toBe("Added a skill: Site moving");
   });
 
   test("how often a skill is read, and how often since it was changed", () => {

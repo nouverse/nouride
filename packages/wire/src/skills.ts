@@ -60,6 +60,8 @@ export interface LearningEvent {
   /** The skill or the kind of work it was about, where there was one. */
   skill: string | null;
   why: string;
+  /** How many times in a row of the list it did the same: the newest is the one shown. Absent for once. */
+  times?: number;
 }
 
 /** What learning holds and what it did lately: the answer to "why was nothing learned". */

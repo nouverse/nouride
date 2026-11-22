@@ -309,8 +309,9 @@ dihapus atau dimulai ulang, gak ada bahan untuk menulisnya, dan halamannya bilan
 
 **What learning did lately** ada di bawahnya: dua belas hal terakhir yang ia lakukan atau putuskan
 untuk gak dilakukan, masing-masing dengan alasannya. "Looked, and found nothing to write down: a
-question answered, nothing done." Di sinilah tempat melihat kalau kamu mengharapkan sebuah skill dan
-gak ada yang muncul.
+question answered, nothing done." Hal yang sama dilakukan lagi jadi satu baris yang menyebut berapa
+kali, "(7 times)", dengan yang terbaru ditampilkan. Di sinilah tempat melihat kalau kamu mengharapkan
+sebuah skill dan gak ada yang muncul.
 
 **Seberapa sering sebuah skill dibaca** ada di barisnya di **Live**: "read 12 times, 3 times since it
 was changed". Angka kedua adalah berapa kali ia dibuka sejak terakhir diubah oleh proses belajar, dan

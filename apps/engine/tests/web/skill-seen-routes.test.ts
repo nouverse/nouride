@@ -96,6 +96,31 @@ describe("what learning holds and did, as the page reads it", () => {
     expect(recent.map((event) => [event.kind, event.skill])).toEqual([["improved", "site-contributing"], ["drafted", "invoice-reading"], ["written", "site-moving"]]);
   });
 
+  // One kind of work held seven times in an afternoon was seven of the twelve lines on a live box.
+  test("the same thing done again is one line with how often, the newest shown; another agent's, another skill's or another reason is its own", async () => {
+    did("skill_candidate_held", { skill: "audit-checklist", description: "Use when filling in the checklist." });
+    did("skill_pass_nothing", { why: "a question answered, nothing done" });
+    did("skill_candidate_held", { skill: "audit-checklist", description: "Use when filling in or tidying the checklist." });
+    did("skill_candidate_held", { skill: "audit-checklist", description: "Use when filling in, checking or tidying the checklist." });
+    did("skill_candidate_held", { skill: "audit-checklist", description: "Another agent's." }, "nexa");
+    did("skill_candidate_held", { skill: "phone-automation", description: "Use when driving a phone." });
+    did("skill_pass_nothing", { why: "a question answered, nothing done" });
+    did("skill_pass_nothing", { why: "a number looked up, nothing done" });
+    did("skill_draft_refused", { skill: "audit-checklist", reason: "its body is 12,838 characters, past 12,000" });
+    const { recent } = (await (await app.request("/skills/learning/seen")).json()) as LearningSeen;
+    expect(recent.map((event) => [event.kind, event.agentId, event.skill, event.why, event.times ?? 1])).toEqual([
+      ["refused", "nouva", "audit-checklist", "its body is 12,838 characters, past 12,000", 1],
+      ["nothing", "nouva", null, "a number looked up, nothing done", 1],
+      ["nothing", "nouva", null, "a question answered, nothing done", 2],
+      ["held", "nouva", "phone-automation", "Use when driving a phone.", 1],
+      ["held", "nexa", "audit-checklist", "Another agent's.", 1],
+      // Three times, and the words are the newest sighting's.
+      ["held", "nouva", "audit-checklist", "Use when filling in, checking or tidying the checklist.", 3],
+    ]);
+    // Once is said by leaving it out.
+    expect(recent[0]).not.toHaveProperty("times");
+  });
+
   test("only the newest twelve are sent", async () => {
     for (let n = 0; n < 15; n += 1) did("skill_pass_nothing", { why: `reason ${n}` });
     const { recent } = (await (await app.request("/skills/learning/seen")).json()) as LearningSeen;

@@ -292,8 +292,9 @@ the draft then waits in the queue, or goes to the pool where learning is set to 
 write from, and the page says so.
 
 **What learning did lately** is under that: the last twelve things it did or decided not to, each with
-its reason. "Looked, and found nothing to write down: a question answered, nothing done." This is where
-to look when you expected a skill and none came.
+its reason. "Looked, and found nothing to write down: a question answered, nothing done." The same thing
+done again is one line that says how often, "(7 times)", with the newest shown. This is where to look
+when you expected a skill and none came.
 
 **How often a skill is read** is on its row in **Live**: "read 12 times, 3 times since it was
 changed". The second number is how often it was opened since learning last changed it, which is what
