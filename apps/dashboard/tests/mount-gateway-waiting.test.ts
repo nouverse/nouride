@@ -10,6 +10,7 @@ import { describe, expect, test } from "bun:test";
 import { answer, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 import { waitingSaid } from "@/modules/agents/components/gateway-waiting";
+import { markRestartPending } from "@/commons/lib/restart";
 
 useMountHarness();
 
@@ -37,23 +38,31 @@ describe("the line under a connection's name", () => {
 describe("an agent's connections", () => {
   const connections = (extra: Record<string, unknown>) => ({ editable: true, groupContextDefault: 20, gateways: [{ id: "telegram:nouva", platform: "telegram", name: "nouva", agent: "nouva", enabled: true, hasCredential: true, tokenSecret: "telegram-nouva", ...extra }] });
 
+  // The connection's own card, by its Remove button: the page holds other statuses too. A save that waits for a
+  // restart says so in a strip above every page, kept from whichever test saved one, and the first status on the page
+  // was that strip in the order the tests run on Linux.
+  const card = (host: HTMLElement) => host.querySelector('[aria-label="Remove connection"]')?.closest("section, article, div[class*='card']") ?? null;
+
   test("one that waits says so in its card, as a status a screen reader is told", async () => {
+    markRestartPending("Web search: Free sources");
     answer({ "/gateways": { status: 200, body: connections({ status: "connecting", waiting: { reason: REASON, since: Date.now() - 120_000, until: Date.now() + 28 * 60_000 + 5_000 } }) } });
     await renderPage("/agents/nouva/gateways", async (host) => {
-      await eventually(() => host.querySelector('[role="status"]') !== null, 3_000, "the line");
-      const line = host.querySelector('[role="status"]')!;
-      expect(line.textContent?.replace(/\s+/g, " ").trim()).toBe(`Connects in 28 min. ${REASON}`);
+      await eventually(() => card(host)?.querySelector('[role="status"]') != null, 3_000, "the line");
       // In the connection's own card, beside its name and its state.
-      const card = line.closest("section, article, div[class*='card']");
-      expect(card?.textContent).toContain("telegram:nouva");
+      expect(card(host)?.textContent).toContain("telegram:nouva");
+      expect(card(host)?.querySelector('[role="status"]')?.textContent?.replace(/\s+/g, " ").trim()).toBe(`Connects in 28 min. ${REASON}`);
+      // The strip is there, and is not what was read.
+      expect([...host.querySelectorAll('[role="status"]')].some((one) => one.textContent?.includes("takes effect after a restart"))).toBe(true);
     });
   });
 
   test("one that is connected says nothing of a wait", async () => {
     answer({ "/gateways": { status: 200, body: connections({ status: "connected" }) } });
     await renderPage("/agents/nouva/gateways", async (host) => {
-      await eventually(() => host.textContent?.includes("telegram:nouva") === true, 3_000, "the card");
-      expect(host.querySelector('[role="status"]')).toBeNull();
+      await eventually(() => card(host)?.textContent?.includes("telegram:nouva") === true, 3_000, "the card");
+      expect(card(host)?.querySelector('[role="status"]')).toBeNull();
+      expect(host.textContent).not.toContain("Connects in");
+      expect(host.textContent).not.toContain("Not connected yet");
     });
   });
 });
