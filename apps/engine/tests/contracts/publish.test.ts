@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { dirtyPaths, notices, plan, publish, refusals, run, settledChecks, settledRun, type PublishFacts, type PublishIo } from "../../../../scripts/release/publish.ts";
+import { dirtyPaths, notices, plan, publish, refusals, run, settledChecks, settledRun, type PublishFacts, type PublishIo, ciOnHead } from "../../../../scripts/release/publish.ts";
 
 const PIN = (path: string, pin: string) => ({ path, pin, onRemote: true, mainFastForwards: true });
 const READY: PublishFacts = {
@@ -109,6 +109,19 @@ describe("what is uncommitted", () => {
 });
 
 describe("waiting for a run", () => {
+  // Asked while a push's run was ending, the release was refused for a run green seconds later.
+  test("ci on the release's commit: green once one run passed, running while none has and one is not over, none otherwise", () => {
+    expect(ciOnHead("completed:success")).toBe("green");
+    // The push's checks green, the asked-for suite still going: green is green.
+    expect(ciOnHead("in_progress: completed:success")).toBe("green");
+    expect(ciOnHead("in_progress:")).toBe("running");
+    expect(ciOnHead("queued: completed:failure")).toBe("running");
+    expect(ciOnHead("completed:failure completed:cancelled")).toBe("none");
+    expect(ciOnHead("")).toBe("none");
+    // A run that says it completed and names no outcome yet is not over: waited for, not refused.
+    expect(ciOnHead("completed:")).toBe("running");
+  });
+
   test("its outcome is the run's own, read once it completed: a watch cut off by the network is no failure (0.8.18)", () => {
     expect(settledRun("completed success")).toBe("success");
     expect(settledRun("completed failure")).toBe("failure");
