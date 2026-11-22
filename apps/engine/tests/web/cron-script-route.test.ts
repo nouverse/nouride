@@ -11,13 +11,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Hono } from "hono";
 import { openDatabase, type SqliteDb } from "@nouride/runtime";
-import type { Job, JobStep } from "@nouride/shared";
+import type { CommandRuns, Job, JobStep } from "@nouride/shared";
 import { migrate } from "@/db/index.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
 import { UserStore } from "@/modules/users/users.store.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { CronStore } from "@/modules/cron/cron.store.ts";
 import type { ScriptFacts } from "@/modules/cron/scripts.ts";
+import { TRY_MAX_MS, tryCommand, tryLimit } from "@/modules/cron/try-step.ts";
 import { mountControlRoutes } from "@/modules/web/control/index.ts";
 import type { ControlDeps } from "@/modules/web/control/types.ts";
 
@@ -27,6 +28,10 @@ let db: SqliteDb;
 let app: Hono;
 let store: CronStore;
 let facts: ScriptFacts;
+let ranFor: string[];
+let asleep: boolean;
+let held: boolean;
+let audit: AuditLog;
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), "cron-script-route-"));
@@ -35,14 +40,20 @@ beforeEach(async () => {
   const config = structuredClone(DEFAULT_CONFIG);
   store = new CronStore({ db, config: config.cron, timezone: "Asia/Jakarta" });
   facts = { secrets: () => ["notion_token"], hasProgram: async (_agent, program) => program === "sh" };
+  ranFor = [];
+  asleep = false;
+  held = false;
+  // A try's own hands: the sandbox a job's command of that agent runs in, here a folder of the test's.
+  const executors = { commandSandbox: (job: { agentId: string }) => (ranFor.push(job.agentId), { cwd: dir, env: { PATH: process.env.PATH ?? "", TMPDIR: join(dir, "scratch") } }), asleep: () => asleep, held: () => held };
+  audit = new AuditLog(db);
   app = new Hono();
   mountControlRoutes(app, {
     ctx: { config, db, gateways: new Map(), startedAt: Date.now(), status: "ready", agentCount: 1, providerErrors: new Map() },
     token: TOKEN,
-    audit: new AuditLog(db),
+    audit,
     users: new UserStore({ db }),
     files: {},
-    cron: { store, scheduler: {}, timezone: "Asia/Jakarta", scripts: facts },
+    cron: { store, scheduler: {}, timezone: "Asia/Jakarta", scripts: facts, tryCommand: (agentId: string, command: CommandRuns, input: string | undefined) => tryCommand(executors, { commandTimeoutMs: 400 }, agentId, command, input) },
     registry: { get: (id: string) => (id === "nouva" ? { dir: "/packs/nouva", config: {} } : undefined), reload: async () => {} },
   } as unknown as ControlDeps);
 });
@@ -126,5 +137,81 @@ describe("how long a job lasts, through the control API", () => {
     const answer = await said(refused);
     expect(answer.error).toContain("only a job that runs again and again on a clock can last a set time");
     expect(answer.plain).toContain("when it runs");
+  });
+});
+
+describe("a step tried alone", () => {
+  const tryIt = async (step: unknown, more: Record<string, unknown> = {}) => {
+    const response = await post("/cron/try", { agentId: "nouva", step, ...more });
+    return { status: response.status, body: (await response.json()) as { tried?: { status: string; said: string; ms: number }; error?: string; plain?: string } };
+  };
+
+  test("a script is run once on what it is given, and what it printed is the answer: nothing of it is kept as a job or a run", async () => {
+    const tried = await tryIt(script("tr a-z A-Z"), { input: "four mails, one urgent" });
+    expect(tried.status).toBe(200);
+    expect(tried.body.tried).toMatchObject({ status: "done", said: "FOUR MAILS, ONE URGENT" });
+    expect(tried.body.tried!.ms).toBeGreaterThanOrEqual(0);
+    expect(ranFor).toEqual(["nouva"]);
+    expect(store.list({ includeDisabled: true })).toEqual([]);
+    expect(store.recentRuns()).toEqual([]);
+  });
+
+  test("a script that prints nothing, and one that fails, each read as a step's outcome does", async () => {
+    expect((await tryIt(script("true"))).body.tried).toMatchObject({ status: "empty", said: "" });
+    expect((await tryIt(script("echo 'the service said no' >&2; exit 3"))).body.tried).toMatchObject({ status: "failed", said: "exit 3\nthe service said no" });
+  });
+
+  test("a line of arguments is tried the same way", async () => {
+    expect((await tryIt({ kind: "command", argv: ["sh", "-lc", "echo plain"] })).body.tried).toMatchObject({ status: "done", said: "plain" });
+  });
+
+  test("a step of another kind is not tried alone, and is told how it is tried", async () => {
+    for (const step of [{ kind: "agentTurn", message: "Sum up." }, { kind: "approval", ask: "Go on?" }, { kind: "mission", goal: "Ship it." }, { kind: "systemEvent", text: "hi" }]) {
+      const refused = await tryIt(step);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("only a script or a command is tried alone: an agent's turn, a mission and a wait for a person are tried with Run now");
+      expect(refused.body.plain).toBe("Only a script can be tried by itself. To try the other steps, save the automation and press Run now.");
+    }
+    expect(ranFor).toEqual([]);
+  });
+
+  test("it is held to what a saved step is, and asked of the machine, before anything runs", async () => {
+    expect((await tryIt({ kind: "command", argv: ["sh"], script: { text: "echo hi", about: "" } })).body.error).toContain("step 1: a script says what it does, in a line (`about`)");
+    expect((await tryIt({ kind: "command", argv: ["python3"], script: { text: "print(1)", about: "Counts" } })).body.error).toContain("`python3` is not on this machine");
+    expect((await tryIt(script("echo", { secrets: ["gh_token"] }))).body.error).toContain("the script names `gh_token`");
+    expect(ranFor).toEqual([]);
+  });
+
+  test("it is somebody's agent's: none named, or one that does not exist, is refused", async () => {
+    expect(await said(await post("/cron/try", { step: script("echo") }))).toMatchObject({ error: "say which agent's it is: `agentId`" });
+    expect(await said(await post("/cron/try", { agentId: "ghost", step: script("echo") }))).toMatchObject({ error: 'no agent "ghost": a job must name one that exists' });
+    expect(ranFor).toEqual([]);
+  });
+
+  test("an agent that is asleep, or an install not gone live, runs nothing, and says so as the try's outcome", async () => {
+    asleep = true;
+    expect((await tryIt(script("echo ran"))).body.tried).toEqual({ status: "failed", said: "nouva is asleep and runs nothing until a person wakes it", ms: 0 });
+    asleep = false;
+    held = true;
+    expect((await tryIt(script("echo ran"))).body.tried).toEqual({ status: "failed", said: "this install was imported and has not gone live: nothing runs here until Go live", ms: 0 });
+    expect(ranFor).toEqual([]);
+  });
+
+  test("a try is not waited for past its limit: the daemon's for a command, a step's own, and never more than a minute", async () => {
+    // The daemon's limit here is 400 ms.
+    expect((await tryIt(script("sleep 3; echo late"))).body.tried).toMatchObject({ status: "failed", said: "timed out after 400ms" });
+    expect(tryLimit(undefined, 600_000)).toBe(TRY_MAX_MS);
+    expect(tryLimit(5_000, 600_000)).toBe(5_000);
+    expect(tryLimit(3_600_000, 600_000)).toBe(TRY_MAX_MS);
+    expect(TRY_MAX_MS).toBe(60_000);
+  });
+
+  test("what was tried is in the audit log whole, saved or not", async () => {
+    await tryIt(script("echo tried-and-never-saved"));
+    audit.stop();
+    const rows = db.prepare<{ details: string; agent_id: string }>("SELECT details, agent_id FROM audit_log WHERE action = 'cron_try'").all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.agent_id).toBe("nouva");
+    expect(rows[0]!.details).toContain("echo tried-and-never-saved");
   });
 });

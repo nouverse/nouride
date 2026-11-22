@@ -18,7 +18,7 @@ import type { Memory } from "@/modules/memory/index.ts";
 import type { MemoryPass } from "@/boot/memory-pass.ts";
 import type { McpTokenPort } from "@/modules/mcp-server/tokens.store.ts";
 import type { Hono } from "hono";
-import type {LoadedAgent, Skill } from "@nouride/shared";
+import type { CommandRuns, LoadedAgent, Skill } from "@nouride/shared";
 import type { AgentRegistry } from "@nouride/persona";
 import type { ReflectionEngine } from "@/modules/reflection/index.ts";
 import type { SkillHub } from "@/modules/skills-hub/index.ts";
@@ -32,6 +32,7 @@ import type { CronScheduler } from "@/modules/cron/scheduler.ts";
 import type { HookTests } from "@/modules/web/hook-reach.ts";
 import type { ProposalCards } from "@/modules/cron/proposal-cards.ts";
 import type { ScriptFacts } from "@/modules/cron/scripts.ts";
+import type { Tried } from "@/modules/cron/try-step.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import type { LogBuffer } from "@/commons/log-buffer.ts";
@@ -234,6 +235,8 @@ export interface ControlDeps {
     proposals?: Pick<ProposalCards, "settled">;
     /** Whether a script a job keeps could run here, asked before the job is saved (`cron/scripts.ts`). */
     scripts?: ScriptFacts;
+    /** A command tried alone, for an agent, with what it reads (`cron/try-step.ts`). Absent where nothing runs. */
+    tryCommand?: (agentId: string, command: CommandRuns, input: string | undefined) => Promise<Tried>;
   };
   /**
    * `skills/` beside the executable, when this build ships built-in skills.

@@ -32,6 +32,12 @@ export function notSaved(what: string | undefined): string {
 /** A change that is not a form's (a removal, an action), turned down for a reason in the server's own words. */
 export const NOT_CHANGED = "Nothing was changed. Reload the page, and try again.";
 
+/** A step of another kind sent to be tried alone. */
+export const ONLY_A_SCRIPT_IS_TRIED = "Only a script can be tried by itself. To try the other steps, save the automation and press Run now.";
+
+/** Handing an automation over by somebody who may not: one that is another person's, or left with nobody by a person who is no admin. */
+export const NOT_YOURS_TO_HAND = "Only the person it belongs to, or an admin, can hand this automation to somebody. Leaving it with nobody is an admin's.";
+
 /** An automation handed to a person People holds nothing for: no account, no chat app. */
 export const NOBODY_TO_HOLD_IT = "This person has no account and no chat app under their name in People yet, so nothing can be theirs. Add one for them in People first.";
 

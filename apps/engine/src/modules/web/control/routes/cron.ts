@@ -13,8 +13,9 @@ import type { CronField } from "@/modules/cron/validate.ts";
 import type { JobPayload } from "@nouride/shared";
 import { cronInputFrom, cronPatchFrom, cronRefusalField, isCronRefusal, jsonBody } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
-import { NOBODY_TO_HOLD_IT, NOT_CHANGED, notSaved } from "../plain.ts";
+import { NOBODY_TO_HOLD_IT, NOT_CHANGED, NOT_YOURS_TO_HAND, notSaved } from "../plain.ts";
 import { jobFor, thingOfJob, thingsFor, type Things } from "../whose.ts";
+import { registerCronTryRoute } from "./cron-try.ts";
 
 /** Each field a job or a webhook can be refused for, as the Schedule and Webhooks pages' forms name it. */
 const CRON_FIELDS: Record<CronField, string> = {
@@ -137,6 +138,9 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
     }
   });
 
+  // A step tried alone (`cron-try.ts`): before `/cron/:id`, which would take the word for a job.
+  registerCronTryRoute(control, deps);
+
   control.post("/cron/:id", async (c) => {
     if (!deps.cron) return c.json({ error: "the scheduler is not enabled" }, 501);
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
@@ -185,16 +189,24 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
   });
 
   /**
-   * Whose it is, set by an admin: `{ person: <key> }` hands it to that person, `{ person: null }` to nobody. For the
-   * ones nobody owns: made from the command line, or from before with nothing a person could be read from. Registered
+   * Whose it is: `{ person: <key> }` hands it to that person, `{ person: null }` to nobody. An admin hands over any,
+   * and leaves one with nobody: the ones made from the command line, or from before with nothing a person could be
+   * read from. Its owner hands over their own, to a person: somebody who made a morning digest and passed the work on
+   * had to ask an admin to move it. From then it is the other person's to change, and no longer theirs. Registered
    * before `/cron/:id/:action`, which would take the word for an action.
    */
   control.post("/cron/:id/owner", async (c) => {
     if (!deps.cron) return c.json({ error: "the scheduler is not enabled" }, 501);
     const principal = c.get("principal");
-    if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
+    const admin = atLeast(principal, "admin");
+    const found = jobFor(deps, principal, c.req.param("id"));
+    // One they cannot see is not there for them; one they see and do not own is not theirs to give, a proposal nobody
+    // said yes to among them.
+    if (!admin && !found) return c.json({ error: "no such job" }, 404);
+    if (!admin && !found!.owned) return c.json({ error: "only its owner or an admin hands an automation to somebody", plain: NOT_YOURS_TO_HAND }, 403);
     const body = ((await jsonBody(c)) ?? {}) as { person?: unknown };
     if (body.person !== null && typeof body.person !== "string") return c.json({ error: "send { person: <key> } or { person: null }" }, 400);
+    if (!admin && body.person === null) return c.json({ error: "only an admin leaves an automation with nobody", plain: NOT_YOURS_TO_HAND }, 403);
     const person = body.person === null ? null : deps.ctx.config.people.find((one) => one.key === body.person);
     if (person === undefined) return c.json({ error: `no person "${String(body.person)}" in People` }, 400);
     // Kept as an id of theirs People reads: their account where they have one, so what they make later sits beside it.
@@ -290,7 +302,7 @@ function yesOf(principal: { actor: string; user?: { id: string } | undefined }, 
 }
 
 /** Why `agentId` cannot own a job, or null. Empty is the store's to refuse, with its own sentence. */
-function unknownAgent(deps: ControlDeps, agentId: string): string | null {
+export function unknownAgent(deps: ControlDeps, agentId: string): string | null {
   if (!agentId.trim() || deps.registry.get(agentId)) return null;
   return `no agent "${agentId}": a job must name one that exists`;
 }

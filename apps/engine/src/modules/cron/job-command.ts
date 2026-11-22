@@ -50,13 +50,14 @@ function commandStart(command: Pick<CommandRuns, "argv" | "script">): { cmd: str
 export async function runJobCommand(
   executors: Pick<CronExecutors, "commandSandbox">,
   config: Pick<CronSection, "commandTimeoutMs">,
-  job: Job,
+  /** Whose command it is: a job's agent, or the agent a step is tried for. */
+  job: Pick<Job, "agentId">,
   command: CommandRuns,
   /** Written to the command's standard input and closed: a webhook's body, or for a script what the step before said. Never in its arguments or its environment. */
   input?: string,
 ): Promise<{ output: string } | { error: string }> {
   // The sandbox reads the command off the job it is given: the secrets bound to this argv, those its script names, and no others.
-  const sandbox = executors.commandSandbox({ ...job, payload: { kind: "command", argv: command.argv, ...(command.script ? { script: command.script } : {}), then: "deliver" } });
+  const sandbox = executors.commandSandbox({ agentId: job.agentId, payload: { kind: "command", argv: command.argv, ...(command.script ? { script: command.script } : {}), then: "deliver" } });
   if (!sandbox) return { error: `agent ${job.agentId} is not loaded, so its workspace is unknown` };
 
   const start = commandStart(command);
