@@ -179,6 +179,10 @@ cuma berjalan setelah giliran di mana sesuatu benar-benar terjadi:
   tiga menit sejak kata terakhir agent, begitulah "kamu sedang mengarahkan" dihitung tanpa membaca satu
   kata pun.
 - **Ia berhasil menjalankan sesuatu yang baru**: tool yang belum pernah berhasil dipakai agent ini.
+- **Sebuah mission selesai dengan status done.** Satu kali, dari tujuannya, giliran terakhirnya dan
+  laporannya. Giliran-giliran mission sendiri gak pernah ditengok satu per satu: itu catatan kerja, dan
+  mission yang berjam-jam berarti puluhan kali menengok. Mission yang dihentikan atau gagal gak
+  menemukan cara yang layak dicatat, jadi dibiarkan.
 
 Semua ini soal *bentuk* dari apa yang terjadi, bukan maknanya. Belum ada yang dinilai. Angka-angkanya
 milik daemon sendiri, bukan pengaturan.
@@ -186,7 +190,13 @@ milik daemon sendiri, bukan pengaturan.
 Daemon juga sengaja gak mencoba menilainya. Versi sebelumnya mencocokkan frasa seperti "masih
 error", yang gagal diam-diam bagi siapa pun yang pilihan katanya gak terantisipasi. Menghitung itu
 bodoh, gratis dan gak bergantung bahasa; penilaiannya milik model. Yaitu model milik agent itu, kecuali
-`[skills.learning] model` menyebut yang lebih murah.
+`[skills.learning] model` menyebut yang lain. Model yang lebih murah di sana lebih hemat dan memutuskan
+lebih ketat: pada percakapan milik satu install sendiri, sebuah model kecil menemukan hal yang layak
+dicatat di 1 dari 13, sedangkan model milik agent-agentnya menemukannya di 7.
+
+**Setelah menengok dan gak menulis apa-apa, tengokan berikutnya di chat itu menunggu dua kali lipat
+pekerjaan.** Enam belas putaran, bukan delapan. Sebuah draft yang disimpan, atau chat yang ditinggal
+enam jam, mengembalikannya ke delapan. Meminta skill dengan kata-kata gak pernah dibuat menunggu.
 
 ## Apa yang diputuskannya
 
@@ -210,7 +220,7 @@ Empat kemungkinan jawaban, yang pertama cocok yang dipakai:
 
 | | |
 |---|---|
-| **Update** | Sudah ada skill yang mencakupnya. Tambahkan langkah atau jebakan yang hilang. |
+| **Update** | Sudah ada skill yang mencakupnya. Tambahkan langkah atau jebakan yang hilang, sebagai suntingan: teks yang diganti dan penggantinya. Sisa skill-nya tetap seperti semula, kata demi kata. |
 | **Attach** | Ada skill yang mencakupnya, tapi yang dipelajari besar, perintah panjang, config yang berhasil, sebuah error dan sebabnya. Taruh di file di sebelah skill, jangan menggelembungkan skill-nya. |
 | **Create** | Belum ada yang mencakup jenis pekerjaan ini. Usulkan skill baru, dan sebutkan mana yang paling mendekati, dan kenapa gak sebaiknya diserap ke situ. |
 | **Skip** | Memang gak ada apa-apa di sini. |
@@ -221,9 +231,14 @@ menyambungkan sebuah kamera dan sekarang berhasil, *kamera*-nya memang kasus sat
 
 **Jenis pekerjaan baru dicatat dulu sebelum ditulis.** Satu percakapan belum membuktikan pekerjaan itu
 bakal datang lagi. Jadi pertama kali, sebuah create ditahan sebagai **kandidat**: nama dan baris "Use
-when", tanpa isi dan tanpa panggilan model kedua. Skill-nya baru ditulis ketika percakapan lain ternyata
-jenis pekerjaan yang sama, atau langsung saat itu juga kalau ada orang yang meminta skill dengan
-kata-kata. Kandidat yang gak muncul lagi dalam 30 hari gugur.
+when", tanpa isi dan tanpa panggilan model kedua. Skill-nya baru ditulis ketika jenis pekerjaan yang
+sama datang lagi: di percakapan lain, atau di chat yang sama setelah pekerjaan itu ditinggal enam jam
+atau lebih. Pekerjaan yang masih berlanjut dalam satu kali duduk belum dihitung datang lagi. Orang yang
+meminta skill dengan kata-kata langsung mendapatkannya. Kandidat yang gak muncul lagi dalam 30 hari
+gugur.
+
+**Skill yang dibaca dalam percakapan itu didahulukan.** Kalau agent membuka sebuah skill selama
+bekerja, pelajaran tentang hal yang dicakup skill itu masuk ke sana, bukan ke skill baru.
 
 ## Seberapa banyak yang berjalan tanpa kamu
 
@@ -275,13 +290,30 @@ alur kerja:
 | Tab | Menampilkan |
 |---|---|
 | **Live** | kumpulannya: apa yang benar-benar dibawa para agent. Dibuka duluan kalau tidak ada yang menunggu kamu |
-| **Pending** | antreannya, plus yang baru-baru ini diputuskan. Dibuka duluan kalau ada yang menunggu kamu |
+| **Pending** | antreannya, plus yang baru-baru ini diputuskan, dan di bawahnya apa yang sedang ditahan dan dilakukan proses belajar. Dibuka duluan kalau ada yang menunggu kamu |
 | **Explore** | daftar skill publik milik Nouverse, pilihannya di depan, dengan satu pencarian di atasnya. Memasang salah satunya menaruhnya di Pending |
 
 Setiap baris draft terbuka menjadi `SKILL.md` utuh, bisa disunting di tempat, plus transkrip giliran
 asalnya yang sudah dibersihkan, atau, untuk skill dari hub, asalnya dan apa saja yang disesuaikan.
 Keduanya ada di baris itu, bukan di balik navigasi, karena keputusannya adalah "apakah saya mau ini ada
 di prompt agent saya" dan buktinya adalah giliran itu.
+
+**Seen once, not a skill yet.** Di bawah antrean, tiap jenis pekerjaan yang baru sekali dikerjakan
+agent dan sedang ditahan: namanya, kapan dipakai, agent mana yang melihatnya, berapa kali dan kapan
+terakhir. **Write it now** membuat agent menulis skill-nya dari percakapan tempat pekerjaan itu
+terlihat, tanpa menunggu pekerjaannya datang lagi; draft-nya lalu menunggu di antrean, atau langsung
+masuk pool kalau belajar diatur berjalan tanpa kamu. **Forget** membuangnya. Kalau percakapan itu sudah
+dihapus atau dimulai ulang, gak ada bahan untuk menulisnya, dan halamannya bilang begitu.
+
+**What learning did lately** ada di bawahnya: dua belas hal terakhir yang ia lakukan atau putuskan
+untuk gak dilakukan, masing-masing dengan alasannya. "Looked, and found nothing to write down: a
+question answered, nothing done." Di sinilah tempat melihat kalau kamu mengharapkan sebuah skill dan
+gak ada yang muncul.
+
+**Seberapa sering sebuah skill dibaca** ada di barisnya di **Live**: "read 12 times, 3 times since it
+was changed". Angka kedua adalah berapa kali ia dibuka sejak terakhir diubah oleh proses belajar, dan
+itulah yang menunjukkan pelajaran yang ditulis ke dalamnya memang dipakai. Pembacaan dihitung sejak
+0.8.42.
 
 **Draft bukan approval.** Ia gak menghalangi apa pun dan gak pernah kedaluwarsa. Karena itu ia
 tinggal di Workshop dan bukan di antrean approval, menyatukan keduanya akan memberi salah satunya
@@ -335,7 +367,14 @@ akun email, atau menceritakan satu sesi ("in this session", "the user said") ali
 prosedurnya. Ia juga ditolak kalau deskripsinya berbunyi seperti catatan suntingan ("Update…",
 "Document…") dan bukan kapan skill itu dipakai, dan kalau badan skill baru lebih dari 8.000 karakter.
 Revisi boleh menumbuhkan badan sampai 12.000 karakter; badan yang sudah lewat dari itu gak boleh
-bertambah panjang. Penolakan dicatat di log dan di audit log.
+bertambah panjang.
+
+Draft yang ditolak dikembalikan ke agent satu kali, beserta alasannya, untuk dibetulkan: sebuah alamat
+diganti penanda tempat, badan yang kepanjangan memindahkan rinciannya ke file di samping skill. Kalau
+percobaan kedua ditolak juga, gak ada yang disimpan, penolakannya dicatat di log dan di audit log, dan
+skill itu dibiarkan dulu selama enam jam. Sebuah revisi hanya bertanggung jawab atas yang ia tambahkan:
+alamat yang memang sudah ada di sebuah skill gak membuat revisinya ditolak, dan tinjauan mingguanlah
+yang membuangnya.
 
 **Skill ditulis dalam bahasa Inggris**, apa pun bahasa yang kamu pakai. Satu pustaka, satu bahasa,
 supaya agent mana pun bisa membaca skill mana pun.

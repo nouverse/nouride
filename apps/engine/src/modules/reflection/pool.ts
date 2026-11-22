@@ -7,7 +7,7 @@
  * model — which is why they all resolve through the pool listing rather than joining a path.
  */
 
-import { createLogger } from "@nouride/shared";
+import { createLogger, type ChatMessage } from "@nouride/shared";
 import { dirname, join, listDir, readTextFileIfExists } from "@nouride/runtime";
 import { agentSkillPool, parseFrontmatter, skillsDirFor, type SkillState } from "@nouride/persona";
 import type { DraftsPort } from "./drafts.store.ts";
@@ -185,4 +185,15 @@ export async function readSkill(pool: SkillState[], name: string, drafts: Drafts
   if (waiting) return waiting.body;
   const found = pool.find((skill) => skill.name === name);
   return found ? await readTextFileIfExists(found.path) : null;
+}
+
+/**
+ * The skills a conversation read, by name: those whose own `SKILL.md` path is in one of its tool calls. Read by
+ * `read` most of the time and by a shell's `cat` where a sandbox refuses, which is why the path is looked for and not
+ * a tool (`AuditLog.skillReads` counts a read the same way).
+ */
+export function skillsRead(pool: readonly SkillState[], messages: readonly ChatMessage[]): string[] {
+  const calls = messages.flatMap((message) => (message.toolCalls ?? []).map((call) => JSON.stringify(call.arguments ?? {})));
+  if (calls.length === 0) return [];
+  return pool.filter((skill) => skill.path && calls.some((args) => args.includes(skill.path))).map((skill) => skill.name);
 }

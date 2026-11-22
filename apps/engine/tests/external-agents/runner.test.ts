@@ -17,6 +17,7 @@ import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { situationOf, untold } from "@/modules/external-agents/situation.ts";
 import { GO_ON } from "@/modules/external-agents/runner.ts";
 import { CLOCK, clockDeps } from "./fixtures/clock.ts";
+import { heldIn } from "@/modules/pipeline/work-done.ts";
 import { ownKey, type OwnChat } from "@/modules/external-agents/own-words.ts";
 import { cliLeftRunningState, externalEffortsState, externalModelsState } from "@/commons/daemon-state.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
@@ -148,7 +149,7 @@ describe("a turn of an external agent", () => {
     expect(result.answeredBy).toBe("Fake CLI · small");
     expect(result.toolSteps).toEqual([{ name: "Bash", ok: true }, { name: "Bash", ok: true }]);
     expect(result.toolCalls).toBe(2);
-    expect(result.messages.map((message) => `${message.role}:${message.content}`)).toEqual(["user:earlier", "user:push the fix", `assistant:Done: ${opening}[telegram · DM · ask_agent: nouva, nox] Mira: push the fix\n\n${CLOCK}`]);
+    expect(result.messages.map((message) => `${message.role}:${message.content}`)).toEqual(["user:earlier", `user:push the fix\n\n${CLOCK}`, `assistant:Done: ${opening}[telegram · DM · ask_agent: nouva, nox] Mira: push the fix\n\n${CLOCK}`]);
     expect(plans).toEqual([[{ text: "push it", state: "done" }]]);
     expect(asks[0]).toMatchObject({ tool: "fake:Bash", params: { command: "git push" }, reason: "Fake CLI asks to run the command above", chatId: "555" });
   });
@@ -372,6 +373,27 @@ describe("a turn of an external agent", () => {
     expect(existsSync(join(workdir, "AGENTS.md"))).toBe(false);
   });
 
+  // Kept without them, a note said "where the conversation does not hold it yet" was said again on every message: what
+  // the agent did for another lately, the dashboard's pages. A model's message has been kept as sent all along.
+  test("its message is kept as the CLI read it, with the time and the turn's notes; one steered in after is kept as written", async () => {
+    const { runner, req } = setup();
+    let steered = false;
+    const steer = () => (steered ? null : ((steered = true), { role: "user" as const, content: "also this" }));
+    const result = await runner.run(req("push the fix", { reminders: ["(Work you did for another agent lately: a job for nox.)"], steer }));
+    const kept = result.messages.filter((message) => message.role === "user").map((message) => message.content);
+    expect(kept).toEqual(["earlier", `push the fix\n\n${CLOCK}\n\n(Work you did for another agent lately: a job for nox.)`, "also this"]);
+    // What the next turn asks of the conversation: the note is there, so it is not said again.
+    expect(heldIn(result.messages, "(Work you did for another agent lately: a job for nox.)")).toBe(true);
+  });
+
+  test("a message no prompt carried is kept as written: its notes were read by nobody", async () => {
+    const { runner, req } = setup();
+    const controller = new AbortController();
+    controller.abort("stopped-by-person");
+    const result = await runner.run(req("push the fix", { signal: controller.signal, reminders: ["(A note nobody read.)"] }));
+    expect(result.turnMessages.map((message) => message.content)).toEqual(["push the fix"]);
+  });
+
   test("a stop that came before the session opened is kept: no prompt reaches the CLI (0.8.1)", async () => {
     // The stop was listened for only once the CLI had started, so one that came while it started was lost.
     const { runner, req, steps } = setup();
@@ -397,7 +419,7 @@ describe("a turn of an external agent", () => {
     let steered = false;
     const steer = () => (steered ? null : ((steered = true), { role: "user" as const, content: "also this" }));
     const result = await runner.run(req("first", { signal: controller.signal, steer }));
-    expect(result.messages.filter((message) => message.role === "user").map((message) => message.content)).toEqual(["earlier", "first", "also this"]);
+    expect(result.messages.filter((message) => message.role === "user").map((message) => message.content)).toEqual(["earlier", `first\n\n${CLOCK}`, "also this"]);
   });
 
   test("a message steered in gets its own answer, said before the next prompt's work — not one message for both (0.8.5)", async () => {

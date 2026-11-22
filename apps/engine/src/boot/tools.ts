@@ -32,7 +32,7 @@ import type { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
 import type { ReflectionEngine } from "@/modules/reflection/index.ts";
 import { createSkillHub, type SkillsCatalog } from "@/modules/skills-hub/index.ts";
 import { peersFrom } from "@/modules/tools/builtins/ask-agent.ts";
-import { createBuiltinTools } from "@/modules/tools/registry.ts";
+import { createBuiltinTools, type ToolsetDeps } from "@/modules/tools/registry.ts";
 import type { HarnessToolOptions } from "@/modules/tools/builtins/harness.ts";
 import { changesSharedTools } from "@/modules/toolchain/shared-tools.ts";
 import type { McpManager } from "@/modules/tools/mcp.ts";
@@ -48,6 +48,8 @@ export function buildTools(deps: {
   isolateHelper?: (ctx: ToolContext) => Promise<{ path: string; branch: string } | { refused: string }>;
   /** In a mission's turn, the chat that mission reports to (`boot/missions.ts` `reportsTo`). */
   missionReportsTo?: (at: { gatewayId: string; chatId: string }) => { gatewayId: string; chatId: string } | null;
+  /** Who is told what a mission's command left running, so its end can end it (`missions/left-running.ts`). */
+  commandLeft?: ToolsetDeps["leftBy"];
   /** The coding CLIs and whether each is installed, for `agent_create`'s external agents (0.8.1). */
   clis?: () => Promise<{ id: string; name: string; installed: boolean; install: string }[]>;
   /** A coding-CLI agent's CLI, for `agent_configure` to set its model (0.8.8). */
@@ -169,6 +171,7 @@ export function buildTools(deps: {
     // `exec` — which had no `startJob` and told the user background execution was unavailable. Found
     // live, on the first attempt.
     startJob: startJobFor(jobs),
+    ...(deps.commandLeft ? { leftBy: deps.commandLeft } : {}),
     web: {
       ...(searchKey ? { searchApiKey: searchKey } : {}),
       ...(isSearchKind(config.security.web.searchKind)

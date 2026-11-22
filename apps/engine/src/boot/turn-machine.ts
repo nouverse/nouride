@@ -64,7 +64,7 @@ import { buildTools } from "./tools.ts";
 const log = createLogger("daemon");
 
 /** What the parts read of the stores. */
-type PartsStores = Pick<Stores, "db" | "state" | "cron" | "notes" | "jobs" | "chatEvents" | "turns" | "usage" | "audit" | "childEnv" | "accounts" | "drafts" | "grants" | "toolGrants" | "providers">;
+type PartsStores = Pick<Stores, "db" | "state" | "cron" | "notes" | "jobs" | "chatEvents" | "turns" | "usage" | "audit" | "childEnv" | "accounts" | "drafts" | "grants" | "toolGrants" | "providers" | "sessions">;
 
 /** The parts the turn machine is built from, and the timers sweep. */
 export type TurnParts = ReturnType<typeof buildTurnParts>;
@@ -108,6 +108,18 @@ export function buildTurnParts(
     childEnv: stores.childEnv,
     linkFor,
     audit,
+    // Built below, and read when a mission ends, which is long after: its own conversation's id is how learning tells
+    // one mission's work from another's.
+    learn: (mission, sessionId) =>
+      void reflection.observeMission({
+        agentId: mission.agentId,
+        gatewayId: mission.gatewayId,
+        chatId: mission.chatId,
+        sessionId,
+        title: mission.title || mission.goal.slice(0, 80),
+        goal: mission.goal,
+        report: mission.report ?? "",
+      }),
   });
   gateways.set(missions.gateway.id, missions.gateway);
 
@@ -146,8 +158,11 @@ export function buildTurnParts(
     drafts: stores.drafts,
     toolMemory: new ToolMemory(db),
     candidates: new CandidateStore(db),
+    conversation: (sessionId) => stores.sessions.byId(sessionId),
+    conversationKept: (sessionId) => stores.sessions.kept(sessionId),
     reviews: new ReviewStore(db),
     lastRead: (paths) => audit.skillReads(paths),
+    skillChanged: (path) => audit.skillChanged(path),
     registry,
     providers: stores.providers,
     agentsDir: config.daemon.agentsDir,
@@ -324,6 +339,7 @@ export async function buildTurnMachine(
     notes: stores.notes,
     shaper: missions.missions,
     missionCommands: missions.missions,
+    commandLeft: missions.commandLeft,
     scheduleCommands: proposals.cards,
     missionTools: missions.tools,
     scheduleTool: proposals.tool,
@@ -364,7 +380,7 @@ export async function buildTurnMachine(
 
   // The job store and the pipeline, joined now that both exist: completions, and the watchdog for the
   // ones still running. The jobs the previous daemon left behind wait for the inbox. See `boot/jobs.ts`.
-  ctx.backgroundTimers.push(wireJobs({ jobs, registry, config: () => ctx.config, pipeline }));
+  ctx.backgroundTimers.push(wireJobs({ jobs, registry, config: () => ctx.config, pipeline, commandLeft: missions.commandLeft }));
   // What an external agent's CLI says by itself, between turns, wakes its chat as a job's end does.
   externalAgents.onOwnWords = (chat) => pipeline.wakeForOwnWords(chat);
   // What a mission's CLI turn has spent, as the CLI says it: its limits read then, not only at the minute's check.
@@ -389,6 +405,7 @@ export async function buildTurnMachine(
     reflection: parts.reflection, mcp, mcpCatalog, skillsCatalog, notes: stores.notes, linkFor: parts.linkFor,
     configPath: input.configPath,
     isolateHelper: missions.isolateHelper,
+    commandLeft: missions.commandLeft,
     missionReportsTo: missions.reportsTo,
     // Fresh each time: a CLI installed a minute ago is one an agent can be made on now.
     clis: () => externalAgents.scan(true),

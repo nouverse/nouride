@@ -15,7 +15,8 @@ import {
   lastAddressedAt,
   resolveGroupContextLimit,
 } from "@/modules/sessions/group-context.ts";
-import { formatRoomEvents } from "@/modules/chat-events/format.ts";
+import { localTime, safeTimeZone } from "@/commons/clock.ts";
+import { formatMissionNotices, formatRoomEvents } from "@/modules/chat-events/format.ts";
 import { speakerName } from "@/modules/people/match.ts";
 import { ownAttachmentRefs } from "@/modules/attachments/chat-attachments.store.ts";
 import type { CarriedFile } from "./attachments.ts";
@@ -46,6 +47,12 @@ const NO_HISTORY_LOOKBACK_MS = 15 * 60_000;
  * are the recent ones — the rest are a `attachment_read` away, which now hands back the picture.
  */
 const CARRIED_FILES_LIMIT = 8;
+
+/**
+ * How many of its missions' notices one window reads back. A mission says a handful in a day (started, a progress
+ * line each half hour of which one is kept, what it needs, done), so this is several missions' worth.
+ */
+const MISSION_NOTICES = 24;
 
 /**
  * The lower bound for "since this agent last spoke".
@@ -216,6 +223,30 @@ export class RoomMemory {
       events: events.length,
     });
     return formatRoomEvents(events);
+  }
+
+  /**
+   * What this agent's own missions told the chat since it was last spoken to, as a block for the question
+   * (`formatMissionNotices`): the same window as `eventsBefore`, stored with the message the same way, so a notice
+   * is read back once. The newest `MISSION_NOTICES` of a long silence: what a mission said last is how it stands.
+   */
+  missionNoticesBefore(agent: LoadedAgent, envelope: MessageEnvelope, history: ChatMessage[], startedAt = 0): string {
+    const store = this.deps.chatEvents;
+    if (!store) return "";
+    const told = store.toldByMissions({
+      gatewayId: envelope.gatewayId,
+      chatId: envelope.chatId,
+      agentId: agent.config.id,
+      after: since(history, envelope.timestamp, startedAt),
+      before: envelope.timestamp,
+      limit: MISSION_NOTICES,
+    });
+    if (told.length === 0) return "";
+    const zone = safeTimeZone(this.deps.config.daemon.timezone);
+    return formatMissionNotices(told, (at) => {
+      const local = localTime(at, zone);
+      return `${local.day} ${local.time}`;
+    });
   }
 
   /**

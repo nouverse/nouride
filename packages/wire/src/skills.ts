@@ -29,6 +29,41 @@ export interface CatalogSkill {
     notForCli?: string[];
   }[];
   lastUsedAt: number | null;
+  /** Times it was read, counted from the release that began counting; and how many of them since learning last changed it. */
+  reads: number;
+  readsSinceChange: number;
+}
+
+/** A kind of work an agent did once, held until it comes back and a skill is written for it. */
+export interface SeenWork {
+  name: string;
+  /** Its "Use when" line. */
+  description: string;
+  why: string;
+  agentId: string;
+  firstSeenAt: number;
+  lastSeenAt: number;
+  /** How many times learning named it. */
+  sightings: number;
+  /** The conversation it was seen in is still kept, so its skill can be written now. */
+  canWrite: boolean;
+}
+
+/** One thing skill learning did, or decided not to, as a person reads it. */
+export interface LearningEvent {
+  at: number;
+  agentId: string | null;
+  /** `nothing`: looked and wrote nothing. `held`: a new kind of work, seen once. `refused`: a draft the daemon would not keep. */
+  kind: "nothing" | "held" | "refused" | "drafted" | "written" | "improved";
+  /** The skill or the kind of work it was about, where there was one. */
+  skill: string | null;
+  why: string;
+}
+
+/** What learning holds and what it did lately: the answer to "why was nothing learned". */
+export interface LearningSeen {
+  seen: SeenWork[];
+  recent: LearningEvent[];
 }
 
 /** Why a turn was worth reflecting on. Recorded on the draft, and shown to whoever decides. */
@@ -42,7 +77,9 @@ export type TriggerKind =
   /** Fetched from a skill hub — GitHub, skills.sh, ClawHub, a well-known index — by a person or an agent. */
   | "external_install"
   /** The weekly review of the library: tighten, merge or archive (`curator.ts`). Waits for a person in every mode. */
-  | "curation";
+  | "curation"
+  /** A mission that ended done, looked at once from its goal and its report. */
+  | "mission";
 
 /**
  * A skill an agent proposed and nobody has decided on yet — the RSI queue.

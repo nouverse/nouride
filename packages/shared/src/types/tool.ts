@@ -522,6 +522,20 @@ export interface ApprovalRequest {
   queued?: boolean;
 }
 
+/** A process as it is told apart from a later one of the same number: its start time, as its system writes it. */
+export interface LeftProcess {
+  pid: number;
+  started: string;
+  /** Its program's name, for a person. */
+  name: string;
+}
+
+/** What a command left in its own process group as it ended (`SandboxOptions.onLeft`). */
+export interface LeftRunning {
+  group: number;
+  members: LeftProcess[];
+}
+
 export interface SandboxOptions {
   cwd: string;
   timeoutMs: number;
@@ -569,6 +583,12 @@ export interface SandboxOptions {
    * write, and one that is closed is a child killed by SIGPIPE partway through its work.
    */
   onOutput?: (stream: "stdout" | "stderr", text: string) => void;
+  /**
+   * Told what the command left running in its own process group as it ended by itself: what it started and did not
+   * wait for (`@nouride/runtime` `process-left.ts`). Asked only where given, since it reads every process once: a
+   * mission's commands give it, so the mission's end can end what they left.
+   */
+  onLeft?: (left: LeftRunning) => void;
   /**
    * The agent whose command this is, from the turn, the job or the cron entry that started it — never from anything the
    * model wrote. Run as that agent's own user where the daemon found the helper (0.8.0); absent for the daemon's own

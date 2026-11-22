@@ -78,6 +78,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   const killed: string[] = [];
   /** The missions whose CLI session was let go. */
   const letGo: string[] = [];
+  /** The missions asked to end what their commands had left running, as they ended. */
+  const endedLeft: string[] = [];
   const stopped: string[] = [];
   const removed: string[] = [];
   /** The removals that asked to keep a folder holding work nobody committed. */
@@ -91,6 +93,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   /** What reached the chat, in order: a notice, a `report.md`, the files. */
   const sent: string[] = [];
   const remembered: string[] = [];
+  /** Each mission handed to skill learning as it ended. */
+  const learned: string[] = [];
   /** Every mission handed on as it ended, with how: what keeps a mission another agent started for both agents' chats. */
   const helped: string[] = [];
   /** Each draft's `BRIEF.md`, by mission (0.8.11): what `draftFolder` wrote; the folders it made. */
@@ -119,6 +123,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     settled: (mission) => settled.get(mission.id) ?? [],
     withdraw: (mission) => void parked.delete(mission.id),
     letGoCli: (mission) => void letGo.push(mission.id),
+    endLeft: (mission) => void endedLeft.push(`${mission.id} ${mission.status}`),
     tell: async (mission, text, buttons) => void (told.push({ mission: mission.id, text, ...(buttons ? { buttons } : {}) }), sent.push("notice")),
     queueTurn: (envelope) => (queued.push(envelope), true),
     stopTurn: (mission) => {
@@ -148,6 +153,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     check: (mission) => checks(mission),
     review: (mission, earlier) => (review ? review(mission, earlier) : Promise.resolve({ pass: true, findings: "", tokens: 0 })),
     remember: async (mission) => void remembered.push(mission.id),
+    learn: (mission) => void learned.push(mission.id),
     helped: (mission) => void helped.push(`${mission.id} ${mission.status} by ${mission.byAgent ?? "a person"}`),
     remove: async (mission, how) => {
       if (how?.keepUnsaved) keepingUnsaved.push(mission.id);
@@ -177,6 +183,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     queued,
     killed,
     letGo,
+    endedLeft,
     stopped,
     removed,
     keepingUnsaved,
@@ -188,6 +195,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     setReportRefused: (why: string | null) => void (reportRefused = why),
     sent,
     remembered,
+    learned,
     helped,
     briefs,
     folders,

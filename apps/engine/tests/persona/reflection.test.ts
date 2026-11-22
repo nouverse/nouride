@@ -22,7 +22,8 @@ import { listDir } from "@nouride/runtime";
 import { migrate } from "@/db/index.ts";
 import { DraftStore, ReflectionEngine, ToolMemory } from "@/modules/reflection/index.ts";
 import { detectTrigger, isExplicitRequest } from "@/modules/reflection/trigger.ts";
-import { buildTranscript, parseTriage } from "@/modules/reflection/synthesis.ts";
+import { parseTriage } from "@/modules/reflection/synthesis.ts";
+import { buildTranscript } from "@/modules/reflection/transcript.ts";
 import { AUTHOR_INSTRUCTION, REVISE_INSTRUCTION, renderSkillList, TRIAGE_INSTRUCTION } from "@/modules/reflection/prompts.ts";
 import { redact } from "@nouride/secrets";
 import {
@@ -54,6 +55,9 @@ const RSI: SkillLearningSection & Tuning = {
   model: "",
   cooldownMs: 60_000,
   maxPending: 5,
+  refusedRestMs: 6 * 3_600_000,
+  maxDoublings: 0,
+  breakMs: 6 * 3_600_000,
   notifyChat: false,
 };
 

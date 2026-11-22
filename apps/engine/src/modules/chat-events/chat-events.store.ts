@@ -36,7 +36,8 @@ const log = createLogger("chat-events");
  * Whether the model sees it.
  *
  * Every event is shown in the dashboard either way. `"agents"` additionally composes the text into
- * the next prompt of each agent in the room; `"ui"` never enters a prompt under any circumstances.
+ * the next prompt of each agent in the room; `"ui"` enters no prompt, but for what an agent's own missions told the
+ * chat under its name, which that agent alone reads back (`toldByMissions`).
  */
 export type EventAudience = "agents" | "ui";
 
@@ -83,6 +84,24 @@ interface Row {
   actor: string | null;
   details: string | null;
   at: number;
+}
+
+/**
+ * A mission's notice as it is kept: for the dashboard's transcript, and for its agent to read back
+ * (`ChatEventStore.toldByMissions`). Written here, beside the query that asks for this shape, so the two cannot drift:
+ * the `note` kind, the mission's agent, and the mission in `details`. A progress line says it is one, since only a
+ * mission's newest is read back.
+ */
+export function missionNotice(mission: { id: string; agentId: string; gatewayId: string; chatId: string }, text: string, progress = false): RecordEvent {
+  return {
+    gatewayId: mission.gatewayId,
+    chatId: mission.chatId,
+    audience: "ui",
+    kind: "note",
+    text,
+    agentId: mission.agentId,
+    details: { mission: mission.id, ...(progress ? { progress: true } : {}) },
+  };
 }
 
 /** How many unseen `agents` events a prompt will carry. See `since`. */
@@ -195,6 +214,32 @@ export class ChatEventStore {
          ORDER BY at DESC LIMIT ?`,
       )
       .all(query.gatewayId, query.chatId, query.after, query.before, limit)
+      .reverse()
+      .map(toEvent);
+  }
+
+  /**
+   * What one agent's own missions told a chat in a window, oldest first: the one place a `"ui"` row reaches a prompt,
+   * and only that agent's.
+   *
+   * A mission's notices (queued, started, how far, needs you, done) are sent to the chat it reports to under its
+   * agent's name, and kept here for the dashboard. They were in no conversation of the agent's: Nix answered a person
+   * that its mission was still at work, a minute after the chat had been told under Nix's name that it was done. They
+   * are the agent's words as far as the person can tell, so the agent reads them back; no other agent of a room does.
+   * Told apart by what `boot/missions.ts` records with each: the `note` kind, its agent, and the mission in `details`.
+   *
+   * The newest `limit` of the window, as `since` takes them: the last thing a mission said is how it stands.
+   */
+  toldByMissions(query: { gatewayId: string; chatId: string; agentId: string; after: number; before: number; limit: number }): ChatEvent[] {
+    if (query.limit <= 0) return [];
+    return this.db
+      .prepare<Row>(
+        `SELECT * FROM chat_events
+         WHERE gateway_id = ? AND chat_id = ? AND kind = 'note' AND agent_id = ? AND at > ? AND at <= ?
+           AND json_valid(details) AND json_extract(details, '$.mission') IS NOT NULL
+         ORDER BY at DESC LIMIT ?`,
+      )
+      .all(query.gatewayId, query.chatId, query.agentId, query.after, query.before, query.limit)
       .reverse()
       .map(toEvent);
   }

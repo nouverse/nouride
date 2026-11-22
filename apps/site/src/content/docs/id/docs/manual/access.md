@@ -157,6 +157,11 @@ nouride access allow --from contacts.txt --gateway whatsapp:main --dry-run   # m
 nouride access allow --from contacts.txt --gateway whatsapp:main
 ```
 
+Hal yang sama dari dashboard (0.8.42), untuk admin: di tab **Approved** halaman Access, tekan **Let in a list**.
+Pilih koneksi tempat mereka akan menulis, tempel daftarnya atau pilih file-nya, lalu tekan **Check the list**: ia
+bilang berapa yang akan dimasukkan dan apa yang ditinggal, tanpa menulis apa-apa. **Let N in** lalu memasukkan
+mereka, dan hanya ditawarkan untuk daftar persis seperti yang sudah diperiksa.
+
 File-nya teks biasa:
 
 - Satu orang per baris: id-nya dulu, lalu nama kalau ada, setelah koma, titik koma atau tab. Semua

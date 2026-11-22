@@ -10,7 +10,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { CatalogSkill, LearningSettings, SkillDraft, SkillHubInstall, SkillHubPopular, SkillHubSearch, SoftwareCheck } from "@nouride/wire";
+import type { CatalogSkill, LearningSeen, LearningSettings, SkillDraft, SkillHubInstall, SkillHubPopular, SkillHubSearch, SoftwareCheck } from "@nouride/wire";
 
 export const skillsApi = {
   skillCatalog: () =>
@@ -106,6 +106,11 @@ export const skillsApi = {
   ) => post<{ ok: true; skill: string; path: string }>(`${control}/skills/drafts/${encodeURIComponent(id)}/approve`, edits ?? {}),
   denySkillDraft: (id: string) =>
     post<{ ok: true }>(`${control}/skills/drafts/${encodeURIComponent(id)}/deny`, {}),
+  // What learning holds until it comes back, and what it did lately.
+  skillSeen: () => request<LearningSeen>(`${control}/skills/learning/seen`),
+  // Minutes, not the client's seconds: the agent's model writes the skill, and may be handed it back once.
+  writeSeenSkill: (name: string) => post<{ ok: true; draft: SkillDraft }>(`${control}/skills/learning/seen/${encodeURIComponent(name)}/write`, {}, { timeoutMs: 5 * 60_000 }),
+  forgetSeenSkill: (name: string) => request<{ ok: true }>(`${control}/skills/learning/seen/${encodeURIComponent(name)}`, { method: "DELETE" }),
 
   // Skills from elsewhere. Search asks Nouverse's catalog, or the hubs when it does not answer; install raises
   // drafts — nothing reaches the pool until one is approved on the Pending tab.

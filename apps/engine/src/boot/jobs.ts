@@ -9,7 +9,7 @@
 
 import type { AgentRegistry } from "@nouride/persona";
 import { processGroupActivity } from "@nouride/runtime";
-import { createLogger, resolveQuietAfterMs, type GlobalConfig } from "@nouride/shared";
+import { createLogger, resolveQuietAfterMs, type GlobalConfig, type LeftRunning } from "@nouride/shared";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { INTERRUPTED_REPORT_MAX, INTERRUPTED_REPORT_WINDOW_MS, type JobRecord, type JobStop, type JobStore } from "@/modules/jobs/jobs.store.ts";
 import type { JobWakePort } from "@/modules/jobs/wakes.store.ts";
@@ -28,9 +28,12 @@ export function wireJobs(params: {
   /** Read at every tick: `[jobs]` and an agent's own override are both reloadable. */
   config: () => GlobalConfig;
   pipeline: Pick<Pipeline, "wakeForJob" | "wakeForQuietJob">;
+  /** Who is told what a mission's job left running as it ended by itself (`boot/mission-left.ts`). */
+  commandLeft?: (at: { gatewayId: string; chatId: string }) => ((left: LeftRunning) => void) | undefined;
 }): ReturnType<typeof setInterval> {
   const { jobs, registry, pipeline } = params;
   jobs.setOnComplete((completion) => pipeline.wakeForJob(completion));
+  if (params.commandLeft) jobs.setLeftBy(params.commandLeft);
 
   const watchdog = new JobWatchdog({
     // Newest first and capped at a hundred: running jobs are recent, and a daemon with a hundred

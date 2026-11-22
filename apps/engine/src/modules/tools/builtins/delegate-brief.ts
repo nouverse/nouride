@@ -47,9 +47,6 @@ export interface HelperBrief {
 /** A goal is a sentence: it heads the job in `nouride jobs`, the dashboard and the report that comes back. */
 const MAX_GOAL_CHARS = 300;
 
-/** The whole brief. Longer material belongs in a file the brief names, where the helper can read the part it needs. */
-const MAX_BRIEF_CHARS = 6_000;
-
 /** What a model writes for "nothing" — a context of only this is an empty one. */
 const PLACEHOLDER = /^(?:none|n\/?a|nil|null|nothing|empty|no context|tidak ada|-+|—|\.+|\?+)$/i; // em-dash-ok: what a model writes for an empty field
 
@@ -112,14 +109,8 @@ function parseBrief(entry: unknown, task: string): { brief: HelperBrief } | { er
 
   const constraints = text("constraints");
   const brief: HelperBrief = { goal, context, ...(constraints ? { constraints } : {}), deliverable };
-  const length = goal.length + context.length + constraints.length + deliverable.length;
-  if (length > MAX_BRIEF_CHARS) {
-    return {
-      error:
-        `${task}'s brief is ${length} characters; keep it under ${MAX_BRIEF_CHARS}. Put long material in a file in ` +
-        `the workspace and name its path in \`context\`: the helper reads the part it needs.`,
-    };
-  }
+  // No bound on the whole: a brief is read once, by the helper it starts, and is as long as the work needs. It was held
+  // to 6,000 characters, and a lead that had written out a scaffold's every part was refused and told to write less.
   if (!workTextIsEnglish([goal, context, constraints, deliverable].join("\n"))) return { error: writeWorkInEnglish(`${task}'s brief`) };
   return { brief };
 }

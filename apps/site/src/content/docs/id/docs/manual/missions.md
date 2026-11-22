@@ -332,6 +332,20 @@ menghentikannya, dan ia tetap melapor ke sana. Percakapan itu ada di halaman mis
 berakhir, misi disimpan selama percakapan disimpan, `[retention] session_days` (30 hari), lalu dihapus; misi yang
 masih berjalan gak pernah dihapus, selama apa pun ia berjalan.
 
+Semua yang dikabarkan misi ke chat-nya dikirim atas nama agent-nya: ia antre atau mulai, sudah sampai mana, hampir
+kena batas, butuh apa dari kamu, lanjut lagi, selesai, dengan hasilnya. Agent di chat itu membaca kabar yang sama
+bersama pesanmu berikutnya di sana (0.8.42), sekali, persis seperti yang kamu baca: apa pun yang dikabarkan sejak ia
+terakhir menjawabmu di sana. Sebelumnya ia hanya tahu pernah memulai misi, dan bisa menjawab bahwa misi yang sudah
+selesai masih berjalan. Dari baris progres sebuah misi ia membaca yang terbaru. Setelah `/new` ia mulai dari nol,
+seperti hal lainnya, dan bisa melihat daftar misinya sendiri.
+
+Saat misi berakhir, yang sedang dijalankannya ikut berakhir: job latar belakangnya, dan (0.8.42) apa pun yang
+dimulai salah satu perintahnya tanpa ditunggu, misalnya worker build yang tertinggal. Masing-masing diminta berhenti
+dan, sesaat kemudian, dihentikan, lalu chat-nya diberi tahu apa yang dihentikan. Program yang sengaja memisahkan diri
+tetap jalan: process manager, container, service sistem. Begitulah cara membuat sesuatu tetap hidup setelah misi
+selesai. Ini berlaku untuk perintah yang dijalankan Nouride bagi agent; yang dimulai agent di coding CLI dari shell
+CLI-nya sendiri adalah urusan CLI itu.
+
 Di dalam misi, agent bisa menyerahkan satu bagian terpisah ke agent lain sebagai misi tersendiri (satu tingkat, gak
 lebih dalam), dan diberi tahu bagaimana hasilnya.
 

@@ -1858,6 +1858,7 @@ free — counting, exit codes, a tool name not seen before — with the dials fi
 | `error_recovery` | three or more tool calls failed in a turn, and one succeeded *after the last failure* |
 | `sustained_effort` | eight rounds accumulated in one conversation — a turn is worth its model round-trips, **plus one when it arrived within three minutes of the agent's last word** |
 | `first_integration` | the agent succeeded for the first time ever with a tool it had not used |
+| `mission` | a mission ended done: looked at once, from its goal, its own last turn and its report (`ReflectionEngine.observeMission`). A mission's turns are never handed to the pass one by one, and one that stopped or failed is not looked at |
 
 `sustained_effort` catches a long conversation where every command succeeded and the person still had to steer.
 Earlier versions read that from phrasing ("bukan gitu", "still broken") and failed silently for wording nobody
@@ -1867,19 +1868,36 @@ density is counted without reading a word — a turn arriving inside three minut
 instead of ten. The counter is reset when the pass runs, not when a trigger matches; a minute's cooldown per agent and
 twenty pending drafts bound the rest.
 
+**After a look that kept nothing, the next in that chat waits for twice the work** (`cooldown.ts` `dueAfter`,
+`TUNING.maxDoublings = 1`): sixteen rounds, back to eight on a draft kept or once the chat was put down for six hours.
+A person asking is never held by it. Replayed over the live box's fifteen days (1,397 turns in 88 chats): 261 looks
+where 383 were made, and of the 19 drafts that came of a chat, 5 would have come minutes later and 3 a day later;
+doubling twice makes 210 looks and puts 5 off by a day, so it doubles once.
+
 **Triage** (`reflection/synthesis.ts`, `prompts.ts`). One call, one question: what should happen to the library
 because of this conversation — `skip`, `update <skill>`, `attach <skill>` (a file beside it rather than a longer body)
 or `create`. It sees every skill with its description, size and owner, and can read any of them. It is active about
 procedure — "standard" and "routine" are not reasons to skip, and a correction is a first-class signal — and strict
 about destination: an incident earns a line only as the step that prevents it on the next task of the kind, and
 facts, measurements, one task's own steps and Nouride's own flags are not captured. A second call writes: the new
-skill, or the revised one, given the current file.
+skill, or the revised one, given the current file. Triage is told which skills the conversation read
+(`pool.ts` `skillsRead`: a skill's own `SKILL.md` path in a tool call), and a lesson on the ground of one goes to it.
 
-**A new kind of work waits for a second conversation** (`candidates.store.ts`, `069_baseline.sql`). A `create`
-names the class and its "Use when" line and is held as a candidate — no body, no second call. When a later
-conversation is the same kind of work (triage names the candidate in `recurs`, or picks its name) the skill is
-written; a person asking for one skips the wait; a candidate lapses after 30 days. One conversation cannot show that
-work recurs, and on the live box by 2026-10-22 a single audit workbook had become a skill.
+**A revision is edits, not the skill written again** (`patch.ts`). The reviser returns `edits`, each the text of the
+body it replaces and what replaces it; `patched` makes them in order, finding `old` as written and then with the
+spaces at its lines' ends left out, and refuses by number one found nowhere or more than once. What is not named
+stays word for word, the body grows by the edit alone, and the draft a person approves is the change. An edit that
+cannot be placed is handed back once, as a refused draft is. The weekly review, which exists to shorten the whole,
+still asks for the whole (`REWRITE_INSTRUCTION`). Before this the reviser returned the body: 43 of the 64 drafts the
+live box refused in fifteen days were a body a few hundred characters past its size.
+
+**A new kind of work waits until it comes back** (`candidates.store.ts`, `069_baseline.sql`). A `create` names the
+class and its "Use when" line and is held as a candidate — no body, no second call. When the same kind of work is
+seen again (triage names the candidate in `recurs`, or picks its name) the skill is written: in another conversation,
+or in the same one six hours or more after it was last seen there, since a chat is one conversation for as long as
+the install lives. A person asking for one skips the wait; a candidate lapses after 30 days, and is done with only
+once its skill is drafted. One sitting cannot show that work recurs, and on the live box by 2026-10-22 a single audit
+workbook had become a skill.
 
 **Checked in code** (`draft-lint.ts`, `gates.ts`), because the prompts said the same and it did not hold. A draft is
 refused when its body names a machine's address, a hardware address or an account, or tells a session ("in this
@@ -1887,6 +1905,32 @@ session", "the user said"); when a description it set reads as an edit note ("Up
 passes 8,000 characters; and when a revision takes a body past 12,000 — one already past it may only shrink. Revisions
 integrate the lesson into the step it changes rather than append it. The live box had grown `home-pc-ops` to 306 lines
 of incidents under the old rule, "keep everything that is still true".
+
+**A refused draft goes back to its writer once** (`synthesis.ts` `handedBackOnce`), with its own answer and the
+reason; the second draft is checked as the first was, and a second refusal keeps nothing. A revision answers for what
+it adds: an address, an account or a story its skill already held is passed over (`notAProcedure`'s `kept`), and the
+weekly review's revision, asked to take those out, is judged whole. The reviser is told the body's size and its limit
+as numbers. A skill whose draft was refused twice is left alone for six hours (`TUNING.refusedRestMs`), a person
+asking excepted. Measured on the live box over fifteen days before this: 64 of the 83 drafts written were refused and
+dropped, 43 for size and 21 for an account's address, two skills nineteen times each.
+
+**What a person is shown** (`GET /skills/learning/seen`, the Skills page's Pending tab). Each kind of work held, with
+how often it was seen (`skill_candidates.sightings`, `093_skill_learning_seen.sql`, backfilled from the audit log's
+`skill_candidate_held` rows) and whether the conversation it was seen in is still kept; and the last twelve things
+learning did, read from its own audit rows, a look that kept nothing among them with triage's reason
+(`skill_pass_nothing`). A held kind of work is written now on an operator's word
+(`POST /skills/learning/seen/:name/write`: the author call over that conversation as it stands, no triage) or
+forgotten (`DELETE`). A skill's reads are counted (`skill_reads.reads`), and again from the last change learning made
+to it (`reads_since_change`).
+
+**A replay** (`POST /skills/learning/try`, admin; `try-out.ts`): what the pass would do with a conversation given as
+text, with nothing kept, and with the deciding or the writing model named for the call. It is how a change to the
+pass is measured on recorded conversations before it ships. Its first use decided where triage runs: on the live
+box's conversations (13 a kind of work was held from, 7 whose lesson is in the pool already), the agents' own model
+(Claude Opus) would act on 8 and their small model (Gemini Flash) on 1, a test's probe; the two decided the same on
+11 of 20. So the deciding call stays on the model that writes, and a cheaper one is a choice
+(`[skills.learning] model`), not a default. The same run wrote a lesson as edits into a skill a revision had been
+refused for nineteen times: 11,800 characters to 11,935, kept.
 
 **Scope.** A skill learning writes is on for the agent whose work it came from (`agents:` in its frontmatter,
 `Skill.agents`); another agent turns it on in its `skills.toml`, whose answer always wins. Until 0.7.27 every pooled

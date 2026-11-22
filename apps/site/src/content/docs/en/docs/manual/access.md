@@ -147,6 +147,11 @@ nouride access allow --from contacts.txt --gateway whatsapp:main --dry-run   # c
 nouride access allow --from contacts.txt --gateway whatsapp:main
 ```
 
+The same from the dashboard (0.8.42), for an admin: on the Access page's **Approved** tab, **Let in a list**. Choose
+the connection they will write on, paste the list or choose its file, and press **Check the list**: it says how many
+would be let in and what is left out, and writes nothing. **Let N in** then lets them in, and is offered only for the
+list as it was checked.
+
 The file is plain text:
 
 - One person a line: their id first, then a name if you have one, after a comma, a semicolon or a tab.

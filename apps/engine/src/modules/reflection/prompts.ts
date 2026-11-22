@@ -176,9 +176,9 @@ export const TRIAGE_INSTRUCTION = [
   "   should not absorb this. Two skills covering one subject is the failure mode: the agent loads",
   "   one, the lesson is in the other, and neither gets trusted. Name it for the class, never for",
   "   today: if the name only makes sense for this task, it is the wrong name and you want (1) or (2).",
-  "   One conversation does not show that work recurs: a new class is held as a candidate until",
-  "   another conversation is the same kind of work, and is written then. If the candidates listed",
-  "   below include this one, name it in `recurs`.",
+  "   Seen once does not show that work recurs: a new class is held as a candidate until the same",
+  "   kind of work comes back, in another conversation or in this one after a break, and is written",
+  "   then. If the candidates listed below include this one, name it in `recurs`.",
   "4. **skip**: genuinely nothing here. The list below is what that actually looks like.",
   "",
   "**You are given one line per skill. Read the ones that might fit.** `read_skill` returns any of",
@@ -299,19 +299,8 @@ export const AUTHOR_INSTRUCTION = [
   "  Point at every file you add from the body, or nobody will find it.",
 ].join("\n");
 
-/**
- * The second pass, used only when the first said "improve this one".
- *
- * Split in two rather than handing every skill's *body* to the first call: eighteen bodies is tens
- * of thousands of tokens on every reflection, most of them irrelevant. Descriptions are cheap
- * (~3.4KB for eighteen, measured on the live box) and are exactly what "which skill is this about"
- * needs. So the first call matches on meaning against descriptions, the second reads the one body
- * that matters. Two calls, but only on the minority of turns that propose an improvement.
- */
-export const REVISE_INSTRUCTION = [
-  "You said this turn should improve the skill below. Here it is in full. Return the improved",
-  "version.",
-  "",
+/** What holds for every revision, whichever shape it comes back in. */
+const REVISE_RULES = [
   "Rules for the improvement:",
   "- **Integrate, do not append.** Put the lesson into the step it changes and merge it with the",
   "  pitfalls already listed; take out history (dated incidents, what happened in which session). Keep",
@@ -355,6 +344,56 @@ export const REVISE_INSTRUCTION = [
   "the same mistake as writing up an unresolved failure as a procedure. If you did not run it, the",
   "knowledge belongs in `references/` as prose.",
   "",
+];
+
+const SUPPORT_FILES_NOTE = "`files` may be omitted. Anything you list replaces a file of that name and leaves the rest alone.";
+
+/**
+ * The second pass, used only when the first said "improve this one".
+ *
+ * Split in two rather than handing every skill's *body* to the first call: eighteen bodies is tens
+ * of thousands of tokens on every reflection, most of them irrelevant. Descriptions are cheap
+ * (~3.4KB for eighteen, measured on the live box) and are exactly what "which skill is this about"
+ * needs. So the first call matches on meaning against descriptions, the second reads the one body
+ * that matters. Two calls, but only on the minority of turns that propose an improvement.
+ *
+ * A lesson from a conversation: returned as edits to the body (`patch.ts`), never as the body written again.
+ *
+ * The rule is in the words, because the model's habit is the other way: "the whole improved body" is what every
+ * earlier version of this prompt asked for, and a body rewritten to carry one new step is how a skill lost a
+ * procedure nobody meant to touch and grew past its size.
+ */
+export const REVISE_INSTRUCTION = [
+  "You said this turn should improve the skill below. Here it is in full. Return the change, as edits.",
+  "",
+  ...REVISE_RULES,
+  "**Change it with edits. Do not write the skill again.** Each edit names text of the body above, copied",
+  "exactly as it is written there, and what replaces it:",
+  "- To add a step or a pitfall, take the line it goes after as `old`, and return that line followed by",
+  "  the new text as `new`.",
+  "- To correct something, `old` is the sentence or the lines that are wrong and `new` what they should say.",
+  "- To take something out, `new` is empty.",
+  "Copy enough of the text that it is found once in the body, and no more than the change needs. What you",
+  "do not name stays exactly as it is, so nothing is lost and nothing has to be typed again. The frontmatter",
+  "is not yours to edit: a description that is now wrong goes in `description`.",
+  "",
+  "Reply with a single JSON object and nothing else:",
+  "{",
+  '  "description": "the one-line trigger, updated if it should be",',
+  '  "requires": "comma-separated programs on this host, or empty",',
+  '  "needs_tools": "comma-separated Nouride tools the procedure calls, or empty",',
+  '  "edits": [{"old": "text copied from the body", "new": "what replaces it"}],',
+  '  "files": [{"path": "scripts/<name>.py", "content": "…"}, {"path": "references/<name>.md", "content": "…"}]',
+  "}",
+  "",
+  SUPPORT_FILES_NOTE,
+].join("\n");
+
+/** The weekly review's revision (`curator.ts`): the skill tightened or merged, which is the whole of it written again. */
+export const REWRITE_INSTRUCTION = [
+  "This skill is to be rewritten. Here it is in full. Return the improved version.",
+  "",
+  ...REVISE_RULES,
   "Reply with a single JSON object and nothing else:",
   "{",
   '  "description": "the one-line trigger, updated if it should be",',
@@ -364,7 +403,7 @@ export const REVISE_INSTRUCTION = [
   '  "files": [{"path": "scripts/<name>.py", "content": "…"}, {"path": "references/<name>.md", "content": "…"}]',
   "}",
   "",
-  "`files` may be omitted. Anything you list replaces a file of that name and leaves the rest alone.",
+  SUPPORT_FILES_NOTE,
 ].join("\n");
 
 /**
@@ -430,10 +469,18 @@ export function renderSkillList(
   ].join("\n");
 }
 
+/**
+ * The skills this conversation read, said outright. Triage's first rule is "a skill this conversation actually used",
+ * and it was left to find that in a transcript whose tool calls are cut to fit.
+ */
+export function renderInPlay(names: readonly string[]): string {
+  return `Skills this conversation read: ${names.join(", ")}. A lesson about what one of them covers goes to that one first, by update or attach, unless it is marked off limits above.`;
+}
+
 /** The classes of work seen once and held as candidates (`candidates.store.ts`), listed after the skills. */
 export function renderCandidates(candidates: readonly { name: string; description: string; day: string }[]): string {
   return [
-    "Seen once, not skills yet (each is written when a second conversation is the same kind of work):",
+    "Seen once, not skills yet (each is written when the same kind of work comes back):",
     ...candidates.map((candidate) => `- ${candidate.name} (${candidate.day}): ${candidate.description}`),
   ].join("\n");
 }

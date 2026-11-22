@@ -7,8 +7,11 @@
  * work. The model writes that sentence in the same step as its first tool call; this decides whether it goes out.
  *
  * - The first one of a turn goes out immediately.
- * - A later one only when `gapMs` (two minutes) has passed since the last one sent: a status on long work, not a running
- *   commentary on every step. One held back is not lost — it is in the conversation like any assistant message.
+ * - A later one of one line only when `gapMs` (two minutes) has passed since the last one sent: a status on long work,
+ *   not a running commentary on every step. One held back stays in the conversation and reaches no chat, which is
+ *   right for "now I run it again" and nothing else. So more than a line goes out whatever the gap: in thirty days
+ *   of a live box every one of 155 lines held back was under 200 characters, and the one text of 3,149 written beside
+ *   a `notes` call was held with them and read by nobody.
  * - A message of its own goes out whatever the gap (`offer`'s `own`): a coding CLI's words between its steps are its
  *   messages, each said as it is written, as its own terminal shows them — held back, they reached the chat minutes
  *   later as one long answer, and the person felt ignored until then (0.8.5).
@@ -51,7 +54,10 @@ export class Preamble {
     const words = text.trim();
     if (!words || this.options.callsAnotherAgent?.(words)) return false;
     const now = (this.options.now ?? Date.now)();
-    if (!said.own && this.lastSentAt !== undefined && now - this.lastSentAt < (this.options.gapMs ?? PREAMBLE_GAP_MS)) return false;
+    // Held back inside the gap only where it is a status: one line. More than a line is no status, it is what the
+    // agent has to tell: held back, it was in the conversation and in no chat, and the agent took it for said.
+    const status = !words.includes("\n");
+    if (!said.own && status && this.lastSentAt !== undefined && now - this.lastSentAt < (this.options.gapMs ?? PREAMBLE_GAP_MS)) return false;
     this.lastSentAt = now;
     this.said.add(words);
     // Never holds the work for long: a platform that hangs on a send gets the line late, not the turn stuck behind it.

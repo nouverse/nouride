@@ -55,7 +55,7 @@ export async function compose(
   ctx: TurnContext,
   turn: TurnState,
   with_: {
-    rooms: Pick<RoomMemory, "filesBefore" | "overheardBefore" | "eventsBefore">;
+    rooms: Pick<RoomMemory, "filesBefore" | "overheardBefore" | "eventsBefore" | "missionNoticesBefore">;
     attachments: Pick<AttachmentIntake, "store" | "pictures" | "quotedFiles">;
   },
   override: string | undefined,
@@ -136,10 +136,12 @@ export async function compose(
   // The same window, read from the events table. Stored with the message for the same reason, so
   // an event reaches this agent once and then belongs to its conversation.
   const events = rooms.eventsBefore(agent, envelope, history, session.startedAt);
+  // And what its own missions told this chat in that window, under its name: read by the person, and by it only here.
+  const told = rooms.missionNoticesBefore(agent, envelope, history, session.startedAt);
   const question = composeQuestion({
     text,
     overheard,
-    events,
+    events: [events, told].filter(Boolean).join("\n\n"),
     hasAttachments: Boolean(attachmentNotice),
     ...(envelope.chatType === "dm" ? {} : { speaker: speakerName(ctx.deps.config.people, envelope) }),
     // A thread's first question carries what the thread was started from; after that it is in the history (0.7.24).

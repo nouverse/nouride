@@ -11,7 +11,7 @@ import { privateWorkspace, sharedWorkspace, type AgentRegistry } from "@nouride/
 import { sessionIdFor } from "@nouride/shared";
 import { ownFolderPorts } from "./mission-folders.ts";
 import type { Notifier } from "@/commons/notify.ts";
-import type { ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
+import { missionNotice, type ChatEventsPort } from "@/modules/chat-events/chat-events.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import { checkRefusal, runChecks } from "@/modules/missions/checks.ts";
 import { MISSION_GATEWAY_ID, MissionGateway } from "@/modules/missions/gateway.ts";
@@ -24,6 +24,7 @@ import { gateSide } from "@/modules/missions/gate-side.ts";
 import { OptionPresses } from "@/modules/missions/options.ts";
 import { ActionPresses } from "@/modules/missions/actions.ts";
 import { DraftNotices } from "@/modules/missions/draft-notices.ts";
+import { missionLeft } from "./mission-left.ts";
 import { ProgressLines } from "@/modules/missions/progress-line.ts";
 import { toldBy } from "@/modules/missions/types.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
@@ -217,6 +218,8 @@ export function buildMissions(params: {
   linkFor?: LinkFor;
   /** Where a mission started on a person's words is recorded, with the words (0.8.11, `now` and `work` start). */
   audit?: Pick<AuditPort, "record">;
+  /** Where a mission that ended done is looked at for a skill (`ReflectionEngine.observeMission`), with its own conversation's id. */
+  learn?: (mission: Mission, sessionId: string) => void;
 }) {
   const store = new MissionStore(params.db);
   /** What *Approve similar from this mission* allowed, per open mission (0.8.7, `missions/similar.ts`). */
@@ -229,14 +232,25 @@ export function buildMissions(params: {
   /** The chat a mission reports to, on the connection its agent speaks on there. */
   const reportsTo = (mission: Mission) => ({ gatewayId: late ? late.voice(mission.agentId, mission.gatewayId) : mission.gatewayId, chatId: mission.chatId });
   /** What a mission said, as the dashboard's conversation shows it. */
-  const noted = (mission: Mission, text: string): void => {
-    params.chatEvents.record({ gatewayId: mission.gatewayId, chatId: mission.chatId, audience: "ui", kind: "note", text, agentId: mission.agentId, details: { mission: mission.id } });
+  // Kept with its mission and its agent: the dashboard's transcript shows it, and the agent reads it back with the next
+  // message in that chat (`ChatEventStore.toldByMissions`). A progress line says so: only a mission's newest is read back.
+  const noted = (mission: Mission, text: string, progress = false): void => {
+    params.chatEvents.record(missionNotice(mission, text, progress));
   };
   const drafted = draftTelling(params.notifier, reportsTo, noted);
   const gateway = new MissionGateway();
   let late: MissionsLate | undefined;
 
   const asTheAgent = (agentId: string): AsAgent => agentCommand(params.config().daemon.workspaceDir, agentId);
+
+  // What a mission's commands left running in their own process groups, ended at its end (`mission-left.ts`).
+  const left = missionLeft({
+    asAgent: asTheAgent,
+    tell: async (mission, text) => {
+      await params.notifier.toChat(reportsTo(mission), text);
+      noted(mission, text);
+    },
+  });
 
   /**
    * What a command of the mission's agent runs with: its folders, its user, nobody waiting on it. A mission not yet
@@ -297,6 +311,7 @@ export function buildMissions(params: {
       drafted.forget(mission.id);
     },
     letGoCli: (mission) => params.forgetCliSession?.(mission.agentId, MISSION_GATEWAY_ID, mission.id),
+    endLeft: left.endLeft,
     tell: async (mission, text, buttons) => {
       const to = reportsTo(mission);
       // With buttons — a question's options, or what can be done about a wait — where the chat carries them, saying so;
@@ -309,7 +324,7 @@ export function buildMissions(params: {
     tellDraft: drafted.tell,
     progress: async (mission, text) => {
       await progressed.say(mission.id, reportsTo(mission), text);
-      noted(mission, text);
+      noted(mission, text, true);
     },
     queueTurn: (envelope) => late?.queueTurn(envelope) ?? false,
     stopTurn: (mission) => late?.cancelTurn(mission.agentId, mission.id),
@@ -344,6 +359,7 @@ export function buildMissions(params: {
     },
     // One another agent started: kept as it ends, so the agent that ran it and the one that started it are told of it.
     helped: (mission) => keepDone(new WorkDoneStore(params.db), missionDone(mission)),
+    learn: (mission) => params.learn?.(mission, sessionIdFor({ agentId: mission.agentId, gatewayId: MISSION_GATEWAY_ID, chatId: mission.id })),
     remember: async (mission) => {
       if (!params.memory) return;
       const person = personFor(params.config().people, mission.gatewayId, mission.startedBy)?.key ?? `${mission.gatewayId}:${mission.startedBy}`;
@@ -457,6 +473,8 @@ export function buildMissions(params: {
     }),
     /** A worktree for a writing helper of a mission in one (`delegate` `isolated`). */
     isolateHelper,
+    /** Who is told what a command left running: a mission's own turn alone, so its end can end it. */
+    commandLeft: left.commandLeft,
     /** The table itself, for what reads across missions — the morning lines (0.8.0). */
     store,
     gateway,

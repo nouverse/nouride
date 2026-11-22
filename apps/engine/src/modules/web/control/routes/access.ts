@@ -7,7 +7,7 @@ import { atLeast } from "@/modules/users/auth.ts";
 import { ACCESS_ACTIONS } from "@/modules/access/access.store.ts";
 import { accountIdentity, personOf, type LinkTarget } from "@/modules/config/settings/identities.ts";
 import { idFormsFor } from "@/modules/people/match.ts";
-import type { Person } from "@nouride/shared";
+import { sendersIn, type Person } from "@nouride/shared";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { INCOMPLETE, NOT_SAVED, NO_SETTINGS, notSaved } from "../plain.ts";
@@ -136,6 +136,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
    * A list of senders let in ahead, at once (`nouride access allow --from`). Registered before `/access/:action`, as
    * `mode` is. Each line is read as the connection reads a written id (`Gateway.senderIdOf`: a phone number as
    * WhatsApp's address of it), so what is kept is what a message from them will carry. `dryRun` writes nothing.
+   * `senders` are lines read already; `text` is the list as it was written or pasted, read here.
    */
   control.post("/access/import", async (c) => {
     if (!deps.access) return c.json({ error: "access control is not enabled" }, 501);
@@ -147,13 +148,15 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
     if (!gateway || gateway.internal) {
       return c.json({ error: `no connection ${JSON.stringify(gatewayId)}`, plain: "There is no connection of that name. Check its name under Connections." }, 404);
     }
-    if (!Array.isArray(body.senders) || body.senders.length === 0) return c.json({ error: "senders is a list of at least one id", plain: "The list names nobody. Check the file, and send it again." }, 400);
-    if (body.senders.length > IMPORT_MAX) return c.json({ error: `a list is at most ${IMPORT_MAX} senders`, plain: "A list holds at most 50,000 people. Send it in parts." }, 400);
+    // The list as written (`text`, the Access page's), read as the command reads a file, or its lines read already.
+    const listed: unknown[] = typeof body.text === "string" ? sendersIn(body.text) : Array.isArray(body.senders) ? body.senders : [];
+    if (listed.length === 0) return c.json({ error: "senders is a list of at least one id", plain: "The list names nobody. Check it, and send it again." }, 400);
+    if (listed.length > IMPORT_MAX) return c.json({ error: `a list is at most ${IMPORT_MAX} senders`, plain: "A list holds at most 50,000 people. Send it in parts." }, 400);
 
     const senders = new Map<string, { senderId: string; name?: string }>();
     const invalid: string[] = [];
     let duplicates = 0;
-    for (const line of body.senders as unknown[]) {
+    for (const line of listed) {
       const written = typeof line === "string" ? line : typeof (line as { id?: unknown })?.id === "string" ? (line as { id: string }).id : "";
       const name = typeof (line as { name?: unknown })?.name === "string" ? (line as { name: string }).name.trim() : "";
       // As this connection writes a sender: its own reading where it has one, else the id as written, whole.
@@ -164,7 +167,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
     }
     const dryRun = body.dryRun === true;
     const counts = deps.access.allowMany(gatewayId, [...senders.values()], principal.actor, dryRun);
-    return c.json({ gateway: gatewayId, dryRun, read: body.senders.length, ...counts, duplicates, invalid: { count: invalid.length, examples: invalid.slice(0, 10) } } satisfies AccessImported);
+    return c.json({ gateway: gatewayId, dryRun, read: listed.length, ...counts, duplicates, invalid: { count: invalid.length, examples: invalid.slice(0, 10) } } satisfies AccessImported);
   });
 
   control.post("/access/:action", async (c) => {

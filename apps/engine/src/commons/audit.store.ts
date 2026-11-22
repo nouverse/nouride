@@ -43,6 +43,10 @@ export interface SkillRead {
   /** The last read; null when there has been none since `since`. */
   readAt: number | null;
   since: number;
+  /** Reads counted (`093_skill_learning_seen.sql`): from that release on, so less than its age says for an older skill. */
+  reads: number;
+  /** Reads since the skill was last changed by learning: whether what was written into it has been used. */
+  readsSinceChange: number;
 }
 
 /** An absolute `SKILL.md` path inside a tool call's recorded arguments — what `read` and `exec cat` of a skill leave. */
@@ -104,8 +108,9 @@ export class AuditLog {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
       const read = this.db.prepare(
-        `INSERT INTO skill_reads (path, watched_since, read_at) VALUES (?, ?, ?)
-         ON CONFLICT (path) DO UPDATE SET read_at = max(coalesce(skill_reads.read_at, 0), excluded.read_at)`,
+        `INSERT INTO skill_reads (path, watched_since, read_at, reads, reads_since_change) VALUES (?, ?, ?, 1, 1)
+         ON CONFLICT (path) DO UPDATE SET read_at = max(coalesce(skill_reads.read_at, 0), excluded.read_at),
+           reads = skill_reads.reads + 1, reads_since_change = skill_reads.reads_since_change + 1`,
       );
       this.db.transaction(() => {
         for (const entry of pending) {
@@ -178,11 +183,11 @@ export class AuditLog {
     this.flush();
 
     const rows = this.db
-      .prepare<{ path: string; watched_since: number; read_at: number | null }>(
-        "SELECT path, watched_since, read_at FROM skill_reads WHERE path IN (SELECT value FROM json_each(?))",
+      .prepare<{ path: string; watched_since: number; read_at: number | null; reads: number; reads_since_change: number }>(
+        "SELECT path, watched_since, read_at, reads, reads_since_change FROM skill_reads WHERE path IN (SELECT value FROM json_each(?))",
       )
       .all(JSON.stringify(paths));
-    for (const row of rows) reads.set(row.path, { readAt: row.read_at, since: row.watched_since });
+    for (const row of rows) reads.set(row.path, { readAt: row.read_at, since: row.watched_since, reads: row.reads, readsSinceChange: row.reads_since_change });
 
     const unseen = paths.filter((path) => !reads.has(path));
     if (unseen.length > 0) for (const [path, read] of this.startWatching(unseen)) reads.set(path, read);
@@ -218,12 +223,17 @@ export class AuditLog {
     const reads = new Map<string, SkillRead>();
     this.db.transaction(() => {
       for (const path of paths) {
-        const read = { readAt: found.get(path) ?? null, since: oldest };
+        const read = { readAt: found.get(path) ?? null, since: oldest, reads: 0, readsSinceChange: 0 };
         insert.run(path, read.since, read.readAt);
         reads.set(path, read);
       }
     });
     return reads;
+  }
+
+  /** A skill was changed by learning: its reads are counted from here, to say whether what was written is used. */
+  skillChanged(path: string): void {
+    this.db.prepare("UPDATE skill_reads SET reads_since_change = 0 WHERE path = ?").run(path);
   }
 
   /** Recent entries, newest first — for the CLI and the dashboard. */

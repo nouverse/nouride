@@ -62,3 +62,39 @@ export function formatRoomEvents(events: ChatEvent[], budget = BLOCK_MAX_CHARS):
   if (lines.length === 0) return "";
   return [head, ...lines.reverse()].join("\n");
 }
+
+/** Chars the missions' block may take: a done notice carries its result, so a line is longer than a room event's. */
+const MISSIONS_MAX_CHARS = 3_000;
+/** Chars of one notice: its first lines say what happened, and the whole is on the mission's page. */
+const NOTICE_MAX_CHARS = 700;
+
+/**
+ * What an agent's own missions told this chat since it was last spoken to, as a block in front of the question.
+ *
+ * The notices as the person read them, not a summary made of the missions' states: whatever a mission says to its
+ * chat (it is queued, it started, how far it is, it nears a limit, it needs something, it goes on, it is done, a
+ * draft changed) reaches the agent the same way, with nothing to keep in step. Of a mission's progress lines only the
+ * newest is said: the chat shows one, rewritten.
+ *
+ * `clock` writes a notice's time as the daemon's own zone has it. Newest first within the budget, as `formatRoomEvents`.
+ */
+export function formatMissionNotices(events: ChatEvent[], clock: (at: number) => string, budget = MISSIONS_MAX_CHARS): string {
+  const newestProgress = new Map<unknown, string>();
+  for (const event of events) if (event.details?.progress === true) newestProgress.set(event.details.mission, event.id);
+  const kept = events.filter((event) => event.details?.progress !== true || newestProgress.get(event.details.mission) === event.id);
+
+  const lines: string[] = [];
+  let spent = 0;
+  for (let index = kept.length - 1; index >= 0; index -= 1) {
+    const event = kept[index]!;
+    const said = oneLine(event.text);
+    const line = `- ${clock(event.at)} ${said.length > NOTICE_MAX_CHARS ? `${said.slice(0, NOTICE_MAX_CHARS)}…` : said}`;
+    if (lines.length > 0 && spent + line.length + 1 > budget) break;
+    spent += line.length + 1;
+    lines.push(line);
+  }
+  if (lines.length === 0) return "";
+  const one = lines.length === 1;
+  const head = `[Since your last message here, your own missions told this chat ${one ? "1 thing" : `${lines.length} things`} under your name. The person has read ${one ? "it" : "them"} and you had not: background for what they say next, not something to answer. A mission's newest line is how it stands now]`;
+  return [head, ...lines.reverse()].join("\n");
+}

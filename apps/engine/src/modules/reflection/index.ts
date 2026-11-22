@@ -22,38 +22,44 @@
  *   deny()     →  the row is deleted, transcript and all
  */
 
-import { createLogger, helperModel, type InstallTiers, type LLMProvider, type SkillLearningSection } from "@nouride/shared";
+import { createLogger, helperModel, type ChatMessage, type InstallTiers, type LLMProvider, type SkillLearningSection } from "@nouride/shared";
 import type { AgentRegistry } from "@nouride/persona";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import { meter, metered } from "@/modules/llm/metered.ts";
 import type { UsagePort } from "@/modules/llm/usage.store.ts";
 import type { BudgetVerdict } from "@/modules/llm/budget.ts";
-import { VALID_SKILL_NAME, archivePoolSkill, updateExistingSkill, writeNewSkill } from "@nouride/persona";
 import type { AuditPort, SkillRead } from "@/commons/audit.store.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import { REASON_SEPARATOR, ToolMemory, lessonOf, type DraftsPort } from "./drafts.store.ts";
 import { redact } from "@nouride/secrets";
+import { redactAll } from "./draft-fields.ts";
 import { detectTrigger } from "./trigger.ts";
-import { buildTranscript, synthesizeSkill } from "./synthesis.ts";
-import { breadthOf, listSkillFiles, readPool, readSkill, readSkillFile, writeRefusal } from "./pool.ts";
+import { authorSkill, synthesizeSkill, type SynthesisInput, type SynthesisResult } from "./synthesis.ts";
+import { buildTranscript } from "./transcript.ts";
+import { approveDraft, denyDraft, type ApprovalOutcome } from "./decisions.ts";
+import { passInput } from "./pass-input.ts";
+import { tryOut, type TryOut } from "./try-out.ts";
+import { readPool, skillsRead } from "./pool.ts";
 import { announceAccepted, announceDraft } from "./notify.ts";
 import { proposeImprovement } from "./propose.ts";
-import { installedFields, type InstallDeps } from "./install.ts";
+import type { InstallDeps } from "./install.ts";
 import { Cooldowns } from "./cooldown.ts";
 import { TUNING, type Tuning } from "./tuning.ts";
 import { LibraryReview } from "./review.ts";
 import type { ReviewStore } from "./reviews.store.ts";
-import type { CandidateStore } from "./candidates.store.ts";
+import type { CandidateStore, SkillCandidate } from "./candidates.store.ts";
 import { refusalOf, writeNow } from "./gates.ts";
-import type { DraftEdits, ObservedTurn, SkillDraft } from "./types.ts";
+import type { DraftEdits, ObservedTurn, SkillDraft, Trigger } from "./types.ts";
 
 // What the daemon builds the loop from, and nothing else: a test that needs the trigger, the triage or the prompts
 // imports them from their own files rather than widening this surface for it.
 export { DraftStore, ToolMemory } from "./drafts.store.ts";
 export { CandidateStore } from "./candidates.store.ts";
+export type { SkillCandidate } from "./candidates.store.ts";
 export { ReviewStore } from "./reviews.store.ts";
 export type { ReviewReport } from "./curator.ts";
 export type { DraftsPort } from "./drafts.store.ts";
+export type { ApprovalOutcome } from "./decisions.ts";
 export type { DraftEdits, ObservedTurn, SkillDraft, ToolStep, Trigger } from "./types.ts";
 
 const log = createLogger("reflection");
@@ -69,8 +75,17 @@ export interface ReflectionDeps {
   toolMemory: ToolMemory;
   /** Classes of work seen once, held until they recur. Absent writes every create — what a test without a database gets. */
   candidates?: CandidateStore;
+  /**
+   * A conversation as it is kept, by its id: the one a held class of work was seen in, written from when a person asks
+   * for its skill now, and a mission's own, read with its report when it ends. Null once it is gone.
+   */
+  conversation?: (sessionId: string) => { gatewayId: string; chatId: string; messages: ChatMessage[] } | null;
+  /** Whether that conversation still holds anything: asked for a list, where reading each would be a page of queries. */
+  conversationKept?: (sessionId: string) => boolean;
   /** When the weekly review ran (`curator.ts`). Absent, there is no review. */
   reviews?: ReviewStore;
+  /** A skill was changed by an approved draft: its reads are counted from here (`AuditLog.skillChanged`). */
+  skillChanged?: (path: string) => void;
   /** When each skill was last read, and since when that has been watched (`AuditLog.skillReads`) — what the review archives by. */
   lastRead?: (paths: string[]) => Map<string, SkillRead>;
   registry: AgentRegistry;
@@ -98,9 +113,18 @@ export interface ReflectionDeps {
   now?: () => number;
 }
 
-export type ApprovalOutcome =
-  | { ok: true; draft: SkillDraft; path: string }
-  | { ok: false; error: string };
+/** A mission that ended done, as learning reads it (`ReflectionEngine.observeMission`). */
+export interface EndedMission {
+  agentId: string;
+  /** The chat it reports to: where a draft from it is announced. */
+  gatewayId: string;
+  chatId: string;
+  /** Its own conversation's id: each mission is a conversation of its own, so work seen in two has come back. */
+  sessionId: string;
+  title: string;
+  goal: string;
+  report: string;
+}
 
 export class ReflectionEngine {
   /**
@@ -111,7 +135,7 @@ export class ReflectionEngine {
    * — two near-identical drafts, minutes apart, for the same afternoon — is exactly what the cooldown
    * exists to avoid.
    */
-  private readonly inFlight = new Set<string>();
+  private readonly inFlight = new Map<string, Promise<void>>();
 
   /** Both clocks — see `cooldown.ts`. */
   private readonly cooldowns: Cooldowns;
@@ -170,12 +194,92 @@ export class ReflectionEngine {
   private async reflect(turn: ObservedTurn): Promise<void> {
     if (this.deps.config.mode === "off") return;
     if (this.inFlight.has(turn.agentId)) return;
-    this.inFlight.add(turn.agentId);
+    await this.alone(turn.agentId, () => this.look(turn));
+  }
+
+  /**
+   * Run `work` as the agent's one reflection in flight, after whatever of its is in flight now. A chat's turn does not
+   * wait (`reflect` drops it, the next turn is looked at); a mission's end and a person's own ask do, since nothing
+   * comes after them to look again.
+   */
+  private async alone(agentId: string, work: () => Promise<void>): Promise<void> {
+    const before = this.inFlight.get(agentId) ?? Promise.resolve();
+    const mine = before.catch(() => {}).then(work);
+    this.inFlight.set(agentId, mine);
     try {
-      await this.look(turn);
+      await mine;
     } finally {
-      this.inFlight.delete(turn.agentId);
+      if (this.inFlight.get(agentId) === mine) this.inFlight.delete(agentId);
     }
+  }
+
+  /**
+   * A mission that ended done is looked at once, from its goal, its own last turn and its report.
+   *
+   * A mission's turns are never handed to `observe` (`pipeline/turn.ts`): they are a work log, and a look every few
+   * rounds of a mission of hours would be dozens of them. So until this, the largest pieces of work an agent did
+   * taught it nothing: only what happened in a chat could become a skill. One look, when the work is whole and a
+   * person or its checks said it is done. A new kind of work still waits to come back: a second mission of the kind,
+   * or the same work in a chat.
+   *
+   * Never throws: nobody is waiting on it, and the mission has ended whatever this does.
+   */
+  async observeMission(done: EndedMission): Promise<void> {
+    try {
+      if (this.deps.config.mode === "off") return;
+      if (this.deps.drafts.pendingCount() >= this.tuning.maxPending) return;
+      const kept = this.deps.conversation?.(done.sessionId)?.messages ?? [];
+      const at = this.now();
+      const messages: ChatMessage[] = [
+        { role: "user", content: `Mission: ${done.goal}`, timestamp: at },
+        ...kept,
+        { role: "assistant", content: `The mission's report, as it ended done:\n\n${done.report}`, timestamp: at },
+      ];
+      const turn: ObservedTurn = { agentId: done.agentId, gatewayId: done.gatewayId, chatId: done.chatId, sessionId: done.sessionId, userText: "", messages, chain: messages, steps: [], iterations: 0 };
+      await this.alone(done.agentId, async () => void (await this.pass(turn, { kind: "mission", reason: `a mission ended done: ${done.title}` }, messages)));
+    } catch (err) {
+      log.warn("reflection on a mission failed", { agent_id: done.agentId, error: String(err) });
+    }
+  }
+
+  /**
+   * The classes of work seen once and held, newest first: what a person is shown when they ask why nothing was
+   * learned. `kept`: the conversation it was seen in is still there, so its skill can be written now.
+   */
+  candidates(): (SkillCandidate & { kept: boolean })[] {
+    return (this.deps.candidates?.list() ?? []).map((held) => ({ ...held, kept: this.deps.conversationKept?.(held.sessionId) ?? false }));
+  }
+
+  /** What learning would do with a conversation, with nothing kept (`try-out.ts`). */
+  async tryOut(asked: Parameters<typeof tryOut>[1]): Promise<TryOut | { error: string }> {
+    return await tryOut(this.deps, asked);
+  }
+
+  /** A person says a held class of work is not a skill: it is forgotten, and held again only if it is seen again. */
+  forgetCandidate(name: string, by: string): boolean {
+    if (!this.deps.candidates?.get(name)) return false;
+    this.deps.candidates.take(name);
+    this.deps.audit?.record({ action: "skill_candidate_forgotten", actor: by, details: { skill: name } });
+    return true;
+  }
+
+  /**
+   * A person asks for a held class of work to be written now, without waiting for it to come back: written from the
+   * conversation it was seen in, as that conversation stands today. The draft waits, or is approved at once where
+   * learning is automatic, as any draft is.
+   */
+  async writeCandidate(name: string, by: string): Promise<{ ok: true; draft: SkillDraft } | { ok: false; why: "not_held" | "gone" | "nothing"; error: string }> {
+    const held = this.deps.candidates?.get(name);
+    if (!held) return { ok: false, why: "not_held", error: `no class of work "${name}" is held` };
+    const seen = this.deps.conversation?.(held.sessionId);
+    if (!seen || seen.messages.length === 0) return { ok: false, why: "gone", error: "the conversation it was seen in is gone, so there is nothing to write it from. It is written when the work comes back" };
+    const turn: ObservedTurn = { agentId: held.agentId, gatewayId: seen.gatewayId, chatId: seen.chatId, sessionId: held.sessionId, userText: "", messages: seen.messages, chain: seen.messages, steps: [], iterations: 0 };
+    let draft: SkillDraft | null = null;
+    let why = "";
+    await this.alone(held.agentId, async () => {
+      draft = await this.pass(turn, { kind: "user_request", reason: `${by} asked for this skill` }, seen.messages, { named: held, said: (reason) => (why = reason) });
+    });
+    return draft ? { ok: true, draft } : { ok: false, why: "nothing", error: why || "nothing could be written from that conversation" };
   }
 
   private async look(turn: ObservedTurn): Promise<void> {
@@ -193,7 +297,7 @@ export class ReflectionEngine {
       steps: turn.steps,
       minToolFailures: this.tuning.minToolFailures,
       effort,
-      reflectAfter: this.tuning.reflectAfter,
+      reflectAfter: this.cooldowns.dueAfter(turn.sessionId),
       unfamiliarTools: unfamiliar,
     });
     if (!trigger) return;
@@ -251,14 +355,39 @@ export class ReflectionEngine {
       }
     }
 
+    /**
+     * A chain trigger reads the chain; everything else reads the turn.
+     *
+     * Not always the chain, though it would be simpler: on a single-turn trigger the extra history
+     * would be whatever unrelated thing was discussed before it — noise the pass has to read past,
+     * in a call that is already the only cost this feature has. Where the chain *is* the point, it
+     * is the whole point: the reasoning that found the answer is in the turns that failed, not in
+     * the one that worked, and `buildTranscript` now compresses the head instead of dropping it so
+     * those turns are actually in what the pass reads.
+     */
+    await this.pass(turn, trigger, trigger.kind === "sustained_effort" ? turn.chain : turn.messages);
+  }
+
+  /**
+   * One pass over a piece of work the checks let through: a chat's turn (`look`), a mission that ended done
+   * (`observeMission`). The draft it kept, or null.
+   */
+  private async pass(
+    turn: ObservedTurn,
+    trigger: Trigger,
+    source: ChatMessage[],
+    /** `named`: a class already named, written with no triage (`writeCandidate`). `said`: told why nothing was kept. */
+    asked: { named?: SkillCandidate; said?: (why: string) => void } = {},
+  ): Promise<SkillDraft | null> {
+    const explicit = trigger.kind === "user_request";
     const agent = this.deps.registry.get(turn.agentId);
-    if (!agent) return;
+    if (!agent) return null;
 
     // After every check that costs nothing, before the calls that cost: the turn that crossed the cap has answered.
     const verdict = this.deps.spend?.();
     if (verdict?.action === "refuse") {
       log.info("reflection skipped: over today's cap", { agent_id: turn.agentId });
-      return;
+      return null;
     }
 
     let provider: LLMProvider;
@@ -271,7 +400,7 @@ export class ReflectionEngine {
       // A profile that cannot be resolved is the operator's problem, not this turn's, and it has
       // already been reported by everything that actually needed it.
       log.warn("reflection has no provider", { agent_id: turn.agentId, error: String(err) });
-      return;
+      return null;
     }
 
     /**
@@ -287,56 +416,50 @@ export class ReflectionEngine {
     // Marked here, not after the call: what starts the cooldown is *having looked*, and a call that
     // throws has still spent the money.
     this.cooldowns.looking(turn.agentId);
+    // Counted as a look that gave nothing until a draft is kept (`keep`): what the next look in this chat waits on.
+    if (!explicit) this.cooldowns.missed(turn.sessionId);
 
-    /**
-     * A chain trigger reads the chain; everything else reads the turn.
-     *
-     * Not always the chain, though it would be simpler: on a single-turn trigger the extra history
-     * would be whatever unrelated thing was discussed before it — noise the pass has to read past,
-     * in a call that is already the only cost this feature has. Where the chain *is* the point, it
-     * is the whole point: the reasoning that found the answer is in the turns that failed, not in
-     * the one that worked, and `buildTranscript` now compresses the head instead of dropping it so
-     * those turns are actually in what the pass reads.
-     */
-    const source = trigger.kind === "sustained_effort" ? turn.chain : turn.messages;
     const { text: transcript, redactions } = buildTranscript(source);
-    const model = helperModel(this.deps.config.model, agent.config.llm, this.deps.llmDefaults ?? { provider: "" }) || agent.config.llm.model;
+    const tiers = this.deps.llmDefaults ?? { provider: "" };
+    const model = helperModel(this.deps.config.model, agent.config.llm, tiers) || agent.config.llm.model;
+    /**
+     * Deciding runs on the model that writes, and it was measured before it was left there.
+     *
+     * Triage is one short question, six in ten times answered "nothing", so the agent's small model looked like the
+     * place for it. Replayed on a live box (`tryOut`): of 13 conversations a kind of work was held from, the agents'
+     * own model would act on 7 and their small model on 1, which was a test's probe the larger one rightly passed
+     * over. The small model called a procedure worth keeping "a one-off fix", every time. Cheaper, and it would have
+     * put back the strictness this release takes out. Somebody who wants it names a model in `[skills.learning]`.
+     */
+    const triageModel = model;
     const existing = await readPool(this.deps.agentsDir, this.deps.builtinSkillsDir);
+    const { synthesized, seenAgain } = await this.write(turn, trigger, { provider, model, triageModel, transcript, existing, explicit, inPlay: skillsRead(existing, source), ...asked });
+    if (!synthesized) return null;
+    return await this.keep(turn, trigger, synthesized, { existing, transcript, model, redactions, ...(seenAgain ? { seenAgain } : {}), ...(asked.said ? { said: asked.said } : {}) });
+  }
 
-    const synthesized = await synthesizeSkill({
-      provider,
-      model,
-      transcript,
-      trigger,
-      existing: await Promise.all(
-        existing.map(async (skill) => ({
-          name: skill.name,
-          description: skill.description,
-          /**
-           * Listed whatever it is, marked by who keeps it — see `renderSkillList`.
-           *
-           * A skill the pass may not write to still has to appear, or it cannot be recognised as
-           * covering the ground and declined as a duplicate. `author` is set by this loop when it
-           * writes one, so its absence in the shared pool means a person wrote the file by hand;
-           * `builtin` is ours and is absent from `author` for a different reason. See `Skill.author`.
-           */
-          owner: skill.scope === "builtin" ? "nouride" : skill.author ? "agent" : "person",
-          ...(await breadthOf(skill)),
-        })),
-      ),
-      readSkill: (name) => readSkill(existing, name, this.deps.drafts),
-      listSkillFiles: (name) => listSkillFiles(existing, name),
-      readSkillFile: (name, path) => readSkillFile(existing, name, path),
-      candidates: (this.deps.candidates?.list() ?? []).map((held) => ({ name: held.name, description: held.description, day: new Date(held.lastSeenAt).toISOString().slice(0, 10) })),
-      gate: (create) => writeNow(this.deps.candidates, create, { trigger, agentId: turn.agentId, sessionId: turn.sessionId, audit: this.deps.audit }),
-    });
-    if (!synthesized) return;
+  /** A pass ended with nothing and said why: kept where a person can read it (`skill_pass_nothing`). */
+  private nothing(turn: ObservedTurn, trigger: Trigger, why: string): void {
+    this.deps.audit?.record({ action: "skill_pass_nothing", agentId: turn.agentId, gatewayId: turn.gatewayId, chatId: turn.chatId, details: { why, trigger: trigger.kind } });
+  }
 
+  /** What the pass wrote, held to the daemon's own rules and kept as a draft: approved at once where learning is automatic. */
+  private async keep(
+    turn: ObservedTurn,
+    trigger: Trigger,
+    synthesized: SynthesisResult,
+    made: { existing: Awaited<ReturnType<typeof readPool>>; transcript: string; model: string; redactions: string[]; seenAgain?: string; said?: (why: string) => void },
+  ): Promise<SkillDraft | null> {
+    const { existing, transcript, model, redactions, seenAgain } = made;
+
+    // Checked again here, whatever the writer's second try gave: this is the rule, and what is recorded.
     const refused = await refusalOf(synthesized, existing, this.deps.drafts);
     if (refused) {
       log.info("reflection draft refused", { agent_id: turn.agentId, skill: synthesized.name, reason: refused });
       this.deps.audit?.record({ action: "skill_draft_refused", agentId: turn.agentId, details: { skill: synthesized.name, reason: refused } });
-      return;
+      this.cooldowns.refused(synthesized.name);
+      made.said?.(`its draft was refused: ${refused}`);
+      return null;
     }
 
     /**
@@ -355,7 +478,7 @@ export class ReflectionEngine {
         agent_id: turn.agentId,
         skill: synthesized.name,
       });
-      return;
+      return null;
     }
 
     /**
@@ -367,7 +490,7 @@ export class ReflectionEngine {
      */
     if (!synthesized.target && existing.some((skill) => skill.name === synthesized.name)) {
       log.info("reflection proposed a skill that already exists", { skill: synthesized.name });
-      return;
+      return null;
     }
     /**
      * A draft for this skill is already waiting, so this one was written on top of it — see
@@ -455,6 +578,10 @@ export class ReflectionEngine {
       model,
     });
 
+    // Only now: a class whose draft was refused is still a candidate, and is written the next time it is seen.
+    for (const name of new Set([seenAgain, draft.name])) if (name) this.deps.candidates?.take(name);
+    this.cooldowns.landed(turn.sessionId);
+
     this.deps.audit?.record({
       action: "skill_draft_created",
       agentId: turn.agentId,
@@ -499,7 +626,7 @@ export class ReflectionEngine {
         });
         this.cooldowns.wrote(draft.name);
         await announceAccepted(this.notifyDeps(), draft, superseded);
-        return;
+        return this.deps.drafts.get(draft.id) ?? draft;
       }
       log.warn("could not approve a draft automatically, so it stays pending", {
         draft: draft.id,
@@ -509,6 +636,42 @@ export class ReflectionEngine {
     }
 
     await announceDraft(this.notifyDeps(), draft, superseded);
+    return draft;
+  }
+
+  /**
+   * Triage and the writing call for one turn, with what the daemon holds a draft to on the way: the wait for work to
+   * come back, the rest after a refusal, and the refusal a writer is handed once to put right.
+   *
+   * `seenAgain` is the candidate a create was a second sighting of. It is done with once its draft exists, not here.
+   */
+  private async write(
+    turn: ObservedTurn,
+    trigger: Trigger,
+    pass: { provider: LLMProvider; model: string; triageModel: string; transcript: string; existing: Awaited<ReturnType<typeof readPool>>; explicit: boolean; inPlay: string[]; named?: SkillCandidate; said?: (why: string) => void },
+  ): Promise<{ synthesized: SynthesisResult | null; seenAgain?: string }> {
+    // A skill whose draft was just refused is left alone a while (`TUNING.refusedRestMs`); a person asking is not held.
+    const resting = pass.explicit ? undefined : (skill: string) => this.cooldowns.resting(skill);
+    let seenAgain: string | undefined;
+    const input: SynthesisInput = {
+      ...(await passInput(this.deps.drafts, pass, trigger)),
+      candidates: (this.deps.candidates?.list() ?? []).map((held) => ({ name: held.name, description: held.description, day: new Date(held.lastSeenAt).toISOString().slice(0, 10) })),
+      gate: (create) => {
+        if (resting?.(create.name)) return false;
+        const verdict = writeNow(this.deps.candidates, create, { trigger, agentId: turn.agentId, sessionId: turn.sessionId, audit: this.deps.audit });
+        seenAgain = verdict.candidate;
+        return verdict.write;
+      },
+      refusal: (draft) => refusalOf(draft, pass.existing, this.deps.drafts),
+      ...(resting ? { resting } : {}),
+      nothing: (why) => {
+        this.nothing(turn, trigger, why);
+        pass.said?.(why);
+      },
+    };
+    if (pass.named) return { synthesized: await authorSkill(input, pass.named), seenAgain: pass.named.name };
+    const synthesized = await synthesizeSkill(input);
+    return { synthesized, ...(seenAgain ? { seenAgain } : {}) };
   }
 
   // --- the two decisions a human makes ------------------------------------------------------
@@ -559,161 +722,13 @@ export class ReflectionEngine {
   }
   private review: LibraryReview | undefined;
 
-  /**
-   * Approve: write the skill into the pool and reload every pack.
-   *
-   * Exactly what `skill_create` does, through the same writer. A new skill is on for the agent that learned it
-   * (`agents:`), an update reaches whoever has it, and a merge or an archive moves the retired skills to `.archive/`.
-   *
-   * The row is marked approved only after the write succeeded and the reload did. A draft marked
-   * approved beside a pool that does not have the skill is the one state nobody could diagnose from
-   * either surface.
-   */
+  /** Approve a draft: the skill is written and every pack reloaded (`decisions.ts`). */
   async approve(id: string, by: string, edits?: DraftEdits): Promise<ApprovalOutcome> {
-    const draft = this.deps.drafts.get(id);
-    if (!draft) return { ok: false, error: `no draft "${id}"` };
-    if (draft.status !== "pending") {
-      return { ok: false, error: `draft "${draft.name}" was already ${draft.status}` };
-    }
-
-    const fields = applyEdits(draft, edits ?? {});
-    if (!VALID_SKILL_NAME.test(fields.name)) {
-      return { ok: false, error: `"${fields.name}" is not a valid skill name` };
-    }
-
-    /**
-     * A skill a person wrote is not the loop's to rewrite, checked again here.
-     *
-     * The triage step already refuses to name one, so reaching this is either a draft raised before
-     * somebody replaced an agent's skill with their own, or a client calling the route directly.
-     * Both are exactly why the check is repeated at the write: the first gate is advice to a model
-     * and this one is the rule.
-     */
-    // A create is checked too: a new skill under a built-in's name would shadow it. See `writeRefusal`.
-    const refusal = await writeRefusal(this.deps.agentsDir, this.deps.builtinSkillsDir, draft.target ?? fields.name, !draft.target);
-    if (refusal) return { ok: false, error: refusal };
-
-    const today = new Date(this.now()).toISOString().slice(0, 10);
-    const document = {
-      name: fields.name,
-      description: fields.description,
-      ...(fields.requires ? { requires: fields.requires } : {}),
-      ...(fields.needsTools ? { needsTools: fields.needsTools } : {}),
-      body: fields.body,
-      author: draft.agentId,
-      verifiedBy: by,
-      ...installedFields(draft),
-      ...(draft.files.length > 0 ? { files: draft.files } : {}),
-      ...(draft.removeFiles.length > 0 ? { removeFiles: draft.removeFiles } : {}),
-    };
-
-    /**
-     * Two verbs, one gate.
-     *
-     * `updateExistingSkill` overwrites and keeps the original `author` and `created`; `writeNewSkill`
-     * refuses to overwrite. Which one runs is decided by the draft, not by whether a file happens to
-     * be there — an update whose target was deleted while the draft waited must fail loudly rather
-     * than quietly becoming a create.
-     */
-    // A proposal to archive a skill retires the skill it names, and writes nothing.
-    const archiveOnly = draft.retire.includes(draft.name);
-    const written = archiveOnly
-      ? { ok: true as const, path: "" }
-      : draft.target
-      ? await updateExistingSkill(this.deps.agentsDir, { ...document, updated: today })
-      : await writeNewSkill(this.deps.agentsDir, {
-          ...document,
-          created: today,
-          // On for the agent whose work it came from; another turns it on in its `skills.toml`. An installed skill was
-          // asked for by name, for whoever wants it.
-          ...(draft.triggerKind !== "external_install" ? { agents: draft.agentId } : {}),
-        });
-    if (!written.ok) return { ok: false, error: written.error };
-    // After the write: a merge's others are archived only once the skill that holds them is on disk.
-    const archived: string[] = [];
-    const archivedTo: string[] = [];
-    for (const name of draft.retire) {
-      const moved = await archivePoolSkill(this.deps.agentsDir, name);
-      if (moved.ok) {
-        archived.push(name);
-        archivedTo.push(moved.path);
-      } else log.warn("an approved draft could not archive a skill", { draft: id, skill: name, error: moved.error });
-    }
-
-    try {
-      await this.deps.registry.reloadAll();
-    } catch (err) {
-      // Said plainly rather than reported as success. The file is on disk and the prompts are stale,
-      // which is a state somebody has to know about to fix.
-      return { ok: false, error: `wrote ${written.path} but reloading the agents failed: ${String(err)}` };
-    }
-
-    this.deps.drafts.markApproved(id, by, written.path || archivedTo[0] || "");
-    this.deps.audit?.record({
-      action: draft.target ? "skill_draft_updated" : "skill_draft_approved",
-      agentId: draft.agentId,
-      actor: by,
-      details: {
-        draft: id,
-        skill: fields.name,
-        path: written.path,
-        ...(draft.target ? { updated: draft.target } : {}),
-        ...(draft.files.length > 0 ? { files: draft.files.map((file) => file.path) } : {}),
-        // What left the pool — the audit row of an archive otherwise names a skill and an empty path.
-        ...(archived.length > 0 ? { archived } : {}),
-      },
-    });
-    log.info(archiveOnly ? "skill archived" : draft.target ? "skill improved" : "skill draft approved", {
-      draft: id,
-      skill: fields.name,
-      actor: by,
-      ...(archived.length > 0 ? { archived } : {}),
-    });
-
-    return { ok: true, draft: this.deps.drafts.get(id)!, path: written.path };
+    return await approveDraft({ ...this.deps, now: () => this.now() }, id, by, edits);
   }
 
-  /** Discard: the row goes, transcript and all. */
+  /** Discard a draft: the row goes, transcript and all. */
   deny(id: string, by: string): boolean {
-    const draft = this.deps.drafts.get(id);
-    if (!draft || draft.status !== "pending") return false;
-
-    this.deps.drafts.deny(id);
-    this.deps.audit?.record({
-      action: "skill_draft_denied",
-      agentId: draft.agentId,
-      actor: by,
-      details: { draft: id, skill: draft.name },
-    });
-    log.info("skill draft discarded", { draft: id, skill: draft.name, actor: by });
-    return true;
+    return denyDraft(this.deps, id, by);
   }
-}
-
-/** The draft's fields with a human's corrections applied. Anything absent keeps what the model wrote. */
-function applyEdits(
-  draft: SkillDraft,
-  edits: DraftEdits,
-): { name: string; description: string; requires: string; needsTools: string; body: string } {
-  return {
-    name: (edits.name ?? draft.name).trim().toLowerCase(),
-    description: (edits.description ?? draft.description).trim(),
-    requires: (edits.requires ?? draft.requires).trim(),
-    needsTools: (edits.needsTools ?? draft.needsTools).trim(),
-    body: (edits.body ?? draft.body).trim(),
-  };
-}
-
-/** Scrub the two fields that end up in a file every agent reads on every turn. */
-function redactAll(
-  body: string,
-  description: string,
-): { body: string; description: string; hits: string[] } {
-  const scrubbedBody = redact(body);
-  const scrubbedDescription = redact(description);
-  return {
-    body: scrubbedBody.text,
-    description: scrubbedDescription.text,
-    hits: [...new Set([...scrubbedBody.hits, ...scrubbedDescription.hits])],
-  };
 }

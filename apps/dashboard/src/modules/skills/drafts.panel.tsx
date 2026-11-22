@@ -33,6 +33,7 @@ const TRIGGER_LABEL: Record<SkillDraft["triggerKind"], string> = {
   first_integration: "something new worked",
   external_install: "installed from a hub",
   curation: "weekly review",
+  mission: "a mission that ended done",
 };
 
 export function DraftList({ drafts, editable }: { drafts: SkillDraft[]; editable: boolean }) {

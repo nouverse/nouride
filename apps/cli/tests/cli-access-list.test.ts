@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Client } from "@nouride/cli-kit";
 import { access } from "../src/commands/access.ts";
-import { sendersIn } from "../src/commands/access-list.ts";
+import { sendersIn } from "@nouride/shared";
 
 const dirs: string[] = [];
 afterEach(() => {

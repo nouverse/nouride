@@ -54,6 +54,12 @@ export interface MissionsDeps {
    */
   letGoCli?: (mission: Mission) => void;
   /**
+   * End what its commands left running in their own process groups, and tell its chat what was ended
+   * (`left-running.ts`): its jobs end with it, and what a command started and did not wait for was nobody's. Never
+   * throws.
+   */
+  endLeft?: (mission: Mission) => void;
+  /**
    * Say something in the chat a mission reports to, as its agent — with buttons under it where the chat carries them
    * (a question's options, 0.8.7). Never throws.
    */
@@ -100,6 +106,8 @@ export interface MissionsDeps {
   changed?: (mission: Mission) => void;
   /** What lasts of a mission that ended, filed once as an episode of its agent's memory, from its report. */
   remember?: (mission: Mission) => Promise<void>;
+  /** A mission ended done: skill learning looks at it once, from its goal and its report (`ReflectionEngine.observeMission`). */
+  learn?: (mission: Mission) => void;
   /** A mission another agent started has ended: kept, so both agents are told of it in their own chats (`pipeline/work-done.ts`). */
   helped?: (mission: Mission) => void;
   /**

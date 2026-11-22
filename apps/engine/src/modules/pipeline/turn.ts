@@ -31,6 +31,7 @@ import type { RoomMemory } from "./room-memory.ts";
 import { STOPPED_BY_PERSON, TurnContext } from "./turn-context.ts";
 import { causeOf, endEarly } from "./turn-endings.ts";
 import { compactAfterReply } from "./session-lifecycle.ts";
+import { hasWords, writtenBesideCalls } from "@/commons/silence.ts";
 import { Preamble } from "./preamble.ts";
 import { nudgeBaseMs, replyNote, watchTurn } from "./budget-nudges.ts";
 import { outcomeOf, type TurnShape } from "./turn-shape.ts";
@@ -242,7 +243,10 @@ export class TurnRunner {
      * reported, a model that cannot send an empty message sends a full stop. One Telegram chat got
      * nine bubbles holding a dot in an evening. Decided here, so the record owes nothing for it either.
      */
-    const said = isSystemEvent(envelope) && !/[\p{L}\p{N}]/u.test(result.text) ? "" : result.text;
+    // Unless the turn wrote words beside a tool call that reached nobody, and ended on no word at all: to the model
+    // they were said, so they are the answer (`writtenBesideCalls`). A person's turn too: its answer was then a dot.
+    const owed = hasWords(result.text) ? "" : writtenBesideCalls(result.turnMessages, (words) => !preamble?.alreadySaid(words));
+    const said = owed || (isSystemEvent(envelope) && !hasWords(result.text) ? "" : result.text);
     const notice = said.trim()
       ? null
       : emptyTurnMessage(result.stopReason, result.toolCalls, controller.signal.aborted, result.approvalsRefused);

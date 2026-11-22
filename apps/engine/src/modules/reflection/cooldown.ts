@@ -19,6 +19,10 @@ const EFFORT_MAX_SESSIONS = 500;
 export interface CooldownConfig {
   cooldownMs: number;
   rapidFollowUpMs: number;
+  refusedRestMs: number;
+  reflectAfter: number;
+  maxDoublings: number;
+  breakMs: number;
 }
 
 export class Cooldowns {
@@ -33,7 +37,7 @@ export class Cooldowns {
    * In memory, and a restart losing it only delays a draft — the safe direction, unlike `ToolMemory`,
    * where a lost set would cause false positives and therefore had to be in the database.
    */
-  private readonly effort = new Map<string, { units: number; lastMessageAt: number }>();
+  private readonly effort = new Map<string, { units: number; lastMessageAt: number; misses: number }>();
 
   /**
    * When each agent was last *looked at*, whether or not it produced anything.
@@ -61,6 +65,9 @@ export class Cooldowns {
    * within minutes is the same noise as one agent doing it twice.
    */
   private readonly written = new Map<string, number>();
+
+  /** When each skill's draft was last refused, by name: see `TUNING.refusedRestMs`. In memory: a restart may forget it. */
+  private readonly refusedAt = new Map<string, number>();
 
   constructor(
     private readonly config: CooldownConfig,
@@ -104,12 +111,36 @@ export class Cooldowns {
 
     const units = (previous?.units ?? 0) + Math.max(1, turn.iterations) + (rapid ? 1 : 0);
     const lastMessageAt = turn.messages.reduce((latest, message) => Math.max(latest, message.timestamp ?? 0), 0);
+    // Picked up again after a break: the looks that gave nothing were about the work before it.
+    const afterBreak = previous !== undefined && previous.lastMessageAt > 0 && askedAt !== undefined && askedAt - previous.lastMessageAt >= this.config.breakMs;
+    const misses = afterBreak ? 0 : (previous?.misses ?? 0);
 
     // Cleared wholesale on overflow rather than evicted one at a time — the same shape the pipeline's
     // drop-notice table uses. Losing the counts costs a delayed draft and nothing else.
     if (this.effort.size > EFFORT_MAX_SESSIONS) this.effort.clear();
-    this.effort.set(turn.sessionId, { units, lastMessageAt });
+    this.effort.set(turn.sessionId, { units, lastMessageAt, misses });
     return units;
+  }
+
+  /**
+   * The rounds of work this chat must have done before it is looked at again: `reflectAfter`, doubled for each look
+   * there that gave nothing, up to `maxDoublings` times (`Tuning.maxDoublings`).
+   */
+  dueAfter(sessionId: string): number {
+    const misses = Math.min(this.effort.get(sessionId)?.misses ?? 0, Math.max(0, this.config.maxDoublings));
+    return Math.max(1, this.config.reflectAfter) * 2 ** misses;
+  }
+
+  /** A look at this chat gave nothing. */
+  missed(sessionId: string): void {
+    const entry = this.effort.get(sessionId);
+    if (entry) this.effort.set(sessionId, { ...entry, misses: entry.misses + 1 });
+  }
+
+  /** A look at this chat left a draft: the next one waits no longer than the first did. */
+  landed(sessionId: string): void {
+    const entry = this.effort.get(sessionId);
+    if (entry) this.effort.set(sessionId, { ...entry, misses: 0 });
   }
 
   /**
@@ -121,7 +152,7 @@ export class Cooldowns {
    */
   spend(sessionId: string): void {
     const entry = this.effort.get(sessionId);
-    if (entry) this.effort.set(sessionId, { units: 0, lastMessageAt: entry.lastMessageAt });
+    if (entry) this.effort.set(sessionId, { ...entry, units: 0 });
   }
 
   /** Mark that this agent was examined — a decline counts, which is the whole point. */
@@ -133,6 +164,18 @@ export class Cooldowns {
   tooSoonToLook(agentId: string, lastDraftAt: number): boolean {
     const last = Math.max(lastDraftAt, this.looked.get(agentId) ?? 0);
     return last > 0 && this.now() - last < this.config.cooldownMs;
+  }
+
+  /** Mark that a draft for this skill was refused, after its writer was told why and tried again. */
+  refused(skill: string): void {
+    if (this.refusedAt.size > EFFORT_MAX_SESSIONS) this.refusedAt.clear();
+    this.refusedAt.set(skill, this.now());
+  }
+
+  /** `true` while a skill whose draft was just refused is left alone. */
+  resting(skill: string): boolean {
+    const last = this.refusedAt.get(skill) ?? 0;
+    return last > 0 && this.now() - last < this.config.refusedRestMs;
   }
 
   /** Mark that this skill reached the pool without anybody approving it. */

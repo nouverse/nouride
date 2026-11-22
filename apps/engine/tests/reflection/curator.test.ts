@@ -32,25 +32,30 @@ const DAY = 86_400_000;
 const LEARNING: SkillLearningSection = { mode: "ask", model: "", notifyChat: false };
 const procedure = (n: number) => Array.from({ length: n }, (_, i) => `${i + 1}. Step ${i + 1}: check the service and restart it when it is stuck.`).join("\n");
 
-/** An engine over a pool, a provider that answers the merge question with `merge` and every rewrite with a short body. */
-/** `watchedSince`: when the skills' reads began to be kept — long ago unless a test says otherwise. */
-async function library(options: { merge?: unknown; rewritten?: string; read?: Record<string, number>; watchedSince?: number } = {}) {
+/**
+ * An engine over a pool, a provider that answers the merge question with `merge` and every rewrite with a short body:
+ * `rewritten`, or as a list one rewrite after another, its last from then on. `watchedSince`: when the skills' reads
+ * began to be kept — long ago unless a test says otherwise.
+ */
+async function library(options: { merge?: unknown; rewritten?: string | string[]; read?: Record<string, number>; watchedSince?: number } = {}) {
   const db: SqliteDb = openDatabase(join(tempDir(), "nouride.db"));
   migrate(db);
   const agentsDir = tempDir();
   const drafts = new DraftStore(db, () => NOW);
   const reviews = new ReviewStore(db, () => clock.now);
   const clock = { now: NOW };
-  const asked = { merge: 0, rewrite: 0 };
+  const asked = { merge: 0, rewrite: 0, instructions: [] as string[] };
+  const rewrites = Array.isArray(options.rewritten) ? options.rewritten : [options.rewritten ?? "## Procedure\n1. Check the service.\n2. Restart it when it is stuck."];
   const provider = {
     async chat(request: { messages: { content: string }[] }) {
       const instruction = request.messages[0]?.content ?? "";
       const merge = instruction.includes("You review a library of skills");
+      asked.instructions.push(instruction);
       if (merge) asked.merge += 1;
       else asked.rewrite += 1;
       const text = merge
         ? JSON.stringify({ merge: options.merge ?? [] })
-        : JSON.stringify({ description: "", requires: "", body: options.rewritten ?? "## Procedure\n1. Check the service.\n2. Restart it when it is stuck." });
+        : JSON.stringify({ description: "", requires: "", body: rewrites[Math.min(asked.rewrite, rewrites.length) - 1]! });
       return { text, toolCalls: [], stopReason: "stop" as const, usage: { inputTokens: 1, outputTokens: 1 } };
     },
   } as unknown as LLMProvider;
@@ -66,7 +71,7 @@ async function library(options: { merge?: unknown; rewritten?: string; read?: Re
       new Map(
         paths.map((path) => {
           const read = Object.entries(options.read ?? {}).find(([name]) => path.includes(`/${name}/`));
-          return [path, { readAt: read?.[1] ?? null, since: options.watchedSince ?? Date.UTC(2026, 0, 1) }] as const;
+          return [path, { readAt: read?.[1] ?? null, since: options.watchedSince ?? Date.UTC(2026, 0, 1), reads: 0, readsSinceChange: 0 }] as const;
         }),
       ),
     registry: { get: (id: string) => (id === agent.config.id ? agent : undefined), enabled: () => [agent], reloadAll: async () => {} } as unknown as AgentRegistry,
@@ -89,6 +94,17 @@ describe("what the review proposes", () => {
     const [draft] = h.drafts.pending();
     expect(draft).toMatchObject({ name: "home-pc-ops", target: "home-pc-ops", triggerKind: "curation", retire: [] });
     expect(draft!.body.length).toBeLessThan(procedure(300).length);
+  });
+
+  // A lesson from a conversation comes back as edits; a review exists to shorten the whole, and asks for the whole.
+  test("a tightening is asked for as the skill rewritten, not as edits to it", async () => {
+    const h = await library();
+    await h.skill("home-pc-ops", procedure(300));
+    await h.engine.library.run();
+    const rewrite = h.asked.instructions.find((instruction) => !instruction.includes("You review a library of skills"))!;
+    expect(rewrite).toContain("This skill is to be rewritten.");
+    expect(rewrite).toContain('"body": "the whole improved markdown body, in English"');
+    expect(rewrite).not.toContain("Change it with edits");
   });
 
   test("a skill naming a machine's address is tightened too, whatever its size", async () => {
@@ -130,6 +146,23 @@ describe("what the review proposes", () => {
     const h = await library();
     await h.skill("hand-written", procedure(300), { author: "", created: "2026-01-01" });
     expect(await h.engine.library.run()).toEqual({ tighten: [], merge: [], archive: [], declined: [] });
+  });
+
+  const NAMES_A_MACHINE = "1. ssh to 172.16.42.7 and start the streaming service";
+
+  test("a rewrite that kept the address it was asked to take out is refused: the review's revision is judged whole", async () => {
+    const h = await library({ rewritten: `${NAMES_A_MACHINE}\n2. Check it answers.` });
+    await h.skill("pc-streaming", NAMES_A_MACHINE);
+    expect(await h.engine.library.run()).toMatchObject({ tighten: [], declined: [{ skill: "pc-streaming" }] });
+    expect(h.drafts.pending()).toEqual([]);
+  });
+
+  test("refused, it goes back to its writer once: a second rewrite without the address waits for a person", async () => {
+    const h = await library({ rewritten: [`${NAMES_A_MACHINE}\n2. Check it answers.`, "1. ssh to <host> and start the streaming service"] });
+    await h.skill("pc-streaming", NAMES_A_MACHINE);
+    expect(await h.engine.library.run()).toMatchObject({ tighten: ["pc-streaming"] });
+    expect(h.asked.rewrite).toBe(2);
+    expect(h.drafts.pending().map((draft) => draft.body)).toEqual(["1. ssh to <host> and start the streaming service"]);
   });
 
   test("a rewrite that is not shorter is refused, and nothing waits", async () => {

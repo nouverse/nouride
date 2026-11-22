@@ -20,6 +20,7 @@ import type { ToolGrantsPort } from "@/modules/tools/tool-grants.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import type { McpManager } from "@/modules/tools/mcp.ts";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
+import type { ToolsetDeps } from "@/modules/tools/registry.ts";
 import type { AutoApprovePort } from "@/modules/tools/auto-approve.store.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
 import type { UsagePort } from "@/modules/llm/usage.store.ts";
@@ -197,6 +198,8 @@ export interface PipelineDeps {
   shaper?: TurnShaper;
   /** What `/mission` reaches of the missions (`hooks/builtins/mission.ts`). */
   missionCommands?: MissionCommands;
+  /** Who is told what a mission's command left running: an agent's own `exec` is built here too (`toolsetDeps`). */
+  commandLeft?: ToolsetDeps["leftBy"];
   /** What `/schedule on|discard` reaches of the proposed jobs (`hooks/builtins/schedule.ts`). */
   scheduleCommands?: ScheduleCommands;
   /** `mission` as a chat turn holds it — `start` alone — and as a mission's own turn does (`tools/builtins/mission.ts`). */

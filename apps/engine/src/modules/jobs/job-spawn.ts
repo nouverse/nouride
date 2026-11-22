@@ -8,7 +8,7 @@
  */
 
 import { type BackgroundHandle, startBackgroundCommand, type TextFilter } from "@nouride/runtime";
-import type { ExecPolicySection, SandboxOptions } from "@nouride/shared";
+import type { ExecPolicySection, LeftRunning, SandboxOptions } from "@nouride/shared";
 import { SecretMasker } from "@nouride/secrets";
 
 type Ceilings = Pick<ExecPolicySection, "maxMemoryMb" | "maxCpuSeconds">;
@@ -40,7 +40,7 @@ function chain(a: TextFilter | undefined, b: TextFilter | undefined): TextFilter
 export function spawnJob(
   job: { argv: string[]; sandbox: Pick<SandboxOptions, "cwd" | "env" | "agent">; service?: boolean },
   logPath: string,
-  o: { secrets: Record<string, string> | undefined; policy: Ceilings | undefined; filter?: () => TextFilter },
+  o: { secrets: Record<string, string> | undefined; policy: Ceilings | undefined; filter?: () => TextFilter; onLeft?: (left: LeftRunning) => void },
 ): BackgroundHandle {
   const secrets = o.secrets;
   const first = o.filter;
@@ -50,6 +50,7 @@ export function spawnJob(
     ...(job.sandbox.agent ? { agent: job.sandbox.agent } : {}),
     logPath,
     limits: jobLimits(o.policy, job.service === true),
+    ...(o.onLeft ? { onLeft: o.onLeft } : {}),
     // One masker per stream, as `exec`'s own spill file has: a value split between two reads is still one value.
     // A command printing credentials swaps them for handles first (`tools/credential-output.ts`), then the exact values.
     ...(first || secrets ? { filter: () => chain(first?.(), secrets ? new SecretMasker(secrets) : undefined) } : {}),
