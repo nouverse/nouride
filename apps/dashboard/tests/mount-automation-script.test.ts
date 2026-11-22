@@ -8,7 +8,7 @@ import { describe, expect, test } from "bun:test";
 import type { AutomationStep, JobRunSummary } from "@nouride/wire";
 import { stepProblems } from "@/modules/automations/lib/steps";
 import { answer, dropdown, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
-import { TWO_AGENTS, automation, barButton, detail, editStep, field, flowDrawn, ok, saveBar, stepCard } from "./automation-fixtures.ts";
+import { AS_VIEWER, TWO_AGENTS, automation, barButton, detail, editStep, field, flowDrawn, ok, saveBar, stepCard } from "./automation-fixtures.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -96,6 +96,67 @@ describe("a script step, read", () => {
     expect(seen.chips).toEqual(["deno run, 1 line", "No AI"]);
     expect(seen.written).toBe("deno run");
     expect(seen.offered).toEqual(["Shell", "Python", "JavaScript (Bun)", "JavaScript (Node)", "deno run"]);
+  });
+});
+
+describe("a script step, where nothing is changed", () => {
+  const read = (host: HTMLElement) => stepCard(host, "save").querySelector<HTMLElement>("[data-script-read]");
+  const shownText = (host: HTMLElement) => read(host)?.querySelector("pre")?.textContent ?? null;
+
+  test("one an agent proposed is agreed to by its text: on its page, before it is turned on, what is known of the script and its text behind the button", async () => {
+    answer({ [PAGE]: detail(automation({ enabled: false, proposal: { by: "nix", at: 1 }, payload: { kind: "steps", steps: [SUM, SAVE, TELL] } })), ...TWO_AGENTS });
+    const seen = { box: "", chips: [] as string[], hidden: false, text: "" as string | null, again: "" as string | null, fields: 0, others: 0 };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 3);
+      await eventually(() => read(host) !== null, 2_000, "the script to read");
+      seen.box = stepCard(host, "save").querySelector("[data-box-title]")?.textContent ?? "";
+      seen.chips = chips(host);
+      seen.hidden = shownText(host) === null;
+      pressed(host, "Show the script")!.click();
+      await eventually(() => shownText(host) !== null, 2_000, "its text");
+      seen.text = shownText(host);
+      pressed(host, "Hide the script")!.click();
+      await eventually(() => shownText(host) === null, 2_000, "its text hidden");
+      seen.again = shownText(host);
+      // Read, and nothing of it changed: no field anywhere on the canvas, and no step opens.
+      seen.fields = host.querySelectorAll("[data-flow] input, [data-flow] textarea, main [data-step-fields]").length + host.querySelectorAll('main [aria-label^="Edit step"]').length;
+      // A step that keeps no script has nothing more to read than its box says.
+      seen.others = host.querySelectorAll("[data-script-read]").length;
+    });
+    expect(seen.box).toBe("Saves the summary as today's page.");
+    expect(seen.chips).toEqual(["Written by Nix", "Python, 4 lines", "No AI", "Uses your saved key: notes_key"]);
+    expect(seen.hidden).toBe(true);
+    expect(seen.text).toBe(TEXT);
+    expect(seen.again).toBeNull();
+    expect(seen.fields).toBe(0);
+    expect(seen.others).toBe(1);
+  });
+
+  test("a change an agent suggests is read the same way, as it would be and as it runs now; and an account that only looks reads it too", async () => {
+    const NEW = "import sys\nprint('saved, the new way')\n";
+    const suggested = automation({ id: "cron_s", enabled: false, proposal: { by: "nix", at: 1, replaces: "cron_e" }, payload: { kind: "steps", steps: [SUM, { ...SAVE, script: { ...SAVE.script!, text: NEW } }, TELL] } });
+    answer({ [PAGE]: detail(automation({ suggested: "cron_s", payload: { kind: "steps", steps: [SUM, SAVE, TELL] } }), [], suggested), ...TWO_AGENTS });
+    const seen = { would: "" as string | null, mark: "", viewer: "" as string | null };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 3);
+      ([...host.querySelectorAll<HTMLElement>('[aria-label="Suggested change"] button')].find((button) => button.textContent === "Suggested") as HTMLElement).click();
+      await eventually(() => read(host) !== null, 2_000, "the script as it would be");
+      seen.mark = stepCard(host, "save").textContent ?? "";
+      pressed(host, "Show the script")!.click();
+      await eventually(() => shownText(host) !== null, 2_000, "its text");
+      seen.would = shownText(host);
+    });
+    answer({ [PAGE]: detail(automation({ payload: { kind: "steps", steps: [SUM, SAVE, TELL] } })), ...TWO_AGENTS, ...AS_VIEWER });
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 3);
+      await eventually(() => read(host) !== null, 2_000, "the script to read");
+      pressed(host, "Show the script")!.click();
+      await eventually(() => shownText(host) !== null, 2_000, "its text");
+      seen.viewer = shownText(host);
+    });
+    expect(seen.mark).toContain("Would change");
+    expect(seen.would).toBe(NEW);
+    expect(seen.viewer).toBe(TEXT);
   });
 });
 
@@ -205,6 +266,8 @@ describe("a script step, written", () => {
         await eventually(() => pressed(host, "Show the script") !== undefined, 2_000, "the script's buttons");
         pressed(host, "Show the script")!.click();
         await eventually(() => text(host) !== null, 2_000, "its text");
+        // How a script reads one is said where its name is typed: the name alone would not say it.
+        expect(host.querySelector("main [data-step-fields]")?.textContent).toContain("The script reads each by its name in capitals: notes_key is NOTES_KEY.");
         type(field(host, "Saved keys it uses"), typed);
         into(await saved(host));
       });

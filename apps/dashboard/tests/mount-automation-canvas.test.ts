@@ -26,11 +26,14 @@ async function saved(host: HTMLElement): Promise<{ path: string; body: unknown }
   return record.posts;
 }
 
-/** A window as narrow as a phone's, for as long as `during` runs: no width a tablet or a laptop has matches. */
-async function onAPhone(during: () => Promise<void>): Promise<void> {
+/** A window of that many pixels across, for as long as `during` runs: a width a page asks for matches where the window has it. */
+async function atWidth(px: number, during: () => Promise<void>): Promise<void> {
   const view = dom.window as unknown as { matchMedia: (query: string) => unknown };
   const was = view.matchMedia;
-  view.matchMedia = (query: string) => ({ matches: !/min-width/.test(query) && (was.call(dom.window, query) as { matches: boolean }).matches, media: query, addEventListener: () => {}, removeEventListener: () => {} });
+  view.matchMedia = (query: string) => {
+    const asked = /\(min-width: (\d+)px\)/.exec(query);
+    return { matches: asked ? px >= Number(asked[1]) : (was.call(dom.window, query) as { matches: boolean }).matches, media: query, addEventListener: () => {}, removeEventListener: () => {} };
+  };
   try {
     await during();
   } finally {
@@ -74,7 +77,7 @@ describe("a pressed box's fields", () => {
     shown();
     let sent: { path: string; body: unknown }[] = [];
     const seen = { beside: true, inBox: false, start: false, moved: [] as string[], copied: [] as string[], whose: "" };
-    await onAPhone(async () => {
+    await atWidth(390, async () => {
       await renderPage(PAGE, async (host) => {
         await flowDrawn(host);
         editStep(host, 2).click();
@@ -104,6 +107,53 @@ describe("a pressed box's fields", () => {
     expect((sent[0]?.body as { payload: { steps: AutomationStep[] } }).payload.steps).toEqual([CHECK, OK, FIND, { ...FIND, id: "s5" }, TELL]);
     expect(seen.start).toBe(true);
     expect(seen.whose).toBe("true true");
+  });
+});
+
+describe("the room the canvas has", () => {
+  test("a laptop's window has none beside the canvas: with the menu and a panel there its boxes were too narrow for their titles, so a box opens in place up to a desktop's width", async () => {
+    shown();
+    const seen: Record<number, { inBox: boolean; beside: boolean }> = {};
+    for (const px of [1024, 1279, 1280, 1440]) {
+      await atWidth(px, async () => {
+        await renderPage(PAGE, async (host) => {
+          await flowDrawn(host);
+          editStep(host, 2).click();
+          await eventually(() => host.querySelector("main [data-step-fields]") !== null, 2_000, "the fields");
+          seen[px] = { inBox: stepCard(host, "find").querySelector("[data-step-fields]") !== null, beside: panel(host) !== null };
+        });
+      });
+    }
+    expect(seen).toEqual({ 1024: { inBox: true, beside: false }, 1279: { inBox: true, beside: false }, 1280: { inBox: false, beside: true }, 1440: { inBox: false, beside: true } });
+  });
+
+  test("a lane stands beside its step where the canvas itself has the room, asked of the canvas and not of the window; short of it the lane hangs under its step and every box keeps its width", async () => {
+    const LOOK: AutomationStep = { id: "look", kind: "agentTurn", message: "Look into why it failed.", then: { to: "find" } };
+    shown({ payload: { kind: "steps", steps: [{ ...CHECK, then: { to: "find" }, whenFailed: { to: "look" } }, LOOK, FIND, OK, TELL] } });
+    const seen = { canvas: [] as string[], row: [] as string[], plain: [] as string[], lane: [] as string[], byWindow: [] as string[] };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 5);
+      const classes = (element: Element | null | undefined) => (element?.getAttribute("class") ?? "").split(/\s+/);
+      seen.canvas = classes(host.querySelector("[data-flow]"));
+      // The row of the step that owns the lane: its box in one column, the lane in the other.
+      seen.row = classes(stepCard(host, "check").parentElement?.parentElement);
+      seen.lane = classes(host.querySelector("[data-lane]")?.parentElement);
+      // A happy-dom window lays nothing out, so each is held by the class that places it. Nothing on the canvas is
+      // placed by a laptop's or a desktop's window: what a lane asks is the canvas's own width.
+      seen.byWindow = [...host.querySelectorAll("[data-flow] *")].flatMap((element) => classes(element).filter((name) => /^(max-)?(lg|xl|2xl):/.test(name)));
+    });
+    shown();
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      seen.plain = (stepCard(host, "check").parentElement?.parentElement?.getAttribute("class") ?? "").split(/\s+/);
+    });
+    expect(seen.canvas).toContain("@container/flow");
+    // A box of 20rem, the lane's line of 4.5rem and a lane of 15rem: 39.5rem, and a box never narrower than its 21rem short of that.
+    expect(seen.row).toEqual(expect.arrayContaining(["mx-auto", "w-full", "max-w-[21rem]", "@[39.5rem]/flow:grid", "@[39.5rem]/flow:max-w-none", "@[39.5rem]/flow:grid-cols-[20rem_15rem]", "@[39.5rem]/flow:gap-x-[4.5rem]"]));
+    expect(seen.lane).toEqual(expect.arrayContaining(["@max-[39.5rem]/flow:ml-6", "@max-[39.5rem]/flow:border-l-2", "@max-[39.5rem]/flow:pl-3"]));
+    expect(seen.byWindow).toEqual([]);
+    // With no lane anywhere there is nothing to make room for.
+    expect(seen.plain).toEqual(["mx-auto", "w-full", "max-w-[21rem]"]);
   });
 });
 

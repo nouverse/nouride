@@ -87,7 +87,8 @@ describe("a path's words", () => {
     expect(choiceWords(command, "whenEmpty", "stop")).toEqual({ label: "Stop quietly", hint: "The run ends, and nobody is told." });
     // A no to a wait is an answer, not a failure.
     expect(choiceWords(wait, "whenFailed", "stop")).toEqual({ label: "Stop there", hint: "The run ends. Nothing is counted as failed." });
-    expect(choiceWords(command, "whenFailed", "goOn")).toEqual({ label: "Go on anyway", hint: "The next step gets the error, and what this step was given." });
+    // What the daemon hands on: a script reads what the failed step had been given, and an agent is told the error too.
+    expect(choiceWords(command, "whenFailed", "goOn")).toEqual({ label: "Go on anyway", hint: "The next step gets what this step was given. An agent is also told why it failed." });
     expect(choiceWords(wait, "whenFailed", "goOn").hint).toBe("The next step is told the answer was no.");
     expect(choiceWords(command, "whenEmpty", "goOn").hint).toBe("The next step runs with nothing handed to it.");
     expect(choiceWords(command, "whenFailed", "ask")).toEqual({ label: "Ask me first", hint: "Yes goes on, no stops here." });

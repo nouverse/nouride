@@ -310,7 +310,8 @@ function context2d(canvas: unknown): unknown {
 }
 
 function install(): void {
-  dom = new Window({ url: "http://localhost/dashboard/" });
+  // A desktop's window: wide enough for a page's panel beside its own column (`useDesktop`), as most are read.
+  dom = new Window({ url: "http://localhost/dashboard/", width: 1440, height: 900 });
   const globals = globalThis as unknown as Record<string, unknown>;
   const source = dom as unknown as Record<string, unknown>;
   for (const key of DOM_GLOBALS) globals[key] = source[key];

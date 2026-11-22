@@ -93,7 +93,7 @@ export function choiceWords(step: Pick<Step, "kind">, exit: PathExit, choice: Ch
       return waits ? { label: "Stop there", hint: "The run ends. Nothing is counted as failed." } : { label: "Stop and tell me", hint: "The run ends, and its chat is told why." };
     case "goOn":
       if (exit === "whenEmpty") return { label: "Go on anyway", hint: "The next step runs with nothing handed to it." };
-      return { label: "Go on anyway", hint: waits ? "The next step is told the answer was no." : "The next step gets the error, and what this step was given." };
+      return { label: "Go on anyway", hint: waits ? "The next step is told the answer was no." : "The next step gets what this step was given. An agent is also told why it failed." };
     case "ask":
       return { label: "Ask me first", hint: "Yes goes on, no stops here." };
     case "lane":

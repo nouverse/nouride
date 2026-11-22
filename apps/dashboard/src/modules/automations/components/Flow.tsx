@@ -22,7 +22,7 @@ import type { Mark } from "../lib/suggested";
 import { stepTitle } from "../lib/words";
 import { exitAnchor, jumpKey, stepAnchor } from "./Branches";
 import { Connector, StepPicker } from "./Connector";
-import { StepItem, type FlowMode, type Inline } from "./StepItem";
+import { LANED_ROW, PLAIN_ROW, StepItem, type FlowMode, type Inline } from "./StepItem";
 
 /** Where a step picked from the "+" goes: on the main line before a step (or at its end), or at the end of a lane. */
 type AddAt = { before: number | null } | { owner: number; exit: PathExit };
@@ -64,7 +64,7 @@ export function Flow({
   const paths = useMemo(() => pathsOf(steps, mode.kind !== "run"), [steps, mode.kind]);
   const line = paths.line;
   const wide = [...paths.rules.values()].some((rules) => rules.some((rule) => rule.kind === "lane"));
-  const row = wide ? "xl:grid xl:grid-cols-[minmax(0,21rem)_minmax(0,15rem)] xl:justify-center xl:gap-x-[4.5rem]" : "mx-auto w-full max-w-[21rem]";
+  const row = wide ? LANED_ROW : PLAIN_ROW;
 
   const titleOf = (step: Step) => stepTitle(step, agentName(("agentId" in step && step.agentId) || own));
   const editing = mode.kind === "edit";
@@ -97,7 +97,7 @@ export function Flow({
   );
 
   return (
-    <div ref={flow} data-flow={mode.kind} className={cn("relative rounded-[22px] border border-base-content/[0.08] bg-[radial-gradient(color-mix(in_oklab,var(--color-base-content)_9%,transparent)_1px,transparent_1px)] bg-[length:18px_18px] px-3 py-6 sm:px-6 sm:py-7", links.length > 0 && FLOW_SIDE)}>
+    <div ref={flow} data-flow={mode.kind} className={cn("@container/flow relative rounded-[22px] border border-base-content/[0.08] bg-[radial-gradient(color-mix(in_oklab,var(--color-base-content)_9%,transparent)_1px,transparent_1px)] bg-[length:18px_18px] px-3 py-6 sm:px-6 sm:py-7", links.length > 0 && FLOW_SIDE)}>
       {lined(head)}
 
       {steps.length === 0 && editing ? (

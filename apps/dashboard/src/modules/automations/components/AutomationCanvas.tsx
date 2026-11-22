@@ -59,8 +59,8 @@ export function AutomationCanvas({
   const lacking = (part: DraftProblem["part"]) => (editable && lacks?.part === part ? lacks.message : undefined);
   const step = editable && !laptop && fields ? shown.steps.find((one) => one.id === open) : undefined;
   return (
-    <div className="flex flex-col items-start gap-5 lg:flex-row lg:gap-7">
-      <div className="w-full min-w-0 lg:flex-1">
+    <div className="flex flex-col items-start gap-5 xl:flex-row xl:gap-7">
+      <div className="w-full min-w-0 xl:flex-1">
         <Flow
           key={drawn}
           steps={shown.steps}
@@ -89,7 +89,8 @@ export function AutomationCanvas({
           }
         />
       </div>
-      <aside className="w-full space-y-4 lg:sticky lg:top-4 lg:w-[23.5rem] lg:shrink-0">{beside}</aside>
+      {/* Beside the canvas from the width `useDesktop` reads, which is where the page opens a box's fields there. */}
+      <aside className="w-full space-y-4 xl:sticky xl:top-4 xl:w-[23.5rem] xl:shrink-0">{beside}</aside>
     </div>
   );
 }

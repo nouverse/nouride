@@ -45,6 +45,49 @@ const TRIED: Record<TriedStep["status"], { label: string; tone: string }> = {
   failed: { label: "It failed", tone: "bg-error/10 text-error" },
 };
 
+const CHIP = "rounded-full bg-base-content/[0.06] px-2.5 py-0.5 text-xs font-bold text-base-content/75";
+
+/** What is known of a script without reading it: who wrote it, what it is written in and how long it is, the keys it is handed. */
+function ScriptFacts({ step, agentName }: { step: Scripted; agentName: (id: string) => string }) {
+  const { script } = step;
+  const writer = scriptWriter(script.by, agentName);
+  const lines = lineCount(script.text);
+  return (
+    <ul aria-label="About this script" className="flex list-none flex-wrap gap-1.5">
+      {writer ? <li className={CHIP}>Written by {writer}</li> : null}
+      <li className={CHIP}>
+        {languageOf(step)}
+        {lines > 0 ? `, ${lines} ${lines === 1 ? "line" : "lines"}` : ""}
+      </li>
+      <li className={CHIP}>No AI</li>
+      {script.secrets?.length ? (
+        <li className={CHIP}>
+          Uses your saved {script.secrets.length === 1 ? "key" : "keys"}: {script.secrets.join(", ")}
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
+/**
+ * A script read and not changed: what is known of it, and its text behind the same button. For one an agent proposed,
+ * before it is turned on; for a suggested change, on both sides; and for whoever only reads the automation. Its card
+ * in a chat sends a person here for a text too long for a message, so the page must show it where nothing is edited.
+ */
+export function ScriptRead({ step, agentName }: { step: Scripted; agentName: (id: string) => string }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="space-y-2.5" data-script-read>
+      <ScriptFacts step={step} agentName={agentName} />
+      <button type="button" aria-expanded={shown} className="btn btn-sm gap-1.5 rounded-xl border-base-content/15 bg-base-100" onClick={() => setShown((was) => !was)}>
+        <Code size={14} aria-hidden="true" />
+        {shown ? "Hide the script" : "Show the script"}
+      </button>
+      {shown ? <pre className="max-h-96 overflow-auto rounded-[14px] bg-base-200/60 px-3 py-2 font-mono text-xs leading-relaxed whitespace-pre-wrap text-base-content/85 [overflow-wrap:anywhere]">{step.script.text}</pre> : null}
+    </div>
+  );
+}
+
 /** "Try it": the script run once, for real, on what it is given to read, and what it printed. */
 function TryIt({ step, agentId, sample }: { step: Scripted; agentId: string; sample: string | undefined }) {
   const [input, setInput] = useState(sample ?? "");
@@ -107,8 +150,6 @@ export function ScriptFields({
   const [shown, setShown] = useState(() => !script.text.trim() || !script.about.trim());
   // As it is typed: read back from the step, a comma just written would be gone before the next name.
   const [keys, setKeys] = useState(() => (script.secrets ?? []).join(", "));
-  const writer = scriptWriter(script.by, agentName);
-  const lines = lineCount(script.text);
   const write = (patch: Partial<Scripted["script"]>) => onChange({ ...step, script: { ...script, ...patch } });
   const listed = PROGRAMS.some((program) => program.run === runOf(step));
   return (
@@ -116,15 +157,7 @@ export function ScriptFields({
       <Field label="What it does" hint="One line, in plain words: what a person reads before turning it on.">
         <input className="input w-full text-sm" value={script.about} placeholder="Saves the summary to the notes page" onChange={(event) => write({ about: event.target.value })} />
       </Field>
-      <ul aria-label="About this script" className="flex list-none flex-wrap gap-1.5">
-        {writer ? <li className="rounded-full bg-base-content/[0.06] px-2.5 py-0.5 text-xs font-bold text-base-content/75">Written by {writer}</li> : null}
-        <li className="rounded-full bg-base-content/[0.06] px-2.5 py-0.5 text-xs font-bold text-base-content/75">
-          {languageOf(step)}
-          {lines > 0 ? `, ${lines} ${lines === 1 ? "line" : "lines"}` : ""}
-        </li>
-        <li className="rounded-full bg-base-content/[0.06] px-2.5 py-0.5 text-xs font-bold text-base-content/75">No AI</li>
-        {script.secrets?.length ? <li className="rounded-full bg-base-content/[0.06] px-2.5 py-0.5 text-xs font-bold text-base-content/75">Uses your saved {script.secrets.length === 1 ? "key" : "keys"}: {script.secrets.join(", ")}</li> : null}
-      </ul>
+      <ScriptFacts step={step} agentName={agentName} />
       <div className="flex flex-wrap gap-2">
         {/* Named for what it asks, apart from the page's own "to change it" at its head. */}
         {asks ? <AskAgentButton task={script.text.trim() ? "to change this script" : "to write this script"} message={asks} variant="soft" /> : null}
@@ -153,7 +186,10 @@ export function ScriptFields({
                 onChange={(run) => onChange({ ...step, argv: run.split(" ").filter(Boolean) })}
               />
             </Field>
-            <Field label="Saved keys it uses" hint="Their names, with a comma between. Each reaches the script by its name.">
+            <Field
+              label="Saved keys it uses"
+              hint="Their names, with a comma between. The script reads each by its name in capitals: notes_key is NOTES_KEY." // plain-words-ok: a saved key's name and how a script reads it, for whoever writes the script
+            >
               <input
                 className="input w-full font-mono text-[13px]"
                 value={keys}

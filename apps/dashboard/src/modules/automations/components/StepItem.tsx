@@ -24,6 +24,7 @@ import { KIND, exitChip, partTitle, stepFacts, stepLine } from "../lib/words";
 import { Branches, stepAnchor } from "./Branches";
 import type { AgentChoice } from "./KindFields";
 import { FactStrip, LaneEnd, LaneLine, RuleStrip } from "./PathRules";
+import { ScriptRead } from "./ScriptFields";
 import { StepBox, type BoxLook } from "./StepBox";
 import { ResetNotes } from "./StepFields";
 import { StepRun } from "./StepRun";
@@ -128,6 +129,16 @@ interface Shared {
   inline: Inline | null;
 }
 
+/**
+ * A row of the canvas. A canvas with a lane lays every row out with room for one at its side, where the canvas itself
+ * has that room: a box of 20rem, the lane's line of 4.5rem and a lane of 15rem are 39.5rem, which a window of 1440px
+ * leaves the canvas with a scrollbar drawn. Asked of the canvas (`@container/flow` on it) and not of the window: at a
+ * window of 1280px, with the menu and the panel beside it, the canvas had 508px, and both columns were squeezed until
+ * a box's title broke in three. Short of that room a lane hangs under its step, set in.
+ */
+export const PLAIN_ROW = "mx-auto w-full max-w-[21rem]";
+export const LANED_ROW = `${PLAIN_ROW} @[39.5rem]/flow:grid @[39.5rem]/flow:max-w-none @[39.5rem]/flow:grid-cols-[20rem_15rem] @[39.5rem]/flow:justify-center @[39.5rem]/flow:gap-x-[4.5rem]`;
+
 /** One step's box, on the main line or in a lane, as the page is showing it. */
 function Box({ index, place, side, grip, shared }: { index: number; place: number | null; side: boolean; grip?: Grip | undefined; shared: Shared }) {
   const { steps, paths, mode, titleOf, agentName, ownName } = shared;
@@ -171,7 +182,14 @@ function Box({ index, place, side, grip, shared }: { index: number; place: numbe
     );
   }
 
-  if (mode.kind === "read") return <StepBox {...head} state={landed ? "target" : marked?.state} />;
+  // Nothing of it is changed here, and a script is still read: one an agent proposed is agreed to by its text.
+  if (mode.kind === "read") {
+    return (
+      <StepBox {...head} state={landed ? "target" : marked?.state}>
+        {step.kind === "command" && step.script ? <ScriptRead step={{ ...step, script: step.script }} agentName={agentName} /> : null}
+      </StepBox>
+    );
+  }
 
   const { editor } = mode;
   const open = editor.open === step.id;
@@ -227,8 +245,8 @@ function Lane({ owner, rule, shared, onAdd }: { owner: number; rule: Extract<Rul
   return (
     <section data-lane={rule.exit} data-taken={taken ? "" : undefined} aria-label={`${name}: what runs in its place`} className="relative">
       {/* The line from the step's box to its lane, where the lane stands at its side. */}
-      <span aria-hidden="true" className={cn("absolute top-8 -left-[4.5rem] w-[4.5rem] border-t-2 border-dashed max-xl:hidden", taken ? "border-success" : "border-secondary/40")} />
-      <p className={cn("text-xs font-bold max-xl:mb-1.5 xl:absolute xl:top-2.5 xl:-left-[4.5rem] xl:w-[4.5rem] xl:text-center", taken ? "text-success" : "text-secondary")}>{name}</p>
+      <span aria-hidden="true" className={cn("absolute top-8 -left-[4.5rem] w-[4.5rem] border-t-2 border-dashed @max-[39.5rem]/flow:hidden", taken ? "border-success" : "border-secondary/40")} />
+      <p className={cn("text-xs font-bold @max-[39.5rem]/flow:mb-1.5 @[39.5rem]/flow:absolute @[39.5rem]/flow:top-2.5 @[39.5rem]/flow:-left-[4.5rem] @[39.5rem]/flow:w-[4.5rem] @[39.5rem]/flow:text-center", taken ? "text-success" : "text-secondary")}>{name}</p>
       {rule.lane.map((at, n) => (
         <div key={steps[at]!.id}>
           {n > 0 ? <LaneLine taken={went(steps[rule.lane[n - 1]!]!.id)?.status === "done"} /> : null}
@@ -272,15 +290,15 @@ export function StepItem({
   const lanes = (paths.rules.get(index) ?? []).filter((rule): rule is Extract<Rule, { kind: "lane" }> => rule.kind === "lane");
   const outcome = mode.kind === "run" ? mode.outcomes.get(steps[index]!.id) : undefined;
   return (
-    <div className={cn(wide ? "xl:grid xl:grid-cols-[minmax(0,21rem)_minmax(0,15rem)] xl:justify-center xl:gap-x-[4.5rem]" : "mx-auto w-full max-w-[21rem]")}>
+    <div className={wide ? LANED_ROW : PLAIN_ROW}>
       <div className="flex min-w-0 flex-col">
         <Box index={index} place={place} side={false} grip={grip} shared={shared} />
         <Branches steps={steps} index={index} exits={chipExits(steps, index, paths)} titleOf={shared.titleOf} active={shared.active} onActive={shared.onActive} onShow={shared.onShow} {...(mode.kind === "run" ? { taken: outcome ? exitTaken(outcome.status) : null } : {})} />
         {/* Beside a lane taller than its step, the main line runs on down to the next box. */}
-        {lanes.length > 0 ? <div aria-hidden="true" className="mx-auto w-0.5 flex-1 rounded-full bg-base-content/15 max-xl:hidden" /> : null}
+        {lanes.length > 0 ? <div aria-hidden="true" className="mx-auto w-0.5 flex-1 rounded-full bg-base-content/15 @max-[39.5rem]/flow:hidden" /> : null}
       </div>
       {lanes.length > 0 ? (
-        <div className="space-y-4 max-xl:mt-2.5 max-xl:ml-6 max-xl:border-l-2 max-xl:border-dashed max-xl:border-secondary/30 max-xl:pl-3">
+        <div className="space-y-4 @max-[39.5rem]/flow:mt-2.5 @max-[39.5rem]/flow:ml-6 @max-[39.5rem]/flow:border-l-2 @max-[39.5rem]/flow:border-dashed @max-[39.5rem]/flow:border-secondary/30 @max-[39.5rem]/flow:pl-3">
           {lanes.map((rule) => (
             <Lane key={rule.exit} owner={index} rule={rule} shared={shared} onAdd={onLaneAdd} />
           ))}

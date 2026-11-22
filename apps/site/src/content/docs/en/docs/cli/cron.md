@@ -23,8 +23,8 @@ A run that waits is listed by `runs` with its id beside it.
 nouride cron add --name <name> \
   (--at 2h | --every 15m | --cron "0 9 * * *" | --manual) \
   --gateway <id> --chat <id> --agent <id> \
-  [--message <prompt> | --text <message> | --command <shell> | --mission <goal> | --steps <file.json>] \
-  [--then agent] [--session fresh|isolated|chat] [--tz <zone>] [--quiet] [--keep]
+  [--message <prompt> | --text <message> | --command <shell> | --script <file> --about <words> | --mission <goal> | --steps <file.json>] \
+  [--then agent] [--session fresh|isolated|chat] [--tz <zone>] [--once] [--for <6h>] [--quiet] [--keep]
 ```
 
 | | |
@@ -39,10 +39,13 @@ nouride cron add --name <name> \
 | `--message <prompt>` | wake the agent with this. One turn, with tools |
 | `--text <message>` | plain text, no model call, no cost |
 | `--command <shell>` | run a shell line, no model call |
+| `--script <file> --about <words>` | run a script the job keeps (0.8.44): the file's text, and a line of what it does. No model call. `--run <program>` says what runs it (`sh` unless said, `python3`, `bun`), `--secrets <name,name>` the agent's secrets it is handed. [What it reads and prints](/en/docs/manual/schedule/#a-script) |
 | `--then agent` | …and wake the agent with what it printed. A run that prints nothing wakes nobody and sends nothing |
 | `--mission <goal>` | run each time as a mission; `--check <command>` for one check, `--no-review` for no reviewer |
 | `--steps <file.json>` | several of these in a fixed order, read from a file: [the list, as JSON](/en/docs/manual/schedule/#from-the-cli) |
 | `--session` | `fresh` (default, no history), `isolated` (its own thread), `chat` (the target chat's) |
+| `--once` | tell once, then turn itself off (0.8.35 on the dashboard; here since 0.8.44) |
+| `--for <6h>` | stop by itself after that long, and say so where it reports (0.8.44). For a job on `--every` or `--cron`, and long enough for a run to fit |
 | `--quiet` | record the run, deliver nothing, not even a failure alert |
 | `--keep` | keep a one-shot after it fires: switched off, and listed as `fired` |
 
@@ -52,6 +55,10 @@ From a terminal, `--gateway`, `--chat` and `--agent` are required. An agent runn
 
 `--command` is run through `sh -lc`, because an operator typing it means a shell line rather than an
 argv. From an agent, a `--command` job always asks first: it runs later with no model and no gate.
+
+`--script` is kept in the job: Nouride writes it to a file of each run, hands that file to its program, and removes it
+after. The program is checked against the machine when the job is saved. In the list, a job that turned itself off
+because it told (`--once`) or because its time was up (`--for`) says `told` or `ended`, and is not shown as a failure.
 
 ### Examples
 
@@ -65,6 +72,12 @@ nouride cron add --name standup --cron "0 9 * * 1-5" --tz Asia/Jakarta \
 nouride cron add --name disk --every 6h \
   --gateway telegram:nouva --chat 123456789 --agent nox \
   --command "df -h /" --then agent
+
+# A watch: a script on a clock that tells once, and gives up by itself after six hours.
+nouride cron add --name backup-watch --every 30m \
+  --gateway telegram:nouva --chat 123456789 --agent nouva \
+  --script check-backup.sh --about "Says once last night's backup is in place." \
+  --once --for 6h
 
 # A job that remembers its own past runs, and nothing else.
 nouride cron add --name inbox --cron "0 8 * * *" \

@@ -21,7 +21,7 @@ import type { JobRunSummary } from "@nouride/wire";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { useToast } from "@/commons/components/ui/toast";
 import { useKnownChats } from "@/commons/hooks/use-known-chats";
-import { useLaptop } from "@/commons/hooks/use-wide";
+import { useDesktop } from "@/commons/hooks/use-wide";
 import { usePageSubject } from "@/commons/hooks/use-page-subject";
 import { useWaitingSteps } from "@/commons/hooks/use-waiting-steps";
 import { api } from "@/commons/lib/api";
@@ -68,8 +68,9 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const queryClient = useQueryClient();
   const toast = useToast();
   const me = useMe();
-  // Whether there is room beside the canvas for a pressed box's fields: without it they open in the box.
-  const laptop = useLaptop();
+  // Whether there is room beside the canvas for a pressed box's fields: without it they open in the box. A desktop's
+  // width: on a laptop's the menu and a panel left the canvas 300px, and its boxes too narrow for their own titles.
+  const laptop = useDesktop();
   // Whether this page may change it: the account may change automations, and this one is not another person's.
   const [writable, admin] = [canWrite(me.data ?? null) && !(automation && readsOnly(automation)), isAdmin(me.data ?? null)];
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
