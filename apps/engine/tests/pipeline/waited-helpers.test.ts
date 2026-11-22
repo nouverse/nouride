@@ -345,6 +345,38 @@ describe("a helper in the foreground", () => {
     await eventually(() => replies(d.gateway).some((text) => text?.includes("Stopped the helper working in the background too.")), 4_000, "the stop");
     await eventually(() => d.jobs.get(job!.id)?.status === "killed", 4_000, "the helper stopped");
   });
+
+  test("/helpers in the chat lists one at work, by what it was given and its job, and nobody once it is stopped", async () => {
+    const d = await daemon({
+      answer: async (who, body) => {
+        if (who.kind === "helper") return await never();
+        if (!body.stream) return { text: "masih jalan" };
+        return delegate(["A very long check"]);
+      },
+    });
+    say(d.gateway, "/helpers", "m0");
+    await eventually(() => replies(d.gateway).includes("Nobody is working for Nouva in the background now."), 4_000, "nobody yet");
+
+    say(d.gateway, "check everything", "m1");
+    await eventually(() => d.jobs.backgroundTurns("nouva").length === 1 && replies(d.gateway).includes("masih jalan"), 4_000, "a helper moved");
+    const [job] = d.jobs.backgroundTurns("nouva");
+    const requests = d.asked.length;
+
+    say(d.gateway, "/helpers", "m2");
+    await eventually(() => replies(d.gateway).some((text) => text?.startsWith("1 at work for Nouva in the background:")), 4_000, "the list");
+    const listed = replies(d.gateway).find((text) => text?.startsWith("1 at work for Nouva in the background:"))!;
+    expect(listed.split("\n")[1]).toMatch(new RegExp(`^1\\. A helper, \\d+s so far, (last step \\d+s ago|no step yet): A very long check \\(${job!.id}\\)$`));
+    expect(listed).toContain("/stop ends what was started from this chat.");
+    // The daemon answers it: no model is asked, and the helper is left at work.
+    expect(d.asked.length).toBe(requests);
+    expect(d.jobs.get(job!.id)?.status).toBe("running");
+
+    say(d.gateway, "/stop", "m3");
+    await eventually(() => d.jobs.get(job!.id)?.status === "killed", 4_000, "the helper stopped");
+    const before = replies(d.gateway).filter((text) => text === "Nobody is working for Nouva in the background now.").length;
+    say(d.gateway, "/helpers", "m4");
+    await eventually(() => replies(d.gateway).filter((text) => text === "Nobody is working for Nouva in the background now.").length === before + 1, 4_000, "nobody again");
+  });
 });
 
 describe("the one limit", () => {

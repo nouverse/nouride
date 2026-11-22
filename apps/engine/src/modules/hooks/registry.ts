@@ -22,6 +22,7 @@ import { daemonHooks } from "./builtins/daemon.ts";
 import { secretHooks } from "./builtins/secrets.ts";
 import { mentionHooks } from "./builtins/mention.ts";
 import { missionHooks } from "./builtins/mission.ts";
+import { helperHooks } from "./builtins/helpers.ts";
 import { scheduleHooks } from "./builtins/schedule.ts";
 import { sideHooks } from "./builtins/side.ts";
 
@@ -100,5 +101,5 @@ export class HookRegistry {
  * end; `/help` writes its own list and is unaffected.
  */
 function builtinHooks(): Hook[] {
-  return [...metaHooks, ...sessionHooks, ...sideHooks, ...notesHooks, ...missionHooks, ...scheduleHooks, ...agentHooks, ...draftHooks, ...approvalHooks, ...secretHooks, ...mentionHooks, ...daemonHooks];
+  return [...metaHooks, ...sessionHooks, ...sideHooks, ...notesHooks, ...missionHooks, ...helperHooks, ...scheduleHooks, ...agentHooks, ...draftHooks, ...approvalHooks, ...secretHooks, ...mentionHooks, ...daemonHooks];
 }

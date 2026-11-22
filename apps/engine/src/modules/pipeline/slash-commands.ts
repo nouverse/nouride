@@ -5,6 +5,8 @@
 
 import type { LoadedAgent, MessageEnvelope } from "@nouride/shared";
 import { HookRegistry, type ModelOverrides } from "@/modules/hooks/registry.ts";
+import type { WorkingInBackground } from "@/modules/hooks/builtins/helpers.ts";
+import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
 import type { DaemonRestart } from "@/modules/update/restart.ts";
 import type { PipelineDeps } from "./deps.ts";
 import type { Admission } from "./admission.ts";
@@ -20,7 +22,7 @@ export function slashCommands(parts: {
   deps: Pick<
     PipelineDeps,
     | "registry" | "sessions" | "approvals" | "notes" | "missionCommands" | "scheduleCommands" | "grants" | "startedAt"
-    | "version" | "externalAgents" | "agentEffort" | "autoApprove" | "config" | "gateways" | "usage" | "reflection"
+    | "version" | "externalAgents" | "jobs" | "agentEffort" | "autoApprove" | "config" | "gateways" | "usage" | "reflection"
     | "roomMention" | "rooms" | "secretKeeping"
   >;
   admission: Pick<Admission, "admitsByName" | "claim">;
@@ -66,6 +68,7 @@ export function slashCommands(parts: {
     renderPrompt: (id, c) => renderPromptForOperator(parts.turnContext, hooks, modelOverrides, id, c.envelope),
     cancelTurn: (agentId, chatId) => control.cancelTurnFor(agentId, chatId),
     stopBackground: (agentId, chatId) => control.stopBackgroundFor(agentId, chatId),
+    ...(deps.jobs ? { workingInBackground: (agentId: string) => workingFor(deps.jobs!, agentId) } : {}),
     agentStatus: (agentId) => control.agentStatus(agentId),
     ...(deps.externalAgents?.offeredEfforts ? { cliEfforts: (agentId: string) => deps.externalAgents!.offeredEfforts!(agentId) } : {}),
     ...(deps.externalAgents?.models ? { cliModels: (agentId: string) => deps.externalAgents!.models!.of(agentId) } : {}),
@@ -99,6 +102,20 @@ export function slashCommands(parts: {
       : {}),
   });
   return hooks;
+}
+
+/** An agent's helpers and asks at work, for `/helpers`: each job with what it was given and when its log was last written. */
+function workingFor(jobs: Pick<JobsPort, "backgroundTurns" | "getSnapshot">, agentId: string): WorkingInBackground[] {
+  return jobs.backgroundTurns(agentId).map((job) => ({
+    id: job.id,
+    asked: job.ask?.agent ?? null,
+    what: job.ask?.task ?? job.brief?.goal ?? job.command,
+    gatewayId: job.gatewayId,
+    chatId: job.chatId,
+    senderId: job.senderId,
+    startedAt: job.startedAt,
+    lastWroteAt: jobs.getSnapshot(job.id)?.logUpdatedAt ?? null,
+  }));
 }
 
 /**
