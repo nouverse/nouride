@@ -128,7 +128,9 @@ menyalakannya, dan mengubahnya sama seperti mengubah automation: perubahan yang 
 - Ia **membaca** apa yang dikatakan langkah sebelumnya (untuk langkah pertama, apa yang dikirim ke webhook), dan apa
   yang ia **cetak** diteruskan ke langkah berikutnya.
 - Gak mencetak apa pun berarti "gak punya apa-apa untuk dikatakan". Berakhir dengan error berarti gagal, dengan apa
-  yang ia tulis sebagai alasannya.
+  yang ia tulis sebagai alasannya. Jadi pengecekan yang belum punya apa-apa untuk dilaporkan harus berakhir tanpa
+  error: di skrip shell, `if [ -f done ]; then cat done; fi`, bukan `test -f done && cat done`, yang berakhir dengan
+  error selama file-nya belum ada.
 - Ia jalan di workspace agent, seperti perintah agent itu, tanpa model dan tanpa bertanya dulu. Ia diberi kunci
   tersimpan yang kamu sebut di langkahnya, di antara yang memang boleh dipakai perintah agent itu; skrip membaca
   tiap kunci lewat namanya dalam huruf besar, `notes_key` jadi `NOTES_KEY`.

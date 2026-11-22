@@ -55,8 +55,12 @@ const ONE_SCRIPT = "Work that needs a loop, a retry or more than one branch is o
 const TRY_IT_FIRST = "Run a script once with `exec` before you propose it.";
 /** A watch that tells once has an end: with none, one whose moment never came checked for as long as the daemon ran. */
 const ONCE_AND_FOR = "Add `once` when it should tell one time and then stop, and `for`, how long it watches before it gives up and says so.";
-/** What is asked for as "tell me when it is done": no turn of a model each time it looks. */
-const TOLD_WHEN = "To be told when something happens, a `script` that prints only once it has, with `once`.";
+/**
+ * What is asked for as "tell me when it is done": no turn of a model each time it looks. And it ends well while the
+ * moment has not come: `test -f done && cat done` ends in an error until the file is there, and a watch written so
+ * told its chat it had failed, once a minute, where it should have said nothing (seen on the box's sandbox).
+ */
+const TOLD_WHEN = "To be told when something happens, a `script` that prints only once it has and exits 0 until then (`if`, not `&&`), with `once`.";
 
 const DESCRIPTION =
   "Propose work that runs later: on a schedule, when a webhook is called, or when a person starts it. It stays off " +

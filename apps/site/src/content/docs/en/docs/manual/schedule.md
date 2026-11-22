@@ -120,7 +120,9 @@ and as it would be.
 
 - It **reads** what the step before said (for a first step, what a webhook was sent), and what it **prints** goes to
   the next step.
-- Printing nothing is "nothing to say". Ending with an error is a failure, with what it wrote as the reason.
+- Printing nothing is "nothing to say". Ending with an error is a failure, with what it wrote as the reason. So a
+  check that has nothing to report yet ends without an error: in a shell script, `if [ -f done ]; then cat done; fi`,
+  not `test -f done && cat done`, which ends in an error for as long as the file is not there.
 - It runs in the agent's workspace, as that agent's commands do, with no model and without asking first. It is handed
   the saved keys you name on it, among those that agent's commands may already use; the script reads each by its name
   in capitals, `notes_key` as `NOTES_KEY`.

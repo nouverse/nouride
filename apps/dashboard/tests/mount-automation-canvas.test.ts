@@ -44,10 +44,11 @@ async function atWidth(px: number, during: () => Promise<void>): Promise<void> {
 describe("a pressed box's fields", () => {
   test("open beside the canvas where there is room, one box at a time, and the last runs come back when it is closed", async () => {
     shown();
-    const seen = { rest: "", step: "", inBox: true, start: "", results: "", closed: "", states: [] as (string | undefined)[] };
+    const seen = { rest: "", panel: [] as string[], step: "", inBox: true, start: "", results: "", closed: "", states: [] as (string | undefined)[] };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       seen.rest = host.querySelector("main aside")?.textContent ?? "";
+      seen.panel = (host.querySelector("main aside[data-panel]")?.getAttribute("class") ?? "").split(/\s+/);
       editStep(host, 2).click();
       await eventually(() => panel(host) !== null, 2_000, "the panel");
       seen.step = panel(host)!.querySelector("header")?.textContent ?? "";
@@ -65,6 +66,9 @@ describe("a pressed box's fields", () => {
       seen.closed = host.querySelector("main aside")?.textContent ?? "";
     });
     expect(seen.rest).toBe("Recent runsIt has not run yet.");
+    // It stays where it is and scrolls in itself, no taller than the window under the page's head: a script's fields
+    // are longer than a window, and the page scrolled with them until the canvas was out of sight.
+    expect(seen.panel).toEqual(expect.arrayContaining(["xl:sticky", "xl:top-4", "xl:max-h-[calc(100dvh-13rem)]", "xl:overflow-y-auto", "xl:w-[25rem]"]));
     expect(seen.step).toBe("Step 2 · Ask an agentNouva works on it");
     expect(seen.inBox).toBe(false);
     expect(seen.states).toEqual([undefined, "open", undefined, undefined]);

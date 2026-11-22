@@ -73,7 +73,10 @@ const size = (name: string) => JSON.stringify(tools.get(name)!.definition).lengt
 // script and not more steps, a script is tried before it is proposed, and telling once on a schedule has an end.
 // Unsaid, an agent asked to check a page every hour proposed an hourly turn of a model, and a watch whose moment never
 // came checked for good. `schedule` is the largest tool now: it writes six kinds of work, and each needs its sentence.
-const PER_TOOL = 4_800;
+// 4,840 for a watch's script that ends well until its moment comes (~40, at 4,839): `test -f done && cat done` ends in
+// an error while the file is not there, and a watch written that way told its chat it had failed once a minute where
+// it should have said nothing (seen on the box's sandbox, in a release's live run).
+const PER_TOOL = 4_840;
 /** All of them together, which no single agent holds but the default-rich ones come close to. */
 // 32,500 since exec's `service`: a server started as an ordinary job ended the turn and never woke it,
 // and the parameter that fixes it has to say when to use it instead of `background`. 32,800 since
@@ -181,7 +184,8 @@ const PER_TOOL = 4_800;
 // in the Backlog. Asked what was in its backlog, an agent answered from its notes and never looked at its missions;
 // asked to put something in the backlog, it wrote a note. Not in the harness: the words are read where the tool is.
 // 52,550 for `schedule`'s script and a watch's end (~1,420, measured at 52,543): the reason is at `PER_TOOL`.
-const TOTAL = 52_550;
+// 52,590 for a watch's script that ends well until its moment comes (~40, measured at 52,583): at `PER_TOOL` too.
+const TOTAL = 52_590;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -190,9 +194,10 @@ const TOTAL = 52_550;
  * as an entry of about 690. On a month of a live install they were called once in 13,823 tool calls. 45,900 with
  * `schedule`'s `together` (measured at 45,896 against 50,727). 46,070 with `mission`'s `title` (measured at 46,068
  * against 50,899). 46,300 with the words a person has for a mission (measured at 46,290 against 51,121). 47,720 with
- * `schedule`'s script and a watch's end (measured at 47,712 against 52,543).
+ * `schedule`'s script and a watch's end (measured at 47,712 against 52,543). 47,760 with a watch's script that ends
+ * well until its moment comes (measured at 47,752 against 52,583).
  */
-const SENT = 47_720;
+const SENT = 47_760;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

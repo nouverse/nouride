@@ -125,15 +125,21 @@ export function useEditor(loaded: Draft, fresh: boolean): Editor {
       },
       choose: (index, exit, choice) => {
         const removed = choosePath(draft.steps, index, exit, choice).removed;
-        steps(
-          (list) => choosePath(list, index, exit, choice).steps,
-          // A lane's first step is opened to be written; a question is written where it was chosen, in its step's fields.
-          (now, was) => (choice === "lane" ? madeIn(now, was) : undefined),
-        );
+        change((held) => {
+          const chosen = choosePath(held.steps, index, exit, choice);
+          // A lane's first step is opened to be written, by the id the choice gave it: it may be the id of the wait
+          // that just went with the old answer, which a look for "the step that was not there before" does not find.
+          // A question is written where it was chosen, in its step's own fields.
+          return { draft: { ...held, steps: chosen.steps }, ...(choice === "lane" && chosen.opened ? { open: chosen.opened } : {}) };
+        });
         return removed > 0 ? draft : null;
       },
       laneEnd: (index, exit, ends) => steps((list) => setLaneEnd(list, index, exit, ends)),
-      addToLane: (index, exit, kind) => steps((list) => addToLane(list, index, exit, kind).steps, madeIn),
+      addToLane: (index, exit, kind) =>
+        change((held) => {
+          const added = addToLane(held.steps, index, exit, kind);
+          return { draft: { ...held, steps: added.steps }, ...(added.opened ? { open: added.opened } : {}) };
+        }),
       restore: (kept) => setState((was) => ({ ...was, draft: kept })),
       forget: (reset) => setState((was) => ({ ...was, resets: was.resets.filter((one) => one !== reset) })),
       discard: () => setState({ draft: null, open: null, resets: [] }),

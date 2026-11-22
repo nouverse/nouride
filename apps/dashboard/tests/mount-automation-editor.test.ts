@@ -357,6 +357,36 @@ describe("where the run goes from a step", () => {
     expect(seen.undone).toEqual(["check", "s5", "find", "ok", "tell"]);
   });
 
+  test("a question changed for other steps: the wait goes, and the lane's first step opens to be written though it takes the id the wait had", async () => {
+    shown();
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { asked: [] as string[], open: "", kicker: "", boxes: [] as string[] };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      choose(host, "whenFailed", "Ask me first");
+      await eventually(() => stepCard(host, "check").querySelector('[data-rule-kind="ask"]') !== null, 2_000, "the question's strip");
+      type(labelled(host, "Question to ask if it fails") as HTMLTextAreaElement, "Go on anyway?");
+      choose(host, "whenFailed", "Do something else");
+      // The wait was step s5, and so is the step that takes its place: found by what the choice made, not by an id
+      // the list did not hold before.
+      await eventually(() => host.querySelector('[data-lane="whenFailed"]') !== null, 2_000, "the lane");
+      await eventually(() => host.querySelector('[data-step-fields="s5"] header p')?.textContent === "If it fails · Ask an agent", 2_000, "the lane's step open");
+      seen.open = host.querySelector("main [data-step-fields]")?.getAttribute("data-step-fields") ?? "";
+      seen.kicker = host.querySelector('[data-step-fields="s5"] header p')?.textContent ?? "";
+      seen.asked = [...host.querySelectorAll("[data-rule]")].map((rule) => rule.textContent ?? "");
+      seen.boxes = drawn(host);
+      type(field(host, "What to ask"), "Look into why it failed.");
+      sent = await saved(host);
+    });
+    expect(seen.open).toBe("s5");
+    expect(seen.kicker).toBe("If it fails · Ask an agent");
+    expect(seen.asked).toEqual([]);
+    expect(seen.boxes).toEqual(["check", "s5", "find", "ok", "tell"]);
+    expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "s5" } }, { id: "s5", kind: "agentTurn", message: "Look into why it failed.", then: { to: "find" } }, FIND, OK, TELL]);
+  });
+
   test("a path written elsewhere that the canvas has no drawing for is a chip and a line to where it lands, and is offered as it is until it is changed", async () => {
     // A failure that leads to a step the main line reaches too, and a step that ends the run early.
     shown([{ ...CHECK, whenFailed: { to: "tell" }, then: "end" }, FIND, OK, TELL]);

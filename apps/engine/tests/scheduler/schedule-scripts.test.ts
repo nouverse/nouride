@@ -67,8 +67,9 @@ describe("the words that make an agent write a script", () => {
     expect(words).toContain("Run a script once with `exec` before you propose it.");
   });
 
-  test("being told when something happens is a script that prints only once it has", () => {
-    expect(tool.definition.description).toContain("To be told when something happens, a `script` that prints only once it has, with `once`.");
+  test("being told when something happens is a script that prints only once it has, and ends well until then", () => {
+    // Ending in an error while the moment has not come is a failure, said in the chat each time it looks.
+    expect(tool.definition.description).toContain("To be told when something happens, a `script` that prints only once it has and exits 0 until then (`if`, not `&&`), with `once`.");
   });
 
   test("the fields say what a script reads and hands on, what runs it, and what a person reads of it", () => {

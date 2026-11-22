@@ -89,8 +89,14 @@ export function AutomationCanvas({
           }
         />
       </div>
-      {/* Beside the canvas from the width `useDesktop` reads, which is where the page opens a box's fields there. */}
-      <aside className="w-full space-y-4 xl:sticky xl:top-4 xl:w-[23.5rem] xl:shrink-0">{beside}</aside>
+      {/* Beside the canvas from the width `useDesktop` reads, which is where the page opens a box's fields there. It
+          stays where it is and scrolls in itself: a script's fields are taller than a window, and the page scrolled
+          with them until the canvas they belong to was out of sight. As tall as the window less the page's head over
+          it (its name, and the tabs: about 13rem), so its end is in sight before the page is scrolled at all. The
+          margin and padding leave its cards' shadows the room a box that scrolls would cut. */}
+      <aside data-panel className="w-full space-y-4 xl:sticky xl:top-4 xl:-m-3 xl:max-h-[calc(100dvh-13rem)] xl:w-[25rem] xl:shrink-0 xl:overflow-y-auto xl:overscroll-contain xl:p-3 xl:[scrollbar-width:thin]">
+        {beside}
+      </aside>
     </div>
   );
 }
