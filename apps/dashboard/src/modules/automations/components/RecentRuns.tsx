@@ -6,6 +6,7 @@
 
 import type { JobRunSummary } from "@nouride/wire";
 import { HeldActions } from "@/commons/components/jobs/Allowances";
+import { plainLine } from "@/commons/lib/markdown/plain";
 import { cn } from "@/commons/lib/utils";
 import { live, ranFor, runWords, took, whenWords, type Tone } from "../lib/runs";
 import { Expandable } from "@/commons/components/ui/ListCard";
@@ -55,8 +56,8 @@ export function RecentRuns({
                         <span className={cn("text-sm", on ? "font-bold text-base-content" : "font-semibold text-base-content/90")}>{whenWords(run.startedAt)}</span>
                         <span className="text-xs text-base-content/65">{live(run) ? label : `${label} · ${took(ranFor(run))}`}</span>
                       </span>
-                      {/* Words only: a mission it names is a link on the step's card, where a link is not inside a button. */}
-                      {run.result ? <span className={cn("block truncate text-xs", on ? "text-secondary" : "text-base-content/65")}>{run.result}</span> : null}
+                      {/* Words only, with no mark of the Markdown an agent writes: a mission it names is a link on the step's card, where a link is not inside a button. */}
+                      {run.result ? <span className={cn("block truncate text-xs", on ? "text-secondary" : "text-base-content/65")}>{plainLine(run.result)}</span> : null}
                     </span>
                   </button>
                   {run.held?.length ? (

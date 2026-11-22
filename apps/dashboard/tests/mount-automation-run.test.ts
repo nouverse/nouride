@@ -229,7 +229,7 @@ describe("following a run", () => {
 
   test("Recent runs lists them, newest first, and a press on one draws that run over the steps", async () => {
     const older = run("success", [out("check", "empty", { ms: 30 })], { id: "run_0", startedAt: Date.now() - 2 * 86_400_000, finishedAt: Date.now() - 2 * 86_400_000 + 30, result: "step 1 of 4 had nothing to say: the run ended there" });
-    const newest = run("success", [out("check", "done", { ms: 400 }), out("find", "done", { ms: 900 }), out("ok", "done", { ms: 5, by: "Gading" }), out("tell", "done", { ms: 5 })], { finishedAt: Date.now() - 50_000, result: "The shop was down." });
+    const newest = run("success", [out("check", "done", { ms: 400 }), out("find", "done", { ms: 900 }), out("ok", "done", { ms: 5, by: "Gading" }), out("tell", "done", { ms: 5 })], { finishedAt: Date.now() - 50_000, result: "**The shop** was `down`." });
     answer({ [PAGE]: detail(automation(), [newest, older]) });
     const seen = { rows: [] as string[], labels: [] as string[], picked: [] as (string | null)[], tab: "", chips: [] as string[], held: 0 };
     await renderPage(PAGE, async (host) => {
@@ -246,7 +246,9 @@ describe("following a run", () => {
       seen.chips = STEPS.map((step) => chip(host, step.id));
     });
     expect(seen.rows[0]).toContain("Done · 10 s");
+    // As words: an agent writes Markdown, and a row of one line draws none of it.
     expect(seen.rows[0]).toContain("The shop was down.");
+    expect(seen.rows[0]).not.toMatch(/[*`]/);
     expect(seen.rows[1]).toContain("step 1 of 4 had nothing to say");
     expect(seen.labels).toEqual(["Steps", "Last run"]);
     expect(seen.held).toBe(0);
