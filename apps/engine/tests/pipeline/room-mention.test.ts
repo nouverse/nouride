@@ -348,12 +348,18 @@ describe("/mention says, sets and clears", () => {
     const h = await group({ bots: ["nouva"] });
     await h.say({ text: "/mention" });
     const said = h.said()[0]!;
-    expect(said).toContain("`/mention <agent>` that agent answers every message that tags nobody");
-    expect(said).toContain("`/mention required` a tag is needed");
-    expect(said).toContain("`/mention default` follow the gateway or daemon again");
+    // Each use on a line of its own, under a blank line.
+    expect(said.split("\n").slice(-5)).toEqual([
+      "",
+      "`/mention`: who answers here",
+      "`/mention <agent>`: that agent answers every message that tags nobody",
+      "`/mention required`: a tag is needed",
+      "`/mention default`: follow the gateway or the daemon again",
+    ]);
     expect(said).not.toMatch(/\/mention (on|off)\b/);
     const listed = h.pipeline.commands().find((command) => command.command === "mention" || command.command === "/mention");
-    expect(listed?.description).toBe("Who answers without a tag here: `/mention <agent>`, `/mention required`, `/mention default`");
+    // What a chat app's own menu shows beside the command: plain words, since a menu draws no code marks.
+    expect(listed?.description).toBe("Who answers a message that tags nobody in this group");
   });
 
   test("the connection's own setting is named as the gateway's", async () => {

@@ -13,19 +13,30 @@ import { doneWhen, shortId } from "@/modules/missions/page.ts";
 import { isDraft } from "@/modules/missions/drafts.ts";
 import { isFinal, seenAs, type Mission } from "@/modules/missions/types.ts";
 import type { Hook, HookContext } from "../types.ts";
+import { uses } from "../format.ts";
 
 /** What `/mission` reaches of the missions. */
 export type MissionCommands = Pick<Missions, "start" | "stop" | "pause" | "continueMission" | "answer" | "accept" | "acceptOutside" | "tell" | "find" | "forChat" | "openFor" | "now" | "limitsLine" | "forStatus" | "load" | "running">;
 
 const VERBS = ["stop", "pause", "continue", "accept", "answer", "tell", "show"] as const;
 
-const USAGE =
-  "/mission <goal>: this agent drafts one from your goal; it runs once you start it, and reports here.\n" +
-  "/mission: what needs you, what is at work and the backlog. /mission show <id>: one in full, ended ones too.\n" +
-  "/mission stop|continue|accept <id>, /mission answer <id> <answer>.\n" +
-  "/mission pause <id>: stop its work for now and keep everything; /mission continue <id> goes on from its checklist, whenever you like.\n" +
-  "/mission tell <id> <words>: tell it something while it works; it is read before its next step and followed, never a new goal.\n" +
-  '/mission accept <id> --outside "<note>": done another way, closed as accepted without its checks.';
+/** How a mission is asked for: the one use an empty list says. */
+const ASK = uses([["/mission <goal>", "this agent drafts one from your goal; it runs once you start it, and reports here"]]);
+
+const USAGE = [
+  ASK,
+  uses([
+    ["/mission", "what needs you, what is at work and the backlog"],
+    ["/mission show <id>", "one in full, an ended one too"],
+    ["/mission accept <id>", "start a draft, or accept a result"],
+    ["/mission answer <id> <answer>", "answer its question"],
+    ["/mission tell <id> <words>", "tell it something while it works; read before its next step, never a new goal"],
+    ["/mission pause <id>", "stop its work for now and keep everything"],
+    ["/mission continue <id>", "go on from its checklist, whenever you like"],
+    ["/mission stop <id>", "end it"],
+    ['/mission accept <id> --outside "<note>"', "done another way, closed as accepted without its checks"],
+  ]),
+].join("\n");
 
 /** One mission in full: what decides it is done, where it stands, and the whole of what it asks. */
 function show(mission: Mission, limits: string): string {
@@ -114,7 +125,7 @@ function listed(missions: MissionCommands, ctx: HookContext): Mission[] {
  */
 export function missionsSaid(open: readonly Mission[], isHere: (mission: Mission) => boolean, roomy = false): string {
   // How one is asked for, and no more: the whole usage under an empty list was six long lines about missions there are none of.
-  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n\n${USAGE.split("\n")[0]}`;
+  if (open.length === 0) return `No mission is in the backlog, at work or waiting here.\n\n${ASK}`;
   const stages: string[] = [];
   for (const stage of STAGES) {
     const inIt = open.filter((mission) => stageOf(mission) === stage.id).sort((a, b) => b.createdAt - a.createdAt);
@@ -138,7 +149,7 @@ function list(missions: MissionCommands, ctx: HookContext): string {
  */
 const missionHook: Hook = {
   command: "/mission",
-  description: "Ask for a mission (a draft you start), or see and answer the missions here: /mission <goal>",
+  description: "Long work it carries on alone: ask for one, or see what has not ended",
   handler: async (ctx) => {
     const missions = ctx.deps.missions;
     if (!missions) return { handled: true, reply: "Missions are not run in this process." };
@@ -146,7 +157,7 @@ const missionHook: Hook = {
     if (!first) return { handled: true, reply: list(missions, ctx) };
     const verb = VERBS.find((one) => one === first.toLowerCase());
     if (!verb) return { handled: false, prompt: draftAsked(ctx.args.join(" ")) };
-    if (!second) return { handled: true, reply: `Which mission? ${USAGE}` };
+    if (!second) return { handled: true, reply: `Which mission?\n\n${USAGE}` };
     const mission = missions.find(second);
     if (!mission || !mayAct(ctx, mission)) return { handled: true, reply: `No mission ${second} here that you can act on.` };
     if (verb === "show") return { handled: true, reply: show(mission, missions.limitsLine(mission)) };

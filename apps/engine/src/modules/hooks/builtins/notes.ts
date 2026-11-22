@@ -8,25 +8,25 @@
 import { plural } from "@nouride/shared";
 import { renderNotes } from "@/modules/notes/format.ts";
 import type { Hook } from "../types.ts";
-import { sessionKey } from "../format.ts";
+import { sessionKey, titled } from "../format.ts";
 
 export const notesHooks: Hook[] = [
   {
     command: "/notes",
-    description: "Show this chat's work notes, or clear them: /notes clear",
+    description: "This chat's work notes; with clear, emptied",
     handler: async (ctx) => {
       const notes = ctx.deps.notes;
       if (!notes) return { handled: true, reply: "Work notes are not kept in this process." };
       const key = sessionKey(ctx);
       if (ctx.args[0]?.toLowerCase() === "clear") {
         const cleared = await notes.clear(key);
-        return { handled: true, reply: cleared === 0 ? "No work notes here, nothing to clear." : `Cleared ${cleared} task(s) from the work notes.` };
+        return { handled: true, reply: cleared === 0 ? "No work notes here, nothing to clear." : `Cleared ${cleared} ${plural(cleared, "task")} from the work notes.` };
       }
       const tasks = notes.tasks(key);
       const plan = notes.plan(key);
       if (tasks.length === 0) return { handled: true, reply: "No work notes in this chat yet." };
       const steps = plan ? `\nPlan for "${plan.task}": ${plan.steps.filter((step) => step.state === "done" || step.state === "skipped").length} of ${plan.steps.length} steps done.` : "";
-      return { handled: true, reply: `Work notes (${tasks.length} ${plural(tasks.length, "task")}):\n\n${renderNotes(tasks).trim()}${steps}` };
+      return { handled: true, reply: `${titled("Work notes", tasks.length)}\n\n${renderNotes(tasks).trim()}${steps}` };
     },
   },
 ];

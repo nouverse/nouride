@@ -2035,7 +2035,7 @@ describe("/drafts", () => {
     expect(h.engine.pending()).toHaveLength(2);
 
     const result = await hook.handler(ctx([], h.engine));
-    expect(result.reply).toContain("takes all 2");
+    expect(result.reply).toContain("`/drafts approve`: add all 2");
 
     const approved = await hook.handler(ctx(["approve"], h.engine));
     expect(approved.reply).toContain("Approved 2");

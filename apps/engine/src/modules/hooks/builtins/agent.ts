@@ -3,15 +3,15 @@
  * what prompt it is actually carrying, and re-reading its pack from disk.
  */
 
-import { effortRefusal, isLlmEffort, LLM_EFFORTS } from "@nouride/shared";
+import { effortRefusal, isLlmEffort, LLM_EFFORTS, plural } from "@nouride/shared";
 import { named, offers, picked } from "../cli-model.ts";
 import type { Hook, HookContext } from "../types.ts";
-import { failed, sessionKey } from "../format.ts";
+import { failed, sessionKey, titled, uses } from "../format.ts";
 
 export const agentHooks: Hook[] = [
     {
       command: "/model",
-      description: "Switch model for this chat",
+      description: "The model for this chat: see it, or change it",
       worksWhilePaused: true,
       handler: async (ctx) => {
         const key = sessionKey(ctx);
@@ -103,30 +103,28 @@ export const agentHooks: Hook[] = [
 
     {
       command: "/agents",
-      description: "List agents",
+      description: "The agents here and what each is doing",
       worksWhilePaused: true,
       handler: async (ctx) => {
         const lines = ctx.deps.registry.all().map((agent) => {
           const status = ctx.deps.registry.status(agent.config.id);
           const enabled = agent.config.enabled ? status : "disabled";
-          return `- \`${agent.config.id}\` ${agent.config.emoji ?? ""} ${agent.config.displayName}: ${enabled}`.replace(
-            /\s+/g,
-            " ",
-          );
+          // Its name first, what a person calls it by; its id after, as code, for a command that takes one.
+          return `• ${agent.config.emoji ?? ""} **${agent.config.displayName}** \`${agent.config.id}\` · ${enabled}`.replace(/ +/g, " ");
         });
 
         const failures = ctx.deps.registry.loadFailures();
         if (failures.length > 0) {
-          lines.push(...failures.map((f) => `- \`${f.id}\` failed to load: ${f.error}`));
+          lines.push("", titled("Did not load", failures.length), ...failures.map((f) => `• \`${f.id}\`: ${f.error}`));
         }
 
-        return { handled: true, reply: lines.join("\n") || "No agents loaded." };
+        return { handled: true, reply: lines.length > 0 ? [titled("Agents", ctx.deps.registry.all().length), ...lines].join("\n") : "No agents loaded." };
       },
     },
 
     {
       command: "/prompt",
-      description: "Show the system prompt this agent is running with",
+      description: "The instructions this agent runs with (in a direct chat)",
       worksWhilePaused: true,
       handler: async (ctx) => {
         // DM only. The prompt contains SOUL and MEMORY — everything the agent knows about the
@@ -158,14 +156,14 @@ export const agentHooks: Hook[] = [
 
     {
       command: "/reload",
-      description: "Reload persona files and config from disk",
+      description: "Read this agent's persona files and config again",
       worksWhilePaused: true,
       handler: async (ctx) => {
         try {
           const agent = await ctx.deps.registry.reload(ctx.agent.config.id);
           return {
             handled: true,
-            reply: `Reloaded. Model \`${agent.config.llm.model}\`, ${agent.skills.length} skill(s), ${agent.config.tools.enabled.length} tool(s).`,
+            reply: `Reloaded. Model \`${agent.config.llm.model}\`, ${agent.skills.length} ${plural(agent.skills.length, "skill")}, ${agent.config.tools.enabled.length} ${plural(agent.config.tools.enabled.length, "tool")}.`,
           };
         } catch (err) {
           return { handled: true, reply: failed("Reload", err, ctx) };
@@ -174,9 +172,12 @@ export const agentHooks: Hook[] = [
     },
 ];
 
-const LOCK_USAGE =
-  "`/effort <level>` sets this chat's · `/effort <level> lock` the agent's own, for every chat and mission (admins) · " +
-  "`/effort lock` locks this chat's level · `/effort unlock` takes the agent's own away";
+const LOCK_USAGE = uses([
+  ["/effort <level>", "this chat's"],
+  ["/effort <level> lock", "the agent's own, for every chat and mission (admins)"],
+  ["/effort lock", "this chat's level, made the agent's own"],
+  ["/effort unlock", "the agent's own, taken away"],
+]);
 const NOT_ADMIN = "Only an admin can lock an effort: it is written in the agent's config, for every chat. `/effort <level>` sets this chat's.";
 
 /**

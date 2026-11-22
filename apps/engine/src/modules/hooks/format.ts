@@ -10,6 +10,21 @@ import type { HookContext } from "./types.ts";
 const log = createLogger("hooks");
 
 /**
+ * A command's uses, one a line: the use as code, then what it does.
+ *
+ * They were written as one line parted by "·", which a phone wraps into a block: four uses of `/mention` read as one
+ * sentence, and the use a person wanted was in the middle of it.
+ */
+export function uses(entries: readonly (readonly [use: string, does: string])[]): string {
+  return entries.map(([use, does]) => `\`${use}\`: ${does}`).join("\n");
+}
+
+/** A list's title, in bold, with how many it holds where that is worth a glance. */
+export function titled(title: string, count?: number): string {
+  return `**${title}**${count === undefined ? "" : ` (${count})`}`;
+}
+
+/**
  * What a command says when its work failed: the sentence a chat may see, and the whole error in the log.
  *
  * `String(err)` went to the chat — a group saw the install's paths, its provider profile names and a platform's

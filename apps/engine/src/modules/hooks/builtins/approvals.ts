@@ -7,7 +7,9 @@
  */
 
 import { describeApprovalLevel, resolveApprovalLevel } from "@nouride/policy";
+import { plural } from "@nouride/shared";
 import type { Hook } from "../types.ts";
+import { titled, uses } from "../format.ts";
 import {
   answerAllApprovals,
   answerApproval,
@@ -18,7 +20,7 @@ import { isPlatformMention } from "../parse.ts";
 export const approvalHooks: Hook[] = [
     {
       command: "/approve",
-      description: "Approve a pending tool call; add `always` to stop being asked for it",
+      description: "Approve what is waiting; with always, stop being asked for it",
       handler: async (ctx) => {
         // `always` as a trailing word rather than a separate command: someone reading a prompt in
         // a chat answers with the shortest thing that works, and `/approve always` is shorter than
@@ -52,8 +54,7 @@ export const approvalHooks: Hook[] = [
      */
     {
       command: "/approvals",
-      description:
-        "How much I ask before running tools: `/approvals`, `/approvals careful`, `/approvals balanced`",
+      description: "How much I ask before I run tools: careful or balanced",
       handler: async (ctx) => {
         /**
          * The person store is needed to *set* a person's level, not to answer questions.
@@ -81,7 +82,10 @@ export const approvalHooks: Hook[] = [
               "",
               resolution.source === "agent"
                 ? "Set on this agent, so it is the same for everyone here. Change it in the dashboard."
-                : "`/approvals balanced` to stop being asked about ordinary calls · `/approvals careful` to be asked.",
+                : uses([
+                    ["/approvals balanced", "stop being asked about ordinary calls"],
+                    ["/approvals careful", "be asked again"],
+                  ]),
             ].join("\n"),
           };
         }
@@ -92,9 +96,10 @@ export const approvalHooks: Hook[] = [
             reply: [
               "`trusted` cannot be set from a chat message.",
               "",
-              "Anyone who can message me can type a command here. That is not proof of who they are,",
-              "which is why pairing exists. `trusted` switches off every gate, config changes and stopping",
-              "this daemon included, so it is set where there is a login: the dashboard, under this agent.",
+              // Whole sentences, a paragraph to a line: broken by hand at a desk's width, they read ragged on a phone.
+              "Anyone who can message me can type a command here. That is not proof of who they are, which is why pairing exists.",
+              "",
+              "`trusted` switches off every gate, config changes and stopping this daemon included, so it is set where there is a login: the dashboard, under this agent.",
             ].join("\n"),
           };
         }
@@ -112,9 +117,9 @@ export const approvalHooks: Hook[] = [
           return {
             handled: true,
             reply: [
-              `This agent is set to \`${agentLevel}\`, which applies to everyone talking to it, so your`,
-              "own setting will not change anything here. Change the agent in the dashboard, or set it",
-              "to `per-person` to let each person choose.",
+              `This agent is set to \`${agentLevel}\`, which applies to everyone talking to it, so your own setting will not change anything here.`,
+              "",
+              "Change the agent in the dashboard, or set it to `per-person` to let each person choose.",
             ].join("\n"),
           };
         }
@@ -140,16 +145,23 @@ export const approvalHooks: Hook[] = [
               "",
               // Stated every time, not buried in documentation. Someone loosening a gate is entitled to
               // know exactly what it still covers.
-              "Still asks, every time: changing a config.toml, giving someone access, stopping this",
-              "daemon, replacing or deleting a stored secret, a credential leaving this machine, and",
-              "changing its system packages. Like every level, it also asks about a program installed",
-              "for every agent, a change to an agent's own persona or to who People says a person is,",
-              "and work nobody watches sending somewhere its job did not name.",
-              "`sudo` changes nothing: what it runs is what is asked about (`sudo systemctl stop nouride`",
-              "still stops this daemon).",
+              "**Still asks, every time:**",
+              "• changing a config.toml",
+              "• giving someone access",
+              "• stopping this daemon",
+              "• replacing or deleting a stored secret",
+              "• a credential leaving this machine",
+              "• changing its system packages",
+              "",
+              "**Like every level, it also asks about:**",
+              "• a program installed for every agent",
+              "• a change to an agent's own persona, or to who People says a person is",
+              "• work nobody watches sending somewhere its job did not name",
+              "",
+              "`sudo` changes nothing: what it runs is what is asked about (`sudo systemctl stop nouride` still stops this daemon).",
               "",
               "This follows you, not this chat: it survives `/new`, `/reset` and a restart.",
-              ...(drained > 0 ? ["", `Approved ${drained} pending request(s).`] : []),
+              ...(drained > 0 ? ["", `Approved ${drained} pending ${plural(drained, "request")}.`] : []),
               ...notice,
             ].join("\n"),
           };
@@ -166,7 +178,7 @@ export const approvalHooks: Hook[] = [
 
     {
       command: "/deny",
-      description: "Deny a pending tool call",
+      description: "Refuse what is waiting",
       handler: async (ctx) => {
         const id = ctx.args.find((arg) => !isPlatformMention(arg));
         return answerApproval(ctx, "deny", id);
@@ -175,7 +187,7 @@ export const approvalHooks: Hook[] = [
 
     {
       command: "/grants",
-      description: "List standing command permissions, or revoke them: `/grants revoke <id|all>`",
+      description: "The commands I no longer ask about, and taking one back",
       handler: async (ctx) => {
         const grants = ctx.deps.grants;
         if (!grants) return { handled: true, reply: "Grants are not enabled in this build." };
@@ -186,7 +198,7 @@ export const approvalHooks: Hook[] = [
           if (!target) return { handled: true, reply: "Name a grant id, or `all`." };
           if (/^all$/i.test(target)) {
             const count = grants.revokeAll(ctx.senderId, agentId);
-            return { handled: true, reply: `Revoked ${count} grant(s). I will ask again from now on.` };
+            return { handled: true, reply: `Took back ${count} ${plural(count, "permission")}. I will ask again from now on.` };
           }
           return {
             handled: true,
@@ -203,13 +215,14 @@ export const approvalHooks: Hook[] = [
         return {
           handled: true,
           reply: [
-            `${list.length} standing permission(s):`,
-            ...list.map(
-              (grant) =>
-                `- \`${grant.id}\` ${grant.commandText}` +
-                (grant.useCount > 0 ? ` · used ${grant.useCount}×` : " · never used"),
-            ),
-            "Revoke with `/grants revoke <id>` or `/grants revoke all`.",
+            titled("Commands I no longer ask about", list.length),
+            // A command and its id on lines of their own: a long command line ran into its id and its count.
+            ...list.map((grant) => ["", `\`${grant.commandText.replace(/`/g, "'")}\``, `\`${grant.id}\` · ${grant.useCount > 0 ? `used ${grant.useCount}×` : "never used"}`].join("\n")),
+            "",
+            uses([
+              ["/grants revoke <id>", "ask about that one again"],
+              ["/grants revoke all", "ask about all of them again"],
+            ]),
           ].join("\n"),
         };
       },

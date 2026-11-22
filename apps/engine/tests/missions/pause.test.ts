@@ -331,7 +331,11 @@ describe("the ways a person pauses one", () => {
   test("the usage names it", async () => {
     const h = await missionsHarness();
     // Where the usage is said whole: a verb with no mission named. An empty list says only how one is asked for.
-    expect((await hook(h, ["pause"])).reply).toContain("/mission pause <id>: stop its work for now and keep everything; /mission continue <id> goes on from its checklist, whenever you like.");
+    const usage = (await hook(h, ["pause"])).reply ?? "";
+    expect(usage.split("\n")).toContain("`/mission pause <id>`: stop its work for now and keep everything");
+    expect(usage.split("\n")).toContain("`/mission continue <id>`: go on from its checklist, whenever you like");
+    // A use to a line: none holds two.
+    expect(usage.split("\n").filter((line) => (line.match(/\/mission /g) ?? []).length > 1)).toEqual([]);
     expect((await hook(h, [])).reply).not.toContain("/mission pause");
   });
 

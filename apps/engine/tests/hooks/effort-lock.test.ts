@@ -112,7 +112,7 @@ describe("/effort … lock", () => {
   test("other words after a level, or after lock and unlock, get the usage and write nothing", async () => {
     const { say, overrides, written } = await chat();
     for (const words of [["max", "forever"], ["lock", "max"], ["unlock", "now"], ["max", "lock", "please"]]) {
-      expect(await say(...words)).toStartWith("`/effort <level>` sets this chat's · `/effort <level> lock` the agent's own");
+      expect((await say(...words)).split("\n").slice(0, 2)).toEqual(["`/effort <level>`: this chat's", "`/effort <level> lock`: the agent's own, for every chat and mission (admins)"]);
     }
     expect(written).toEqual([]);
     expect(overrides.effortOf(ID)).toBeUndefined();
