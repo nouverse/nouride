@@ -31,6 +31,7 @@ import type { CronPort } from "@/modules/cron/cron.store.ts";
 import type { CronScheduler } from "@/modules/cron/scheduler.ts";
 import type { HookTests } from "@/modules/web/hook-reach.ts";
 import type { ProposalCards } from "@/modules/cron/proposal-cards.ts";
+import type { ScriptFacts } from "@/modules/cron/scripts.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import type { LogBuffer } from "@/commons/log-buffer.ts";
@@ -231,6 +232,8 @@ export interface ControlDeps {
     tests?: HookTests;
     /** A proposal answered here: its card in the chat says so (0.8.0). */
     proposals?: Pick<ProposalCards, "settled">;
+    /** Whether a script a job keeps could run here, asked before the job is saved (`cron/scripts.ts`). */
+    scripts?: ScriptFacts;
   };
   /**
    * `skills/` beside the executable, when this build ships built-in skills.

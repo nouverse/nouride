@@ -10,10 +10,11 @@
  * the rows and `next_run_at` — and this can be read without the SQL around it.
  */
 
-import type { JobDelivery, JobPayload, JobStep, StepGo, TogetherStep } from "@nouride/shared";
+import type { JobDelivery, JobPayload, JobScript, JobStep, StepGo, TogetherStep } from "@nouride/shared";
 import { assertTimezone, nextCronOccurrence, parseCronExpr } from "@/modules/cron/expr.ts";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
 import { CHECK_MAX, CHECKS_MAX, GOAL_MAX, REVIEW_MAX } from "@/modules/missions/limits.ts";
+import { SCRIPT_MAX_BYTES } from "./job-command.ts";
 import { APPROVAL_WAIT_MAX_MS, APPROVAL_WAIT_MIN_MS, STEPS_MAX } from "./steps.ts";
 import { TOGETHER_MAX, TOGETHER_MIN } from "./together.ts";
 
@@ -94,6 +95,36 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
   if (delivery?.once && delivery.mode === "none") {
     throw new CronValidationError("a job that tells nobody cannot turn itself off once it has told: give it somewhere to report.", "delivery");
   }
+  validateLasts(input);
+}
+
+/**
+ * How long a job lasts must be a time it can run in: it is on a clock, and one that runs every so often has a run
+ * inside it. One that would end before it ever ran does nothing and then says it gave up. A pattern's runs are not
+ * counted: how far apart they are depends on the day it is asked, and a rule that refuses on a Friday what it took on
+ * a Monday is not one.
+ */
+export function validateLasts(input: Pick<JobInput, "trigger" | "delivery">): void {
+  const lasts = input.delivery?.lasts;
+  if (lasts === undefined) return;
+  if (!Number.isFinite(lasts) || lasts <= 0) throw new CronValidationError("how long a job lasts is a length of time: \"6h\", \"30d\".", "schedule");
+  const { trigger } = input;
+  if (trigger.kind !== "every" && trigger.kind !== "cron") {
+    throw new CronValidationError("only a job that runs again and again on a clock can last a set time: this one runs once, or when it is called or started.", "schedule");
+  }
+  if (trigger.kind === "every" && trigger.everyMs > lasts) {
+    throw new CronValidationError("it would end before its first run: let it last longer than the time between two runs.", "schedule");
+  }
+}
+
+/**
+ * What a job does, held to its rules when only that is changed: every step of a list, and a job of one command, which
+ * may keep a script with rules of its own. The other kinds are held when a job is made, as they were: a job in the
+ * field made under an older rule is not refused its next save for it.
+ */
+export function validateDoes(input: Pick<JobInput, "payload" | "session" | "delivery" | "agentId">): void {
+  if (input.payload.kind === "steps") validateSteps(input);
+  else if (input.payload.kind === "command") doesProblems(input.payload, input.delivery);
 }
 
 /** What one thing a job does must be: a job of one kind, or one step of several. */
@@ -112,6 +143,36 @@ function doesProblems(does: Exclude<JobPayload, { kind: "steps" }> | Exclude<Job
     if (does.argv.some((a) => typeof a !== "string")) {
       throw new CronValidationError("every argv entry must be a string.", "command");
     }
+    if (does.script !== undefined) scriptProblems(does.script, does.argv);
+  }
+}
+
+/** A secret's name as the store keeps one: what a script may name to be handed. */
+const SECRET_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
+
+/**
+ * What a script a job keeps must be: text the machine can start a program with, a line of what it does, and a program
+ * to run it. Whether that program is on the machine, and whether its agent holds the secrets it names, is asked where
+ * the job is made (`scripts.ts`), since both are facts about an agent and not about the text.
+ */
+function scriptProblems(script: JobScript, argv: readonly string[]): void {
+  if (typeof script !== "object" || script === null || typeof script.text !== "string" || !script.text.trim()) {
+    throw new CronValidationError("a script needs its text.", "command");
+  }
+  // A NUL ends a string where the program is started, so the rest of the text would never reach its file.
+  if (script.text.includes("\0")) throw new CronValidationError("a script is text: this one holds a NUL byte.", "command");
+  const bytes = new TextEncoder().encode(script.text).length;
+  if (bytes > SCRIPT_MAX_BYTES) {
+    throw new CronValidationError(`a script is at most ${SCRIPT_MAX_BYTES} bytes, the most this machine starts a program with, and this one is ${bytes}: keep the long part in a file it reads.`, "command");
+  }
+  if (typeof script.about !== "string" || !script.about.trim()) {
+    throw new CronValidationError("a script says what it does, in a line (`about`): a person turning it on reads that before the text.", "command");
+  }
+  // The program is the script's own line where one is given: a first argument that is itself the text would run it twice over.
+  if (!argv[0]?.trim() || /\s/.test(argv[0])) throw new CronValidationError("a script names the program that runs it, one word: `sh`, `python3`, `bun`.", "command");
+  const secrets = script.secrets ?? [];
+  if (!Array.isArray(secrets) || secrets.some((name) => typeof name !== "string" || !SECRET_NAME.test(name))) {
+    throw new CronValidationError("a script's `secrets` are the names of secrets its agent holds, each one name.", "command");
   }
 }
 
@@ -123,9 +184,9 @@ const STEP_ID = /^[a-z0-9][a-z0-9_-]{0,23}$/;
 
 /**
  * What a job of several steps must be, said with the step's number so whoever wrote the list finds it. Called for a
- * new job and for a change to one (`cron.store.ts`): a list is edited far more often than a job of one kind is.
+ * new job and for a change to one (`validateDoes`): a list is edited far more often than a job of one kind is.
  */
-export function validateSteps(input: Pick<JobInput, "payload" | "session" | "delivery" | "agentId">): void {
+function validateSteps(input: Pick<JobInput, "payload" | "session" | "delivery" | "agentId">): void {
   if (input.payload.kind !== "steps") return;
   const steps = input.payload.steps;
   if (!Array.isArray(steps) || steps.length === 0) throw new CronValidationError("a job of steps needs at least one step.", "steps");

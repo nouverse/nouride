@@ -77,13 +77,10 @@ export type JobPayload =
    * `then` decides what its output is worth: `"deliver"` posts stdout straight to the delivery
    * target for zero tokens, `"agentTurn"` opens one turn with the output already in hand.
    */
-  | {
+  | ({
       kind: "command";
-      argv: string[];
-      cwd?: string;
-      timeoutMs?: number;
       then: "deliver" | "agentTurn";
-    }
+    } & CommandRuns)
   /**
    * Long work as a mission (0.8.0): every run starts one, as the person who turned the job on,
    * reporting to its chat — and ends at the reviewer, since that person accepted the work when they turned it on. One
@@ -104,6 +101,38 @@ export type JobPayload =
    * where the run goes next. No loop: an exit only ever points forward.
    */
   | { kind: "steps"; steps: JobStep[] };
+
+/**
+ * A script a command runs, kept in the job itself and not in a file beside it: whoever turns the job on is shown what
+ * will run, a change to it is a change to the job (proposed, read side by side, in its history), and what runs is what
+ * was agreed. At each run the text is written to a file of that run's own and removed after.
+ *
+ * It reads what the step before said on its standard input (a webhook's body where no step has read it yet), and what
+ * it prints is handed on: printing nothing is having nothing to say, and a non-zero exit is a failure, as a command's.
+ */
+export interface JobScript {
+  /** The program's text. */
+  text: string;
+  /** What it does, in a line, as whoever wrote it says: shown where the text would not be read. */
+  about: string;
+  /** Who wrote the text as it stands: `agent:<id>`, an account, `cli`. Written by the daemon, never taken from a caller. */
+  by?: string;
+  /** Secrets it is handed, by name, besides those every command of its agent holds: named so a person sees them listed. */
+  secrets?: string[];
+}
+
+/**
+ * What a command runs: a line of arguments, or a script. With a script, `argv` is the program that runs it and that
+ * program's own arguments (`["python3"]`, `["bun", "run"]`), and the script's file is its last argument.
+ *
+ * A type and not an interface: a job goes over the wire as a record of unknowns, which an interface is not read as.
+ */
+export type CommandRuns = {
+  argv: string[];
+  script?: JobScript;
+  cwd?: string;
+  timeoutMs?: number;
+};
 
 /**
  * Where a run goes from a step: the step after it, the end of the run, or a later step by its id. Never an earlier one,
@@ -144,7 +173,7 @@ interface StepCommon {
  */
 export type TogetherStep = { id: string; name?: string } & (
   | { kind: "agentTurn"; message: string; model?: string; agentId?: string }
-  | { kind: "command"; argv: string[]; cwd?: string; timeoutMs?: number }
+  | ({ kind: "command" } & CommandRuns)
 );
 
 /**
@@ -157,8 +186,8 @@ export type JobStep = StepCommon &
     { kind: "systemEvent"; text: string }
     /** One turn, of the job's agent or of `agentId`: another agent reads what the step before said and starts fresh. */
     | { kind: "agentTurn"; message: string; model?: string; agentId?: string }
-    /** A command with no model, in the job's agent's workspace. */
-    | { kind: "command"; argv: string[]; cwd?: string; timeoutMs?: number }
+    /** A command with no model, in the job's agent's workspace: a line, or a script kept here (`JobScript`). */
+    | ({ kind: "command" } & CommandRuns)
     /**
      * A mission, started with what the step before said as its request. The run waits for it to end, however long that
      * is and across a restart, and hands its result on. One that failed or was stopped is a failed step.
@@ -226,6 +255,16 @@ export interface JobDelivery {
   once?: true;
   /** Tell whatever the hour: what the job says is not held for the install's quiet hours (`[cron] quiet_hours`). */
   atOnce?: true;
+  /**
+   * How long the job lasts once it is on, in milliseconds. Past that it turns itself off and says so where it reports:
+   * a watch whose moment never comes would otherwise check for good, with nobody the wiser. For a job on a clock.
+   */
+  lasts?: number;
+  /**
+   * The instant `lasts` falls on, written by the store each time the job is turned on, and never taken from a caller.
+   * The job comes due then at the latest, and is ended in place of being run.
+   */
+  endsAt?: number;
 }
 
 /**

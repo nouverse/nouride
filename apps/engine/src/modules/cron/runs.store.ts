@@ -52,7 +52,7 @@ export interface RunState {
   at: string;
   wait: RunWait;
   /** What the step before said, to hand on. `told`: the chat heard it already, so the run's end does not repeat it. */
-  before?: { from: string; said: string; failed?: true; told?: true };
+  before?: { from: string; said: string; failed?: true; told?: true; earlier?: { from: string; said: string } };
   /** A webhook's body no step has read yet. */
   body?: string;
   /** The run read a webhook's payload: what a later turn keeps waits for a person. */

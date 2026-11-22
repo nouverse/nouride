@@ -55,7 +55,7 @@ import type { SupervisorInfo } from "@/service/supervisor.ts";
 import { adminChatsOf } from "./admin-chats.ts";
 import { wireJobs } from "./jobs.ts";
 import { buildMissions } from "./missions.ts";
-import { buildProposals } from "./proposals.ts";
+import { buildProposals, scriptFacts } from "./proposals.ts";
 import { requestRestart } from "./restart.ts";
 import { secretKeepingFor } from "./secret-keeping.ts";
 import type { Stores } from "./stores.ts";
@@ -189,7 +189,7 @@ export function buildTurnParts(
     adminChats: adminChatsOf({ config: () => config, gateways, turns, isAdmin: (who) => input.pipeline().isAdmin(who) }),
   });
   // A proposed job's card, with Turn on and Discard, and the `schedule` tool that posts it (0.8.0).
-  const proposals = buildProposals({ cron, notifier, registry, timezone: () => config.daemon.timezone, people: () => config.people, pipeline: input.pipeline, linkFor });
+  const proposals = buildProposals({ cron, notifier, registry, timezone: () => config.daemon.timezone, people: () => config.people, pipeline: input.pipeline, linkFor, scripts: scriptFacts(registry, input.pipeline) });
   // Whether anyone could answer an approval now: a chat connected, or a client that just asked for them (`reachability.ts`).
   const reach = new ApprovalReach();
   const approvals = new SqliteApprovalGate({

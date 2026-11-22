@@ -8,6 +8,7 @@ import type { Job } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import { webhookUrl } from "@/modules/web/hooks.ts";
 import { sendReachTest } from "@/modules/web/hook-reach.ts";
+import { assertScriptsRun } from "@/modules/cron/scripts.ts";
 import { cronInputFrom, isCronRefusal, jsonBody, webhookView } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jobFor, thingOfJob, thingsFor, type Things } from "../whose.ts";
@@ -55,6 +56,7 @@ export function registerWebhookRoutes(control: ControlApp, deps: ControlDeps): v
       const input = { ...cronInputFrom(body, principal.actor, deps.cron.timezone, { trigger: { kind: "webhook" } }), ...(principal.user ? { owner: `web:${principal.user.id}` } : {}) };
       const unknown = unknownStepAgent(deps, input.payload);
       if (unknown) return c.json({ error: unknown }, 400);
+      await assertScriptsRun(input.agentId, input.payload, deps.cron.scripts);
       const job = deps.cron.store.create(input);
       deps.audit.record({
         action: "webhook_create",

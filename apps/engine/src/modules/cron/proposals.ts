@@ -10,8 +10,10 @@
  * it runs with nobody there.
  */
 
-import type { Job, JobPayload, JobProposal, JobStep, MessageButton, StepGo, TogetherStep } from "@nouride/shared";
+import { oneLine, type CommandRuns, type Job, type JobPayload, type JobProposal, type JobStep, type MessageButton, type StepGo, type TogetherStep } from "@nouride/shared";
+import { variableOf } from "@/modules/tools/exec-secrets.ts";
 import type { CronPort, JobInput } from "./cron.store.ts";
+import { lastsWords } from "./parse.ts";
 
 /** Proposals an agent may have waiting at once: past it, the oldest is the person's to answer first. */
 const OPEN_PROPOSALS = 10;
@@ -43,7 +45,7 @@ function doesLine(agentId: string, payload: JobPayload | JobStep | TogetherStep)
     case "agentTurn":
       return `${("agentId" in payload && payload.agentId) || agentId} works on: "${payload.message}"`;
     case "command":
-      return `runs \`${payload.argv.join(" ")}\` on this machine, with no model`;
+      return payload.script ? scriptLine(payload) : `runs \`${payload.argv.join(" ")}\` on this machine, with no model`;
     case "mission": {
       const checks = payload.checks?.length ? `, done when \`${payload.checks.join("`, `")}\` pass` : "";
       const review = payload.review === false ? ", no reviewer" : ", then a reviewer agrees";
@@ -59,6 +61,29 @@ function doesLine(agentId: string, payload: JobPayload | JobStep | TogetherStep)
         ...payload.steps.map((step, index) => `${index + 1}. ${doesLine(agentId, step)}${step.onlyChanged ? ". It goes on only when this differs from the last run." : ""}${exitsLine(step, index, payload.steps)}`),
       ].join("\n");
   }
+}
+
+/** The most of a script's text a card holds: a chat's message is a few thousand characters, and the card says the rest. */
+const SCRIPT_SHOWN = 2_400;
+
+/** A fence inside a script's text would end the card's own: said with straight quotes there, on the card only. */
+const FENCE = "```";
+
+/**
+ * A script on a card: what it is said to do, then what the daemon knows without being told (the program, how long the
+ * text is, which secrets it is handed, by the variables they arrive as), then the text whole. A text too long for a
+ * message is not shown in part: the part left out would be the part nobody read before saying yes.
+ */
+function scriptLine(command: Pick<CommandRuns, "argv" | "script">): string {
+  const script = command.script!;
+  const lines = script.text.trimEnd().split("\n").length;
+  const secrets = script.secrets?.length ? `, handed ${script.secrets.map((name) => `$${variableOf(name)}`).join(", ")}` : "";
+  const facts = `a script run by \`${command.argv.join(" ")}\` on this machine, with no model: ${lines} ${lines === 1 ? "line" : "lines"}${secrets}`;
+  const text =
+    script.text.length <= SCRIPT_SHOWN
+      ? `${FENCE}\n${script.text.split(FENCE).join("'''").trimEnd()}\n${FENCE}`
+      : "(Its text is too long for a message: read it on the Automations page before you turn it on.)";
+  return `${oneLine(script.about)}\n   ${facts}\n${text}`;
 }
 
 /** Where a run goes from a step, said only where it is not what a person would expect of a list. */
@@ -88,6 +113,7 @@ export function proposalCard(job: Job, when: string, shown: { buttons: boolean; 
     // Named on the card a person turns on, since that is their yes to it: results sent elsewhere are not asked about again.
     `Results: ${shown.results ? `sent to ${shown.results}, not here` : "here"}`,
     ...(job.delivery.once ? ["Tells once: after the first run that tells you something, it turns itself off."] : []),
+    ...(job.delivery.lasts !== undefined ? [`Lasts: ${lastsWords(job.delivery.lasts)} from when it is turned on. Then it turns itself off and says so${job.delivery.once ? ", if it has told nothing by then" : ""}.`] : []),
     "It stays off until somebody turns it on.",
   ];
   if (!shown.buttons) lines.push(`Turn on: /schedule on ${job.id}, or /schedule discard ${job.id}`);

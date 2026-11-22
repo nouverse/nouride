@@ -120,8 +120,8 @@ describe("a job's results", () => {
   });
 
   test("with `once`, both are kept", async () => {
-    await propose({ to: "whatsapp:nouva:2671@lid", once: true });
-    expect(jobs()[0]!.delivery).toEqual({ mode: "announce", once: true, gatewayId: "whatsapp:nouva", chatId: "2671@lid" });
+    await propose({ to: "whatsapp:nouva:2671@lid", once: true, for: "2d" });
+    expect(jobs()[0]!.delivery).toEqual({ mode: "announce", once: true, lasts: 2 * 86_400_000, gatewayId: "whatsapp:nouva", chatId: "2671@lid" });
   });
 
   test("a change that says no `to` keeps where the job it replaces sends; one that says a `to` moves it", async () => {

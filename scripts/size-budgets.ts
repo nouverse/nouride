@@ -43,8 +43,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, who is told what its session started",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 481,
-    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves, what the audit keeps of a step; validation is `cron/validate.ts`, a watch's is `watch.store.ts`",
+    lines: 495,
+    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves and a lasting job's end is written; rules are `validate.ts`, audit shapes `job-audit.ts`",
+  },
+  "apps/engine/src/modules/cron/scheduler.ts": {
+    lines: 405,
+    why: "the ticker: claim, catch up, run now, each kind's dispatch, a step run's hands. Runs of steps are `step-runs.ts`, a job's end `ending.ts`, the quiet hours `quiet.ts`: what is left is one clock",
   },
   "packages/persona/src/config.ts": {
     lines: 492,

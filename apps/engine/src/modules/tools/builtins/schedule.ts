@@ -10,10 +10,11 @@
 
 import type { Job, JobPayload, JobTrigger, Tool, ToolContext } from "@nouride/shared";
 import { CronValidationError } from "@/modules/cron/validate.ts";
-import { parseScheduleInput } from "@/modules/cron/parse.ts";
+import { parseDuration, parseScheduleInput } from "@/modules/cron/parse.ts";
 import { stepsFrom } from "@/modules/cron/step-input.ts";
 import type { CronPort, JobInput } from "@/modules/cron/cron.store.ts";
 import { proposalFor, proposalRefusal } from "@/modules/cron/proposals.ts";
+import { assertScriptsRun, type ScriptFacts } from "@/modules/cron/scripts.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { briefFilesOf } from "@/modules/missions/start.ts";
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
@@ -34,18 +35,46 @@ export interface ScheduleToolOptions {
   linkFor?: LinkFor;
   /** A brief file's text, or null where it cannot be read — what a mission's start reads (`boot/missions.ts`). */
   readBrief?: (path: string) => string | null;
+  /** Whether a script it proposes could run on this machine, for the agent that will run it (`cron/scripts.ts`). */
+  scripts?: ScriptFacts;
   now?: () => number;
 }
+
+/**
+ * The rules that make an agent write a script where one fits, each a sentence of the tool's description and held by a
+ * test of its own: a model reads these on every request, and a rule lost in a rewrite is behaviour lost.
+ *
+ * Asked for "check this page every hour", an agent proposed an hourly `prompt`: a model's turn each hour to do what a
+ * few lines do for nothing, the same each time. And for work with a retry and a fallback it wrote a web of steps with
+ * exits, where steps only go forward and a script loops.
+ */
+const SCRIPT_OR_PROMPT =
+  "What is the same every run and needs no judgement (fetch, compare, call a service) is a `script`: no model runs. " +
+  "A `prompt` is for what must be read, judged or written.";
+const ONE_SCRIPT = "Work that needs a loop, a retry or more than one branch is one `script`, not more steps.";
+const TRY_IT_FIRST = "Run a script once with `exec` before you propose it.";
+/** A watch that tells once has an end: with none, one whose moment never came checked for as long as the daemon ran. */
+const ONCE_AND_FOR = "Add `once` when it should tell one time and then stop, and `for`, how long it watches before it gives up and says so.";
+/** What is asked for as "tell me when it is done": no turn of a model each time it looks. */
+const TOLD_WHEN = "To be told when something happens, a `script` that prints only once it has, with `once`.";
 
 const DESCRIPTION =
   "Propose work that runs later: on a schedule, when a webhook is called, or when a person starts it. It stays off " +
   "until a person turns it on from the card this posts here. Say so in one line. Use it for anything asked at a time " +
   "or again and again. The cheapest that does the job: `text` is sent as written, `command` runs a shell line, " +
-  "`prompt` is one turn of yours, `mission` is long work that is checked. Several in order are `steps`. To watch " +
-  'something ("tell me when…"), check it on a schedule with `only_changed`: it speaks when what it found changes and ' +
-  "is quiet otherwise. Add `once` when it should tell one time and then stop. Each run's result comes to this chat; " +
-  "`to` sends it to another one instead, so no run needs `send_message` for its own result. To change a job, or its " +
-  "steps, propose it again with `replaces`.";
+  "`script` runs a program you write, `prompt` is one turn of yours, `mission` is long work that is checked. " +
+  SCRIPT_OR_PROMPT +
+  " Several in order are `steps`. " +
+  ONE_SCRIPT +
+  " " +
+  TRY_IT_FIRST +
+  ' To watch something ("tell me when…"), check it on a schedule with `only_changed`: it speaks when what it found ' +
+  "changes and is quiet otherwise. " +
+  ONCE_AND_FOR +
+  " " +
+  TOLD_WHEN +
+  " Each run's result comes to this chat; `to` sends it to another one instead, so no run needs `send_message` for " +
+  "its own result. To change a job, or its steps, propose it again with `replaces`.";
 
 /**
  * A run's `prompt`, or its mission's goal and review, as written in English (0.8.8): each run of a proposed job starts
@@ -65,10 +94,13 @@ function notInEnglish(args: Record<string, unknown>): string | null {
 
 type OneKind = Exclude<JobPayload, { kind: "steps" }>;
 
-/** The one thing a job, or one step of several, does: exactly one of the four, as written. */
+/** What a job, or a step, may be written as: each a field of its own. */
+const DOES = ["text", "command", "script", "prompt", "mission"] as const;
+
+/** The one thing a job, or one step of several, does: exactly one of the five, as written. */
 function doesOf(args: Record<string, unknown>): OneKind | string {
-  const given = (["text", "command", "prompt", "mission"] as const).filter((key) => typeof args[key] === "string" && String(args[key]).trim());
-  if (given.length !== 1) return "Give exactly one of `text`, `command`, `prompt` or `mission`.";
+  const given = DOES.filter((key) => typeof args[key] === "string" && String(args[key]).trim());
+  if (given.length !== 1) return "Give exactly one of `text`, `command`, `script`, `prompt` or `mission`.";
   const refused = notInEnglish(args);
   if (refused) return refused;
   const value = String(args[given[0]!]).trim();
@@ -78,6 +110,14 @@ function doesOf(args: Record<string, unknown>): OneKind | string {
     case "command":
       // `sh -lc`, as the CLI and the dashboard write a shell line — the card shows it whole.
       return { kind: "command", argv: ["sh", "-lc", value], then: "deliver" };
+    case "script": {
+      // What it does, in a line: the person who turns it on reads that, and many of them read nothing else of it.
+      const about = typeof args.about === "string" ? args.about.trim() : "";
+      if (!about) return "A `script` needs `about`: one line of what it does, for the person who turns it on.";
+      const run = typeof args.run === "string" && args.run.trim() ? args.run.trim().split(/\s+/) : ["sh"];
+      const secrets = Array.isArray(args.secrets) ? args.secrets.map(String).map((name) => name.trim()).filter(Boolean) : [];
+      return { kind: "command", argv: run, script: { text: value, about, ...(secrets.length > 0 ? { secrets } : {}) }, then: "deliver" };
+    }
     case "prompt":
       return { kind: "agentTurn", message: value };
     case "mission": {
@@ -101,8 +141,8 @@ function togetherOf(written: unknown[], agentExists: (agentId: string) => boolea
   for (const [index, raw] of written.entries()) {
     const part = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
     const does = doesOf(part);
-    if (typeof does === "string") return does.startsWith("Give exactly one") ? `\`together\`, part ${index + 1}: give a \`prompt\` or a \`command\`.` : does;
-    if (does.kind !== "agentTurn" && does.kind !== "command") return `\`together\`, part ${index + 1}: only a \`prompt\` or a \`command\` starts beside others. A \`mission\` or a \`text\` is a step of its own.`;
+    if (typeof does === "string") return does.startsWith("Give exactly one") ? `\`together\`, part ${index + 1}: give a \`prompt\`, a \`command\` or a \`script\`.` : `\`together\`, part ${index + 1}: ${does}`;
+    if (does.kind !== "agentTurn" && does.kind !== "command") return `\`together\`, part ${index + 1}: only a \`prompt\`, a \`command\` or a \`script\` starts beside others. A \`mission\` or a \`text\` is a step of its own.`;
     const agent = typeof part.agent === "string" && part.agent.trim() ? part.agent.trim() : "";
     if (agent && !agentExists(agent)) return `\`together\`, part ${index + 1}: there is no agent called ${agent}.`;
     const one: Record<string, unknown> = { ...does };
@@ -125,15 +165,15 @@ function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string)
   if (args.steps === undefined) {
     const one = doesOf(args);
     if (typeof one === "string" || args.only_changed !== true) return one;
-    if (one.kind === "systemEvent") return "A `text` is the same words every run, so there is nothing that could change: watch with a `command` or a `prompt` that looks at something.";
+    if (one.kind === "systemEvent") return "A `text` is the same words every run, so there is nothing that could change: watch with a `script`, a `command` or a `prompt` that looks at something.";
     // One thing that speaks only when changed is a list of one: the mark is a step's, and a list's last words are sent.
     const step: Record<string, unknown> = { ...one, onlyChanged: true };
     delete step.then;
     return { kind: "steps", steps: stepsFrom([step]) };
   }
   if (!Array.isArray(args.steps) || args.steps.length === 0) return "`steps` is a list of at least one step.";
-  if ((["text", "command", "prompt", "mission"] as const).some((key) => typeof args[key] === "string" && String(args[key]).trim())) {
-    return "Give `steps`, or one of `text`, `command`, `prompt` and `mission`: not both.";
+  if (DOES.some((key) => typeof args[key] === "string" && String(args[key]).trim())) {
+    return "Give `steps`, or one of `text`, `command`, `script`, `prompt` and `mission`: not both.";
   }
   const written: Record<string, unknown>[] = [];
   for (const [index, raw] of args.steps.entries()) {
@@ -203,6 +243,23 @@ function resultsGoTo(args: Record<string, unknown>, ctx: ToolContext, targets: S
   return found.chat.gatewayId === ctx.gatewayId && found.chat.chatId === ctx.chatId ? null : { gatewayId: found.chat.gatewayId, chatId: found.chat.chatId };
 }
 
+/**
+ * How long the job lasts (`JobDelivery.lasts`), in milliseconds: nothing for one with no end, a string for why what
+ * was written is refused. A change that says none keeps what the job it replaces has.
+ *
+ * A watch an agent sets on a clock always has one. "Tell me when the build is done" for a build that never finishes
+ * was a check every few minutes for as long as the daemon ran, and nobody was told it had stopped being worth it.
+ */
+function lastsOf(args: Record<string, unknown>, trigger: JobTrigger, replaced: Job | null): number | undefined | string {
+  const written = typeof args.for === "string" ? args.for.trim() : "";
+  const lasts = written ? parseDuration(written) : (replaced?.delivery.lasts ?? undefined);
+  if (lasts === null) return '`for` is a length of time: "6h", "30d".';
+  if (args.once === true && lasts === undefined && (trigger.kind === "every" || trigger.kind === "cron")) {
+    return '`once` on a schedule needs `for`: how long it watches before it gives up and says so ("6h", "30d"). With no end it would check for good.';
+  }
+  return lasts;
+}
+
 /** Why this chat cannot take a proposal: its card would go where nobody reads — a mission's conversation, a job's own. */
 function notAChat(ctx: ToolContext): string | null {
   if (ctx.gatewayId === MISSION_GATEWAY_ID || ctx.chatId.startsWith("cron:")) return "Propose scheduled work from a chat with a person in it: nobody reads this conversation.";
@@ -224,6 +281,14 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           tz: { type: "string", description: "The zone for `cron` and `at`." },
           text: { type: "string", description: "A reminder, sent as written." },
           command: { type: "string", description: "A shell line; what it prints is sent, and nothing at all when it prints nothing." },
+          script: {
+            type: "string",
+            description:
+              "A program's text, kept in the job. It reads what the step before said, or a webhook's body, on stdin; what it prints is sent or handed on, printing nothing says nothing, a non-zero exit is a failure.",
+          },
+          run: { type: "string", description: 'What runs the `script`: "sh" unless said, or "python3", "bun".' },
+          about: { type: "string", description: "With `script`: what it does, in one line a person reads before turning it on." },
+          secrets: { type: "array", items: { type: "string" }, description: "With `script`: your secrets it is handed as variables, by name." },
           prompt: { type: "string", description: "What you are woken with, in English, and whole: a run starts with none of this conversation." },
           mission: { type: "string", description: "Long work: each run's goal, as `mission` takes one." },
           checks: { type: "array", items: { type: "string" }, description: "Mission: commands that say a run is done." },
@@ -232,13 +297,17 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           steps: {
             type: "array",
             description:
-              "Several, in a fixed order, each handed what the one before said; the last one's words are sent. A step is one of `text`, `command`, `prompt`, `mission` (the run waits for it), `ask` (the run waits for a person's yes) or `together` (2 to 5 steps of `prompt` or `command` begun at once, their words joined under each one's name). A failed step ends the run as failed and one with nothing to say ends it quietly, unless `if_failed` or `if_empty` say otherwise; `then` is where it goes once done. Each is \"next\", \"end\" or a later step's number.",
+              "Several, in a fixed order, each handed what the one before said; the last one's words are sent. A step is one of `text`, `command`, `script` (with `about`), `prompt`, `mission` (the run waits for it), `ask` (the run waits for a person's yes) or `together` (2 to 5 steps of `prompt`, `command` or `script` begun at once, their words joined under each one's name). A failed step ends the run as failed and one with nothing to say ends it quietly, unless `if_failed` or `if_empty` say otherwise; `then` is where it goes once done. Each is \"next\", \"end\" or a later step's number.",
             items: {
               type: "object",
               properties: {
                 name: { type: "string" },
                 text: { type: "string" },
                 command: { type: "string" },
+                script: { type: "string" },
+                run: { type: "string" },
+                about: { type: "string" },
+                secrets: { type: "array", items: { type: "string" } },
                 prompt: { type: "string" },
                 mission: { type: "string" },
                 ask: { type: "string" },
@@ -252,8 +321,9 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
               },
             },
           },
-          only_changed: { type: "boolean", description: "A `command` or `prompt` (or a step): goes on only when what it said differs from the last run." },
-          once: { type: "boolean", description: "Turns itself off after the first run that tells somebody." },
+          only_changed: { type: "boolean", description: "A `script`, `command` or `prompt` (or a step): goes on only when what it said differs from the last run." },
+          once: { type: "boolean", description: "Turns itself off after the first run that tells somebody. On a schedule it needs `for`." },
+          for: { type: "string", description: 'How long it runs before it turns itself off and says so: "6h", "30d".' },
           agent: { type: "string", description: "Another agent runs it." },
           to: { type: "string", description: "Where each run's result is sent when not here: as `send_message`'s `to`." },
           replaces: { type: "string", description: "The id of the job this changes." },
@@ -284,20 +354,26 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
         const trigger = triggerOf(String(args.when ?? ""), typeof args.tz === "string" ? args.tz : undefined, now(), options.timezone());
         // A command a call from outside sets off, with no model between, is an admin's to make from the dashboard.
         if (trigger.kind === "webhook" && (payload.kind === "command" || (payload.kind === "steps" && payload.steps.some((step) => step.kind === "command" || (step.kind === "parallel" && step.steps.some((part) => part.kind === "command")))))) {
-          return { content: "A webhook that runs a command is made by an admin from the dashboard, not proposed.", isError: true };
+          return { content: "A webhook that runs a command or a script is made by an admin from the dashboard, not proposed.", isError: true };
         }
         const replaces = typeof args.replaces === "string" && args.replaces.trim() ? args.replaces.trim() : undefined;
+        const lasts = lastsOf(args, trigger, replaces ? options.store.get(replaces) : null);
+        if (typeof lasts === "string") return { content: lasts, isError: true };
         const refused = proposalRefusal(options.store, ctx.agentId, { trigger }, replaces);
         if (refused) return { content: refused, isError: true };
         const elsewhere = resultsGoTo(args, ctx, options.chats(agentId), replaces ? options.store.get(replaces) : null);
         if (typeof elsewhere === "string") return { content: elsewhere, isError: true };
+        // Said now, to the agent that wrote the script: a program that is not here, a secret it does not hold.
+        await assertScriptsRun(agentId, payload, options.scripts);
         const input: JobInput = {
           agentId,
           name,
           trigger,
           payload,
           target: { gatewayId: ctx.gatewayId, chatId: ctx.chatId },
-          ...(args.once === true || elsewhere ? { delivery: { mode: "announce" as const, ...(args.once === true ? { once: true as const } : {}), ...elsewhere } } : {}),
+          ...(args.once === true || elsewhere || lasts !== undefined
+            ? { delivery: { mode: "announce" as const, ...(args.once === true ? { once: true as const } : {}), ...(lasts !== undefined ? { lasts } : {}), ...elsewhere } }
+            : {}),
           createdBy: `agent:${ctx.agentId}`,
           proposal: proposalFor(ctx.agentId, { gatewayId: ctx.gatewayId, chatId: ctx.chatId, senderId: ctx.senderId }, now(), replaces),
         };

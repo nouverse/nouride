@@ -17,9 +17,9 @@
  */
 
 import { sha256Text } from "@nouride/runtime";
-import type { HeldAction, Job, JobStep, RunWait, StepGo, StepOutcome, TogetherStep } from "@nouride/shared";
+import type { CommandRuns, HeldAction, Job, JobStep, RunWait, StepGo, StepOutcome, TogetherStep } from "@nouride/shared";
 import type { RunOutcome, RunState } from "./cron.store.ts";
-import { stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
+import { handedTo, stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
 import type { JobTurnResult, TriggerContext } from "./scheduler.ts";
 import { runTogether } from "./together.ts";
 
@@ -41,7 +41,10 @@ type Step<K extends "systemEvent" | "agentTurn" | "command" | "mission" | "appro
 type Sent = { ok: true } | { ok: false; error: string; unreachable?: true };
 
 export interface StepHands {
-  /** A command with no model: what it printed, or why it failed. `input`: a webhook's body, on its standard input. */
+  /**
+   * A command with no model: what it printed, or why it failed. `input`, on its standard input: a webhook's body no
+   * step has read, or for a script what the step before said.
+   */
   command(step: Step<"command">, input?: string): Promise<{ output: string } | { error: string }>;
   /** What the step of that id said the last time a run of this job ended well, as a hash; nothing on its first run. */
   saidBefore(stepId: string): string | undefined;
@@ -81,7 +84,7 @@ export function stepLabel(job: Pick<Job, "agentId">, step: JobStep, index: numbe
   const what = step.name?.trim()
     ? `"${step.name.trim()}"`
     : step.kind === "command"
-      ? `the command \`${step.argv.join(" ")}\``
+      ? commandWords(step)
       : step.kind === "agentTurn"
         ? `${step.agentId ?? job.agentId}'s turn`
         : step.kind === "mission"
@@ -92,6 +95,11 @@ export function stepLabel(job: Pick<Job, "agentId">, step: JobStep, index: numbe
               ? `${step.steps.length} steps at the same time`
               : "the message";
   return `step ${index + 1} of ${total}, ${what}`;
+}
+
+/** What a command is called where it has no name: its line whole, or what its script is said to do. */
+function commandWords(command: Pick<CommandRuns, "argv" | "script">): string {
+  return command.script ? `the script "${command.script.about.trim()}"` : `the command \`${command.argv.join(" ")}\``;
 }
 
 /** Where a step sends the run for how it went, with what a job of that one kind would do when it does not say. */
@@ -208,7 +216,10 @@ export async function runSteps(job: Job, steps: readonly JobStep[], hands: StepH
       if (next < 0 || next >= steps.length) {
         return end(went.declined ? { status: "skipped", result: `${label}: ${went.why}` } : { status: "error", result: `${label} failed: ${went.why}` });
       }
-      carry.before = { from: capital(label), said: went.said ?? went.why, failed: true };
+      // Handed on with the failure: what the failed step itself had been given. A save that failed is not the end of what
+      // was to be saved, and the step after it had only the error to work from.
+      const earlier = carry.before ? (carry.before.failed ? carry.before.earlier : { from: carry.before.from, said: carry.before.said }) : undefined;
+      carry.before = { from: capital(label), said: went.said ?? went.why, failed: true, ...(earlier ? { earlier } : {}) };
     } else if (went.exit === "empty") {
       if (next < 0 || next >= steps.length) return end({ status: "success", result: `${label} ${went.same ? "said the same as last time" : "had nothing to say"}: the run ended there` });
       delete carry.before;
@@ -243,9 +254,12 @@ async function finish(carry: Carry, hands: StepHands, end: (outcome: RunOutcome)
   const last = carry.before;
   if (!last) return end({ status: "success", result: "the last step had nothing to say" });
   if (last.told) return end({ status: "success", result: last.said.slice(0, SAID_KEPT) });
-  const sent = await hands.deliver(last.said);
+  // A run that went on past a failure to its end has the work that step was handed, and says it with the failure
+  // under it: it sent the error alone, and "send it here anyway" sent nothing a person could use.
+  const words = last.failed && last.earlier ? `${last.earlier.said.trim()}\n\n⚠️ ${last.from} failed: ${last.said.trim()}` : last.said;
+  const sent = await hands.deliver(words);
   if (sent.ok) carry.told = true;
-  return sent.ok ? end({ status: "success", result: last.said.slice(0, SAID_KEPT) }) : end({ status: "error", result: sent.error, ...(sent.unreachable ? { unreachable: true } : {}) });
+  return sent.ok ? end({ status: "success", result: words.slice(0, SAID_KEPT) }) : end({ status: "error", result: sent.error, ...(sent.unreachable ? { unreachable: true } : {}) });
 }
 
 /** What a step marked to go on only when changed is said to have done when it said the same again. */
@@ -294,8 +308,10 @@ async function runStep(
 
     case "command": {
       // A webhook's body no step has read yet is this command's to read, on its standard input: what it prints is what
-      // the run goes on with, so a script can drop a call before any agent is woken for it.
-      const ran = await hands.command(step, carry.body);
+      // the run goes on with, so a script can drop a call before any agent is woken for it. A script kept in the job is
+      // given what the step before said where there is no body: a line of arguments keeps the input it always had, so
+      // no command in the field meets input it was not written for.
+      const ran = await hands.command(step, carry.body ?? (step.script ? handedTo(carry.before) : undefined));
       delete carry.body;
       if ("error" in ran) return failed(ran.error);
       if (!ran.output.trim()) {
@@ -307,7 +323,7 @@ async function runStep(
         return { exit: "empty", same: true };
       }
       mark("done", ran.output);
-      return { exit: "done", before: { from: `The command \`${step.argv.join(" ")}\``, said: ran.output } };
+      return { exit: "done", before: { from: capital(commandWords(step)), said: ran.output } };
     }
 
     case "agentTurn": {
@@ -338,7 +354,9 @@ async function runStep(
 
     case "mission": {
       // Each part named when there are two, so the mission can tell a caller's payload from an earlier step's words.
-      const said = carry.before?.said;
+      // After a failure, the failure and the work the failed step was handed, each named.
+      const before = carry.before;
+      const said = before?.failed && before.earlier ? `${before.from} failed: ${before.said}\n\nWhat it had been handed:\n${before.earlier.said}` : before?.said;
       const request = carry.body && said ? `The webhook's payload:\n${carry.body}\n\nWhat the step before said:\n${said}` : carry.body || said || undefined;
       delete carry.body;
       const run = hands.mission(step, request);

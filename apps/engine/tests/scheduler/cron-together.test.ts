@@ -363,7 +363,7 @@ describe("an agent proposes steps at the same time", () => {
     });
     // The model is told what it is and how many: the fields are a step's own, and are not written out twice.
     const steps = (made.definition.parameters as { properties: { steps: { description: string; items: { properties: Record<string, unknown> } } } }).properties.steps;
-    expect(steps.description).toContain("or `together` (2 to 5 steps of `prompt` or `command` begun at once, their words joined under each one's name)");
+    expect(steps.description).toContain("or `together` (2 to 5 steps of `prompt`, `command` or `script` begun at once, their words joined under each one's name)");
     expect(steps.items.properties.together).toEqual({ type: "array", items: { type: "object" } });
   });
 
@@ -371,14 +371,14 @@ describe("an agent proposes steps at the same time", () => {
     const { propose, posted } = tool();
     const said = async (steps: unknown[], more: Record<string, unknown> = {}) => (await propose({ steps, ...more })).content;
     const news = { prompt: "Read the news.", agent: "nix" };
-    expect(await said([{ together: [news, { mission: "Ship it." }] }])).toBe("Step 1: `together`, part 2: only a `prompt` or a `command` starts beside others. A `mission` or a `text` is a step of its own.");
-    expect(await said([{ together: [news, { text: "Good morning." }] }])).toBe("Step 1: `together`, part 2: only a `prompt` or a `command` starts beside others. A `mission` or a `text` is a step of its own.");
-    expect(await said([{ together: [{}, news] }])).toBe("Step 1: `together`, part 1: give a `prompt` or a `command`.");
+    expect(await said([{ together: [news, { mission: "Ship it." }] }])).toBe("Step 1: `together`, part 2: only a `prompt`, a `command` or a `script` starts beside others. A `mission` or a `text` is a step of its own.");
+    expect(await said([{ together: [news, { text: "Good morning." }] }])).toBe("Step 1: `together`, part 2: only a `prompt`, a `command` or a `script` starts beside others. A `mission` or a `text` is a step of its own.");
+    expect(await said([{ together: [{}, news] }])).toBe("Step 1: `together`, part 1: give a `prompt`, a `command` or a `script`.");
     expect(await said([{ together: [{ prompt: "Look.", agent: "ghost" }, news] }])).toBe("Step 1: `together`, part 1: there is no agent called ghost.");
     // How many, and no agent twice, are the store's to say, as for a list a person wrote.
     expect(await said([{ together: [news] }])).toContain("step 1: steps at the same time are 2 to 5.");
     expect(await said([{ together: [news, { prompt: "Again.", agent: "nix" }] }])).toContain("step 1: nix has two turns at the same time.");
-    expect(await said([{ together: [news, { command: "date" }] }], { when: "webhook" })).toBe("A webhook that runs a command is made by an admin from the dashboard, not proposed.");
+    expect(await said([{ together: [news, { command: "date" }] }], { when: "webhook" })).toBe("A webhook that runs a command or a script is made by an admin from the dashboard, not proposed.");
     expect(posted).toEqual([]);
   });
 });

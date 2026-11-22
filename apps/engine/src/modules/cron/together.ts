@@ -12,7 +12,7 @@
  */
 
 import type { HeldAction, Job, JobStep, StepOutcome, TogetherStep } from "@nouride/shared";
-import { STEP_SAID_MAX, stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
+import { handedTo, STEP_SAID_MAX, stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
 import type { StepHands } from "./steps.ts";
 
 /** At least two, or it is a step alone; at most this many (a starting value): each is a turn or a command at once. */
@@ -38,7 +38,7 @@ export interface TogetherEnd {
 /** What one of them is called over its words: its name, or whose turn or which command it is. */
 function partName(job: Pick<Job, "agentId">, part: TogetherStep): string {
   if (part.name?.trim()) return part.name.trim();
-  return part.kind === "command" ? `\`${part.argv.join(" ")}\`` : (part.agentId ?? job.agentId);
+  return part.kind === "command" ? (part.script ? part.script.about.trim() : `\`${part.argv.join(" ")}\``) : (part.agentId ?? job.agentId);
 }
 
 type PartEnd = { said: string } | { empty: true } | { failed: string } | { interrupted: string };
@@ -63,8 +63,9 @@ export async function runTogether(
 
   const one = async (part: TogetherStep, index: number): Promise<PartEnd> => {
     if (part.kind === "command") {
-      // Each reads the webhook's body the run was set off with: they start from the same thing.
-      const ran = await hands.command(part, given.body);
+      // Each reads the webhook's body the run was set off with: they start from the same thing. A script kept in the job
+      // reads what the step before said where there is no body, as one that is a step alone does.
+      const ran = await hands.command(part, given.body ?? (part.script ? handedTo(given.before) : undefined));
       if ("error" in ran) return settle(index, "failed", ran.error), { failed: ran.error };
       if (!ran.output.trim()) return settle(index, "empty", "printed nothing"), { empty: true };
       return settle(index, "done", ran.output), { said: ran.output };

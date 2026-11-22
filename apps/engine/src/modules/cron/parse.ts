@@ -24,7 +24,7 @@ const UNITS: Record<string, number> = {
  * choice of unit is wrong for somebody — five seconds would be a schedule nobody meant and the
  * kind of mistake that is only noticed by the bill.
  */
-function parseDuration(text: string): number | null {
+export function parseDuration(text: string): number | null {
   const trimmed = text.trim().toLowerCase();
   if (!trimmed) return null;
 
@@ -159,6 +159,15 @@ export function describeTrigger(trigger: JobTrigger, defaultTz: string): string 
     case "manual":
       return "when somebody starts it";
   }
+}
+
+/** A length of time as a person says it: "6 hours", "1 day", "90 minutes". The largest unit it is a whole number of. */
+export function lastsWords(ms: number): string {
+  for (const [unit, size] of [["day", UNITS.d], ["hour", UNITS.h], ["minute", UNITS.m]] as const) {
+    const value = ms / (size as number);
+    if (value >= 1 && Number.isInteger(value)) return `${value} ${unit}${value === 1 ? "" : "s"}`;
+  }
+  return `${Math.round(ms / 1000)} seconds`;
 }
 
 function formatDuration(ms: number): string {

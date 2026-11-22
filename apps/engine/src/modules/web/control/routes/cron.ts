@@ -8,6 +8,7 @@ import { describeTrigger } from "@/modules/cron/parse.ts";
 import { idsOf } from "@/modules/people/match.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import { settledCard, turnOnProposal } from "@/modules/cron/proposals.ts";
+import { assertScriptsRun } from "@/modules/cron/scripts.ts";
 import type { CronField } from "@/modules/cron/validate.ts";
 import type { JobPayload } from "@nouride/shared";
 import { cronInputFrom, cronPatchFrom, cronRefusalField, isCronRefusal, jsonBody } from "../payloads.ts";
@@ -119,6 +120,7 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       // the job came due — which is exactly when nobody is watching. Said now, to whoever asked.
       const unknown = unknownAgent(deps, input.agentId) ?? unknownStepAgent(deps, input.payload);
       if (unknown) return c.json({ error: unknown }, 400);
+      await assertScriptsRun(input.agentId, input.payload, deps.cron.scripts);
       const job = deps.cron.store.create(input);
       deps.audit.record({
         action: "cron_create_api",
@@ -147,6 +149,8 @@ export function registerCronRoutes(control: ControlApp, deps: ControlDeps): void
       const patch = cronPatchFrom(body, deps.cron.timezone);
       const unknown = (patch.agentId !== undefined ? unknownAgent(deps, patch.agentId) : null) ?? unknownStepAgent(deps, patch.payload);
       if (unknown) return c.json({ error: unknown }, 400);
+      // A changed script is asked of the machine again, for the agent the job will have once the change is made.
+      await assertScriptsRun(patch.agentId ?? existing.agentId, patch.payload, deps.cron.scripts);
       const job = deps.cron.store.update(existing.id, patch, c.get("principal").actor);
       if (!job) return c.json({ error: "no such job" }, 404);
       return c.json({ job: summaryOf(job, deps.cron.timezone, found!.things) } satisfies { job: JobSummary });
