@@ -77,6 +77,29 @@ describe("/help", () => {
   });
 });
 
+describe("/approvals", () => {
+  const approvals = approvalHooks.find((hook) => hook.command === "/approvals")!;
+  const ask = async (agentLevel: string | undefined) =>
+    (await approvals.handler({ agent: { config: { id: "nouva", displayName: "Nouva", ...(agentLevel ? { approvals: agentLevel } : {}) } }, gatewayId: "telegram:nouva", chatId: "1", senderId: "u1", args: [], envelope: { chatType: "dm" }, deps: { daemonApprovals: "careful" } } as unknown as HookContext)).reply ?? "";
+
+  test("the level, what it means and who set it are a line each, then how it is changed", async () => {
+    expect((await ask(undefined)).split("\n")).toEqual([
+      "Approvals: `careful`",
+      "A new command or change asks once, and deletes, teardowns, force-pushes and the rest of the fixed list every time.",
+      "The daemon default, because neither this agent nor you have set one.",
+      "",
+      "`/approvals balanced`: stop being asked about ordinary calls",
+      "`/approvals careful`: be asked again",
+    ]);
+  });
+
+  test("a level set on the agent says so once, and where it is changed", async () => {
+    const text = await ask("trusted");
+    expect(text.match(/Set on this agent/g)).toHaveLength(1);
+    expect(text.split("\n").at(-1)).toBe("Change it in the dashboard, under this agent.");
+  });
+});
+
 describe("/agents and /grants", () => {
   const agent = (id: string, displayName: string, more: Record<string, unknown> = {}) => ({ config: { id, displayName, enabled: true, ...more } });
   const ctx = (deps: Record<string, unknown>): HookContext => ({ agent: agent("nouva", "Nouva"), gatewayId: "telegram:nouva", chatId: "1", senderId: "u1", args: [], envelope: { chatType: "dm" }, deps }) as unknown as HookContext;

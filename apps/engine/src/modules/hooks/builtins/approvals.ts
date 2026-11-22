@@ -81,7 +81,8 @@ export const approvalHooks: Hook[] = [
               `Approvals: ${describeApprovalLevel(resolution)}`,
               "",
               resolution.source === "agent"
-                ? "Set on this agent, so it is the same for everyone here. Change it in the dashboard."
+                ? // Who set it is the line above: said again here, it was said twice.
+                  "Change it in the dashboard, under this agent."
                 : uses([
                     ["/approvals balanced", "stop being asked about ordinary calls"],
                     ["/approvals careful", "be asked again"],
