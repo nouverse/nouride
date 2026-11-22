@@ -56,6 +56,15 @@ checks, or asks you first when the goal is unclear. `/goal` is the same command.
 form, and an automation's mission step, still start at once: you wrote the first, and nobody is there to press Start
 for the second.
 
+`/mission` with nothing after it lists what has not ended, as the Missions page has it: **Needs you**, **Working** and
+**Backlog** (the drafts not started), each with its count. Missions that are done, failed or stopped are not listed;
+`/mission show <id>` still shows one. In a group it lists that group's missions. In a direct chat it lists that
+agent's missions wherever each was started: the chat's own and the ones you started, and all of them for an admin.
+One started somewhere else says so, and is acted on there or on the Missions page.
+
+Your agents know the words too. Ask one what is in its backlog or how a task is going and it looks at its missions
+before it answers; ask it to put something in the backlog and it drafts a mission.
+
 To start one yourself:
 
 ```

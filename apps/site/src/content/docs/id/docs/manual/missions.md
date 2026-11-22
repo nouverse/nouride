@@ -58,6 +58,15 @@ tujuannya belum jelas. `/goal` adalah perintah yang sama. Misi yang kamu tulis d
 otomasi, tetap langsung jalan: yang pertama kamu sendiri yang menulis, dan yang kedua tidak ada orang yang bisa menekan
 Start.
 
+`/mission` tanpa kata lain menampilkan yang belum selesai, seperti di halaman Missions: **Needs you**, **Working**, dan
+**Backlog** (draft yang belum dimulai), masing-masing dengan jumlahnya. Misi yang sudah selesai, gagal, atau dihentikan
+tidak ditampilkan; `/mission show <id>` tetap bisa menampilkan satu misi. Di grup, yang tampil misi grup itu. Di chat
+langsung, yang tampil misi agent itu di mana pun dimulainya: milik chat itu dan yang kamu mulai sendiri, dan semuanya
+kalau kamu admin. Misi yang dimulai di tempat lain diberi keterangan, dan ditindak dari sana atau dari halaman Missions.
+
+Agent-mu juga paham istilahnya. Tanya apa isi backlog-nya atau bagaimana kabar suatu task, ia melihat daftar misinya
+dulu sebelum menjawab; minta sesuatu dimasukkan ke backlog, ia membuat draft misi.
+
 Untuk memulai sendiri:
 
 ```
