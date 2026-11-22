@@ -115,8 +115,8 @@ export const BUDGET: Record<string, Budget> = {
 /** Test files over `MAX_TEST_CODE_LINES`; new cases go in a file of their own. */
 export const TEST_BUDGET: Record<string, Budget> = {
   "apps/engine/tests/pipeline/pipeline.test.ts": {
-    lines: 3_828,
-    why: "the pipeline's first suite, from before the pipeline was split, its cases on the one `harness` this file builds; new cases go beside the module they test",
+    lines: 3_849,
+    why: "the pipeline's first suite, from before it was split, its cases on the one `harness` it builds; new cases go beside their module, but a job wake-up's steps line sits with the wake-up cases here",
   },
   "apps/engine/tests/persona/reflection.test.ts": {
     lines: 2_079,

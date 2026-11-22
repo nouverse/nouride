@@ -161,6 +161,10 @@ export class TurnRunner {
             // Same rule as the reply: a system event's id names no real message, so there is nothing
             // to quote and asking the platform to quote it fails the send. See `Voice.reply`.
             ...(envelope.chatType === "dm" || isSystemEvent(envelope) ? {} : { replyTo: quotedId(envelope) }),
+            // A turn the daemon started, nobody waiting on it, may end with nothing to say: its steps are counted and
+            // written only where it does speak (`reply`). Live, the line was in the chat before that was known, and a
+            // look-in on a helper still at work left "✓ 2 steps · 42s" there with no answer under it.
+            ...(isSystemEvent(envelope) ? { summary: true } : {}),
             ...(this.ctx.deps.progressIntervalMs ? { minIntervalMs: this.ctx.deps.progressIntervalMs } : {}),
             ...(this.ctx.deps.progressQuietMs ? { quietTickMs: this.ctx.deps.progressQuietMs } : {}),
             onPosted: (messageId) => this.ctx.voice.outbound.record({ platform: envelope.gateway, chatId: envelope.chatId, messageId, agentId: agent.config.id }),
@@ -353,6 +357,9 @@ export class TurnRunner {
       if (!isSystemEvent(envelope)) {
         await progress?.beforeAnswer(turn.failed ? "failed" : "ok");
         if (await this.ctx.voice.reply(envelope, notice!, agent.config.id, { onDelivered: delivered })) delivered();
+      } else {
+        // Nothing said, so nothing of its steps either: a line of them alone reads as a message with nothing in it.
+        progress?.drop();
       }
     }
   }

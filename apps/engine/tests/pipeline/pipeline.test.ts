@@ -2088,27 +2088,7 @@ describe("routing", () => {
         { text: "udah kelar Ding — nox benerin buildnya, PR #12" },
       ],
       progressIntervalMs: 1,
-      // The real `plan`, slowed down. The progress line is written on a timer, and every provider
-      // call in this harness resolves without yielding to one — so with an instant tool the turn is
-      // over before the first tick and the bubble is never posted. A tool that actually takes a moment
-      // is what the timer exists for, and it is the only way to observe the line from a test.
-      extraTools: new Map<string, Tool>([
-        [
-          "plan",
-          {
-            requiresApproval: false,
-            definition: {
-              name: "plan",
-              description: "tracks a plan",
-              parameters: { type: "object", properties: {} },
-            },
-            async execute() {
-              await sleep(20);
-              return { content: "plan noted", isError: false };
-            },
-          },
-        ],
-      ]),
+      extraTools: SLOW_PLAN,
       secondAgent: "nox",
       configOverrides: {
         ...PROVIDER_TOML,
@@ -3403,6 +3383,25 @@ describe("a tool that outgrows the context", () => {
  * yang bisa dibantu?" A conversational answer to a message nobody had sent, restating what had just
  * been said one line earlier.
  */
+/**
+ * The real `plan`, slowed down. A progress line is written on a timer, and every provider call in this harness resolves
+ * without yielding to one: with an instant tool the turn is over before the first tick and the line is never posted. A
+ * tool that takes a moment is what the timer exists for, and the only way to see the line from a test.
+ */
+const SLOW_PLAN = new Map<string, Tool>([
+  [
+    "plan",
+    {
+      requiresApproval: false,
+      definition: { name: "plan", description: "tracks a plan", parameters: { type: "object", properties: {} } },
+      async execute() {
+        await sleep(20);
+        return { content: "plan noted", isError: false };
+      },
+    },
+  ],
+]);
+
 describe("job wake-ups", () => {
   const wake = (h: Awaited<ReturnType<typeof harness>>) =>
     h.pipeline.wakeForJob({
@@ -3445,6 +3444,42 @@ describe("job wake-ups", () => {
     expect(h.gateway.sent).toHaveLength(0);
     // Silence asked for is not a warning: each counted in a deploy's warn lines (0.8.12).
     expect(release().map((line) => line.message)).not.toContain("turn produced no text");
+  });
+
+  const looked = { toolCalls: [{ id: "c1", name: "plan", args: { steps: [{ state: "in_progress", text: "look at the helper" }] } }] };
+
+  // On a live box: the daemon looked in on a helper still at work, the agent checked its status and answered ".",
+  // and the person's chat got "[nouva] ✓ 2 steps · 42s" as a message of its own, three times in forty minutes.
+  test("a daemon-started turn that looks something up and then says nothing leaves no line of its steps", async () => {
+    const h = await harness({ turns: [looked, { text: "." }, looked, { text: "The build is up." }], progressIntervalMs: 1, extraTools: SLOW_PLAN });
+
+    wake(h);
+    await h.pipeline.idle();
+    // A person's turn after it, whose own line and answer are waited for: by then the silent turn's would be there too.
+    h.gateway.receive(envelope({ text: "is it up?" }));
+    await h.pipeline.idle();
+    await eventually(() => h.gateway.sent.some((message) => message.text === "The build is up."), 3_000, "the person's answer");
+
+    const texts = h.gateway.sent.map((message) => message.text);
+    // The person's turn alone is in the chat: its own line, then its answer. Nothing of the silent one.
+    expect(texts.at(-1)).toBe("The build is up.");
+    expect(texts.filter((text) => /\d+ steps?/.test(text))).toHaveLength(1);
+    expect(texts).toHaveLength(2);
+  });
+
+  test("one that does say something says its steps once, above its answer, with no line while it works", async () => {
+    const h = await harness({ turns: [looked, { text: "The build finished: three pages." }], progressIntervalMs: 1, extraTools: SLOW_PLAN });
+
+    wake(h);
+    await h.pipeline.idle();
+    await eventually(() => h.gateway.sent.some((message) => message.text === "The build finished: three pages."), 3_000, "its answer");
+
+    const texts = h.gateway.sent.map((message) => message.text);
+    expect(texts).toHaveLength(2);
+    expect(texts[0]).toMatch(/^\[nouva\] ✓ 1 step · \d+s$/);
+    expect(texts[1]).toBe("The build finished: three pages.");
+    // Written whole, once: no line was put in the chat while it worked, to be changed later.
+    expect(h.gateway.edits).toEqual([]);
   });
 
   test("a person still gets the fallback when a turn produces nothing", async () => {
