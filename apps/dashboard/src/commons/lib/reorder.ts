@@ -10,13 +10,6 @@ export interface Slot {
   height: number;
 }
 
-/** The list with one item taken from `from` and put at `to`, the place it ends up at. */
-export function moved<T>(items: readonly T[], from: number, to: number): T[] {
-  if (from === to || from < 0 || from >= items.length || to < 0 || to >= items.length) return [...items];
-  const rest = items.filter((_, at) => at !== from);
-  return [...rest.slice(0, to), items[from]!, ...rest.slice(to)];
-}
-
 /**
  * Where an item dragged `dy` from its place lands: past every item whose middle its own middle has gone below. So an
  * item takes a neighbour's place once it is more than halfway over it, and not before.

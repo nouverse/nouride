@@ -43,7 +43,7 @@ async function pageSentFrom(path: string, ready: (host: HTMLElement) => boolean)
 
 describe("the page a message from the floating chat is sent with", () => {
   test("one automation's page: in Automations, and about that automation by its name", async () => {
-    const page = await pageSentFrom("/automations/cron_1", (host) => host.textContent?.includes("Who and where") === true);
+    const page = await pageSentFrom("/automations/cron_1", (host) => host.querySelector('main [aria-label="Who and where"]') !== null);
     expect(page).toEqual({ path: "/dashboard/automations/cron_1", title: "Automations", subject: "Shop health check" });
   });
 

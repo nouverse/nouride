@@ -3,8 +3,9 @@
  * page then draws it.
  *
  * The saves are the page's own (`apps/dashboard/tests/fixtures/automation-saves.json`, which the dashboard's test
- * holds to what the page builds: every kind of step, paths that go on, end and jump, each way to start, one thing and
- * a list, a new automation and a change). The page checks a list before it sends it and the routes check it again:
+ * holds to what the page builds: every kind of step, paths that go on, end and jump, a question and other steps where
+ * a step fails, a script in a list and as the one thing, a time it lasts, each way to start, one thing and a list, a
+ * new automation and a change). The page checks a list before it sends it and the routes check it again:
  * two copies of one rule, and the dashboard's mount tests answer a save from a fixture. So a body these routes refuse,
  * or keep in another shape, passed every test on both sides and failed in a browser, at Save.
  */
@@ -49,7 +50,8 @@ beforeEach(async () => {
     audit: new AuditLog(db),
     users: new UserStore({ db }),
     files: {},
-    cron: { store, scheduler: {}, timezone: "Asia/Jakarta" },
+    // A script's program is on this machine, and it names no secret: what the routes ask before they keep one.
+    cron: { store, scheduler: {}, timezone: "Asia/Jakarta", scripts: { secrets: () => [], hasProgram: async () => true } },
     // The agents the page's saves name: the automation's own, and another one step is given to.
     registry: { get: (id: string) => (["nouva", "nix"].includes(id) ? { dir: `/packs/${id}`, config: {} } : undefined), reload: async () => {} },
   } as unknown as ControlDeps);
@@ -66,22 +68,49 @@ const ask = (path: string, body?: unknown) =>
     { clientAddress: "203.0.113.10" },
   );
 
-/** The automation as its page is then answered (`GET /automations/:id`): the parts a save says it keeps. */
-async function drawn(id: string): Promise<Save["keeps"]> {
+interface Scripted {
+  script?: { by?: string };
+  steps?: Scripted[];
+}
+
+/** Every script a payload keeps: the one thing's own, a step's, and one among several started at the same time. */
+const scriptsIn = (payload: Scripted): { by?: string }[] => [...(payload.script ? [payload.script] : []), ...(payload.steps ?? []).flatMap(scriptsIn)];
+
+/**
+ * The automation as its page is then answered (`GET /automations/:id`): the parts a save says it keeps. Two things are
+ * the daemon's own to add, and are held here and taken off before the two are compared: who wrote each script, which
+ * no page may say for itself, and the moment one that lasts a set time ends.
+ */
+async function drawn(id: string, since: number): Promise<Save["keeps"]> {
   const answer = await ask(`/automations/${id}`);
   expect(answer.status).toBe(200);
-  const { automation } = (await answer.json()) as { automation: Save["keeps"] };
-  return { name: automation.name, start: automation.start, payload: automation.payload, target: automation.target, delivery: automation.delivery };
+  const { automation } = (await answer.json()) as { automation: Save["keeps"] & { payload: Scripted; delivery: { lasts?: number; endsAt?: number } } };
+  for (const script of scriptsIn(automation.payload)) {
+    // Whoever sent the save, as the routes know them: here the control token, which the daemon calls "cli".
+    expect({ id, by: script.by }).toEqual({ id, by: "cli" });
+    delete script.by;
+  }
+  const { endsAt, ...delivery } = automation.delivery;
+  if (delivery.lasts === undefined) expect({ id, endsAt }).toEqual({ id, endsAt: undefined });
+  else {
+    expect(endsAt).toBeGreaterThanOrEqual(since + delivery.lasts);
+    expect(endsAt).toBeLessThanOrEqual(Date.now() + delivery.lasts);
+  }
+  return { name: automation.name, start: automation.start, payload: automation.payload, target: automation.target, delivery };
 }
 
 describe("what the Automations page saves", () => {
   test("the file is the page's: saves of new automations, and changes to them", () => {
-    expect(SAVES.filter((save) => "create" in save.send).length).toBeGreaterThanOrEqual(5);
-    expect(SAVES.filter((save) => "change" in save.send).length).toBeGreaterThanOrEqual(3);
+    expect(SAVES.filter((save) => "create" in save.send).length).toBeGreaterThanOrEqual(8);
+    expect(SAVES.filter((save) => "change" in save.send).length).toBeGreaterThanOrEqual(5);
+    // Among them what the canvas writes of its own: scripts, and one that lasts a set time.
+    expect(SAVES.flatMap((save) => scriptsIn(save.keeps.payload as Scripted)).length).toBeGreaterThanOrEqual(3);
+    expect(SAVES.filter((save) => (save.keeps.delivery as { lasts?: number }).lasts !== undefined).length).toBeGreaterThanOrEqual(2);
   });
 
   test("each one is taken by the route it is sent to, and the automation is then drawn as the page saved it", async () => {
     const ids = new Map<string, string>();
+    const since = Date.now();
     for (const save of SAVES) {
       const where = `"${save.name}"`;
       if ("create" in save.send) {
@@ -97,7 +126,7 @@ describe("what the Automations page saves", () => {
         expect({ save: where, status: answer.status, error: said.error }).toEqual({ save: where, status: 200, error: undefined });
         ids.set(save.name, id!);
       }
-      expect({ save: where, ...(await drawn(ids.get(save.name)!)) }).toEqual({ save: where, ...save.keeps });
+      expect({ save: where, ...(await drawn(ids.get(save.name)!, since)) }).toEqual({ save: where, ...save.keeps });
     }
   });
 });

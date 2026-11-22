@@ -1,9 +1,12 @@
 /**
- * The line that joins one card of the flow to the next, and the "+" on it that puts a step in between: the flow is
- * read down this line, start to end. Over a run, the stretch the run went along is drawn in the colour of what is
- * done, and the stretches it never took stay faint.
+ * The line that joins one box of the canvas to the next: the canvas is read down this line, start to end. Over a run,
+ * the stretch the run went along is drawn in the colour of what is done, and the stretches it never took stay faint.
  *
- * The picker a "+" opens is one for the whole flow (`StepPicker`), under whichever "+" was pressed.
+ * A "+" on the line puts a step in between. It shows when the pointer or the focus is on the line: a "+" drawn on
+ * every line made the steps read as a form to fill. Where no pointer hovers (a phone), a step is added at the end and
+ * moved up from its fields.
+ *
+ * The picker a "+" opens is one for the whole canvas (`StepPicker`), under whichever "+" was pressed.
  */
 
 import { Plus } from "lucide-react";
@@ -27,18 +30,17 @@ export function Connector({
   const line = cn("w-0.5 rounded-full transition-colors duration-200", taken ? "bg-success" : "bg-base-content/15");
   if (!onAdd) return <div aria-hidden="true" data-taken={taken ? "" : undefined} className={cn(line, "mx-auto", short ? "h-4" : "h-7")} />;
   return (
-    <div className="flex flex-col items-center">
-      <div aria-hidden="true" className={cn(line, "h-2.5")} />
+    <div className="group/line relative flex h-7 flex-col items-center">
+      <div aria-hidden="true" data-taken={taken ? "" : undefined} className={cn(line, "h-full")} />
       <button
         type="button"
         aria-label={addLabel}
         title={addLabel}
-        className="grid size-7 place-items-center rounded-full border border-base-content/15 bg-base-100 text-base-content/65 shadow-xs transition-all duration-150 hover:border-secondary/40 hover:bg-secondary/10 hover:text-secondary active:scale-90 max-sm:size-9"
+        className="absolute top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full border border-base-content/15 bg-base-100 text-base-content/65 opacity-0 shadow-xs transition-all duration-150 group-hover/line:opacity-100 hover:border-secondary/40 hover:bg-secondary/10 hover:text-secondary focus-visible:opacity-100 active:scale-90 [@media(hover:none)]:hidden"
         onClick={(event) => onAdd(event.currentTarget)}
       >
-        <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
+        <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
       </button>
-      <div aria-hidden="true" className={cn(line, "h-2.5")} />
     </div>
   );
 }

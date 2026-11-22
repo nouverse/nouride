@@ -23,9 +23,12 @@ export const readsOnly = (thing: Owned): boolean => thing.changeable === false;
 /** Whose it is in a word or two: "Rina's", or "Nobody's". */
 export const whoseWords = (thing: Owned): string => (thing.person ? `${thing.person.name}'s` : NOBODYS);
 
-/** The line under the title of one the reader only reads: whose it is, and why it is on their page at all. */
+/**
+ * The line under the title of one the reader only reads: whose it is, and why it is on their page at all. What is
+ * nobody's has no person to ask for a change, so the line says who makes one.
+ */
 export const readOnlyLine = (thing: Owned): string =>
-  `This is ${thing.person ? `${thing.person.name}'s` : "nobody's"}. It reports to a chat of yours, so you can read it here but not change it.`;
+  `This is ${thing.person ? `${thing.person.name}'s` : "nobody's, and an admin's to change"}. It reports to a chat of yours, so you can read it here but not change it.`;
 
 /**
  * Who answers what it waits for, where that is not the reader: its person, or an admin for what is nobody's. None for

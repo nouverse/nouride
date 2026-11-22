@@ -14,11 +14,23 @@ import { useCallback, useMemo, useState } from "react";
 import type { StepExit } from "@nouride/wire";
 import { useUnsaved } from "@/commons/lib/unsaved";
 import { changed, settled, type Draft } from "../lib/draft";
-import { asKind, blankStep, duplicateStep, insertStep, moveStep, removeStep, replaceStep, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+import { addOnLine, addToLane, choosePath, copyOnLine, moveOnLine, pathsOf, removeDrawn, setLaneEnd, type Choice, type PathExit } from "../lib/paths";
+import { asKind, replaceStep, resetsBetween, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+
+/** The step a change made, by its id: what is opened to be written. */
+const madeIn = (now: readonly Step[], was: readonly Step[]): string | undefined => now.find((step) => !was.some((old) => old.id === step.id))?.id;
+
+/** A changed list with the paths the change put back to their default, for the card to say. */
+const told = (was: readonly Step[], now: Step[]): Changed => ({ steps: now, reset: resetsBetween(was, now) });
+
+/** What is open beside the canvas when it is not a step: how it starts, where its results go, whose it is. No step's id begins so. */
+export const OPEN_START = "@start";
+export const OPEN_RESULTS = "@results";
+export const OPEN_OWNER = "@owner";
 
 interface State {
   draft: Draft | null;
-  /** The step whose fields are open, by its id. */
+  /** What is open: a step by its id, or one of the canvas's own boxes. */
   open: string | null;
   resets: ExitReset[];
 }
@@ -34,12 +46,19 @@ export interface Editor {
   setStep: (index: number, step: Step) => void;
   setKind: (index: number, kind: StepKind) => void;
   setExit: (index: number, exit: ExitName, go: StepExit) => void;
-  /** A new step at a place, opened to be written. */
-  add: (at: number, kind: StepKind) => void;
+  /** A new step on the main line, before the step at that place in the list or at the line's end, opened to be written. */
+  add: (before: number | null, kind: StepKind) => void;
   duplicate: (index: number) => void;
+  /** A step of the main line to another place on it, both counted as the line is drawn. What hangs on it goes along. */
   move: (from: number, to: number) => void;
-  /** Takes a step out, and hands back the draft as it was, for an undo. */
+  /** Takes a step out with what hangs on it, and hands back the draft as it was, for an undo. */
   remove: (index: number) => Draft;
+  /** One of a step's paths given an answer (`lib/paths.ts`). Hands back the draft as it was where steps went with the old answer. */
+  choose: (index: number, exit: PathExit, choice: Exclude<Choice, "jump">) => Draft | null;
+  /** Where a lane ends: back into the main line, or a stop. */
+  laneEnd: (index: number, exit: PathExit, ends: "stop" | "back") => void;
+  /** A step added at a lane's end, opened to be written. */
+  addToLane: (index: number, exit: PathExit, kind: StepKind) => void;
   /** Puts a draft back whole: what an undo does. */
   restore: (draft: Draft) => void;
   /** Forgets a path's "put back to its default" note. */
@@ -94,20 +113,27 @@ export function useEditor(loaded: Draft, fresh: boolean): Editor {
         const id = draft.steps[index]?.id;
         setState((was) => ({ ...was, resets: was.resets.filter((reset) => !(reset.id === id && reset.exit === exit)) }));
       },
-      add: (at, kind) =>
-        steps(
-          (list) => insertStep(list, at, blankStep(kind, list)),
-          (now, was) => now.find((step) => !was.some((old) => old.id === step.id))?.id,
-        ),
-      duplicate: (index) => steps((list) => duplicateStep(list, index)),
-      move: (from, to) => steps((list) => moveStep(list, from, to)),
+      add: (before, kind) => steps((list) => addOnLine(list, before, kind), madeIn),
+      duplicate: (index) => steps((list) => copyOnLine(list, index)),
+      move: (from, to) => steps((list) => told(list, moveOnLine(list, pathsOf(list, false).line[from] ?? from, to))),
       remove: (index) => {
         steps(
-          (list) => removeStep(list, index),
-          (now) => (state.open && now.some((step) => step.id === state.open) ? state.open : null),
+          (list) => told(list, removeDrawn(list, index)),
+          (now) => (state.open && (state.open.startsWith("@") || now.some((step) => step.id === state.open)) ? state.open : null),
         );
         return draft;
       },
+      choose: (index, exit, choice) => {
+        const removed = choosePath(draft.steps, index, exit, choice).removed;
+        steps(
+          (list) => choosePath(list, index, exit, choice).steps,
+          // A lane's first step is opened to be written; a question is written where it was chosen, in its step's fields.
+          (now, was) => (choice === "lane" ? madeIn(now, was) : undefined),
+        );
+        return removed > 0 ? draft : null;
+      },
+      laneEnd: (index, exit, ends) => steps((list) => setLaneEnd(list, index, exit, ends)),
+      addToLane: (index, exit, kind) => steps((list) => addToLane(list, index, exit, kind).steps, madeIn),
       restore: (kept) => setState((was) => ({ ...was, draft: kept })),
       forget: (reset) => setState((was) => ({ ...was, resets: was.resets.filter((one) => one !== reset) })),
       discard: () => setState({ draft: null, open: null, resets: [] }),

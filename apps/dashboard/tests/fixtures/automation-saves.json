@@ -425,6 +425,286 @@
     }
   },
   {
+    "name": "Morning digest",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Morning digest",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "Read my unread email from the last day and sum it up in four points."
+          },
+          {
+            "id": "s2",
+            "kind": "command",
+            "argv": [
+              "python3"
+            ],
+            "name": "Save it",
+            "script": {
+              "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
+              "about": "Saves the summary as today's page."
+            },
+            "then": {
+              "to": "s3"
+            },
+            "whenFailed": {
+              "to": "s4"
+            }
+          },
+          {
+            "id": "s4",
+            "kind": "approval",
+            "ask": "Saving it failed. Send the digest anyway?",
+            "then": {
+              "to": "s3"
+            }
+          },
+          {
+            "id": "s3",
+            "kind": "systemEvent",
+            "text": "The morning digest is saved."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "cron": "0 7 * * 1,2,3,4,5",
+      "tz": "Asia/Jakarta"
+    },
+    "keeps": {
+      "name": "Morning digest",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "Read my unread email from the last day and sum it up in four points."
+          },
+          {
+            "id": "s2",
+            "kind": "command",
+            "argv": [
+              "python3"
+            ],
+            "name": "Save it",
+            "script": {
+              "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
+              "about": "Saves the summary as today's page."
+            },
+            "then": {
+              "to": "s3"
+            },
+            "whenFailed": {
+              "to": "s4"
+            }
+          },
+          {
+            "id": "s4",
+            "kind": "approval",
+            "ask": "Saving it failed. Send the digest anyway?",
+            "then": {
+              "to": "s3"
+            }
+          },
+          {
+            "id": "s3",
+            "kind": "systemEvent",
+            "text": "The morning digest is saved."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "Backup watch",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Backup watch",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh"
+            ],
+            "script": {
+              "text": "test -f backups/last.ok && cat backups/last.ok\n",
+              "about": "Reads the mark the backup leaves when it is done."
+            },
+            "onlyChanged": true,
+            "then": {
+              "to": "s2"
+            },
+            "whenFailed": {
+              "to": "s3"
+            },
+            "whenEmpty": {
+              "to": "s2"
+            }
+          },
+          {
+            "id": "s3",
+            "kind": "agentTurn",
+            "message": "Read the backup's log and say what went wrong."
+          },
+          {
+            "id": "s4",
+            "kind": "systemEvent",
+            "text": "The backup needs a look. What was found is above.",
+            "then": "end"
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "The backup is in place."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce",
+        "once": true,
+        "lasts": 21600000
+      },
+      "every": "30m"
+    },
+    "keeps": {
+      "name": "Backup watch",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh"
+            ],
+            "script": {
+              "text": "test -f backups/last.ok && cat backups/last.ok\n",
+              "about": "Reads the mark the backup leaves when it is done."
+            },
+            "onlyChanged": true,
+            "then": {
+              "to": "s2"
+            },
+            "whenFailed": {
+              "to": "s3"
+            },
+            "whenEmpty": {
+              "to": "s2"
+            }
+          },
+          {
+            "id": "s3",
+            "kind": "agentTurn",
+            "message": "Read the backup's log and say what went wrong."
+          },
+          {
+            "id": "s4",
+            "kind": "systemEvent",
+            "text": "The backup needs a look. What was found is above.",
+            "then": "end"
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "The backup is in place."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce",
+        "once": true,
+        "lasts": 21600000
+      }
+    }
+  },
+  {
+    "name": "Disk room",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Disk room",
+      "payload": {
+        "kind": "command",
+        "argv": [
+          "sh"
+        ],
+        "script": {
+          "text": "df -h / | tail -1\n",
+          "about": "Says how full the disk is."
+        },
+        "then": "deliver"
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "manual": true
+    },
+    "keeps": {
+      "name": "Disk room",
+      "start": "manual",
+      "payload": {
+        "kind": "command",
+        "argv": [
+          "sh"
+        ],
+        "script": {
+          "text": "df -h / | tail -1\n",
+          "about": "Says how full the disk is."
+        },
+        "then": "deliver"
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
     "name": "Shop health check, changed",
     "send": {
       "change": "Shop health check"
@@ -643,6 +923,195 @@
       },
       "delivery": {
         "mode": "none"
+      }
+    }
+  },
+  {
+    "name": "Backup watch, back into the line and for a day",
+    "send": {
+      "change": "Backup watch"
+    },
+    "body": {
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh"
+            ],
+            "script": {
+              "text": "test -f backups/last.ok && cat backups/last.ok\n",
+              "about": "Reads the mark the backup leaves when it is done."
+            },
+            "onlyChanged": true,
+            "then": {
+              "to": "s2"
+            },
+            "whenFailed": {
+              "to": "s3"
+            },
+            "whenEmpty": {
+              "to": "s2"
+            }
+          },
+          {
+            "id": "s3",
+            "kind": "agentTurn",
+            "message": "Read the backup's log and say what went wrong."
+          },
+          {
+            "id": "s4",
+            "kind": "systemEvent",
+            "text": "The backup needs a look. What was found is above.",
+            "then": {
+              "to": "s2"
+            }
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "The backup is in place."
+          }
+        ]
+      },
+      "delivery": {
+        "mode": "announce",
+        "once": true,
+        "lasts": 86400000
+      }
+    },
+    "keeps": {
+      "name": "Backup watch",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "command",
+            "argv": [
+              "sh"
+            ],
+            "script": {
+              "text": "test -f backups/last.ok && cat backups/last.ok\n",
+              "about": "Reads the mark the backup leaves when it is done."
+            },
+            "onlyChanged": true,
+            "then": {
+              "to": "s2"
+            },
+            "whenFailed": {
+              "to": "s3"
+            },
+            "whenEmpty": {
+              "to": "s2"
+            }
+          },
+          {
+            "id": "s3",
+            "kind": "agentTurn",
+            "message": "Read the backup's log and say what went wrong."
+          },
+          {
+            "id": "s4",
+            "kind": "systemEvent",
+            "text": "The backup needs a look. What was found is above.",
+            "then": {
+              "to": "s2"
+            }
+          },
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "The backup is in place."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce",
+        "once": true,
+        "lasts": 86400000
+      }
+    }
+  },
+  {
+    "name": "Morning digest, going on without asking",
+    "send": {
+      "change": "Morning digest"
+    },
+    "body": {
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "Read my unread email from the last day and sum it up in four points."
+          },
+          {
+            "id": "s2",
+            "kind": "command",
+            "argv": [
+              "python3"
+            ],
+            "name": "Save it",
+            "script": {
+              "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
+              "about": "Saves the summary as today's page."
+            },
+            "whenFailed": "next"
+          },
+          {
+            "id": "s3",
+            "kind": "systemEvent",
+            "text": "The morning digest is saved."
+          }
+        ]
+      }
+    },
+    "keeps": {
+      "name": "Morning digest",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "Read my unread email from the last day and sum it up in four points."
+          },
+          {
+            "id": "s2",
+            "kind": "command",
+            "argv": [
+              "python3"
+            ],
+            "name": "Save it",
+            "script": {
+              "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
+              "about": "Saves the summary as today's page."
+            },
+            "whenFailed": "next"
+          },
+          {
+            "id": "s3",
+            "kind": "systemEvent",
+            "text": "The morning digest is saved."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
       }
     }
   }

@@ -114,8 +114,13 @@ describe("a pill", () => {
     let starts: string[][] = [];
     let whole: string[] = [];
     await renderPage("/automations/new", async (host) => {
-      await eventually(() => saying(host, "button", "At a time") !== undefined, 3_000, "the form");
+      // Each in the fields its box of the canvas opens: how it starts, then where its results go.
+      await eventually(() => host.querySelector('[aria-label="Change how it starts"]') !== null, 3_000, "the canvas");
+      (host.querySelector('[aria-label="Change how it starts"]') as HTMLElement).click();
+      await eventually(() => saying(host, "button", "At a time") !== undefined, 3_000, "when it starts");
       starts = [...saying(host, "button", "At a time")!.parentElement!.querySelectorAll("button")].map(classes);
+      (host.querySelector('[aria-label="Change where its results go"]') as HTMLElement).click();
+      await eventually(() => host.querySelector('button[aria-label="Show the whole list"]') !== null, 3_000, "the chat's field");
       whole = classes(host.querySelector('button[aria-label="Show the whole list"]'));
     });
     expect(starts).toHaveLength(4);

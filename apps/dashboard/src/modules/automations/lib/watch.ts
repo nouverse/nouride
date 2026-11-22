@@ -14,6 +14,39 @@ import type { AutomationSummary, QuietHoursPolicy } from "@nouride/wire";
  */
 export const toldAndOff = (automation: Pick<AutomationSummary, "enabled" | "disabledReason">): boolean => !automation.enabled && automation.disabledReason === "told";
 
+/**
+ * Whether it is off because it lasted the time it was given: one set to stop by itself, which the server turns off at
+ * that moment with this word as why, telling its chat. Nothing failed, and nobody paused it.
+ */
+export const endedAndOff = (automation: Pick<AutomationSummary, "enabled" | "disabledReason">): boolean => !automation.enabled && automation.disabledReason === "ended";
+
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
+
+/** How long an automation that stops by itself can be set to last, as a person picks one. */
+const LASTS: readonly (readonly [ms: number, label: string])[] = [
+  [HOUR, "1 hour"],
+  [6 * HOUR, "6 hours"],
+  [DAY, "1 day"],
+  [7 * DAY, "1 week"],
+  [30 * DAY, "30 days"],
+];
+
+/** A length of time as a person says it, in the largest unit it is a whole number of: "6 hours", "2 days", "90 minutes". */
+function lastsWords(ms: number): string {
+  const [count, unit] = ms % DAY === 0 ? [ms / DAY, "day"] : ms % HOUR === 0 ? [ms / HOUR, "hour"] : [Math.round(ms / 60_000), "minute"];
+  return `${count} ${unit}${count === 1 ? "" : "s"}`;
+}
+
+/** The choices of "Stop by itself after": never, the lengths a person picks from, and the one it holds when it is none of them. */
+export function lastsChoices(held: number | undefined): { value: string; label: string }[] {
+  const listed = held === undefined || LASTS.some(([ms]) => ms === held) ? LASTS : [...LASTS, [held, lastsWords(held)] as const].sort((a, b) => a[0] - b[0]);
+  return [{ value: "", label: "Never" }, ...listed.map(([ms, label]) => ({ value: String(ms), label }))];
+}
+
+/** The line under "Stop by itself after": what the choice does. */
+export const LASTS_HINT = "Counted from when it is turned on. When the time is up it turns itself off, and says so where it reports.";
+
 /** The hours as a line says them, "22:00 to 07:00"; null where none are set. */
 export function hoursWords(policy: Pick<QuietHoursPolicy, "from" | "to">): string | null {
   return policy.from && policy.to ? `${policy.from} to ${policy.to}` : null;
@@ -76,6 +109,10 @@ export function atOnceHint(hours: string | null | undefined, tellsChat: boolean)
  * A mark that does nothing as the automation stands is not said: telling once where it tells nobody, telling at once
  * where it tells no chat.
  */
-export function marksWords(delivery: Pick<Delivery, "mode" | "once" | "atOnce">): string[] {
-  return [...(delivery.once && delivery.mode !== "none" ? ["It tells once, then turns itself off."] : []), ...(delivery.atOnce && delivery.mode === "announce" ? ["It tells at once, even in quiet hours."] : [])];
+export function marksWords(delivery: Pick<Delivery, "mode" | "once" | "atOnce" | "lasts">): string[] {
+  return [
+    ...(delivery.once && delivery.mode !== "none" ? ["It tells once, then turns itself off."] : []),
+    ...(delivery.atOnce && delivery.mode === "announce" ? ["It tells at once, even in quiet hours."] : []),
+    ...(delivery.lasts !== undefined ? [`It stops by itself after ${lastsWords(delivery.lasts)}.`] : []),
+  ];
 }

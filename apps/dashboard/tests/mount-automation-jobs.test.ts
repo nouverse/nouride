@@ -105,22 +105,24 @@ describe("who and where", () => {
       await flowDrawn(host, 1);
       await eventually(() => host.textContent?.includes("DM · Gading") === true, 2_000, "the chat's name");
       seen.head = host.querySelector("main header")?.textContent ?? "";
-      const who = host.querySelector<HTMLElement>('[aria-label="Who and where"]')!;
-      seen.who = who.textContent ?? "";
+      seen.who = host.querySelector<HTMLElement>('[aria-label="Who and where"]')?.textContent ?? "";
       seen.step = stepCard(host, "s1").textContent ?? "";
-      ([...who.querySelectorAll("button")].find((button) => button.textContent === "Change") as HTMLElement).click();
-      await eventually(() => who.querySelector('input[placeholder="Pick a chat, or type its id"]') !== null, 2_000, "the picker");
-      (who.querySelector('input[placeholder="Pick a chat, or type its id"]') as HTMLInputElement).focus();
+      // Its last box opens who runs it and where it reports.
+      (host.querySelector('[aria-label="Change where its results go"]') as HTMLElement).click();
+      const who = () => host.querySelector<HTMLElement>("main [data-results-fields]")!;
+      await eventually(() => who()?.querySelector('input[placeholder="Pick a chat, or type its id"]') != null, 2_000, "the picker");
+      (who().querySelector('input[placeholder="Pick a chat, or type its id"]') as HTMLInputElement).focus();
       // The list is drawn on the page's body, over every card.
       await eventually(() => host.ownerDocument.body.querySelector('[role="listbox"]')?.textContent?.includes("DM · Gading") === true, 2_000, "the list");
       seen.offered = host.ownerDocument.body.querySelector('[role="listbox"]')?.textContent ?? "";
-      const quiet = who.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+      const quiet = who().querySelector<HTMLInputElement>('input[type="checkbox"]')!;
       seen.quiet = quiet.disabled && quiet.checked;
-      seen.hint = who.textContent ?? "";
+      seen.hint = who().textContent ?? "";
     });
-    expect(seen.head).toContain("Reports to DM · Gading.");
-    expect(seen.who).toContain("Nouva runs it and tells DM · Gading how each run went.");
-    expect(seen.step).toContain("Step 1 · Start a missionSum up the week's mail.");
+    // Who and where in a line under its name, and where its results go as the canvas's last box.
+    expect(seen.head).toContain("every day at 07:00 · Nouva runs it · sends to Telegram, DM · Gading");
+    expect(seen.who).toBe("Results go to TelegramDM · Gading");
+    expect(seen.step).toBe("Start a missionSum up the week's mail.");
     // Narrowed to what the field holds: the chat it reports to now, by its name.
     expect(seen.offered).toContain("DM · Gading5550001111");
     expect(seen.quiet).toBe(true);
@@ -137,9 +139,14 @@ describe("a webhook", () => {
     let page = "";
     let sent: { path: string; body: unknown }[] = [];
     let tests = 0;
+    let box = "";
     await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 1);
+      box = host.querySelector('[aria-label="Start"]')?.textContent ?? "";
+      // Its address and whether a call can arrive: in the fields its first box opens.
+      (host.querySelector('[aria-label="Change how it starts"]') as HTMLElement).click();
       await eventually(() => host.textContent?.includes("Reach unknown") === true, 3_000, "the webhook");
-      page = host.querySelector('[aria-label="Start"]')?.textContent ?? "";
+      page = host.querySelector("main [data-start-fields]")?.textContent ?? "";
       tests = buttons(host).filter((label) => label === "Send a test").length;
       const record = recordPosts({ "/webhooks/cron_e/test": ok({ webhook: {} }) });
       press(host, "Send a test");
@@ -147,7 +154,7 @@ describe("a webhook", () => {
       record.restore();
       sent = record.posts;
     });
-    expect(page).toContain("when its address is called");
+    expect(box).toBe("When its address is calledWebhook");
     // The public address: what a service outside is handed, and what the test goes through.
     expect(page).toContain("https://box.example.com/hooks/tok");
     expect(page).toContain("Anyone with this address can start it");
@@ -162,8 +169,10 @@ describe("a webhook", () => {
     let page = "";
     let tests = 0;
     await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 1);
+      (host.querySelector('[aria-label="Change how it starts"]') as HTMLElement).click();
       await eventually(() => host.textContent?.includes("Local network only") === true, 3_000, "the webhook");
-      page = host.querySelector('[aria-label="Start"]')?.textContent ?? "";
+      page = host.querySelector("main [data-start-fields]")?.textContent ?? "";
       tests = buttons(host).filter((label) => label === "Send a test").length;
     });
     expect(page).toContain("No public address is set");

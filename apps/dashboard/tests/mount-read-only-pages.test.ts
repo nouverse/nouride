@@ -12,7 +12,7 @@ import type { AutomationSummary, JobRunSummary, MissionDetail, MissionView } fro
 import { lastRunLine, stateOf } from "@/modules/automations/lib/list";
 import { outcomeWords, runWords } from "@/modules/automations/lib/runs";
 import { answer, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
-import { automation, detail, drawn, flowDrawn, ok, stepCard, TWO_AGENTS } from "./automation-fixtures.ts";
+import { automation, detail, drawn, flowDrawn, ok, openWhose, stepCard, TWO_AGENTS } from "./automation-fixtures.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -27,13 +27,13 @@ const NOTE = "This is Gading's. It reports to a chat of yours, so you can read i
 
 const note = (host: HTMLElement) => host.querySelector("main [data-read-only]")?.textContent ?? null;
 const pressable = (host: HTMLElement) => [...host.querySelectorAll<HTMLButtonElement>("main button")].map((button) => button.textContent?.replace(/\s+/g, " ").trim() || button.getAttribute("aria-label") || "");
-/** What on an automation's page changes it, counted: its switch, Run now, its menu, the name's field, a card's Change, a step's own controls. */
+/** What on an automation's page changes it, counted: its switch, Run now, its menu, the name's field, a box of the canvas that opens to be changed, a step's own controls. */
 const changes = (host: HTMLElement) => ({
   switches: host.querySelectorAll('main [role="switch"]').length,
   runNow: pressable(host).filter((label) => label === "Run now").length,
   menu: host.querySelectorAll('main header [aria-label^="More for"]').length,
   name: host.querySelectorAll('main input[aria-label="Name"]').length,
-  change: pressable(host).filter((label) => label === "Change").length,
+  change: host.querySelectorAll('main [aria-label^="Change how it starts"], main [aria-label^="Change where its results go"]').length,
   steps: host.querySelectorAll('main [aria-label^="Edit step"], main [aria-label^="Add a step"], main [aria-label^="Move step"]').length,
   ask: pressable(host).filter((label) => label.includes("to change it")).length,
 });
@@ -69,7 +69,7 @@ describe("an automation's page, for a reader who only reads it", () => {
   test("says whose it is under its name and offers nothing that changes it; its steps and its runs are read", async () => {
     const run: JobRunSummary = { id: "run_9", jobId: "cron_e", startedAt: Date.now() - 60_000, finishedAt: Date.now() - 30_000, status: "success", result: "All well." };
     answer({ ...AS_OPERATOR, [PAGE]: detail(automation(THEIRS), [run]) });
-    const seen = { note: null as string | null, changes: NONE, title: "", steps: 0, runs: "", who: "", picked: "" };
+    const seen = { note: null as string | null, changes: NONE, title: "", steps: 0, runs: "", pressed: -1, picked: "" };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       seen.note = note(host);
@@ -77,7 +77,8 @@ describe("an automation's page, for a reader who only reads it", () => {
       seen.title = host.querySelector("main h1")?.textContent ?? "";
       seen.steps = drawn(host).length;
       seen.runs = host.querySelector('main [aria-label="Recent runs"]')?.textContent ?? "";
-      seen.who = [...host.querySelectorAll("main aside section")].find((card) => card.textContent?.includes("Who may change it"))?.textContent ?? "";
+      // A box is words and nothing to press: no fields open beside the canvas or in it.
+      seen.pressed = stepCard(host, "check").querySelectorAll("button").length + host.querySelectorAll("main [data-step-fields], main [data-whose-fields]").length;
       // A run is still opened and read over the steps.
       (host.querySelector('main [aria-label="Recent runs"] button') as HTMLElement).click();
       await eventually(() => host.querySelector('[role="tab"][aria-selected="true"]')?.textContent === "Last run", 2_000, "the run over the steps");
@@ -88,8 +89,7 @@ describe("an automation's page, for a reader who only reads it", () => {
     expect(seen.title).toBe("Shop check");
     expect(seen.steps).toBe(4);
     expect(seen.runs).toContain("Done");
-    expect(seen.who).toContain("Gading changes its steps and answers what it asks. You can read them, and how each run went.");
-    expect(seen.who).not.toContain("You change the steps here");
+    expect(seen.pressed).toBe(0);
     expect(seen.picked.length).toBeGreaterThan(0);
   });
 
@@ -100,10 +100,12 @@ describe("an automation's page, for a reader who only reads it", () => {
       await flowDrawn(host);
       seen.note = note(host);
       seen.changes = changes(host);
-      seen.who = host.querySelector("main aside")?.textContent ?? "";
+      // Who may change it is said where whose it is is: behind the head's menu.
+      await openWhose(host);
+      seen.who = host.querySelector('main section[aria-label="Who may change it"]')?.textContent ?? "";
     });
     expect(seen.note).toBeNull();
-    // Two cards with Change (how it starts, who runs it), and each of four steps with its own controls.
+    // Two boxes that open to be changed (how it starts, where its results go), and each of four steps with its own controls.
     expect(seen.changes).toMatchObject({ switches: 1, runNow: 1, menu: 1, name: 1, change: 2, ask: 1 });
     expect(seen.changes.steps).toBeGreaterThan(4);
     expect(seen.who).toContain("You change the steps here");
@@ -111,14 +113,14 @@ describe("an automation's page, for a reader who only reads it", () => {
 
   test("one that is nobody's says so, and that an admin is who changes it", async () => {
     answer({ ...AS_OPERATOR, [PAGE]: detail(automation({ changeable: false })) });
-    const seen = { note: null as string | null, who: "" };
+    const seen = { note: null as string | null, menu: -1 };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       seen.note = note(host);
-      seen.who = host.querySelector("main aside")?.textContent ?? "";
+      seen.menu = changes(host).menu;
     });
-    expect(seen.note).toBe("This is nobody's. It reports to a chat of yours, so you can read it here but not change it.");
-    expect(seen.who).toContain("An admin changes its steps and answers what it asks.");
+    expect(seen.note).toBe("This is nobody's, and an admin's to change. It reports to a chat of yours, so you can read it here but not change it.");
+    expect(seen.menu).toBe(0);
   });
 
   test("a run that waits for a person says who answers it, and has neither answer", async () => {
@@ -153,7 +155,7 @@ describe("an automation's page, for a reader who only reads it", () => {
       seen.address = host.querySelector("main")?.textContent?.includes("/hooks/") === true;
       seen.test = pressable(host).some((label) => label === "Send a test" || label === "Make a new address");
     });
-    expect(seen.start).toContain("when its address is called");
+    expect(seen.start).toContain("When its address is called");
     expect(seen).toMatchObject({ address: false, test: false });
 
     // Its owner's page, for the same automation, holds the address.
@@ -161,7 +163,10 @@ describe("an automation's page, for a reader who only reads it", () => {
     let owner = "";
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      owner = host.querySelector('main [aria-label="Start"]')?.textContent ?? "";
+      // In the fields its first box opens.
+      (host.querySelector('main [aria-label="Change how it starts"]') as HTMLElement).click();
+      await eventually(() => host.querySelector("main")?.textContent?.includes("/hooks/") === true, 2_000, "the address");
+      owner = host.querySelector("main")?.textContent ?? "";
     });
     expect(owner).toContain("https://box.example.com/hooks/hook_1");
   });

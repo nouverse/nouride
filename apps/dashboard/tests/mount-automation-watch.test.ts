@@ -13,7 +13,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AutomationStep, AutomationSummary, JobRunSummary, StepRunOutcome } from "@nouride/wire";
 import { answer, dropdown, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
-import { AS_VIEWER, STEPS, TWO_AGENTS, automation, barButton, detail, field, flowDrawn, labelled, ok, saveBar, stepCard } from "./automation-fixtures.ts";
+import { AS_VIEWER, automation, barButton, closeStep, detail, editStep, field, flowDrawn, labelled, ok, saveBar, stepCard, STEPS, TWO_AGENTS } from "./automation-fixtures.ts";
 import { sameAsLastTime } from "@/modules/automations/lib/runs";
 import { marksWords, toldAndOff } from "@/modules/automations/lib/watch";
 import { eventually } from "./wait.ts";
@@ -171,8 +171,8 @@ describe("the switch that lets a run go on only when what a step says has change
   const shown = (steps: AutomationStep[], more: Record<string, { status: number; body: unknown }> = {}) => answer({ [PAGE]: detail(automation({ payload: { kind: "steps", steps } })), ...TWO_AGENTS, ...more });
   /** A step's editor opened, by its place. */
   async function open(host: HTMLElement, place: number): Promise<void> {
-    labelled(host, `Edit step ${place}`).click();
-    await eventually(() => host.querySelector(`[aria-label="Close step ${place}"]`) !== null, 2_000, `step ${place} opened`);
+    editStep(host, place).click();
+    await eventually(() => closeStep(host, place) !== null, 2_000, `step ${place} opened`);
   }
   const sentSteps = (posts: { path: string; body: unknown }[]) => (posts[0]?.body as { payload: { steps: AutomationStep[] } }).payload.steps;
 
@@ -201,15 +201,16 @@ describe("the switch that lets a run go on only when what a step says has change
       toggle(host, LABEL)!.click();
       await eventually(() => saveBar(host) !== null, 2_000, "something to save");
       seen.on = toggle(host, LABEL)!.checked;
-      labelled(host, "Close step 1").click();
-      await eventually(() => host.querySelector('[aria-label="Edit step 1"]') !== null, 2_000, "the card closed");
+      closeStep(host, 1).click();
+      await eventually(() => editStep(host, 1) !== null, 2_000, "the card closed");
       seen.card = stepCard(host, "check").textContent ?? "";
       seen.others = ["find", "fix", "ok", "tell"].filter((id) => stepCard(host, id).textContent?.includes(SAYS));
       sent = await save(host);
     });
     expect(seen.before).not.toContain(SAYS);
     expect(seen.on).toBe(true);
-    expect(seen.card).toContain(`No AI is used for this step. ${SAYS}`);
+    // Under its words, in its own box.
+    expect(seen.card).toBe(`Run a scriptdf -h /${SAYS}`);
     expect(seen.others).toEqual([]);
     expect(sent).toEqual([{ path: "/cron/cron_e", body: { payload: { kind: "steps", steps: [{ ...CHECK, onlyChanged: true }, FIND, FIX, OK, TELL] } } }]);
   });
@@ -246,10 +247,10 @@ describe("the switch that lets a run go on only when what a step says has change
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host, 2);
       await open(host, 1);
-      await dropdown(host, "What it does").pick("Ask an agent");
+      await dropdown(host, "Kind of step").pick("Ask an agent");
       await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "the agent's fields");
       seen.asAgent = toggle(host, LABEL)?.checked ?? null;
-      await dropdown(host, "What it does").pick("Send a message");
+      await dropdown(host, "Kind of step").pick("Send a message");
       await eventually(() => host.textContent?.includes("Sent as written") === true, 2_000, "the message's fields");
       seen.asMessage = toggle(host, LABEL)?.checked ?? null;
       sent = await save(host);
@@ -285,7 +286,7 @@ describe("the switch that lets a run go on only when what a step says has change
       await open(host, 1);
       line = lineOf(host, LABEL);
     });
-    expect(line).toBe('If it says the same as last time, the run goes where "When it has nothing to say" sends it.');
+    expect(line).toBe('If it says the same as last time, the run goes where "With nothing to say" sends it.');
   });
 
   test("an account that only looks, and a reader of another person's, read the mark on the step's card and are offered no switch", async () => {
@@ -320,10 +321,10 @@ describe("the two switches where an automation reports", () => {
   const NONE_SET = { [HOURS]: ok({ timeZone: "Asia/Jakarta", editable: true }) };
   const AT_NIGHT = { [HOURS]: ok({ from: "22:00", to: "07:00", timeZone: "Asia/Jakarta", editable: true }) };
   const who = (host: HTMLElement) => host.querySelector<HTMLElement>('main section[aria-label="Who and where"]')!;
-  /** The card's fields opened by its Change. */
+  /** Where its results go, opened by a press on the canvas's last box. */
   async function change(host: HTMLElement): Promise<void> {
-    ([...who(host).querySelectorAll("button")].find((button) => button.textContent === "Change") as HTMLElement).click();
-    await eventually(() => toggle(host, AT_ONCE) !== null, 2_000, "the card's fields");
+    labelled(host, "Change where its results go").click();
+    await eventually(() => toggle(host, AT_ONCE) !== null, 2_000, "the box's fields");
   }
   const marks = (host: HTMLElement) => who(host).querySelector("[data-marks]")?.textContent ?? null;
 
@@ -473,8 +474,9 @@ describe("the two switches where an automation reports", () => {
       kinds().find((button) => button.querySelector("span span")?.textContent === "Ask an agent")!.click();
       await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "the step's fields");
       type(field(host, "What to ask"), "Is the build done?");
+      // Where its results go: in the fields the canvas's last box opens.
+      await change(host);
       type(host.querySelector('input[placeholder="Pick a chat, or type its id"]') as HTMLInputElement, "-100200");
-      // The card that says where it reports is open on a new one.
       toggle(host, ONCE)!.click();
       toggle(host, AT_ONCE)!.click();
       const record = recordPosts({ "/cron": ok({ job: automation({ id: "cron_new" }) }) });
@@ -499,7 +501,7 @@ describe("the two switches where an automation reports", () => {
         await flowDrawn(host);
         seen[name] = {
           card: marks(host),
-          change: [...who(host).querySelectorAll("button")].filter((button) => button.textContent === "Change").length,
+          change: who(host).querySelectorAll("button").length,
           boxes: host.querySelectorAll('main input[type="checkbox"]:not([role="switch"])').length,
         };
       });

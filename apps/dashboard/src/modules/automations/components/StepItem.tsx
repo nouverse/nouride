@@ -1,28 +1,31 @@
 /**
- * One step in the flow: its card, and under it the paths it says for itself. The same card three ways, by what the page
- * is showing: being edited (a handle to drag it by, a menu to move, copy or delete it, its fields opened in place), over
- * a run (how it went, or that the run never reached it), or only read (a change an agent suggested, with what it would
- * add, change and remove marked).
+ * One step of the main line with what hangs on it: its box, its own rules as a strip in that box, the lanes that run in
+ * its place at its side, and a chip for a path the canvas has no drawing for (`lib/paths.ts`).
+ *
+ * The same box three ways, by what the page is showing: being edited (a press opens its fields beside the canvas, or in
+ * the box on a phone; a handle and a menu show when the pointer or the focus is on it), over a run (how it went, or that
+ * the run never reached it), or only read (a change an agent suggested, with what it would add, change and remove
+ * marked).
  */
 
-import { ArrowDown, ArrowUp, CopyPlus, Ellipsis, GripVertical, Pencil, Trash2, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowDown, ArrowUp, CopyPlus, Ellipsis, GripVertical, Plus, Trash2 } from "lucide-react";
 import type { JobRunSummary, StepRunOutcome } from "@nouride/wire";
-import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
-import { StepCard, type StepCardState } from "@/commons/components/jobs/StepCard";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import type { Grip } from "@/commons/components/ui/ReorderList";
 import { Tag } from "@/commons/components/ui/Tag";
-import { useAgentFace } from "@/commons/hooks/use-agent-face";
 import { cn } from "@/commons/lib/utils";
 import type { Editor } from "../hooks/use-editor";
-import { savesAsList, type Then } from "../lib/draft";
+import { chipExits, type Paths, type PathExit, type Rule } from "../lib/paths";
 import { exitTaken, outcomeWords, type Tone } from "../lib/runs";
 import { STEPS_MAX, type Step } from "../lib/steps";
 import type { Mark } from "../lib/suggested";
-import { KIND, partTitle, stepLine, stepNote } from "../lib/words";
+import { KIND, exitChip, partTitle, stepFacts, stepLine } from "../lib/words";
 import { Branches, stepAnchor } from "./Branches";
 import type { AgentChoice } from "./KindFields";
-import { ResetNotes, StepEditor } from "./StepEditor";
+import { FactStrip, LaneEnd, LaneLine, RuleStrip } from "./PathRules";
+import { StepBox, type BoxLook } from "./StepBox";
+import { ResetNotes } from "./StepFields";
 import { StepRun } from "./StepRun";
 
 /** What the flow is showing, and what each way of showing it needs. */
@@ -51,28 +54,28 @@ export type FlowMode =
     }
   | { kind: "read" };
 
-const MARKS: Record<Mark, { tag: string; state: StepCardState | undefined }> = {
+/** What opens in a box in place of beside the canvas, on a screen with no room beside it: whose it is, and the fields. */
+export interface Inline {
+  key: string;
+  node: ReactNode;
+}
+
+const MARKS: Record<Mark, { tag: string; state: BoxLook | undefined }> = {
   added: { tag: "Suggested", state: "suggested" },
   changed: { tag: "Would change", state: undefined },
   removed: { tag: "Would be removed", state: "leaving" },
 };
 
-const OF_TONE: Record<Tone, StepCardState | undefined> = { done: "done", failed: "failed", quiet: undefined, working: "working", needs: "needs" };
-
-/** Whose step it is, as its cat: for a step an agent does. */
-function StepFace({ agentId }: { agentId: string }) {
-  const face = useAgentFace(agentId);
-  return face?.look ? <AgentAvatar look={face.look} name={face.name} size="xs" /> : null;
-}
+const OF_TONE: Record<Tone, BoxLook | undefined> = { done: "done", failed: "failed", quiet: undefined, working: "working", needs: "needs" };
 
 const ITEM = "min-h-10 gap-3 rounded-xl text-sm";
 
-function StepMenu({ index, grip, full, editor, onRemove }: { index: number; grip: Grip; full: boolean; editor: Editor; onRemove: (index: number) => void }) {
+function StepMenu({ index, place, grip, full, editor, onRemove }: { index: number; place: number; grip: Grip; full: boolean; editor: Editor; onRemove: (index: number) => void }) {
   return (
     <DropdownMenu
       trigger={<Ellipsis size={16} aria-hidden="true" />}
       triggerClassName="btn btn-ghost btn-square btn-sm text-base-content/65 hover:text-base-content"
-      ariaLabel={`More for step ${index + 1}`}
+      ariaLabel={`More for step ${place + 1}`}
       width={208}
       menuClassName="rounded-2xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft"
     >
@@ -105,134 +108,184 @@ function StepMenu({ index, grip, full, editor, onRemove }: { index: number; grip
   );
 }
 
-export function StepItem({
-  steps,
-  index,
-  own,
-  ownName,
-  agentName,
-  mode,
-  grip,
-  mark,
-  landed,
-  active,
-  onActive,
-  onShow,
-  titleOf,
-}: {
+interface Shared {
   steps: readonly Step[];
-  index: number;
-  /** The automation's own agent, and what it is called. */
-  own: string;
+  paths: Paths;
+  /** The automation's own agent's name. */
   ownName: string;
-  /** What an agent is called, by its id. */
+  /** The agent a lone command hands what it printed to, where it does. */
+  reads?: string | undefined;
   agentName: (id: string) => string;
   mode: FlowMode;
-  grip: Grip;
-  /** What a suggested change would do to this step. */
-  mark?: Mark | undefined;
-  /** A jump under the pointer lands on this card. */
-  landed: boolean;
+  /** What a suggested change would do to each step, by its id. */
+  marks?: ReadonlyMap<string, Mark> | undefined;
+  /** The step a jump under the pointer lands on, by its anchor. */
+  landsOn: string | null;
   active: string | null;
   onActive: (key: string | null) => void;
   onShow: (to: number) => void;
   titleOf: (step: Step) => string;
-}) {
+  inline: Inline | null;
+}
+
+/** One step's box, on the main line or in a lane, as the page is showing it. */
+function Box({ index, place, side, grip, shared }: { index: number; place: number | null; side: boolean; grip?: Grip | undefined; shared: Shared }) {
+  const { steps, paths, mode, titleOf, agentName, ownName } = shared;
   const step = steps[index]!;
   const look = KIND[step.kind];
-  const does = step.kind === "agentTurn" || step.kind === "mission" ? (step.agentId ?? own) : null;
+  const mark = shared.marks?.get(step.id);
   const marked = mark ? MARKS[mark] : null;
-  const head = { eyebrow: `Step ${index + 1}`, title: titleOf(step), line: stepLine(step), mono: step.kind === "command", icon: look.icon, tile: look.tile, anchor: stepAnchor(step.id) };
-  const face = does ? <StepFace agentId={does} /> : null;
+  const landed = shared.landsOn === stepAnchor(step.id);
+  const rules = (paths.rules.get(index) ?? []).filter((rule): rule is Extract<Rule, { kind: "goOn" | "ask" }> => rule.kind !== "lane");
+  const outcomeOf = (id: string) => (mode.kind === "run" ? mode.outcomes.get(id) : undefined);
+  const outcome = outcomeOf(step.id);
+  const left = outcome ? exitTaken(outcome.status) : null;
+  // A question folded into this box that a save would be refused for: said here, since its own box is not drawn.
+  const lacks = (rule: Rule): string | undefined => (mode.kind === "edit" && rule.kind === "ask" ? mode.problems.get(rule.at) : undefined);
+  // `reads` is there only for an automation that is one command and no list: among other steps the next step reads it.
+  const facts = stepFacts(step, shared.reads);
+  const strip =
+    rules.length + facts.length > 0 ? (
+      <>
+        {facts.map((fact) => (
+          <FactStrip key={fact}>{fact}</FactStrip>
+        ))}
+        {rules.map((rule) => (
+          <RuleStrip key={rule.exit} step={step} rule={rule} question={rule.kind === "ask" ? (steps[rule.at] as Extract<Step, { kind: "approval" }>).ask : undefined} taken={left === rule.exit} lacking={lacks(rule) !== undefined} />
+        ))}
+      </>
+    ) : null;
   const tag = marked ? <Tag tone={mark === "removed" ? "plain" : "needs"}>{marked.tag}</Tag> : null;
-  const branches = (taken?: ReturnType<typeof exitTaken>) => <Branches steps={steps} index={index} titleOf={titleOf} active={active} onActive={onActive} onShow={onShow} {...(taken === undefined ? {} : { taken })} />;
+  const head = { title: titleOf(step), line: stepLine(step, agentName), mono: step.kind === "command" && !step.script, icon: look.icon, tile: look.tile, anchor: stepAnchor(step.id), side, strip, badge: tag };
 
   if (mode.kind === "run") {
-    const outcome = mode.outcomes.get(step.id);
     // Each of several at the same time, by the name its words are joined under; one no longer in the list keeps its id.
     const partTitleOf = (id: string): string => {
       const part = step.kind === "parallel" ? step.steps.find((one) => one.id === id) : undefined;
       return part ? partTitle(part, part.kind === "agentTurn" && part.agentId ? agentName(part.agentId) : ownName) : id;
     };
     return (
-      <>
-        <StepCard {...head} whole={outcome?.status === "waiting"} state={outcome ? (landed ? "target" : OF_TONE[outcomeWords(outcome, mode.whom).tone]) : undefined} dimmed={!outcome} aside={face}>
-          {outcome ? <StepRun outcome={outcome} run={mode.run} name={mode.name} before={mode.before} canAnswer={mode.canAnswer} whom={mode.whom} partTitle={partTitleOf} /> : <p className="text-xs text-base-content/65">Not reached in this run</p>}
-        </StepCard>
-        {branches(outcome ? exitTaken(outcome.status) : null)}
-      </>
+      <StepBox {...head} state={outcome ? (landed ? "target" : OF_TONE[outcomeWords(outcome, mode.whom).tone]) : undefined} dimmed={!outcome}>
+        {outcome ? <StepRun outcome={outcome} run={mode.run} name={mode.name} before={mode.before} canAnswer={mode.canAnswer} whom={mode.whom} partTitle={partTitleOf} /> : <p className="text-xs text-base-content/65">Not reached in this run</p>}
+      </StepBox>
     );
   }
 
-  if (mode.kind === "read") {
-    return (
-      <>
-        <StepCard {...head} note={stepNote(step, index)} state={landed ? "target" : marked?.state} badge={tag} aside={face} />
-        {branches()}
-      </>
-    );
-  }
+  if (mode.kind === "read") return <StepBox {...head} state={landed ? "target" : marked?.state} />;
 
   const { editor } = mode;
   const open = editor.open === step.id;
   const resets = editor.resets.filter((reset) => reset.id === step.id);
   // A step still being written is not told what it lacks; one left behind is, and one the server refused always.
-  const problem = mode.refused?.index === index ? mode.refused.message : open ? undefined : mode.problems.get(index);
-  const alone = !savesAsList(editor.draft) && step.kind === "command" ? { then: editor.draft.then, agent: ownName, onThen: (then: Then) => editor.set({ then }) } : null;
+  const problem = mode.refused?.index === index ? mode.refused.message : open ? undefined : (mode.problems.get(index) ?? (paths.rules.get(index) ?? []).map(lacks).find(Boolean));
+  const here = shared.inline?.key === step.id ? shared.inline.node : null;
+  const number = place === null ? `the side step “${titleOf(step)}”` : `step ${place + 1}`;
   return (
-    <>
-      <StepCard
-        {...head}
-        note={stepNote(step, index, alone?.then === "agentTurn" ? alone.agent : undefined)}
-        state={problem ? "failed" : open ? "open" : landed ? "target" : marked?.state}
-        className={cn(grip.held && "scale-[1.015] shadow-xl")}
-        onPress={() => editor.setOpen(open ? null : step.id)}
-        expanded={open}
-        leading={
-          steps.length > 1 ? (
-            <button {...grip.handle} className={cn("-ml-1.5 grid h-10 w-6 shrink-0 place-items-center rounded-lg text-base-content/65 outline-none hover:text-base-content focus-visible:ring-2 focus-visible:ring-secondary/50", grip.handle.className)}>
-              <GripVertical size={16} aria-hidden="true" />
-            </button>
-          ) : null
-        }
-        badge={tag}
-        aside={
+    <StepBox
+      {...head}
+      state={problem ? "lacking" : open ? "open" : landed ? "target" : marked?.state}
+      className={cn(grip?.held && "scale-[1.015] shadow-xl")}
+      onPress={() => editor.setOpen(open ? null : step.id)}
+      pressLabel={`${open ? "Close" : "Edit"} ${number}: ${titleOf(step)}`}
+      expanded={open}
+      hover={
+        grip && place !== null ? (
           <>
-            {face}
-            {/* Not on a phone, where the card's words are the button and the room is theirs. */}
-            <button type="button" className="btn btn-ghost btn-square btn-sm text-base-content/65 hover:text-base-content max-sm:hidden" aria-label={open ? `Close step ${index + 1}` : `Edit step ${index + 1}`} onClick={() => editor.setOpen(open ? null : step.id)}>
-              {open ? <X size={16} aria-hidden="true" /> : <Pencil size={15} aria-hidden="true" />}
-            </button>
-            <StepMenu index={index} grip={grip} full={steps.length >= STEPS_MAX} editor={editor} onRemove={mode.onRemove} />
+            {paths.line.length > 1 ? (
+              <button {...grip.handle} className={cn("grid size-8 place-items-center rounded-lg text-base-content/65 outline-none hover:text-base-content focus-visible:ring-2 focus-visible:ring-secondary/50", grip.handle.className)}>
+                <GripVertical size={16} aria-hidden="true" />
+              </button>
+            ) : null}
+            <StepMenu index={index} place={place} grip={grip} full={steps.length >= STEPS_MAX} editor={editor} onRemove={mode.onRemove} />
           </>
-        }
-      >
-        {problem || resets.length > 0 || open ? (
-          <div className="space-y-3">
-            {problem ? (
-              <p role="alert" className="text-sm font-medium text-error">
-                {problem}
-              </p>
-            ) : null}
-            <ResetNotes step={step} resets={resets} onForget={editor.forget} />
-            {open ? (
-              <StepEditor
-                steps={steps}
-                index={index}
-                own={own}
-                agents={mode.agents}
-                alone={alone}
-                titleOf={titleOf}
-                onStep={(next) => editor.setStep(index, next)}
-                onKind={(kind) => editor.setKind(index, kind)}
-                onExit={(exit, go) => editor.setExit(index, exit, go)}
-                onDone={() => editor.setOpen(null)}
-              />
-            ) : null}
-          </div>
-        ) : null}
-      </StepCard>
-      {branches()}
-    </>
+        ) : null
+      }
+    >
+      {problem || resets.length > 0 || here ? (
+        <div className="space-y-3">
+          {problem ? (
+            <p role="alert" className="text-sm font-medium text-error">
+              {problem}
+            </p>
+          ) : null}
+          <ResetNotes step={step} resets={resets} onForget={editor.forget} />
+          {here}
+        </div>
+      ) : null}
+    </StepBox>
+  );
+}
+
+/** A lane: the steps that run in a step's place, under the path's name, and the mark it ends in. */
+function Lane({ owner, rule, shared, onAdd }: { owner: number; rule: Extract<Rule, { kind: "lane" }>; shared: Shared; onAdd?: ((owner: number, exit: PathExit) => (button: HTMLButtonElement) => void) | undefined }) {
+  const { steps, mode, titleOf } = shared;
+  const step = steps[owner]!;
+  const went = (id: string) => (mode.kind === "run" ? mode.outcomes.get(id) : undefined);
+  const leftBy = went(step.id) ? exitTaken(went(step.id)!.status) : null;
+  const taken = leftBy === rule.exit;
+  const name = exitChip(step, rule.exit);
+  return (
+    <section data-lane={rule.exit} data-taken={taken ? "" : undefined} aria-label={`${name}: what runs in its place`} className="relative">
+      {/* The line from the step's box to its lane, where the lane stands at its side. */}
+      <span aria-hidden="true" className={cn("absolute top-8 -left-[4.5rem] w-[4.5rem] border-t-2 border-dashed max-xl:hidden", taken ? "border-success" : "border-secondary/40")} />
+      <p className={cn("text-xs font-bold max-xl:mb-1.5 xl:absolute xl:top-2.5 xl:-left-[4.5rem] xl:w-[4.5rem] xl:text-center", taken ? "text-success" : "text-secondary")}>{name}</p>
+      {rule.lane.map((at, n) => (
+        <div key={steps[at]!.id}>
+          {n > 0 ? <LaneLine taken={went(steps[rule.lane[n - 1]!]!.id)?.status === "done"} /> : null}
+          <Box index={at} place={null} side shared={shared} />
+          <Branches steps={steps} index={at} exits={chipExits(steps, at, shared.paths)} titleOf={titleOf} active={shared.active} onActive={shared.onActive} onShow={shared.onShow} {...(mode.kind === "run" ? { taken: went(steps[at]!.id) ? exitTaken(went(steps[at]!.id)!.status) : null } : {})} />
+        </div>
+      ))}
+      {onAdd ? (
+        <button
+          type="button"
+          aria-label={`Add a step to what runs ${name.charAt(0).toLowerCase()}${name.slice(1)}`}
+          className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-dashed border-base-content/25 bg-base-100 px-3 text-xs font-bold text-base-content/75 transition-colors hover:border-secondary/40 hover:text-secondary"
+          onClick={(event) => onAdd(owner, rule.exit)(event.currentTarget)}
+        >
+          <Plus size={13} strokeWidth={2.5} aria-hidden="true" /> Add a step
+        </button>
+      ) : null}
+      <LaneEnd ends={rule.ends === "stop" ? "stop" : "back"} title={rule.ends === "stop" ? undefined : titleOf(steps[rule.ends.back]!)} />
+    </section>
+  );
+}
+
+export function StepItem({
+  index,
+  place,
+  grip,
+  wide,
+  onLaneAdd,
+  ...shared
+}: Shared & {
+  /** Its place in the list, and on the main line as drawn. */
+  index: number;
+  place: number;
+  grip: Grip;
+  /** Some step of the canvas has a lane: every row is laid out with room for one at its side. */
+  wide: boolean;
+  /** A step added at a lane's end, from the button it was pressed on. None outside editing, or where the list is full. */
+  onLaneAdd?: ((owner: number, exit: PathExit) => (button: HTMLButtonElement) => void) | undefined;
+}) {
+  const { steps, paths, mode } = shared;
+  const lanes = (paths.rules.get(index) ?? []).filter((rule): rule is Extract<Rule, { kind: "lane" }> => rule.kind === "lane");
+  const outcome = mode.kind === "run" ? mode.outcomes.get(steps[index]!.id) : undefined;
+  return (
+    <div className={cn(wide ? "xl:grid xl:grid-cols-[minmax(0,21rem)_minmax(0,15rem)] xl:justify-center xl:gap-x-[4.5rem]" : "mx-auto w-full max-w-[21rem]")}>
+      <div className="flex min-w-0 flex-col">
+        <Box index={index} place={place} side={false} grip={grip} shared={shared} />
+        <Branches steps={steps} index={index} exits={chipExits(steps, index, paths)} titleOf={shared.titleOf} active={shared.active} onActive={shared.onActive} onShow={shared.onShow} {...(mode.kind === "run" ? { taken: outcome ? exitTaken(outcome.status) : null } : {})} />
+        {/* Beside a lane taller than its step, the main line runs on down to the next box. */}
+        {lanes.length > 0 ? <div aria-hidden="true" className="mx-auto w-0.5 flex-1 rounded-full bg-base-content/15 max-xl:hidden" /> : null}
+      </div>
+      {lanes.length > 0 ? (
+        <div className="space-y-4 max-xl:mt-2.5 max-xl:ml-6 max-xl:border-l-2 max-xl:border-dashed max-xl:border-secondary/30 max-xl:pl-3">
+          {lanes.map((rule) => (
+            <Lane key={rule.exit} owner={index} rule={rule} shared={shared} onAdd={onLaneAdd} />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

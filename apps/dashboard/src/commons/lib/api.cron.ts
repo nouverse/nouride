@@ -8,7 +8,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { AutomationSummary, CronRunEntry, JobInput, JobPatch, JobRunSummary, JobSummary, RunNowOutcome, WaitingStep, WebhookInput, WebhookSummary } from "@nouride/wire";
+import type { AutomationSummary, CronRunEntry, JobInput, JobPatch, JobRunSummary, JobSummary, RunNowOutcome, TriedStep, TryStepInput, WaitingStep, WebhookInput, WebhookSummary } from "@nouride/wire";
 
 export const cronApi = {
   /** What the scheduler has fired lately, across every job. */
@@ -62,6 +62,12 @@ export const cronApi = {
     post<{ job: JobSummary }>(`${control}/cron/${id}`, patch),
 
   cronDelete: (id: string) => request<{ ok: true; id: string }>(`${control}/cron/${id}`, { method: "DELETE" }),
+
+  /**
+   * A script tried alone, as it is written on the page, saved or not: run once for real, for that agent, on what it is
+   * given to read. Answered with what it printed or why it failed; nothing is kept as a run.
+   */
+  cronTry: (input: TryStepInput) => post<{ tried: TriedStep }>(`${control}/cron/try`, input),
 
   /** Whose an automation is, set by an admin: a person in People by their key, or `null` for nobody. */
   cronOwner: (id: string, person: string | null) => post<{ job: JobSummary }>(`${control}/cron/${id}/owner`, { person }),

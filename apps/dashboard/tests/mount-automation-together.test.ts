@@ -32,7 +32,7 @@ describe("several at the same time, written in its card", () => {
       // At two, neither can be removed: fewer is a step alone.
       seen.removable = parts(host).map((part) => !(part.querySelector('[aria-label^="Remove number"]') as HTMLButtonElement).disabled);
       type(parts(host)[0]!.querySelector("textarea") as HTMLTextAreaElement, "Read the news.");
-      tab(parts(host)[1]!, "Run a command").click();
+      tab(parts(host)[1]!, "Run a script").click();
       await eventually(() => parts(host)[1]!.querySelector("input.font-mono") !== null, 2_000, "the command's field");
       type(parts(host)[1]!.querySelector("input.font-mono") as HTMLInputElement, "ls reports");
       type(parts(host)[1]!.querySelector('input[placeholder="News"]') as HTMLInputElement, "Reports");
@@ -47,7 +47,7 @@ describe("several at the same time, written in its card", () => {
         (host.querySelector(`[aria-label="Remove number ${count + 1}"]`) as HTMLButtonElement).click();
         await eventually(() => parts(host).length === count, 2_000, `${count} left`);
       }
-      tab(parts(host)[2]!, "Run a command").click();
+      tab(parts(host)[2]!, "Run a script").click();
       await eventually(() => parts(host)[2]!.querySelector("input.font-mono") !== null, 2_000, "the third's command field");
       type(parts(host)[2]!.querySelector("input.font-mono") as HTMLInputElement, "date");
       seen.after = parts(host).length;
@@ -62,10 +62,10 @@ describe("several at the same time, written in its card", () => {
     });
     expect(seen.began).toBe(2);
     expect(seen.lacks).toContain("Step 5: Write what each of them does: what to ask, or the command to run.");
-    expect(seen.kinds).toEqual(["Ask an agent", "Run a command"]);
+    expect(seen.kinds).toEqual(["Ask an agent", "Run a script"]);
     expect(seen.removable).toEqual([false, false]);
     expect([seen.full, seen.after, seen.more]).toEqual([true, 3, true]);
-    expect(seen.title).toContain("Step 5 · 3 at the same time");
+    expect(seen.title).toStartWith("3 at the same time");
     const steps = (sent[0]?.body as { payload: { steps: AutomationStep[] } }).payload.steps;
     expect(steps.at(-1)).toEqual({
       id: "s5",

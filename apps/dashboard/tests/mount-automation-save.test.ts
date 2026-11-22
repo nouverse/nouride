@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { answer, buttons, dropdown, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
-import { STEPS, TWO_AGENTS, addStep, automation, barButton, detail, drawn, field, flowDrawn, labelled, ok, saveBar, stepCard } from "./automation-fixtures.ts";
+import { addStep, automation, barButton, detail, drawn, editStep, field, flowDrawn, labelled, ok, saveBar, stepCard, STEPS, TWO_AGENTS } from "./automation-fixtures.ts";
 import { eventually } from "./wait.ts";
 import { READS_OUTPUT } from "@/modules/automations/lib/draft";
 
@@ -34,12 +34,12 @@ describe("one thing, and a list", () => {
       card = stepCard(host, "s1").textContent ?? "";
       // One step has nothing to be moved among: no handle.
       expect(host.querySelector('[aria-label^="Move step"]')).toBeNull();
-      labelled(host, "Edit step 1").click();
+      editStep(host, 1).click();
       await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "its fields");
       type(field(host, "What to ask"), "Sum up the news.");
       sent = await save(host);
     });
-    expect(card).toContain("Step 1 · Nouva works on itSum up the mail.");
+    expect(card).toBe("Nouva works on itSum up the mail.");
     expect(sent).toEqual([{ path: "/cron/cron_e", body: { payload: { kind: "agentTurn", message: "Sum up the news." } } }]);
   });
 
@@ -49,7 +49,7 @@ describe("one thing, and a list", () => {
     const seen = { then: "", note: "", order: [] as string[], agent: "", notes: "" };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host, 1);
-      labelled(host, "Edit step 1").click();
+      editStep(host, 1).click();
       await eventually(() => dropdown(host, "After it runs").button() !== undefined, 2_000, "what its output is worth");
       seen.then = dropdown(host, "After it runs").holds() ?? "";
       seen.note = stepCard(host, "s1").textContent ?? "";
@@ -87,12 +87,13 @@ describe("one thing, and a list", () => {
     let sent: { path: string; body: unknown }[] = [];
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      ([...host.querySelectorAll('[aria-label="Start"] button')].find((button) => button.textContent === "Change") as HTMLElement).click();
+      // How it starts: in the fields the canvas's first box opens.
+      labelled(host, "Change how it starts").click();
       await eventually(() => host.querySelector('[role="radiogroup"]') !== null, 2_000, "the start's choices");
       // Made as it is: a webhook is chosen only when an automation is made.
       expect([...host.querySelectorAll('[role="radio"]')].map((choice) => choice.querySelector("span")?.textContent)).toEqual(["Scheduled", "Manual"]);
       ([...host.querySelectorAll<HTMLElement>('[role="radio"]')][1]!).click();
-      await eventually(() => host.querySelector('[aria-label="Start"]')?.textContent?.includes("when you press Run now") === true, 2_000, "by hand");
+      await eventually(() => host.querySelector('[aria-label="Start"]')?.textContent?.startsWith("When you press Run now") === true, 2_000, "by hand");
       sent = await save(host);
     });
     expect(sent).toEqual([{ path: "/cron/cron_e", body: { manual: true } }]);
@@ -101,12 +102,12 @@ describe("one thing, and a list", () => {
     answer({ [PAGE]: detail(hook) });
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
-      const start = host.querySelector('[aria-label="Start"]')!;
+      labelled(host, "Change how it starts").click();
+      await eventually(() => host.querySelector("main [data-start-fields]")?.textContent?.includes("A webhook stays a webhook") === true, 2_000, "why it stays");
+      const start = host.querySelector("main [data-start-fields]")!;
       // Its address, to copy; whether a call can arrive; and no way to make it anything but a webhook.
       expect(start.textContent).toContain("https://box.example.com/hooks/t");
       expect(start.textContent).toContain("Reachable from the internet");
-      ([...start.querySelectorAll("button")].find((button) => button.textContent === "Change") as HTMLElement).click();
-      await eventually(() => start.textContent?.includes("A webhook stays a webhook") === true, 2_000, "why it stays");
       expect(start.querySelector('[role="radiogroup"]')).toBeNull();
     });
   });
@@ -120,16 +121,16 @@ describe("a refusal", () => {
       await flowDrawn(host);
       type(host.querySelector('input[aria-label="Name"]') as HTMLInputElement, "Shop watch");
       await save(host, "Save", { "/cron/cron_e": { status: 400, body: { error: "step 2: an agent turn needs a message.", plain: "Nothing was saved. Check the steps, and try again." } } });
-      await eventually(() => stepCard(host, "find").dataset.state === "failed", 2_000, "the step marked");
+      await eventually(() => stepCard(host, "find").dataset.state === "lacking", 2_000, "the step marked");
       seen.state = stepCard(host, "find").dataset.state ?? "";
       seen.card = stepCard(host, "find").querySelector('[role="alert"]')?.textContent ?? "";
       seen.bar = saveBar(host)?.querySelector('[role="alert"] p')?.textContent ?? "";
       seen.details = saveBar(host)?.querySelector("details")?.textContent ?? "";
       seen.name = (host.querySelector('input[aria-label="Name"]') as HTMLInputElement).value;
       // No other step is marked.
-      expect(STEPS.filter((step) => stepCard(host, step.id).dataset.state === "failed").map((step) => step.id)).toEqual(["find"]);
+      expect(STEPS.filter((step) => stepCard(host, step.id).dataset.state === "lacking").map((step) => step.id)).toEqual(["find"]);
     });
-    expect(seen.state).toBe("failed");
+    expect(seen.state).toBe("lacking");
     expect(seen.card).toBe("Nothing was saved. Check the steps, and try again.");
     expect(seen.bar).toBe("Nothing was saved. Check the steps, and try again.");
     // The route's own words, which name the step, are for whoever runs the server.
@@ -150,6 +151,9 @@ describe("a new automation", () => {
     kinds().find((button) => button.querySelector("span span")?.textContent === "Ask an agent")!.click();
     await eventually(() => host.textContent?.includes("What to ask") === true, 2_000, "the step's fields");
     type(field(host, "What to ask"), "Sum up the mail.");
+    // Where its results go: in the fields the canvas's last box opens.
+    labelled(host, "Change where its results go").click();
+    await eventually(() => host.querySelector('input[placeholder="Pick a chat, or type its id"]') !== null, 2_000, "the chat's field");
     type(host.querySelector('input[placeholder="Pick a chat, or type its id"]') as HTMLInputElement, "-100200");
   }
 
@@ -184,6 +188,8 @@ describe("a new automation", () => {
     for (const start of ["Manual", "Webhook"]) {
       await renderPage("/automations/new", async (host) => {
         await written(host);
+        labelled(host, "Change how it starts").click();
+        await eventually(() => host.querySelector("main [data-start-fields] [role=\"radiogroup\"]") !== null, 2_000, "the start's choices");
         ([...host.querySelectorAll<HTMLElement>('[role="radio"]')].find((choice) => choice.querySelector("span")?.textContent === start) as HTMLElement).click();
         await eventually(() => host.querySelector('[role="radio"][aria-checked="true"] span')?.textContent === start, 2_000, `${start} chosen`);
         sent.push(...(await save(host, "Save automation", made)));

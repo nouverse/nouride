@@ -17,7 +17,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { StepExit } from "@nouride/wire";
 import { blankDraft, createBody, deliveryOf, patchBody, payloadOf, settled, type Draft } from "@/modules/automations/lib/draft";
-import { KINDS, argvOf, blankStep, insertStep, moveStep, removeStep, setExit, type ExitName, type Step, type StepKind } from "@/modules/automations/lib/steps";
+import { addToLane, choosePath, insertOnLine, moveOnLine, removeDrawn, setLaneEnd, type Choice, type PathExit } from "@/modules/automations/lib/paths";
+import { KINDS, argvOf, blankStep, newStepId, replaceStep, setExit, type ExitName, type Step, type StepKind } from "@/modules/automations/lib/steps";
 
 const FIXTURES = join(import.meta.dir, "fixtures", "automation-saves.json");
 const TZ = "Asia/Jakarta";
@@ -35,10 +36,25 @@ interface Save {
 const fresh = (over: Partial<Draft>): Draft => ({ ...blankDraft("nouva", "telegram:nouva", TZ), chatId: "8142", ...over });
 /** The editor's own operations, each ended as the editor ends a change (`use-editor.ts`). */
 const add = (draft: Draft, kind: StepKind, written: Record<string, unknown>): Draft =>
-  settled({ ...draft, steps: insertStep(draft.steps, draft.steps.length, { ...blankStep(kind, draft.steps), ...written } as Step).steps });
+  settled({ ...draft, steps: insertOnLine(draft.steps, null, { ...blankStep(kind, draft.steps), ...written } as Step) });
+/** A one-line command, as an automation made before scripts holds one and the page still saves it: a new one from the page is a script. */
+const line = (draft: Draft, typed: string, written: Record<string, unknown> = {}): Draft =>
+  settled({ ...draft, steps: insertOnLine(draft.steps, null, { id: newStepId(draft.steps), kind: "command", argv: argvOf(typed), ...written } as Step) });
 const path = (draft: Draft, index: number, exit: ExitName, go: StepExit): Draft => settled({ ...draft, steps: setExit(draft.steps, index, exit, go) });
-const move = (draft: Draft, from: number, to: number): Draft => settled({ ...draft, steps: moveStep(draft.steps, from, to).steps });
-const remove = (draft: Draft, index: number): Draft => settled({ ...draft, steps: removeStep(draft.steps, index).steps });
+const move = (draft: Draft, from: number, to: number): Draft => settled({ ...draft, steps: moveOnLine(draft.steps, from, to) });
+const remove = (draft: Draft, index: number): Draft => settled({ ...draft, steps: removeDrawn(draft.steps, index) });
+/** One of a step's paths given an answer, and what the page then has written into the step it made. */
+const choose = (draft: Draft, index: number, exit: PathExit, choice: Exclude<Choice, "jump">, written: Record<string, unknown> = {}): Draft => {
+  const chosen = choosePath(draft.steps, index, exit, choice);
+  const made = chosen.steps.findIndex((step) => !draft.steps.some((was) => was.id === step.id));
+  return settled({ ...draft, steps: made < 0 ? chosen.steps : replaceStep(chosen.steps, made, { ...chosen.steps[made]!, ...written } as Step) });
+};
+const laneStep = (draft: Draft, owner: number, exit: PathExit, kind: StepKind, written: Record<string, unknown>): Draft => {
+  const added = addToLane(draft.steps, owner, exit, kind);
+  const made = added.steps.findIndex((step) => step.id === added.opened);
+  return settled({ ...draft, steps: replaceStep(added.steps, made, { ...added.steps[made]!, ...written } as Step) });
+};
+const laneEnds = (draft: Draft, owner: number, exit: PathExit, ends: "stop" | "back"): Draft => settled({ ...draft, steps: setLaneEnd(draft.steps, owner, exit, ends) });
 
 const kept = (draft: Draft): Save["keeps"] => ({
   name: draft.name.trim(),
@@ -57,7 +73,7 @@ const changed = (name: string, of: Draft, now: Draft): Save => {
 function saves(): Save[] {
   // Every kind of step, with paths of their own, on a timer.
   let shop = fresh({ name: "Shop health check" });
-  shop = add(shop, "command", { argv: argvOf("curl -sf https://shop.example.com/health") });
+  shop = line(shop, "curl -sf https://shop.example.com/health");
   shop = add(shop, "agentTurn", { name: "Find out why", message: "The shop's health check failed. Find out why and say what you found.", agentId: "nix" });
   shop = add(shop, "mission", { name: "Bring it back", goal: "Bring the shop back up and confirm that it answers.", checks: ["curl -sf https://shop.example.com/health"] });
   shop = add(shop, "approval", { ask: "Post what was found to the group?", timeoutMs: 3_600_000 });
@@ -72,7 +88,7 @@ function saves(): Save[] {
   shop = path(shop, 4, "then", "end");
 
   // One thing, started by hand: a command whose output its agent reads.
-  const backup = add(fresh({ name: "Backup check", start: "manual", then: "agentTurn" }), "command", { argv: argvOf("ls backups | tail -1") });
+  const backup = line(fresh({ name: "Backup check", start: "manual", then: "agentTurn" }), "ls backups | tail -1");
 
   // Started by a webhook: two steps.
   let order = add(fresh({ name: "New order", start: "webhook" }), "agentTurn", { message: "A new order came in. Read what was sent and say who ordered what." });
@@ -98,6 +114,33 @@ function saves(): Save[] {
   round = add(round, "agentTurn", { message: "Write the morning note from what they said." });
   round = path(round, 0, "whenFailed", "next");
 
+  // A script as a step, and "Ask me first" where it fails: the wait stands right after it, passed over when it is done.
+  let digest = fresh({ name: "Morning digest", trigger: { ...fresh({}).trigger, mode: "daily", time: "07:00", days: [1, 2, 3, 4, 5] } });
+  digest = add(digest, "agentTurn", { message: "Read my unread email from the last day and sum it up in four points." });
+  digest = add(digest, "command", { name: "Save it", argv: ["python3"], script: { text: "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n", about: "Saves the summary as today's page." } });
+  digest = add(digest, "systemEvent", { text: "The morning digest is saved." });
+  digest = choose(digest, 1, "whenFailed", "ask", { ask: "Saving it failed. Send the digest anyway?" });
+
+  // One that watches: a script marked to go on only when what it prints changes, other steps in its place where it
+  // fails, silence that goes on, told once and stopped by itself after six hours.
+  let watch = fresh({ name: "Backup watch", trigger: { ...fresh({}).trigger, mode: "interval", everyCount: "30", everyUnit: "m" }, delivery: { mode: "announce", once: true, lasts: 6 * 3_600_000 } });
+  watch = add(watch, "command", { argv: ["sh"], script: { text: "test -f backups/last.ok && cat backups/last.ok\n", about: "Reads the mark the backup leaves when it is done." }, onlyChanged: true });
+  watch = add(watch, "systemEvent", { text: "The backup is in place." });
+  watch = choose(watch, 0, "whenFailed", "lane", { message: "Read the backup's log and say what went wrong." });
+  watch = laneStep(watch, 0, "whenFailed", "systemEvent", { text: "The backup needs a look. What was found is above." });
+  watch = laneEnds(watch, 0, "whenFailed", "stop");
+  watch = choose(watch, 0, "whenEmpty", "goOn");
+
+  // A script as the one thing an automation does, started by hand.
+  const room = add(fresh({ name: "Disk room", start: "manual" }), "command", { argv: ["sh"], script: { text: "df -h / | tail -1\n", about: "Says how full the disk is." } });
+
+  // Its lane goes back into the line, the failure of its last step goes on, and it lasts a day.
+  let watchNow = laneEnds(watch, 0, "whenFailed", "back");
+  watchNow = { ...watchNow, delivery: { mode: "announce", once: true, lasts: 86_400_000 } };
+
+  // The question taken off again: the wait goes with it.
+  const digestNow = choose(digest, 1, "whenFailed", "goOn");
+
   // The list changed: renamed, a step moved above the wait, the step two paths led to deleted, and another time to start.
   let shopNow: Draft = { ...shop, name: "Shop check", trigger: { ...shop.trigger, mode: "daily", time: "07:00", days: [] } };
   shopNow = move(shopNow, 4, 3);
@@ -116,9 +159,14 @@ function saves(): Save[] {
     made(brief),
     made(tidy),
     made(round),
+    made(digest),
+    made(watch),
+    made(room),
     changed("Shop health check, changed", shop, shopNow),
     changed("Backup check, with a second step", backup, backupNow),
     changed("New order, reporting elsewhere and quiet", order, orderNow),
+    changed("Backup watch, back into the line and for a day", watch, watchNow),
+    changed("Morning digest, going on without asking", digest, digestNow),
   ];
 }
 
@@ -142,10 +190,21 @@ test("the saves are of every kind of step, every way a path can go, each way to 
   expect(goes.some((go) => typeof go === "object")).toBe(true);
   expect([...new Set(all.map((save) => save.keeps.start))].sort()).toEqual(["manual", "scheduled", "webhook"]);
   expect([...new Set(payloads.map((payload) => payload.kind))].sort()).toEqual(["agentTurn", "command", "steps", "systemEvent"]);
+  // What the canvas writes of its own: a script in a list and as the one thing, a question, a lane that stops and
+  // one that goes back, a failure that goes on, a step marked to watch, and a time it lasts.
+  const named = (name: string) => (all.find((save) => save.name === name)!.keeps.payload as { steps: Step[] }).steps;
+  expect(steps.filter((step) => step.kind === "command" && step.script).length).toBeGreaterThanOrEqual(2);
+  expect((all.find((save) => save.name === "Disk room")!.keeps.payload as { script?: { about: string } }).script?.about).toBe("Says how full the disk is.");
+  expect(named("Morning digest")).toMatchObject([{ id: "s1" }, { id: "s2", then: { to: "s3" }, whenFailed: { to: "s4" } }, { id: "s4", kind: "approval", then: { to: "s3" } }, { id: "s3" }]);
+  expect(named("Morning digest, going on without asking").map((step) => [step.id, step.whenFailed])).toEqual([["s1", undefined], ["s2", "next"], ["s3", undefined]]);
+  expect(named("Backup watch")).toMatchObject([{ id: "s1", onlyChanged: true, then: { to: "s2" }, whenFailed: { to: "s3" }, whenEmpty: { to: "s2" } }, { id: "s3" }, { id: "s4", then: "end" }, { id: "s2" }]);
+  expect(named("Backup watch, back into the line and for a day").map((step) => [step.id, step.then])).toEqual([["s1", { to: "s2" }], ["s3", undefined], ["s4", { to: "s2" }], ["s2", undefined]]);
+  expect(all.find((save) => save.name === "Backup watch")!.keeps.delivery).toEqual({ mode: "announce", once: true, lasts: 21_600_000 });
+  expect(all.find((save) => save.name === "Backup watch, back into the line and for a day")!.body).toMatchObject({ delivery: { mode: "announce", once: true, lasts: 86_400_000 } });
   expect(all.filter((save) => "change" in save.send).length).toBeGreaterThanOrEqual(3);
   // A change sends what changed: the renamed, reordered list sends its name, its steps and its time, and no chat.
   expect(Object.keys(all.find((save) => save.name === "Shop health check, changed")!.body as object).sort()).toEqual(["cron", "name", "payload", "tz"]);
   // A path that led to a deleted step is gone from what is sent, not sent pointing nowhere.
-  const shopNow = payloads[5]!.steps!;
+  const shopNow = (all.find((save) => save.name === "Shop health check, changed")!.keeps.payload as { steps: Step[] }).steps;
   expect(shopNow.flatMap((step) => [step.then, step.whenFailed, step.whenEmpty]).filter((go) => typeof go === "object")).toEqual([]);
 });
