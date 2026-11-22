@@ -30,6 +30,18 @@ export async function stepsFromFile(path: string): Promise<unknown[]> {
   return steps;
 }
 
+/**
+ * A script a job keeps, read from a file: its text as it is. What runs it and what it does are said beside it, on the
+ * command line, and the daemon reads and refuses all three, so nothing about a script is decided here either.
+ */
+export async function scriptFromFile(path: string): Promise<string> {
+  try {
+    return new TextDecoder().decode(await readFileBytes(path));
+  } catch {
+    usageError(`cannot read ${path}`, "--script takes a file holding the script's text");
+  }
+}
+
 const MARK: Record<StepOutcome["status"], string> = {
   done: `${GREEN}✓${RESET}`,
   failed: `${RED}✗${RESET}`,

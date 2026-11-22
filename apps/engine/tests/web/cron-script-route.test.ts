@@ -131,6 +131,22 @@ describe("how long a job lasts, through the control API", () => {
     expect(delivery.endsAt).toBeGreaterThanOrEqual(before + 3_600_000);
   });
 
+  test("a length as a person types one, which the command line sends, is read the same; words that are no length are refused, saying what one is", async () => {
+    const before = Date.now();
+    const made = await post("/cron", body([script("echo")], { delivery: { mode: "announce", lasts: "6h" } }));
+    expect(made.status).toBe(200);
+    const delivery = store.list()[0]!.delivery;
+    expect(delivery.lasts).toBe(21_600_000);
+    expect(delivery.endsAt).toBeGreaterThanOrEqual(before + 21_600_000);
+    // A bare number is five of something, and no unit is the right guess.
+    for (const lasts of ["soon", "5", ""]) {
+      const refused = await post("/cron", body([script("echo")], { name: `for ${lasts}`, delivery: { mode: "announce", lasts } }));
+      expect({ lasts, status: refused.status }).toEqual({ lasts, status: 400 });
+      expect((await said(refused)).error).toContain('how long a job lasts is a length of time: "6h", "30d".');
+    }
+    expect(store.list()).toHaveLength(1);
+  });
+
   test("a length a job on no clock cannot have is refused as when it runs", async () => {
     const refused = await post("/cron", { agentId: "nouva", name: "by hand", manual: true, payload: { kind: "systemEvent", text: "hi" }, target: { gatewayId: "telegram:nouva", chatId: "1" }, delivery: { mode: "announce", lasts: 3_600_000 } });
     expect(refused.status).toBe(400);

@@ -11,7 +11,7 @@ import type { WebhookSummary } from "@nouride/wire";
 import { attachmentTypeFor } from "@nouride/gateways";
 import type { JobInput } from "@/modules/cron/cron.store.ts";
 import { CronValidationError, type CronField } from "@/modules/cron/validate.ts";
-import { parseScheduleInput } from "@/modules/cron/parse.ts";
+import { parseDuration, parseScheduleInput } from "@/modules/cron/parse.ts";
 import { commandFrom, stepsFrom } from "@/modules/cron/step-input.ts";
 import { webhookUrl } from "@/modules/web/hooks.ts";
 import { hookReach } from "@/modules/web/hook-reach.ts";
@@ -127,8 +127,10 @@ function cronDeliveryFrom(raw: unknown): JobDelivery | undefined {
     ...(typeof delivery.webhookUrl === "string" ? { webhookUrl: delivery.webhookUrl } : {}),
     ...(delivery.once === true ? { once: true as const } : {}),
     ...(delivery.atOnce === true ? { atOnce: true as const } : {}),
-    // How long it lasts, in milliseconds. When that ends is the store's to write, and is not read here.
-    ...(typeof delivery.lasts === "number" ? { lasts: delivery.lasts } : {}),
+    // How long it lasts: milliseconds as the dashboard sends it, or a length as a person types one ("6h"), which is
+    // what the command line sends. One that is no length is kept as no number, for the refusal that says what one is.
+    // When that ends is the store's to write, and is not read here.
+    ...(typeof delivery.lasts === "number" ? { lasts: delivery.lasts } : typeof delivery.lasts === "string" ? { lasts: parseDuration(delivery.lasts) ?? Number.NaN } : {}),
   };
 }
 
