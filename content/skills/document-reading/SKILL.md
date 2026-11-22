@@ -84,8 +84,8 @@ If the document is on a machine reached over ssh (often a Windows laptop with no
 there. **Copy it here once, work on the copy, copy back once:**
 
 ```sh
-scp 'laptop:C:/Users/Ani/Documents/Laporan.xlsx' "$TMPDIR/Laporan.xlsx"   # forward slashes work on Windows OpenSSH
-python3 DOC inspect "$TMPDIR/Laporan.xlsx"
+scp 'laptop:C:/Users/Sam/Documents/Report.xlsx' "$TMPDIR/Report.xlsx"   # forward slashes work on Windows OpenSSH
+python3 DOC inspect "$TMPDIR/Report.xlsx"
 ```
 
 To put an edited copy back, see the `document-authoring` skill: it checks the file is not open first, and compares

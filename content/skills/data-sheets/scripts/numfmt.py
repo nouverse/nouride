@@ -233,7 +233,7 @@ def lookup(locales: dict, tag: str) -> dict | None:
 
 
 def unit_to_currency(unit: str) -> str | None:
-    """--unit Rp -> IDR. None when the unit is not a currency (kg, %, orang) or is ambiguous ($, ¥)."""
+    """--unit Rp -> IDR. None when the unit is not a currency (kg, %, people) or is ambiguous ($, ¥)."""
     u = (unit or "").strip().lower()
     if re.match(r"^[a-z]{3}$", u) and u.upper() in BUILD_CURRENCIES:
         return u.upper()

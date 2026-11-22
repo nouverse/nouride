@@ -47,7 +47,7 @@ import { Cooldowns } from "./cooldown.ts";
 import { TUNING, type Tuning } from "./tuning.ts";
 import { LibraryReview } from "./review.ts";
 import type { ReviewStore } from "./reviews.store.ts";
-import type { CandidateStore, SkillCandidate } from "./candidates.store.ts";
+import { writtenNextSighting, type CandidateStore, type SkillCandidate } from "./candidates.store.ts";
 import { refusalOf, writeNow } from "./gates.ts";
 import type { DraftEdits, ObservedTurn, SkillDraft, Trigger } from "./types.ts";
 
@@ -243,11 +243,12 @@ export class ReflectionEngine {
   }
 
   /**
-   * The classes of work seen once and held, newest first: what a person is shown when they ask why nothing was
-   * learned. `kept`: the conversation it was seen in is still there, so its skill can be written now.
+   * The classes of work seen and held, newest first: what a person is shown when they ask why nothing was learned.
+   * `kept`: the conversation it was seen in is still there, so its skill can be written now. `next`: its skill is
+   * written the next time it is seen, wherever and whenever that is.
    */
-  candidates(): (SkillCandidate & { kept: boolean })[] {
-    return (this.deps.candidates?.list() ?? []).map((held) => ({ ...held, kept: this.deps.conversationKept?.(held.sessionId) ?? false }));
+  candidates(): (SkillCandidate & { kept: boolean; next: boolean })[] {
+    return (this.deps.candidates?.list() ?? []).map((held) => ({ ...held, kept: this.deps.conversationKept?.(held.sessionId) ?? false, next: writtenNextSighting(held) }));
   }
 
   /** What learning would do with a conversation, with nothing kept (`try-out.ts`). */

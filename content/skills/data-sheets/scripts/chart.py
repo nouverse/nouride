@@ -24,7 +24,7 @@ Numbers are written for --locale (a BCP-47 tag: en-US, en-GB, en-IN, id-ID, de-D
 and money for --currency (an ISO 4217 code: USD, EUR, IDR, INR, JPY ...): separators, grouping, the currency's symbol,
 its side and its decimals, and the short forms on the axis (1.25M, 1,25 jt, 1,25 Mio., 125万, 12.5L) all follow
 CLDR - from Babel when installed, else from numfmt_cldr.json beside this file. --unit is for what is not money: "%",
-"kg", "orang". Without --locale the numbers are en-US, and the output says so.
+"kg", "people". Without --locale the numbers are en-US, and the output says so.
 
 --y with several columns, or --group, makes one series each: grouped bars or several lines (at most 6).
 Bars are sorted by value, largest first, unless the categories have an order of their own (dates, numbers, months,
@@ -640,7 +640,7 @@ def main(argv) -> int:
         ap.add_argument("--xlabel")
         ap.add_argument("--ylabel")
         ap.add_argument("--currency", help="ISO 4217 code of the money plotted: IDR, USD, EUR, GBP, JPY, INR, CHF ...")
-        ap.add_argument("--unit", help='what is not money: %%, kg, "orang" ... - on the axis and every value label')
+        ap.add_argument("--unit", help='what is not money: %%, kg, "people" ... - on the axis and every value label')
         ap.add_argument("--locale", help="the reader's locale, BCP-47: en-US, en-GB, en-IN, id-ID, de-DE, fr-FR, ja-JP ... (default en-US)")
         ap.add_argument("--highlight", help="one category drawn in colour, the rest grey")
         ap.add_argument("--label", help="scatter: a column to write beside each point (25 points at most)")

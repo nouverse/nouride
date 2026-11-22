@@ -237,7 +237,15 @@ function gather(tag: string, mode: Mode): PublishFacts {
       mainFastForwards: git(["merge-base", "--is-ancestor", "origin/main", pin], cwd).ok,
     };
   });
-  const runs = run("gh", ["api", `repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${head}&per_page=20`, "--jq", "[.workflow_runs[].conclusion] | join(\" \")"]);
+  // One still running is waited for, not refused: asked the moment a push's run was ending, the release was refused
+  // for a run that was green seconds later, and the person told to wait and ask again.
+  const ciRuns = () => run("gh", ["api", `repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${head}&per_page=20`, "--jq", '[.workflow_runs[] | (.status + ":" + (.conclusion // ""))] | join(" ")']);
+  let runs = ciRuns();
+  for (let waited = 0; ciOnHead(runs.ok ? runs.out : "") === "running" && waited < CI_WAIT_MS; waited += CI_LOOK_MS) {
+    if (waited === 0) console.log(`ci.yml is still running on ${head.slice(0, 8)}: waiting for it`);
+    MACHINE.sleep(CI_LOOK_MS);
+    runs = ciRuns();
+  }
   const listed = run("curl", ["-fsS", "-H", "accept: application/vnd.github+json", "https://api.github.com/repos/nouverse/nouride/releases?per_page=30"]);
   const page: MirrorEntry[] = listed.ok
     ? (JSON.parse(listed.out) as { tag_name: string; draft?: boolean; prerelease?: boolean }[])
@@ -256,10 +264,25 @@ function gather(tag: string, mode: Mode): PublishFacts {
     pushedHead: remote.ok ? remote.out : null,
     pins,
     mainFastForwards: git(["merge-base", "--is-ancestor", "origin/main", head]).ok,
-    ciGreen: runs.ok && runs.out.split(" ").includes("success"),
+    ciGreen: runs.ok && ciOnHead(runs.out) === "green",
     stranded: listed.ok ? strandedFloors(page) : ["the mirror's page could not be read"],
     tagExists: git(["rev-parse", "--verify", "-q", `refs/tags/${tag}`]).ok || git(["ls-remote", "--exit-code", "origin", `refs/tags/${tag}`]).ok,
   };
+}
+
+/** How long a run of `ci.yml` still going on the release's commit is waited for, and how often it is asked. */
+const CI_WAIT_MS = 40 * 60_000;
+const CI_LOOK_MS = 30_000;
+
+/**
+ * `ci.yml` on a commit, from its runs as `status:conclusion` words (`completed:success in_progress:`): green once one
+ * passed, running while none has and one has no outcome yet, none where every one has an outcome and none is a pass,
+ * or there is none. A run that says it completed and names no outcome yet is not over. Pure.
+ */
+export function ciOnHead(runs: string): "green" | "running" | "none" {
+  const each = runs.trim().split(/\s+/).filter(Boolean).map((word) => word.split(":"));
+  if (each.some(([status, conclusion]) => status === "completed" && conclusion === "success")) return "green";
+  return each.some(([status, conclusion]) => status !== "completed" || !conclusion) ? "running" : "none";
 }
 
 /**

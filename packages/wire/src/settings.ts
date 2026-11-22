@@ -12,6 +12,8 @@ export interface GatewayInstance {
   agent?: string;
   /** Live connection state, or null for an instance added since the last restart. */
   status: string | null;
+  /** What it waits on while it is not connected, where that is known: the reason as a sentence, and when the platform said to come back. */
+  waiting?: { reason: string; since: number; until?: number };
   hasCredential: boolean;
   sessionDir?: string;
   /** Per-connection override for `[agents] group_context_messages`. Absent means it inherits. */

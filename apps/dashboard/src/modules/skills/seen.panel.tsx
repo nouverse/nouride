@@ -1,10 +1,11 @@
 /**
  * What skill learning holds and what it did lately: the answer to "why did it learn nothing".
  *
- * A new kind of work is held the first time it is seen and written as a skill when it comes back. Until this panel a
- * held one was a row nobody could see, and a look that wrote nothing left a line in a log: the page showed an empty
- * queue, which reads as a feature that is off. Here each held kind of work is named, with how often it was seen, and
- * can be written now or forgotten; under it, the last things learning did or decided not to.
+ * A new kind of work is held the first time it is seen and written as a skill when it comes back, or the third time
+ * it is seen. Until this panel a held one was a row nobody could see, and a look that wrote nothing left a line in a
+ * log: the page showed an empty queue, which reads as a feature that is off. Here each held kind of work is named,
+ * with how often it was seen and whether the next sighting writes it, and can be written now or forgotten; under
+ * it, the last things learning did or decided not to.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,12 +24,14 @@ const asWords = (name: string): string => name.replace(/-/g, " ").replace(/^./, 
 export function eventSaid(event: LearningEvent): string {
   const skill = event.skill ? asWords(event.skill) : "";
   const why = event.why ? `: ${event.why}` : "";
-  if (event.kind === "nothing") return `Looked, and found nothing to write down${why}`;
-  if (event.kind === "held") return `Saw a new kind of work once, and is waiting for it to come back: ${skill}`;
-  if (event.kind === "refused") return `Wrote a draft for ${skill || "a skill"} and it was not kept${why}`;
-  if (event.kind === "drafted") return `Wrote a draft, waiting on you: ${skill}`;
-  if (event.kind === "written") return `Added a skill: ${skill}`;
-  return `Improved a skill: ${skill}`;
+  // The same thing done again is one line: how often, after what it was.
+  const often = event.times && event.times > 1 ? ` (${event.times} times)` : "";
+  if (event.kind === "nothing") return `Looked, and found nothing to write down${why}${often}`;
+  if (event.kind === "held") return `Saw a new kind of work, not a skill yet: ${skill}${often}`;
+  if (event.kind === "refused") return `Wrote a draft for ${skill || "a skill"} and it was not kept${why}${often}`;
+  if (event.kind === "drafted") return `Wrote a draft, waiting on you: ${skill}${often}`;
+  if (event.kind === "written") return `Added a skill: ${skill}${often}`;
+  return `Improved a skill: ${skill}${often}`;
 }
 
 export function SeenPanel({ editable, agentName }: { editable: boolean; agentName: (id: string) => string }) {
@@ -40,8 +43,8 @@ export function SeenPanel({ editable, agentName }: { editable: boolean; agentNam
 
   return (
     <ListCard
-      title={held.length === 0 ? "Seen once, not a skill yet" : `${held.length} seen once, not a skill yet`}
-      description="A new kind of work becomes a skill when it comes back: in another conversation, or in the same chat after a few hours. You can have one written now."
+      title={held.length === 0 ? "Seen, not a skill yet" : `${held.length} seen, not a skill yet`}
+      description="A new kind of work becomes a skill when it comes back: in another conversation, in the same chat after a few hours, or the third time it is seen. You can have one written now."
     >
       <ErrorNote error={seen.error} />
       {held.length === 0 ? (
@@ -96,6 +99,7 @@ function SeenRow({ work, editable, agentName }: { work: SeenWork; editable: bool
           <p className="mt-1 text-xs text-base-content/65">
             {agentName(work.agentId)} · seen {work.sightings === 1 ? "once" : `${work.sightings} times`} · last {ago(work.lastSeenAt)}
           </p>
+          {work.writtenNext ? <p className="mt-1 text-xs text-base-content/65">It becomes a skill the next time this work is seen.</p> : null}
           {!work.canWrite ? (
             <p className="mt-1 text-xs text-base-content/65">The conversation it was seen in is gone. It is written when the work comes back.</p>
           ) : null}

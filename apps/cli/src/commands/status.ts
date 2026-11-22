@@ -7,6 +7,8 @@ export async function status(client: Client): Promise<void> {
   say(`  ${DIM}config${RESET}   ${s.configSource ?? "built-in defaults"}`);
   say(`  ${DIM}agents${RESET}   ${s.agents.filter((a) => a.state === "running" && a.enabled).length} running / ${s.agents.length} loaded`);
   say(`  ${DIM}gateways${RESET} ${s.gateways.map((g) => `${g.id}:${g.status}`).join(", ") || "none"}`);
+  // One that is not up yet and said why: "connecting" alone reads as hung.
+  for (const waiting of s.gateways.filter((g) => g.waiting)) say(`  ${YELLOW}waiting${RESET}  ${waiting.id}: ${waiting.waiting}`);
   say(`  ${DIM}queue${RESET}    ${s.queue.running} running, ${s.queue.waiting} waiting`);
   if (s.pendingApprovals > 0) say(`  ${YELLOW}approvals${RESET} ${s.pendingApprovals} waiting`);
   if (s.failures.length > 0) say(`  ${RED}failed${RESET}   ${s.failures.map((f) => f.id).join(", ")}`);

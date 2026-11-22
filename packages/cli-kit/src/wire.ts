@@ -85,7 +85,7 @@ export interface StatusResponse {
   }[];
   failures: { id: string; error: string }[];
   providers: { name: string; kind: string; baseUrl: string; hasCredential: boolean }[];
-  gateways: { id: string; platform: string; status: string }[];
+  gateways: { id: string; platform: string; status: string; waiting?: string }[];
   queue: { running: number; waiting: number };
   pendingApprovals: number;
   /** What compaction and the memory pass ran into with their models in the last day (`helper-trouble.ts`). Absent before 0.7.25. */

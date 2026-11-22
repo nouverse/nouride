@@ -47,6 +47,8 @@ export interface SeenWork {
   sightings: number;
   /** The conversation it was seen in is still kept, so its skill can be written now. */
   canWrite: boolean;
+  /** Seen often enough that the next time it is seen its skill is written, wherever that is. */
+  writtenNext: boolean;
 }
 
 /** One thing skill learning did, or decided not to, as a person reads it. */
@@ -58,6 +60,8 @@ export interface LearningEvent {
   /** The skill or the kind of work it was about, where there was one. */
   skill: string | null;
   why: string;
+  /** How many times in a row of the list it did the same: the newest is the one shown. Absent for once. */
+  times?: number;
 }
 
 /** What learning holds and what it did lately: the answer to "why was nothing learned". */

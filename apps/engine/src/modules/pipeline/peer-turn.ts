@@ -46,7 +46,7 @@ import type { PeerTurnRequest, PeerTurnResult } from "@/modules/tools/builtins/a
 import { buildHandoff } from "@/modules/tools/handoff.ts";
 import type { HelperOutcome, RunningHelper } from "@/modules/jobs/helper-jobs.ts";
 import { logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
-import { delegateNote, leadNudgeText, nudgeBaseMs, sinceSaid, watchTurn } from "./budget-nudges.ts";
+import { DelegateSteps, delegateNote, leadHears, leadNudgeText, nudgeBaseMs, watchTurn } from "./budget-nudges.ts";
 import { ChatProgress } from "./chat-progress.ts";
 import { endedAlready, type MovableTurn } from "./background-move.ts";
 import type { TurnContext } from "./turn-context.ts";
@@ -173,6 +173,10 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     });
   }
 
+  // Whether it is at work, for the look-in of the agent that asked once it has moved to the background (`DelegateSteps`).
+  const baseMs = nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes);
+  const made = new DelegateSteps(baseMs);
+
   // No helpers in the background (0.7.15): a peer answers the agent that asked, and a helper's report would wake the
   // peer into the caller's conversation as itself. Its `delegate` waits for its helpers, inside this answer.
   const toolset = resolveToolset(peer, ctx.tools, ctx.deps.config.security, { ...ctx.toolsetDeps(), backgroundHelpers: () => 0 });
@@ -231,6 +235,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
       if (!job) progress?.batch(lines);
     },
     onActivity: (kind, text, detail) => {
+      made.step(kind);
       const line = logLine(kind, text);
       if (job) {
         if (line) job.log(line);
@@ -288,10 +293,12 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
    * Run long, it is told to stop and report if stuck (`budget-nudges.ts`); once it is in the background the agent that
    * asked hears how long it has run. Waited on, that agent is in a turn of its own, on its own clock and nudges.
    */
-  const nudges = watchTurn(nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes), delegateNote, (nudge) => {
-    if (!job) return;
-    job.log(`· ${sinceSaid(nudge.dueMs)} in: asked to report if stuck`);
-    ctx.nudgeLead?.(job.id, leadNudgeText({ who: peer.config.id, task: quotable(request.task), ms: nudge.dueMs, job: job.id }));
+  const nudges = watchTurn(baseMs, delegateNote, (nudge) => {
+    const moved = job;
+    if (!moved) return;
+    leadHears(made, (line) => moved.log(line), nudge.dueMs, () =>
+      ctx.nudgeLead?.(moved.id, leadNudgeText({ who: peer.config.id, task: quotable(request.task), ms: nudge.dueMs, job: moved.id })),
+    );
   });
   let settled = false;
   const ended = (async (): Promise<HelperOutcome> => {

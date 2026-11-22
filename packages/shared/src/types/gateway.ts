@@ -42,6 +42,20 @@ export interface AttachmentStream {
 
 export type GatewayStatus = "disconnected" | "connecting" | "connected" | "reconnecting" | "dead";
 
+/**
+ * What a connection that is not up yet waits on, in words for a person. A platform's client retries by itself and
+ * says nothing: Telegram's waited thirty minutes on a live box, the connection "connecting" throughout, with nothing
+ * in the log and nothing on its row to tell a wait the platform asked for from a connection that had hung.
+ */
+export interface GatewayWaiting {
+  /** Why, as a sentence. */
+  reason: string;
+  /** When this wait began. */
+  since: number;
+  /** When the platform said to come back, where it named a time. */
+  until?: number;
+}
+
 export interface GatewayResilienceConfig {
   maxReconnectAttempts: number;
   reconnectBackoffMs: number;
@@ -59,6 +73,8 @@ export interface GatewayResilienceConfig {
   connectionStableAfterMs?: number;
   /** How long the teardown before a connect may take before the connect goes ahead without it — `BaseGateway`. */
   teardownTimeoutMs?: number;
+  /** How long a connect may go unanswered before the connection says it is still waiting — `BaseGateway`. */
+  slowConnectMs?: number;
 }
 
 export const DEFAULT_RESILIENCE: GatewayResilienceConfig = {
@@ -107,6 +123,8 @@ export interface Gateway {
   readonly id: string;
   readonly platform: GatewayName;
   readonly status: GatewayStatus;
+  /** What it waits on while it is not connected, where that is known; null once it is up. Absent on a gateway that never waits. */
+  readonly waiting?: GatewayWaiting | null;
   /**
    * The exact text another agent writes to tag this bot on this platform.
    *

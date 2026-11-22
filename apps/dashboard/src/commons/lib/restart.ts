@@ -118,6 +118,17 @@ export function markRestartPending(what: string): void {
   for (const listener of listeners) listener();
 }
 
+/**
+ * No save waits for a restart any more. The list is this module's, so it outlives a page: a test that saved something
+ * left "Saved, takes effect after a restart" above every page mounted after it, in whichever file ran next, and tests
+ * that read a page's first status read that strip. The mount harness calls this after each test.
+ */
+export function forgetRestartPending(): void {
+  if (pending.length === 0) return;
+  pending = [];
+  for (const listener of listeners) listener();
+}
+
 /** Whether a restart is being followed now — what starting another one waits for. */
 export function following(): boolean {
   return active;

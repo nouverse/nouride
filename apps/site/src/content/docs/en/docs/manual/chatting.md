@@ -22,7 +22,8 @@ nothing and always work. They are answered at once, even while a turn is running
 | `/stop` | Stop what this agent is doing, and put it to sleep |
 | `/sleep` | Put this agent to sleep: it takes no work until `/wake` |
 | `/wake` | Wake this agent (`/start` too) |
-| `/mission` | Start long work it carries on alone, or see the missions here: [Missions →](/en/docs/manual/missions/) |
+| `/mission` | Start long work it carries on alone, or see what has not ended: what needs you, what is at work and the backlog. [Missions →](/en/docs/manual/missions/) |
+| `/helpers` | Who is working for this agent in the background now: its helpers and the agents it asked |
 | `/model` | Switch model for this chat |
 | `/effort` | How long the model thinks, for this chat; `/effort <level> lock` for every chat and mission |
 | `/btw` | Ask something beside the work: the agent answers as itself, does nothing, and keeps it out of the conversation |

@@ -45,6 +45,8 @@ const LEARNING_ACTIONS = {
 
 /** How many of them the page is given: what happened lately, not a history. */
 const LEARNING_RECENT = 12;
+/** How many of its rows are read to find them: the same thing done again is one line, so twelve lines can be many rows. */
+const LEARNING_ROWS = 240;
 
 /** The draft as a client sees it. Same fields, minus nothing — there is nothing secret in a draft. */
 function toJson(draft: StoredDraft): SkillDraft {
@@ -73,6 +75,22 @@ function toJson(draft: StoredDraft): SkillDraft {
     decidedBy: draft.decidedBy,
     publishedPath: draft.publishedPath,
   };
+}
+
+/**
+ * The same thing learning did, by the same agent about the same skill, said once with how often: the newest stands
+ * for the rest, wherever in the list the others were. A look that found nothing is the same only where its reason is:
+ * that reason is all it says. Newest first, as given.
+ */
+function sameOnce(events: readonly LearningEvent[]): LearningEvent[] {
+  const first = new Map<string, LearningEvent & { times: number }>();
+  for (const event of events) {
+    const key = JSON.stringify([event.agentId, event.kind, event.skill, event.kind === "nothing" ? event.why : ""]);
+    const seen = first.get(key);
+    if (seen) seen.times += 1;
+    else first.set(key, { ...event, times: 1 });
+  }
+  return [...first.values()].map(({ times, ...event }) => (times > 1 ? { ...event, times } : event));
 }
 
 export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): void {
@@ -125,14 +143,15 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
    * page showed for it was an empty queue.
    *
    * A draft that was approved is one event, not two: its "drafted" row is left out once the same draft was written.
+   * And the same thing done again is one line with how often, the newest shown: one kind of work held seven times in
+   * an afternoon was seven of the twelve lines, and pushed everything else off the page.
    */
   control.get("/skills/learning/seen", (c) => {
-    const rows = deps.audit.ofActions(Object.keys(LEARNING_ACTIONS) as (keyof typeof LEARNING_ACTIONS)[], LEARNING_RECENT * 4);
+    const rows = deps.audit.ofActions(Object.keys(LEARNING_ACTIONS) as (keyof typeof LEARNING_ACTIONS)[], LEARNING_ROWS);
     const decided = new Set(rows.filter((row) => row.action !== "skill_draft_created").map((row) => row.details?.draft).filter(Boolean));
     const text = (value: unknown): string => (typeof value === "string" ? value : "");
-    const recent = rows
+    const each = rows
       .filter((row) => !(row.action === "skill_draft_created" && decided.has(row.details?.draft)))
-      .slice(0, LEARNING_RECENT)
       .map((row) => ({
         at: row.timestamp,
         agentId: row.agentId ?? null,
@@ -140,6 +159,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
         skill: text(row.details?.skill) || null,
         why: text(row.details?.why) || text(row.details?.reason) || text(row.details?.description),
       }));
+    const recent = sameOnce(each).slice(0, LEARNING_RECENT);
     const seen = (deps.reflection?.candidates() ?? []).map((held) => ({
       name: held.name,
       description: held.description,
@@ -149,6 +169,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
       lastSeenAt: held.lastSeenAt,
       sightings: held.sightings,
       canWrite: held.kept,
+      writtenNext: held.next,
     }));
     return c.json({ seen, recent } satisfies LearningSeen);
   });

@@ -9,7 +9,7 @@ from that. The numbers are starting points that work at the template's 1280×720
   order: they should be the whole argument. If they are not, the deck is a pile of topics.
 - **One idea per slide.** Two ideas are two slides; slides are free, attention is not.
 - **The order**: what the audience needs to decide or know → the evidence → what to do next. The closing slide
-  states the ask or the next step, not "Terima kasih" / "Thank you" alone.
+  states the ask or the next step, not "Thank you" alone.
 - **Detail lives in the notes**: the template's `<aside class="notes">`. The speaker reads them; the audience reads
   the slide.
 

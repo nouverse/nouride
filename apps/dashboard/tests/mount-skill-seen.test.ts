@@ -19,11 +19,16 @@ const event = (over: Partial<LearningEvent>): LearningEvent => ({ at: Date.now()
 describe("the words", () => {
   test("each thing learning did reads as a sentence, with its reason", () => {
     expect(eventSaid(event({ kind: "nothing", why: "a number looked up, nothing done" }))).toBe("Looked, and found nothing to write down: a number looked up, nothing done");
-    expect(eventSaid(event({ kind: "held", skill: "website-feature-development", why: "Use when changing the site." }))).toBe("Saw a new kind of work once, and is waiting for it to come back: Website feature development");
+    expect(eventSaid(event({ kind: "held", skill: "website-feature-development", why: "Use when changing the site." }))).toBe("Saw a new kind of work, not a skill yet: Website feature development");
     expect(eventSaid(event({ kind: "refused", skill: "site-contributing", why: "its body is 12,838 characters, past 12,000" }))).toBe("Wrote a draft for Site contributing and it was not kept: its body is 12,838 characters, past 12,000");
     expect(eventSaid(event({ kind: "drafted", skill: "invoice-reading" }))).toBe("Wrote a draft, waiting on you: Invoice reading");
     expect(eventSaid(event({ kind: "written", skill: "site-moving" }))).toBe("Added a skill: Site moving");
     expect(eventSaid(event({ kind: "improved", skill: "site-moving" }))).toBe("Improved a skill: Site moving");
+    // The same thing done again is one line, with how often after what it was; once says nothing of it.
+    expect(eventSaid(event({ kind: "held", skill: "website-feature-development", times: 7 }))).toBe("Saw a new kind of work, not a skill yet: Website feature development (7 times)");
+    expect(eventSaid(event({ kind: "nothing", why: "a question answered, nothing done", times: 3 }))).toBe("Looked, and found nothing to write down: a question answered, nothing done (3 times)");
+    expect(eventSaid(event({ kind: "refused", skill: "site-contributing", why: "its body is 12,838 characters, past 12,000", times: 19 }))).toBe("Wrote a draft for Site contributing and it was not kept: its body is 12,838 characters, past 12,000 (19 times)");
+    expect(eventSaid(event({ kind: "written", skill: "site-moving", times: 1 }))).toBe("Added a skill: Site moving");
   });
 
   test("how often a skill is read, and how often since it was changed", () => {
@@ -44,15 +49,15 @@ const CATALOG = ok({
 });
 const SEEN: LearningSeen = {
   seen: [
-    { name: "website-feature-development", description: "Use when changing a site's components and layout.", why: "three corrections", agentId: "nexa", firstSeenAt: Date.now() - 7 * 86_400_000, lastSeenAt: Date.now() - 3 * 3_600_000, sightings: 12, canWrite: true },
-    { name: "image-aspect-reframing", description: "Use when a picture has to fit another shape.", why: "worked once", agentId: "nexa", firstSeenAt: Date.now() - 86_400_000, lastSeenAt: Date.now() - 86_400_000, sightings: 1, canWrite: false },
+    { name: "website-feature-development", description: "Use when changing a site's components and layout.", why: "three corrections", agentId: "nexa", firstSeenAt: Date.now() - 7 * 86_400_000, lastSeenAt: Date.now() - 3 * 3_600_000, sightings: 12, canWrite: true, writtenNext: true },
+    { name: "image-aspect-reframing", description: "Use when a picture has to fit another shape.", why: "worked once", agentId: "nexa", firstSeenAt: Date.now() - 86_400_000, lastSeenAt: Date.now() - 86_400_000, sightings: 1, canWrite: false, writtenNext: false },
   ],
   recent: [event({ agentId: "nexa", kind: "nothing", why: "a question answered, nothing done" }), event({ agentId: null, kind: "improved", skill: "pdf" })],
 };
 const openPending = async (host: HTMLElement) => {
   await eventually(() => host.querySelector('[role="tab"]') !== null, 3_000, "the tabs");
   ([...host.querySelectorAll('[role="tab"]')].find((tab) => tab.textContent?.includes("Pending")) as HTMLElement).click();
-  await eventually(() => host.textContent?.includes("seen once, not a skill yet") === true, 3_000, "the panel");
+  await eventually(() => host.textContent?.includes("seen, not a skill yet") === true, 3_000, "the panel");
 };
 const rowOf = (host: HTMLElement, name: string) => [...host.querySelectorAll("li")].find((row) => row.querySelector("p")?.textContent === name) as HTMLElement;
 
@@ -65,7 +70,7 @@ describe("the panel, under the drafts", () => {
       await eventually(() => host.textContent?.includes("read 12 times") === true, 3_000, "the pool's reads");
       seen.pool = [...host.querySelectorAll("div")].find((box) => box.textContent === "read 12 times, 3 times since it was changed")?.textContent ?? "";
       await openPending(host);
-      seen.title = [...host.querySelectorAll("h2, h3")].map((heading) => heading.textContent ?? "").find((text) => text.includes("seen once")) ?? "";
+      seen.title = [...host.querySelectorAll("h2, h3")].map((heading) => heading.textContent ?? "").find((text) => text.includes("not a skill yet")) ?? "";
       const first = rowOf(host, "Website feature development");
       seen.first = first.textContent ?? "";
       seen.firstButtons = [...first.querySelectorAll("button")].map((button) => button.textContent?.trim() ?? "");
@@ -75,9 +80,12 @@ describe("the panel, under the drafts", () => {
       seen.lately = [...host.querySelectorAll("li.text-xs")].map((line) => line.textContent ?? "");
     });
     expect(seen.pool).toBe("read 12 times, 3 times since it was changed");
-    expect(seen.title).toBe("2 seen once, not a skill yet");
+    expect(seen.title).toBe("2 seen, not a skill yet");
     expect(seen.first).toContain("Use when changing a site's components and layout.");
     expect(seen.first).toContain("Nexa · seen 12 times · last 3 h ago");
+    // Seen often enough: said, so nobody wonders what it still waits for. The one seen once says nothing of it.
+    expect(seen.first).toContain("It becomes a skill the next time this work is seen.");
+    expect(seen.second).not.toContain("It becomes a skill the next time");
     expect(seen.firstButtons).toEqual(["Write it now", "Forget"]);
     // Its conversation is gone: said, and only forgetting is offered.
     expect(seen.second).toContain("Nexa · seen once");

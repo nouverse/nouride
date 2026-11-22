@@ -6,7 +6,8 @@
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage[bahasa]{babel}      % drop for English; changes hyphenation AND "Tabel"/"Gambar"
+% Another language than English: \usepackage[<language>]{babel} here (ngerman, french, spanish ...).
+% It changes hyphenation and the generated words ("Table", "Figure").
 \usepackage[margin=2cm,columnsep=0.6cm]{geometry}
 \usepackage{booktabs}           % \toprule/\midrule/\bottomrule — never \hline
 \usepackage{array}
@@ -20,27 +21,27 @@
 \captionsetup[table]{skip=4pt,font=small,labelfont=bf}
 \captionsetup[figure]{skip=4pt,font=small,labelfont=bf}
 
-\title{\bfseries Judul Makalah}
-\author{Nama Penulis\\ \small Institusi \\ \small surel@contoh.ac.id}
+\title{\bfseries Paper Title}
+\author{Author Name\\ \small Institution \\ \small author@example.edu}
 \date{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\noindent Ringkasan satu paragraf. Dalam kelas \texttt{article} bermode dua kolom, judul dan
-abstrak membentang penuh sementara isi mengalir dua kolom --- itu memang perilaku yang benar.
+\noindent A summary of one paragraph. In the \texttt{article} class in two-column mode, the title and
+the abstract span the full width while the body flows in two columns --- that is the right behaviour.
 \end{abstract}
 
-\section{Pendahuluan}
-Ganti paragraf ini. Teks contoh ada di sini dengan sengaja: dengan satu kata per bagian, kolom kedua tidak pernah terisi dan dokumen dua kolom ini akan tampak seperti satu kolom saat dibuka --- kesan pertama yang salah, dan sudah pernah membuat orang mengira templat ini rusak.
+\section{Introduction}
+Replace this paragraph. The sample text is here on purpose: with one word a section, the second column never fills, and this two-column document looks like a single column when it is opened --- a wrong first impression, and one that has made people think this template was broken.
 
-Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terlihat, sehingga masalah tata letak muncul sekarang dan bukan setelah naskah selesai ditulis. Perhatikan bahwa teks mengalir dari kolom kiri ke kolom kanan, lalu ke halaman berikutnya. Tabel yang lebih lebar dari satu kolom tidak ikut aliran itu: ia mengambang ke puncak halaman sebagai \texttt{table*}, dan itulah sebabnya Tabel~\ref{tab:lit} tidak muncul di sebelah kalimat yang menyebutnya. Rujuk tabel dengan nomornya, jangan dengan kata \emph{berikut ini}.
+This much text is also what makes hyphenation and justified lines visible, so a layout problem shows now and not after the manuscript is written. Note that the text flows from the left column to the right one, then to the next page. A table wider than one column does not join that flow: it floats to the top of a page as a \texttt{table*}, which is why Table~\ref{tab:lit} does not appear beside the sentence that mentions it. Refer to a table by its number, never as \emph{the table below}.
 
-\section{Metode}
-Ganti paragraf ini. Teks contoh ada di sini dengan sengaja: dengan satu kata per bagian, kolom kedua tidak pernah terisi dan dokumen dua kolom ini akan tampak seperti satu kolom saat dibuka --- kesan pertama yang salah, dan sudah pernah membuat orang mengira templat ini rusak.
+\section{Method}
+Replace this paragraph. The sample text is here on purpose: with one word a section, the second column never fills, and this two-column document looks like a single column when it is opened --- a wrong first impression, and one that has made people think this template was broken.
 
-Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terlihat, sehingga masalah tata letak muncul sekarang dan bukan setelah naskah selesai ditulis. Perhatikan bahwa teks mengalir dari kolom kiri ke kolom kanan, lalu ke halaman berikutnya. Tabel yang lebih lebar dari satu kolom tidak ikut aliran itu: ia mengambang ke puncak halaman sebagai \texttt{table*}, dan itulah sebabnya Tabel~\ref{tab:lit} tidak muncul di sebelah kalimat yang menyebutnya. Rujuk tabel dengan nomornya, jangan dengan kata \emph{berikut ini}.
+This much text is also what makes hyphenation and justified lines visible, so a layout problem shows now and not after the manuscript is written. Note that the text flows from the left column to the right one, then to the next page. A table wider than one column does not join that flow: it floats to the top of a page as a \texttt{table*}, which is why Table~\ref{tab:lit} does not appear beside the sentence that mentions it. Refer to a table by its number, never as \emph{the table below}.
 
 % A table wider than one column MUST be `table*` — the starred float spans both
 % columns. It only ever places at the top of a page: [h] and [b] are ignored, so
@@ -53,14 +54,14 @@ Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terliha
 % placement with [h!] on a starred float does nothing at all.
 \begin{table*}[t]
   \centering
-  \caption{Matriks ekstraksi literatur}
+  \caption{Literature extraction matrix}
   \label{tab:lit}
   \small
   % p{} columns for prose cells. A bare l/c column does not wrap, and one long
   % sentence in a cell is the first Overfull \hbox of the day.
   \begin{tabular}{@{}p{0.6cm}p{3cm}p{4cm}p{1cm}p{4.5cm}@{}}
     \toprule
-    No & Penulis & Judul & Tahun & Catatan \\
+    No & Author & Title & Year & Notes \\
     \midrule
     1 & & & & \\
     2 & & & & \\
@@ -68,12 +69,12 @@ Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terliha
   \end{tabular}
 \end{table*}
 
-\section{Kesimpulan}
-Ganti paragraf ini. Teks contoh ada di sini dengan sengaja: dengan satu kata per bagian, kolom kedua tidak pernah terisi dan dokumen dua kolom ini akan tampak seperti satu kolom saat dibuka --- kesan pertama yang salah, dan sudah pernah membuat orang mengira templat ini rusak.
+\section{Conclusion}
+Replace this paragraph. The sample text is here on purpose: with one word a section, the second column never fills, and this two-column document looks like a single column when it is opened --- a wrong first impression, and one that has made people think this template was broken.
 
-Panjang segini juga yang membuat penjatahan kata dan perataan kanan-kiri terlihat, sehingga masalah tata letak muncul sekarang dan bukan setelah naskah selesai ditulis. Perhatikan bahwa teks mengalir dari kolom kiri ke kolom kanan, lalu ke halaman berikutnya. Tabel yang lebih lebar dari satu kolom tidak ikut aliran itu: ia mengambang ke puncak halaman sebagai \texttt{table*}, dan itulah sebabnya Tabel~\ref{tab:lit} tidak muncul di sebelah kalimat yang menyebutnya. Rujuk tabel dengan nomornya, jangan dengan kata \emph{berikut ini}.
+This much text is also what makes hyphenation and justified lines visible, so a layout problem shows now and not after the manuscript is written. Note that the text flows from the left column to the right one, then to the next page. A table wider than one column does not join that flow: it floats to the top of a page as a \texttt{table*}, which is why Table~\ref{tab:lit} does not appear beside the sentence that mentions it. Refer to a table by its number, never as \emph{the table below}.
 
 \bibliographystyle{plain}
-% \bibliography{referensi}
+% \bibliography{references}
 
 \end{document}

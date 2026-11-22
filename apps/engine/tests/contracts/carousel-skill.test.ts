@@ -80,7 +80,7 @@ describe("what the skill tells an agent", () => {
     // The outline ends a turn of its own: a real agent, told only to wait for a yes, drew in the turn that had the words.
     expect(flat).toContain("So there are **two turns, not one**: the first ends with the outline, the words of every slide, sent for a yes. Nothing is written to a file or drawn before that yes.");
     expect(flat).toContain("**Send the outline and end your turn there.** In the turn that sends it you write no file and run no command");
-    expect(flat).toContain('Only two things skip the wait: they said to just make it ("langsung aja", "no need to ask"), or you are in a mission');
+    expect(flat).toContain('Only two things skip the wait: they said to just make it ("go ahead", "no need to ask"), or you are in a mission');
     expect(flat).toContain("This step starts once the outline has its yes.");
     // And what the agent adds to their material is a line of it, marked as its own: it added three such on a first run.
     expect(flat).toContain("- **What you add to their material is in the outline too**: a tip, a reason, a number of seconds they did not give you. Marked `source: mine, not from your notes`, so they can strike it.");

@@ -22,7 +22,7 @@ import { renderBrief } from "@/modules/tools/builtins/delegate-brief.ts";
 import { buildHandoff } from "@/modules/tools/handoff.ts";
 import type { HelperOutcome, RunningHelper } from "@/modules/jobs/helper-jobs.ts";
 import type { TurnContext } from "./turn-context.ts";
-import { delegateNote, leadNudgeText, nudgeBaseMs, sinceSaid, watchTurn } from "./budget-nudges.ts";
+import { DelegateSteps, delegateNote, leadHears, leadNudgeText, nudgeBaseMs, watchTurn } from "./budget-nudges.ts";
 import { helperAsking, logLine, quotable, sayingWho, stopped } from "./background-turn.ts";
 import { endedAlready, type MovableTurn } from "./background-move.ts";
 import { beginDelegated, type DelegatedEnd, type DelegatedTurn } from "./delegated-turn.ts";
@@ -93,6 +93,9 @@ export function startSubagent(ctx: TurnContext, request: SubagentRequest, option
    * events` and `nouride turns show` account for its calls, where they used to see one opaque `delegate` for minutes.
    * Once it moved, its job's log and its own record: that turn has ended.
    */
+  // Whether it is at work, for its lead's look-in once it has moved to the background (`DelegateSteps`).
+  const baseMs = nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes);
+  const made = new DelegateSteps(baseMs);
   const steps = stepsInto(ctx.deps.turns, request.ctx.turnId, { via: "delegate", by: parent.config.id });
   // And what each of its requests carried, beside them (0.7.26).
   const lines = contextInto(ctx.deps.turns, request.ctx.turnId, { via: "delegate", by: parent.config.id });
@@ -100,6 +103,7 @@ export function startSubagent(ctx: TurnContext, request: SubagentRequest, option
     // Shown in the parent's conversation, marked as coming from a helper. A tool call the operator
     // did not ask for appearing unattributed is worse than one line of noise.
     onActivity: (kind, text, detail) => {
+      made.step(kind);
       const line = logLine(kind, text);
       if (job) {
         if (line) job.log(line);
@@ -128,10 +132,12 @@ export function startSubagent(ctx: TurnContext, request: SubagentRequest, option
    * Run long, it is told to stop and report if stuck (`budget-nudges.ts`). Waited on, the parent waits in a turn of its
    * own, on its own clock and nudges; once it moved, the parent hears how long it has run.
    */
-  const nudges = watchTurn(nudgeBaseMs(ctx.deps.config.agents.nudgeAfterMinutes), delegateNote, (nudge) => {
-    if (!job) return;
-    job.log(`· ${sinceSaid(nudge.dueMs)} in: asked to report if stuck`);
-    ctx.nudgeLead?.(job.id, leadNudgeText({ who: "Your background helper", task: quotable(request.brief.goal), ms: nudge.dueMs, job: job.id }));
+  const nudges = watchTurn(baseMs, delegateNote, (nudge) => {
+    const moved = job;
+    if (!moved) return;
+    leadHears(made, (line) => moved.log(line), nudge.dueMs, () =>
+      ctx.nudgeLead?.(moved.id, leadNudgeText({ who: "Your background helper", task: quotable(request.brief.goal), ms: nudge.dueMs, job: moved.id })),
+    );
   });
   const turn: TurnRequest = {
     ...helperTurn(ctx, blank, request, sessionId, { mode }),

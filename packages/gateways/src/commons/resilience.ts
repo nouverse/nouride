@@ -7,6 +7,7 @@
  * Three copies of this logic would have drifted apart within a month.
  */
 
+import { ConnectWait, SLOW_CONNECT_MS } from "./connect-wait.ts";
 import {
   backoffDelay,
   contained,
@@ -21,6 +22,7 @@ import {
   type GatewayName,
   type GatewayResilienceConfig,
   type GatewayStatus,
+  type GatewayWaiting,
   type MessageEnvelope,
   type OutboundMessage,
   type PressAnswer,
@@ -193,6 +195,8 @@ export abstract class BaseGateway implements Gateway {
   private settleMs = 0;
   private healthTimer?: ReturnType<typeof setInterval>;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
+  /** What this connection waits on while it is not up, as its adapter or the slow-connect look said it (`connect-wait.ts`). */
+  private readonly wait: ConnectWait;
   /** Pending "this connection has held long enough" reset — see `CONNECTION_STABLE_AFTER_MS`. */
   private stableTimer?: ReturnType<typeof setTimeout>;
   private stopping = false;
@@ -204,10 +208,15 @@ export abstract class BaseGateway implements Gateway {
     // Logger is namespaced by instance, not platform: with two Telegram bots running, "which
     // one reconnected?" is the first question anyone asks.
     this.log = createLogger(`gateway.${identity.id}`);
+    this.wait = new ConnectWait(this.log, () => !this.stopping && (this._status === "connecting" || this._status === "reconnecting"));
   }
 
   get status(): GatewayStatus {
     return this._status;
+  }
+
+  get waiting(): GatewayWaiting | null {
+    return this.wait.now;
   }
 
   // ── Platform primitives ───────────────────────────────────────────────────
@@ -297,6 +306,7 @@ export abstract class BaseGateway implements Gateway {
     clearInterval(this.healthTimer);
     clearTimeout(this.reconnectTimer);
     clearTimeout(this.stableTimer);
+    this.wait.end();
     try {
       if (!(await this.teardown())) this.log.warn("disconnect did not finish during stop", { after_ms: this.teardownMs() });
     } catch (err) {
@@ -425,6 +435,15 @@ export abstract class BaseGateway implements Gateway {
     this.scheduleReconnect();
   }
 
+  /**
+   * Call while connecting, when the platform's answer makes the connect wait: asked to come back later, an error of
+   * its own, not reachable (`connect-wait.ts`). `untilMs` where the platform named when. Only while it is not up: a
+   * platform that slows a connection already working is another matter, and its sends say so themselves.
+   */
+  protected waitingFor(reason: string, untilMs?: number): void {
+    this.wait.say(reason, untilMs);
+  }
+
   /** Call when the platform reports credentials are no longer usable (WhatsApp QR). */
   protected handleSessionExpired(): void {
     this.setStatus("dead", "session expired");
@@ -452,6 +471,8 @@ export abstract class BaseGateway implements Gateway {
 
   private async attemptConnect(): Promise<void> {
     this.setStatus("connecting");
+    // A connect nothing has answered says so by itself: "connecting" for an hour is not the whole of what is known.
+    this.wait.begin(this.resilience.slowConnectMs ?? SLOW_CONNECT_MS, () => this._status === "connecting");
 
     /**
      * Tear the previous attempt down before starting another. This is the load-bearing line.
@@ -660,6 +681,8 @@ export abstract class BaseGateway implements Gateway {
   private setStatus(status: GatewayStatus, error?: string): void {
     if (this._status === status) return;
     this._status = status;
+    // A wait belongs to the connect it was said in: up, failed or stopped, it is over.
+    this.wait.end();
     this.log.info("status", { status, ...(error ? { error } : {}) });
     this.emitEvent({ type: "status", gatewayId: this.id, status, error });
   }

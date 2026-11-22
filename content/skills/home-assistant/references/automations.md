@@ -64,7 +64,7 @@ the new ones.
 | something changes | `{"trigger": "state", "entity_id": "binary_sensor.front_door", "to": "on"}` |
 | …and stays that way | add `"for": "00:10:00"` |
 | a number crosses a line | `{"trigger": "numeric_state", "entity_id": "sensor.pm2_5", "above": 50}` |
-| someone arrives / leaves | `{"trigger": "zone", "entity_id": "person.budi", "zone": "zone.home", "event": "enter"}` |
+| someone arrives / leaves | `{"trigger": "zone", "entity_id": "person.sam", "zone": "zone.home", "event": "enter"}` |
 | HA starts | `{"trigger": "homeassistant", "event": "start"}` |
 
 Conditions use the same shapes with `"condition":` (`state`, `numeric_state`, `time` with `after`/`before`/
@@ -131,7 +131,7 @@ helper as the command, reports only what is wrong:
 
 ```sh
 nouride cron add --name purifier-check --every 1h --gateway <gateway> --chat <chat> --agent <you> \
-  --command 'python3 /srv/nouride/skills/home-assistant/scripts/ha.py template --quiet "{% if states(\"sensor.bedroom_pm2_5\") | float(0) > 50 %}PM2.5 di kamar {{ states(\"sensor.bedroom_pm2_5\") }} µg/m³{% endif %}"'
+  --command 'python3 /srv/nouride/skills/home-assistant/scripts/ha.py template --quiet "{% if states(\"sensor.bedroom_pm2_5\") | float(0) > 50 %}PM2.5 in the bedroom is {{ states(\"sensor.bedroom_pm2_5\") }} µg/m³{% endif %}"'
 ```
 
 With `--quiet` a template that renders nothing prints nothing, and a `--command` job with no output delivers nothing,

@@ -63,7 +63,7 @@ def main(argv) -> int:
     ap.add_argument("--unify", help="text columns where one value written several ways becomes its commonest spelling")
     ap.add_argument("--text", help="columns kept exactly as text, whatever they look like")
     ap.add_argument("--row-numbers", action="store_true", help="add source_row, the row number in the original")
-    ap.add_argument("--snake", action="store_true", help="headers as snake_case (jumlah_bayar)")
+    ap.add_argument("--snake", action="store_true", help="headers as snake_case (amount_paid)")
     a = ap.parse_args(argv)
 
     if os.path.abspath(a.out) == os.path.abspath(a.file):

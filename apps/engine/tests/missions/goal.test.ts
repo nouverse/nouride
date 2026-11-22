@@ -9,7 +9,7 @@ import { describe, expect, test } from "bun:test";
 import { draftAsked, missionHooks } from "@/modules/hooks/builtins/mission.ts";
 import { HookRegistry } from "@/modules/hooks/registry.ts";
 import type { HookContext } from "@/modules/hooks/types.ts";
-import { WHEN_TO_START } from "@/modules/tools/builtins/mission.ts";
+import { createMissionTools, WHEN_TO_START } from "@/modules/tools/builtins/mission.ts";
 import { missionsHarness } from "./harness.ts";
 
 const goal = missionHooks.find((hook) => hook.command === "/goal")!;
@@ -57,6 +57,12 @@ describe("/mission <goal>, and /goal as its other name", () => {
     expect(listed).toContain("/mission");
     expect(listed).not.toContain("/goal");
     expect(goal.handler).toBe(missionHooks.find((hook) => hook.command === "/mission")!.handler);
+  });
+
+  test("the rule says where a draft waits, in the word a person has for it: asked to put something in the backlog, an agent drafts", () => {
+    // "Put it in the backlog" was answered with a note to self: the board's first column was named nowhere in the rule.
+    expect(WHEN_TO_START).toContain("A draft waits in the person's Backlog: asked to put something in the backlog, draft it.");
+    expect(createMissionTools({} as never).chat.definition.description).toContain("asked to put something in the backlog, draft it.");
   });
 
   test("the rule for when work is a mission's says it is what other harnesses call /goal", () => {

@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LeftRunning, ToolContext } from "@nouride/shared";
 import { groupMembers, runCommand, signalGroup, stillLeft } from "@nouride/runtime";
-import { GRACE_MS, GROUPS_KEPT, leftEndedNotice, MissionLeft, type LeftDeps } from "@/modules/missions/left-running.ts";
+import { counted, GRACE_MS, GROUPS_KEPT, leftEndedNotice, MissionLeft, type LeftDeps } from "@/modules/missions/left-running.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { openAndMigrate } from "@/db/index.ts";
 import { JobStore, type JobCompletion } from "@/modules/jobs/jobs.store.ts";
@@ -141,6 +141,11 @@ describe("a mission's end", () => {
     );
     expect(leftEndedNotice("Mission msn_ab12cd", ["sleep"])).toStartWith("Mission msn_ab12cd: 1 process its commands had left running was ended with it (sleep).");
   });
+
+  test("names are said once each with how many", () => {
+    expect(counted(["java", "node", "java", "java"])).toEqual(["java (3)", "node"]);
+    expect(counted([])).toEqual([]);
+  });
 });
 
 describe("the mission and the command", () => {
@@ -240,4 +245,69 @@ describe("the mission and the command", () => {
     expect(machine).toContain("wireJobs({ jobs, registry, config: () => ctx.config, pipeline, commandLeft: missions.commandLeft })");
     expect(told).toHaveLength(1);
   }, 15_000);
+
+  // What a mission's coding CLI left (`external-agents/session-groups.ts`): the daemon held none of those commands,
+  // so they come at the end, from the group the session's process was kept in. A real process stands for the one a
+  // CLI's command left; what set itself apart is a name, since nothing here is done to it.
+  test("what its coding CLI's session left is ended with the rest, in one notice, and what set itself apart is left and said", async () => {
+    const told: string[] = [];
+    const cli = (await leaves("sleep 59 > /dev/null 2>&1 & exit 0")).left!;
+    const asked: string[] = [];
+    const wired = missionLeft({
+      asAgent: () => async () => undefined,
+      tell: async (_mission, text) => void told.push(text),
+      cliLeft: async (mission) => (asked.push(mission.id), { left: [cli], apart: [{ pid: 7300, started: "1", name: "java" }, { pid: 7340, started: "2", name: "java" }] }),
+    });
+    const own = (await leaves("sleep 60 > /dev/null 2>&1 & exit 0")).left!;
+    wired.commandLeft({ gatewayId: MISSION_GATEWAY_ID, chatId: "msn_a1b2c3d4e5" } as ToolContext)!(own);
+    wired.endLeft({ id: "msn_a1b2c3d4e5", agentId: "nix", title: "The app build" } as never);
+    await eventually(() => told.length > 0 && groupMembers(cli.group).length === 0 && groupMembers(own.group).length === 0, 8_000, "both ended, and told");
+    expect(asked).toEqual(["msn_a1b2c3d4e5"]);
+    expect(told).toEqual([
+      "The app build (msn_a1b2c3): 2 processes its commands had left running were ended with it (sleep (2)). To keep something running after a mission ends, start it as a service of its own: a process manager, a container, or the system's. 2 processes it started are still running, set apart in a session of their own, and were left (java (2)).",
+    ]);
+  }, 15_000);
+
+  test("only what set itself apart: said, and nothing ended; a CLI that left nothing, or cannot be read, ends with no word of it", async () => {
+    const told: string[] = [];
+    const answers: ((() => Promise<{ left: LeftRunning[]; apart: { pid: number; started: string; name: string }[] } | null>))[] = [
+      async () => ({ left: [], apart: [{ pid: 7300, started: "1", name: "java" }] }),
+      async () => ({ left: [], apart: [] }),
+      async () => null,
+      async () => { throw new Error("no"); },
+      // The last, asked after the others: once its word is out, each of theirs would be too.
+      async () => ({ left: [], apart: [{ pid: 7301, started: "1", name: "kotlin" }] }),
+    ];
+    const wired = missionLeft({ asAgent: () => async () => undefined, tell: async (_mission, text) => void told.push(text), cliLeft: () => answers.shift()!() });
+    for (const id of ["msn_1", "msn_2", "msn_3", "msn_4", "msn_5"]) wired.endLeft({ id, agentId: "nix", title: null } as never);
+    await eventually(() => told.some((text) => text.startsWith("Mission msn_5:")), 4_000, "the last told");
+    expect(told).toEqual([
+      "Mission msn_1: 1 process it started is still running, set apart in a session of its own, and was left (java).",
+      "Mission msn_5: 1 process it started is still running, set apart in a session of its own, and was left (kotlin).",
+    ]);
+  });
+
+  test("a coding CLI that cannot be read does not keep the mission's own leftovers from being ended", async () => {
+    const told: string[] = [];
+    const wired = missionLeft({ asAgent: () => async () => undefined, tell: async (_mission, text) => void told.push(text), cliLeft: async () => { throw new Error("its group could not be read"); } });
+    const own = (await leaves("sleep 61 > /dev/null 2>&1 & exit 0")).left!;
+    wired.commandLeft({ gatewayId: MISSION_GATEWAY_ID, chatId: "msn_9" } as ToolContext)!(own);
+    wired.endLeft({ id: "msn_9", agentId: "nix", title: null } as never);
+    await eventually(() => told.length > 0 && groupMembers(own.group).length === 0, 8_000, "its own ended, and told");
+    expect(told[0]).toStartWith("Mission msn_9: 1 process its commands had left running was ended with it (sleep).");
+  }, 15_000);
+
+  test("it is wired from the mission's own conversation, and the CLI's session is let go before it is asked", () => {
+    const boot = readFileSync(join(import.meta.dir, "../../src/boot/missions.ts"), "utf8");
+    expect(boot).toContain("cliLeft: async (mission) => (await params.cliLeft?.(mission.agentId, MISSION_GATEWAY_ID, mission.id)) ?? null,");
+    const machine = readFileSync(join(import.meta.dir, "../../src/boot/turn-machine.ts"), "utf8");
+    expect(machine).toContain("cliLeft: (agentId, gatewayId, chatId) => externalAgents.leftBy(agentId, gatewayId, chatId),");
+    // A mission's conversation is followed under its id; a chat's is not.
+    const external = readFileSync(join(import.meta.dir, "../../src/boot/external-agents.ts"), "utf8");
+    expect(external).toContain('followed: (gatewayId, chatId) => (gatewayId === MISSION_GATEWAY_ID ? `m-${chatId.replace(/[^A-Za-z0-9_-]/g, "")}` : null),');
+    // The order a mission ends in: its session closed, then what is left read.
+    const missions = readFileSync(join(import.meta.dir, "../../src/modules/missions/missions.ts"), "utf8");
+    expect(missions.indexOf("this.deps.letGoCli?.(mission);")).toBeGreaterThan(0);
+    expect(missions.indexOf("this.deps.letGoCli?.(mission);")).toBeLessThan(missions.indexOf("this.deps.endLeft?.(mission);"));
+  });
 });

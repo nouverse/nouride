@@ -56,3 +56,26 @@ describe("/health and agents' own users (0.8.0)", () => {
     expect(buildHealth(ctx()).payload).not.toHaveProperty("agentUsers");
   });
 });
+
+describe("/health and a connection that waits", () => {
+  const withGateways = (gateways: Record<string, { status: string; waiting?: { reason: string; since: number } | null; internal?: boolean }>): DaemonContext =>
+    ({ ...ctx(), gateways: new Map(Object.entries(gateways)) }) as unknown as DaemonContext;
+
+  test("one that is not up and said why is something to look at, named with its reason", () => {
+    const health = buildHealth(withGateways({
+      "telegram:nouva": { status: "connecting", waiting: { reason: "Telegram asked this bot to wait 30 minutes before it connects.", since: 1 } },
+      "telegram:nix": { status: "connected", waiting: null },
+    })).payload;
+    expect(health.gateways).toEqual({ "telegram:nouva": "connecting", "telegram:nix": "connected" });
+    expect(health.issues).toEqual(["telegram:nouva: connecting, waiting. Telegram asked this bot to wait 30 minutes before it connects."]);
+  });
+
+  test("one that is connecting and has said nothing is no issue: every start passes through it", () => {
+    expect(buildHealth(withGateways({ "telegram:nouva": { status: "connecting", waiting: null }, "discord:nouva": { status: "connecting" } })).payload.issues ?? []).toEqual([]);
+  });
+
+  test("one that is reconnecting is said as that, once, whatever it waits on", () => {
+    expect(buildHealth(withGateways({ "telegram:nouva": { status: "reconnecting", waiting: { reason: "x", since: 1 } } })).payload.issues).toEqual(["telegram:nouva: reconnecting"]);
+  });
+});
+

@@ -7,6 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { defaultConnectionName } from "@/modules/agents/components/connection-name";
+import { waitingSaid } from "@/modules/agents/components/gateway-waiting";
 import { Plus, Trash2 } from "lucide-react";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { api } from "@/commons/lib/api";
@@ -59,7 +60,12 @@ const PLATFORMS: {
 
 export function GatewayList({ agentId }: { agentId: string }) {
   const queryClient = useQueryClient();
-  const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
+  // Asked again while one is on its way up: its row says what it waits on, and that it has connected, without a reload.
+  const gateways = useQuery({
+    queryKey: ["gateways"],
+    queryFn: api.gateways,
+    refetchInterval: (query) => (query.state.data?.gateways.some((gateway) => gateway.enabled && (gateway.status === "connecting" || gateway.status === "reconnecting")) ? 10_000 : false),
+  });
   const [adding, setAdding] = useState<Platform | null>(null);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["gateways"] });
@@ -167,6 +173,7 @@ function GatewayCard({
   });
   const platform = PLATFORMS.find((entry) => entry.id === gateway.platform);
   const { ask, dialog } = useConfirm();
+  const waiting = waitingSaid(gateway);
 
   return (
     <Card
@@ -215,50 +222,57 @@ function GatewayCard({
           }}
         />
       ) : (
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
-          <div className="p-3 rounded-xl bg-base-200/40 border border-base-content/[0.05]">
-            <dt className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 mb-1 font-mono">
-              Connects When Nouride Starts
-            </dt>
-            <dd className="font-semibold text-base-content">{gateway.enabled ? "Yes" : "No"}</dd>
-          </div>
-          <div className="p-3 rounded-xl bg-base-200/40 border border-base-content/[0.05]">
-            <dt className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 mb-1 font-mono">
-              Group Context
-            </dt>
-            <dd className="font-semibold text-base-content">
-              {(gateway.groupContextMessages ?? groupContextDefault) === 0 ? (
-                "Off"
-              ) : (
-                <>
-                  {gateway.groupContextMessages ?? groupContextDefault} messages
-                  {gateway.groupContextMessages === undefined && (
-                    <span className="text-base-content/65 font-normal"> (the default)</span>
-                  )}
-                </>
-              )}
-            </dd>
-          </div>
-          <div className="p-3 rounded-xl bg-base-200/40 border border-base-content/[0.05]">
-            <dt className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 mb-1 font-mono">
-              Its Key
-            </dt>
-            <dd>
-              {gateway.hasCredential ? (
-                <>
-                  <span className="font-semibold text-base-content">Saved</span>
-                  <Details>
-                    <p>
-                      As the secret <code className="bg-base-300/80 px-1.5 py-0.5 rounded-md text-[11px]">{gateway.tokenSecret || `${gateway.id}-key`}</code>
-                    </p>
-                  </Details>
-                </>
-              ) : (
-                <span className="text-error font-medium">Not saved yet</span>
-              )}
-            </dd>
-          </div>
-        </dl>
+        <>
+          {waiting ? (
+            <p role="status" className="mb-4 rounded-xl border border-warning/20 bg-warning/10 p-3 text-sm break-words text-base-content">
+              {waiting}
+            </p>
+          ) : null}
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-sm">
+            <div className="p-3 rounded-xl bg-base-200/40 border border-base-content/[0.05]">
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 mb-1 font-mono">
+                Connects When Nouride Starts
+              </dt>
+              <dd className="font-semibold text-base-content">{gateway.enabled ? "Yes" : "No"}</dd>
+            </div>
+            <div className="p-3 rounded-xl bg-base-200/40 border border-base-content/[0.05]">
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 mb-1 font-mono">
+                Group Context
+              </dt>
+              <dd className="font-semibold text-base-content">
+                {(gateway.groupContextMessages ?? groupContextDefault) === 0 ? (
+                  "Off"
+                ) : (
+                  <>
+                    {gateway.groupContextMessages ?? groupContextDefault} messages
+                    {gateway.groupContextMessages === undefined && (
+                      <span className="text-base-content/65 font-normal"> (the default)</span>
+                    )}
+                  </>
+                )}
+              </dd>
+            </div>
+            <div className="p-3 rounded-xl bg-base-200/40 border border-base-content/[0.05]">
+              <dt className="text-[11px] font-bold uppercase tracking-wider text-base-content/65 mb-1 font-mono">
+                Its Key
+              </dt>
+              <dd>
+                {gateway.hasCredential ? (
+                  <>
+                    <span className="font-semibold text-base-content">Saved</span>
+                    <Details>
+                      <p>
+                        As the secret <code className="bg-base-300/80 px-1.5 py-0.5 rounded-md text-[11px]">{gateway.tokenSecret || `${gateway.id}-key`}</code>
+                      </p>
+                    </Details>
+                  </>
+                ) : (
+                  <span className="text-error font-medium">Not saved yet</span>
+                )}
+              </dd>
+            </div>
+          </dl>
+        </>
       )}
 
       {platform?.pairs && gateway.enabled && !editing && (

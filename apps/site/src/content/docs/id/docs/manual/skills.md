@@ -233,9 +233,11 @@ menyambungkan sebuah kamera dan sekarang berhasil, *kamera*-nya memang kasus sat
 bakal datang lagi. Jadi pertama kali, sebuah create ditahan sebagai **kandidat**: nama dan baris "Use
 when", tanpa isi dan tanpa panggilan model kedua. Skill-nya baru ditulis ketika jenis pekerjaan yang
 sama datang lagi: di percakapan lain, atau di chat yang sama setelah pekerjaan itu ditinggal enam jam
-atau lebih. Pekerjaan yang masih berlanjut dalam satu kali duduk belum dihitung datang lagi. Orang yang
-meminta skill dengan kata-kata langsung mendapatkannya. Kandidat yang gak muncul lagi dalam 30 hari
-gugur.
+atau lebih. Dan skill itu ditulis pada kali ketiga pekerjaannya terlihat, berapa pun jaraknya: kalau
+kamu bekerja di satu chat seharian, tiga kali dilihat dan tiga kali disebut jenis pekerjaan baru yang
+sama berarti pekerjaannya memang datang lagi. Dilihat dua kali dalam satu kali duduk belum dihitung.
+Orang yang meminta skill dengan kata-kata langsung mendapatkannya. Kandidat yang gak muncul lagi dalam
+30 hari gugur.
 
 **Skill yang dibaca dalam percakapan itu didahulukan.** Kalau agent membuka sebuah skill selama
 bekerja, pelajaran tentang hal yang dicakup skill itu masuk ke sana, bukan ke skill baru.
@@ -298,17 +300,18 @@ asalnya yang sudah dibersihkan, atau, untuk skill dari hub, asalnya dan apa saja
 Keduanya ada di baris itu, bukan di balik navigasi, karena keputusannya adalah "apakah saya mau ini ada
 di prompt agent saya" dan buktinya adalah giliran itu.
 
-**Seen once, not a skill yet.** Di bawah antrean, tiap jenis pekerjaan yang baru sekali dikerjakan
-agent dan sedang ditahan: namanya, kapan dipakai, agent mana yang melihatnya, berapa kali dan kapan
-terakhir. **Write it now** membuat agent menulis skill-nya dari percakapan tempat pekerjaan itu
+**Seen, not a skill yet.** Di bawah antrean, tiap jenis pekerjaan yang pernah dikerjakan agent dan
+sedang ditahan: namanya, kapan dipakai, agent mana yang melihatnya, berapa kali dan kapan terakhir.
+Yang sudah terlihat dua kali diberi keterangan bahwa ia jadi skill saat pekerjaannya terlihat lagi. **Write it now** membuat agent menulis skill-nya dari percakapan tempat pekerjaan itu
 terlihat, tanpa menunggu pekerjaannya datang lagi; draft-nya lalu menunggu di antrean, atau langsung
 masuk pool kalau belajar diatur berjalan tanpa kamu. **Forget** membuangnya. Kalau percakapan itu sudah
 dihapus atau dimulai ulang, gak ada bahan untuk menulisnya, dan halamannya bilang begitu.
 
 **What learning did lately** ada di bawahnya: dua belas hal terakhir yang ia lakukan atau putuskan
 untuk gak dilakukan, masing-masing dengan alasannya. "Looked, and found nothing to write down: a
-question answered, nothing done." Di sinilah tempat melihat kalau kamu mengharapkan sebuah skill dan
-gak ada yang muncul.
+question answered, nothing done." Hal yang sama dilakukan lagi jadi satu baris yang menyebut berapa
+kali, "(7 times)", dengan yang terbaru ditampilkan. Di sinilah tempat melihat kalau kamu mengharapkan
+sebuah skill dan gak ada yang muncul.
 
 **Seberapa sering sebuah skill dibaca** ada di barisnya di **Live**: "read 12 times, 3 times since it
 was changed". Angka kedua adalah berapa kali ia dibuka sejak terakhir diubah oleh proses belajar, dan

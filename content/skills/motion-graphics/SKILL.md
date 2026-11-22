@@ -121,7 +121,7 @@ The probe measures the clock. Nobody receives it.
 - **Sound**: their music or their voice as a file, music found with a licence, or none. Many people watch a feed
   with the sound off, so what the clip says is on screen either way.
 
-When their words already say it ("reels", "buat TikTok", "an intro for my talk"), do not ask it again: say in one
+When their words already say it ("reels", "for TikTok", "an intro for my talk"), do not ask it again: say in one
 line what you took as the answer. With nothing said and nobody to ask, it is 16:9 with no sound.
 
 **Ask the person about the assets first, every time** (their logo, screenshots, photos, footage, music, brand font
@@ -158,7 +158,7 @@ look:
 **Words need time.** A line is on screen, fully arrived, for a second for every 17 characters it has, and never under
 a second: the pace subtitles are held to (Netflix's ceiling for subtitles is 17 characters a second in many
 languages, 20 in English), and on-screen text has motion beside it to compete with. Count it in the storyboard,
-beside each line that is a sentence: `"Giling tepat sebelum diseduh" (28 characters: 2 s)`. A scene that cannot give
+beside each line that is a sentence: `"Grind it right before you brew" (30 characters: 2 s)`. A scene that cannot give
 its words their time says less, or is longer.
 
 A line with no source you can write there is a line you made up: a tagline, a URL, a feature list. Ask for it, or
@@ -340,7 +340,7 @@ Round 2 (stills 30, 75, 120, 225, 270, 345 and the sheet)
 - the same where each should differ: 345, three cards with one icon
 - text under 1/30: none
 - covered in a 9:16 frame, or too pale: none
-- words given their time: 120, "Kopi yang digiling tepat sebelum diseduh" (40 characters) is up 1.5 s -> scene 2 is a second longer
+- words given their time: 120, "Coffee ground right before it is brewed" (39 characters) is up 1.5 s -> scene 2 is a second longer
 - a feed's first and last scene: none
 - sheet, timing: none
 ```

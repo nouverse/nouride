@@ -181,6 +181,19 @@ paired only by the bot they addressed (tagged, named, or replied to): that bot a
 under their message, and the other bots in the group say nothing and open no request. The gate runs
 once per connection, so without this one tag met a wall of codes.
 
+## A connection that waits
+
+A connection that is not up yet says what it waits on, where that is known. A chat app that asks a bot to come back
+later, as Telegram does after several restarts close together, is waited out by its client library without a word:
+the connection read "connecting" for as long as that took, half an hour once. Now the reason is on the connection's
+card in the dashboard, with when it connects where the app named a time, in `nouride status`, among `/health`'s
+issues, and once in the log ("waiting to connect"). It connects by itself when the wait is over: restarting it does
+not shorten a wait the app asked for. Where Telegram answers with an error of its own, or cannot be reached, it is
+asked again after a second, then two, then four, up to a minute apart, for as long as it takes; before 0.8.43 the
+client library did this by itself and waited a hundred seconds, then two hundred, after one bad minute of a network.
+A connection that has not been answered for half a minute and knows no reason says that much: "It has not answered
+yet."
+
 ## Alerts
 
 The daemon reports on *itself* through a gateway you nominate, a connection that gave up

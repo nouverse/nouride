@@ -114,6 +114,8 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
       id: gateway.id,
       platform: gateway.platform,
       status: gateway.status,
+      // Why it is not up yet, where it said: what `nouride status` prints under it.
+      ...(gateway.waiting ? { waiting: gateway.waiting.reason } : {}),
     }));
 
     const body = {

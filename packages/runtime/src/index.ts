@@ -35,6 +35,7 @@ export * from "./process-agent-files.ts";
 export * from "./process-background.ts";
 export * from "./process-dumpable.ts";
 export * from "./process-cgroup.ts";
+export * from "./process-work-group.ts";
 export * from "./machine.ts";
 export * from "./system.ts";
 export * from "./prompt.ts";

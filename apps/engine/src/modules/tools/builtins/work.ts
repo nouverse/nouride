@@ -43,6 +43,16 @@ export interface WorkToolDeps {
   audit?: Pick<AuditPort, "record">;
 }
 
+/**
+ * The words a person has for a mission, said where the tool that answers is read (asserted by a test). Asked "what is
+ * in your backlog" or "how is that task going", an agent answered from its notes or its memory and never looked: the
+ * board calls the drafts the Backlog, and people call a mission a task. Not every "task" is a
+ * mission, the work of the chat at hand is not: so it says to look, not what to conclude.
+ */
+const BACKLOG_MEANS =
+  'A person\'s "backlog" is your drafts not started yet, and by a "task" or a "to-do" they often mean a mission: asked what is ' +
+  'in the backlog or how a task stands, look with "missions" before you answer.';
+
 const ACTIONS = ["missions", "mission", "start", "stop", "pause", "resume", "answer", "accept_outside", "tell", "jobs", "job", "kill", "approvals", "approval"] as const;
 type Action = (typeof ACTIONS)[number];
 
@@ -311,7 +321,8 @@ export function createWorkTool(deps: WorkToolDeps): Tool {
       name: "work",
       description:
         "Your own work, as the daemon knows it, and only yours: missions you work or started, your background jobs (`ask_agent` asks " +
-        'included), approvals you raised. "missions" lists them, your drafts in Backlog too; "mission" shows one; "stop" ends one; "pause" holds one ' +
+        `included), approvals you raised. ${BACKLOG_MEANS} ` +
+        '"missions" lists them, your drafts in Backlog too; "mission" shows one; "stop" ends one; "pause" holds one ' +
         'where it is, its work kept, and "resume" goes on with one you paused yourself (the orchestrator may pause any agent\'s mission by its id; a pause a person made is theirs to end); "answer" answers its ' +
         'question (`text`); "start" starts a draft of yours when the person you are talking to says to (their own words in ' +
         '`text`); "accept_outside" closes one as done outside its checks, with a `text` note, when the work landed ' +

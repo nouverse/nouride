@@ -56,6 +56,8 @@ export interface RunnerHost {
   instructedWith(agentId: string, key: string): string | undefined;
   /** A conversation's session let go, open or kept, so its next one is new. */
   forgetSession(agentId: string, gatewayId: string, chatId: string): void;
+  /** Told the processes the CLI started for a session opened here, where the conversation's work is followed. */
+  born?(agentId: string, gatewayId: string, chatId: string): ((pids: number[] | null) => void) | undefined;
   /** Whether an open session still owes its chat words it said by itself, or a command it left running. */
   owes(agentId: string, cli: CliConnection, sessionId: string): boolean;
   /** The models the CLI offers, as a session that opened said them — the Brain tab suggests them — and the one it opened on. */
@@ -484,7 +486,7 @@ export class ExternalTurnRunner {
       this.host.keepSession(agentId, key, id, instructions);
       const offered = offeredModels(opened);
       if (offered) this.host.models?.keep(agentId, offered);
-    });
+    }, this.host.born?.(agentId, req.gatewayId, req.chatId));
     hold(sessionId);
     // Each turn, not only a session's first: a preset or model changed on the Brain tab reaches a chat already going.
     const offered = this.host.models?.of(agentId) ?? [];

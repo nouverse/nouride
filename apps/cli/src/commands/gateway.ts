@@ -13,6 +13,8 @@ export async function gateway(client: Client, args: string[]): Promise<void> {
     for (const g of status.gateways) {
       const colour = g.status === "connected" ? GREEN : g.status === "dead" ? RED : YELLOW;
       say(`${colour}●${RESET} ${BOLD}${g.id}${RESET} ${DIM}${g.platform} · ${g.status}${RESET}`);
+      // Why it is not up yet, where it said: "connecting" alone reads as hung.
+      if (g.waiting) say(`  ${DIM}${g.waiting}${RESET}`);
     }
     return;
   }

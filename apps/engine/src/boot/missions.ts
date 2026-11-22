@@ -6,7 +6,7 @@
  */
 
 import { basename, fileExistsSync, freeDiskBytes, join, readPlainTextFile, readTextFileSync, realPathStrict, runCommand, statFile, writeFileAsAgent, type SqliteDb } from "@nouride/runtime";
-import { contained, createLogger, newId, type GlobalConfig, type Job, type LoadedAgent, type MessageEnvelope, type Tool, type ToolContext } from "@nouride/shared";
+import { contained, createLogger, newId, type GlobalConfig, type Job, type LeftProcess, type LeftRunning, type LoadedAgent, type MessageEnvelope, type Tool, type ToolContext } from "@nouride/shared";
 import { privateWorkspace, sharedWorkspace, type AgentRegistry } from "@nouride/persona";
 import { sessionIdFor } from "@nouride/shared";
 import { ownFolderPorts } from "./mission-folders.ts";
@@ -204,6 +204,8 @@ export function buildMissions(params: {
   roomForCli?: () => boolean;
   /** A conversation's coding-CLI session let go (`ExternalAgents.forgetSession`). */
   forgetCliSession?: (agentId: string, gatewayId: string, chatId: string) => void;
+  /** What a conversation's coding-CLI session left running, its session let go (`ExternalAgents.leftBy`). */
+  cliLeft?: (agentId: string, gatewayId: string, chatId: string) => Promise<{ left: LeftRunning[]; apart: LeftProcess[] } | null>;
   /** Whether nothing asks before an agent deletes (`ExternalAgents.freeToDelete`). */
   freeToDelete?: (agent: LoadedAgent | undefined) => boolean;
   /** What an agent's CLI turn running in a conversation has spent so far, estimated (`ExternalAgents.spentNow`). */
@@ -246,6 +248,7 @@ export function buildMissions(params: {
   // What a mission's commands left running in their own process groups, ended at its end (`mission-left.ts`).
   const left = missionLeft({
     asAgent: asTheAgent,
+    cliLeft: async (mission) => (await params.cliLeft?.(mission.agentId, MISSION_GATEWAY_ID, mission.id)) ?? null,
     tell: async (mission, text) => {
       await params.notifier.toChat(reportsTo(mission), text);
       noted(mission, text);

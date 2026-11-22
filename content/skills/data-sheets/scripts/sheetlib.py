@@ -242,7 +242,7 @@ def build(all_rows: list[tuple[int, list]], header: int | None, path: str, notes
         raise Stop(2, f"{path} has no data rows")
     if header is None:
         # The header is the first row that is at least half as wide as the widest of the next rows: a title line
-        # ("Laporan Penjualan 2026") above the real header is skipped and said.
+        # ("Sales Report 2026") above the real header is skipped and said.
         width = max(sum(1 for c in r if str(c).strip()) for _, r in nonempty[:30])
         hdr_i, hdr = next((i, r) for i, r in nonempty if sum(1 for c in r if str(c).strip()) >= max(2, width // 2) or width < 2)
         if hdr_i != nonempty[0][0]:

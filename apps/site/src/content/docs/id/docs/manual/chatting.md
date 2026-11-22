@@ -22,7 +22,8 @@ jalan. Semuanya dijawab saat itu juga, bahkan ketika sebuah giliran sedang jalan
 | `/stop` | Hentikan yang sedang dikerjakan agent ini, lalu tidurkan |
 | `/sleep` | Tidurkan agent ini: ia gak menerima kerjaan sampai `/wake` |
 | `/wake` | Bangunkan agent ini (`/start` juga bisa) |
-| `/mission` | Mulai kerjaan panjang yang ia selesaikan sendiri, atau lihat misi di sini. [Misi →](/id/docs/manual/missions/) |
+| `/mission` | Mulai kerjaan panjang yang ia selesaikan sendiri, atau lihat yang belum selesai: yang butuh kamu, yang sedang jalan, dan backlog. [Misi →](/id/docs/manual/missions/) |
+| `/helpers` | Siapa yang sedang bekerja untuk agent ini di latar: helper-nya dan agent lain yang ia mintai tolong |
 | `/model` | Ganti model untuk chat ini |
 | `/effort` | Seberapa lama model berpikir, untuk chat ini; `/effort <level> lock` untuk semua chat dan misi |
 | `/btw` | Tanya sesuatu di samping pekerjaan: agent menjawab sebagai dirinya sendiri, tidak melakukan apa pun, dan tidak masuk ke percakapan |

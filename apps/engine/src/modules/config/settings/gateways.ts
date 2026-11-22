@@ -31,6 +31,8 @@ export function gateways(deps: SettingsDeps): GatewayView[] {
   return deps.config.gateways.map((gateway) => ({
     ...gateway,
     status: live.get(gateway.id)?.status ?? null,
+    // Why it is not up yet, where it said: "connecting" for half an hour reads as hung without it.
+    ...(live.get(gateway.id)?.waiting ? { waiting: live.get(gateway.id)!.waiting! } : {}),
     // Whichever secret this platform actually needs — asking about `tokenSecret` on a gateway that
     // has none reports every WhatsApp instance as missing its credential.
     hasCredential: names.has(gateway.encryptionKeySecret ?? gateway.tokenSecret),

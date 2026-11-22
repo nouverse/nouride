@@ -8,6 +8,7 @@
 
 import { Bot, GrammyError, InputFile } from "grammy";
 import {
+  backoffDelay,
   contained,
   GatewayAuthError,
   GatewayError,
@@ -26,6 +27,7 @@ import { toTelegramHtml } from "./html.ts";
 import { sendTelegramAlbum, telegramAlbumRun } from "./album.ts";
 import { foldChatId, telegramEdit, telegramEnvelope, telegramRoomTitle, topicNameOf } from "./envelope.ts";
 import { inlineKeyboard, NO_BUTTONS, telegramPress } from "./presses.ts";
+import { CutPause, sayingWhyItWaits, untilStarted } from "./waits.ts";
 
 /** Telegram rejects anything longer; we split rather than let the send fail. */
 const MAX_MESSAGE_CHARS = 4096;
@@ -118,6 +120,10 @@ export class TelegramGateway extends BaseGateway {
   readonly formatting =
     "Formatting: write normal markdown; it is converted before sending. Headings become bold. This is usually read on a phone, so do not use tables; write short labelled lines instead. A table you send anyway is flattened into one, which will not be the layout you intended.";
   private bot?: Bot;
+  /** The bot a connect is starting, until its start has answered: what it waits on then is said (`waits.ts`). */
+  private starting?: Bot;
+  /** The wait a start is in, where it is in one: cut short when the connect is given up. */
+  private startPause = new CutPause();
   /** A group's chat id is negative, and Telegram holds a group to twenty a minute. */
   protected pacer = new Pacer({ perChat: (chat) => (chat.startsWith("-") ? GROUP_RATE : CHAT_RATE), perBot: BOT_RATE });
   private me?: { id: number; username?: string };
@@ -187,6 +193,9 @@ export class TelegramGateway extends BaseGateway {
       if (method === "getUpdates" && this.bot === bot) this.lastPollAt = Date.now();
       return result;
     });
+    // What grammY's start waits out in silence is said (`waits.ts`): only for the bot this connect is starting.
+    this.starting = bot;
+    bot.api.config.use(sayingWhyItWaits(() => this.starting === bot, (reason, until) => this.waitingFor(reason, until)));
 
     const self = () => ({ gatewayId: this.id, me: this.me });
     bot.on(
@@ -250,13 +259,16 @@ export class TelegramGateway extends BaseGateway {
     // `init()` validates the token and fetches our own identity before polling starts, so a
     // wrong token fails connect() instead of looping silently in the background.
     try {
-      await bot.init();
+      // Asked again here where its start has to wait, at this connection's own pace and not the library's (`waits.ts`).
+      await untilStarted(() => bot.init(), () => this.starting === bot, this.startPause, (attempt) => backoffDelay(attempt, this.resilience));
     } catch (err) {
       // 401, or 404 for a token Telegram cannot even read: the token, not the network — given up on, not retried.
       if (err instanceof GrammyError && (err.error_code === 401 || err.error_code === 404)) {
         throw new GatewayAuthError(this.id, `Telegram refused the bot token: ${err.description}`);
       }
       throw err;
+    } finally {
+      if (this.starting === bot) this.starting = undefined;
     }
     this.me = {
       id: bot.botInfo.id,
@@ -320,6 +332,9 @@ export class TelegramGateway extends BaseGateway {
   }
 
   protected async disconnect(): Promise<void> {
+    // A start still waiting is given up: its bot is no longer the one being started, and its wait ends now.
+    this.starting = undefined;
+    this.startPause.end();
     const bot = this.bot;
     this.bot = undefined;
     if (!bot) return;

@@ -219,9 +219,11 @@ connected and it now works, the *camera* is a one-off but the *procedure* is not
 **A new kind of work is noted before it is written.** One conversation does not show that the work
 comes back. So the first time, a create is held as a **candidate**: a name and a "Use when" line, with
 no body and no second model call. The skill is written when the same kind of work comes back: in
-another conversation, or in the same chat once it has been put down for six hours or more. Work that
-goes on in one sitting is not the work coming back. Somebody asking for a skill in words gets it at
-once. A candidate that does not come back within 30 days lapses.
+another conversation, or in the same chat once it has been put down for six hours or more. And it is
+written the third time it is seen, whatever the time between: if you work in one chat all day, three
+looks that each named the same new kind of work are the work coming back. A second look in the same
+sitting is not. Somebody asking for a skill in words gets it at once. A candidate that does not come
+back within 30 days lapses.
 
 **A skill the conversation read comes first.** When the agent opened a skill during the work, a lesson
 about what that skill covers goes to it, not to a new one.
@@ -281,16 +283,18 @@ the turn it came from, or, for an install, where it came from and what was adjus
 row rather than behind a navigation, because the decision is "do I want this in my agents' prompts"
 and the evidence for it is the turn.
 
-**Seen once, not a skill yet.** Under the queue, each kind of work an agent did once and is holding:
-its name, when to use it, which agent saw it, how many times and when last. **Write it now** has the
+**Seen, not a skill yet.** Under the queue, each kind of work an agent did and is holding: its name,
+when to use it, which agent saw it, how many times and when last. One seen twice says it becomes a
+skill the next time the work is seen. **Write it now** has the
 agent write the skill from the conversation it was seen in, without waiting for the work to come back;
 the draft then waits in the queue, or goes to the pool where learning is set to run without you.
 **Forget** drops it. Where that conversation has been deleted or started over, there is nothing to
 write from, and the page says so.
 
 **What learning did lately** is under that: the last twelve things it did or decided not to, each with
-its reason. "Looked, and found nothing to write down: a question answered, nothing done." This is where
-to look when you expected a skill and none came.
+its reason. "Looked, and found nothing to write down: a question answered, nothing done." The same thing
+done again is one line that says how often, "(7 times)", with the newest shown. This is where to look
+when you expected a skill and none came.
 
 **How often a skill is read** is on its row in **Live**: "read 12 times, 3 times since it was
 changed". The second number is how often it was opened since learning last changed it, which is what

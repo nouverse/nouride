@@ -47,10 +47,14 @@ export const MISSION_IS_FOR =
 /**
  * How one starts from a chat: always a draft the person starts. An agent never starts one itself; asked to "just run
  * it", it drafts and says the person's Start runs it, or starts its own draft with `work` on the person's word.
+ *
+ * And the word a person has for where a draft waits: the board's first column is "Backlog", and "put it in the
+ * backlog" was answered as a note to self or a memory, with no mission drafted.
  */
 export const MISSION_DRAFT =
   "From a chat, `mission` makes a draft, which runs once the person starts it; say what it will do and how it will be " +
-  "judged done. What other harnesses call `/goal` is a mission here.";
+  "judged done. A draft waits in the person's Backlog: asked to put something in the backlog, draft it. " +
+  "What other harnesses call `/goal` is a mission here.";
 
 /** The whole rule, where it is read alone: the tool's description and a coding CLI's instructions. */
 export const WHEN_TO_START =
