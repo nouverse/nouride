@@ -114,8 +114,8 @@ export function newStepId(steps: readonly Pick<Step, "id">[]): string {
 /** One of the steps started at the same time, with nothing written in it yet. Its id is its step's to give (`parted`). */
 export const blankPart = (kind: Part["kind"]): Part => (kind === "command" ? { id: "", kind, argv: [] } : { id: "", kind, message: "" });
 
-/** What one of them asks or runs. */
-const partText = (part: Part): string => (part.kind === "command" ? shellLine(part.argv) : part.message);
+/** What one of them asks or runs: a script is said by what it does, since its line is only the program that runs it. */
+const partText = (part: Part): string => (part.kind === "command" ? (part.script ? part.script.about : shellLine(part.argv)) : part.message);
 
 /** The same one as the other kind: its name and its words kept, an agent of its own dropped with the turn it was for. */
 export function asPart(part: Part, kind: Part["kind"]): Part {
@@ -170,7 +170,7 @@ export function mainText(step: Step): string {
     case "agentTurn":
       return step.message;
     case "command":
-      return shellLine(step.argv);
+      return step.script ? step.script.about : shellLine(step.argv);
     case "mission":
       return step.goal;
     case "approval":

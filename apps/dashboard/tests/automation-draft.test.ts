@@ -24,6 +24,10 @@ describe("an automation as a draft", () => {
   test("one thing is drawn as the single step it is, each kind with what it holds", () => {
     expect(stepsOf({ kind: "agentTurn", message: "Sum up.", model: "big" })).toEqual([{ id: "s1", kind: "agentTurn", message: "Sum up.", model: "big" }]);
     expect(stepsOf({ kind: "systemEvent", text: "Hi" })).toEqual([{ id: "s1", kind: "systemEvent", text: "Hi" }]);
+    // A script it keeps is drawn with it and saved with it: dropped on the way, the job would run its program on nothing.
+    const script = { text: "echo hi", about: "Greets", by: "agent:nova" };
+    expect(stepsOf({ kind: "command", argv: ["sh"], script, then: "deliver" })).toEqual([{ id: "s1", kind: "command", argv: ["sh"], script }]);
+    expect(payloadOf({ steps: [{ id: "s1", kind: "command", argv: ["sh"], script }], then: "deliver", list: false })).toEqual({ kind: "command", argv: ["sh"], script, then: "deliver" });
     expect(stepsOf({ kind: "command", argv: ["sh", "-lc", "ls"], cwd: "/srv", timeoutMs: 5000, then: "agentTurn" })).toEqual([{ id: "s1", kind: "command", argv: ["sh", "-lc", "ls"], cwd: "/srv", timeoutMs: 5000 }]);
     expect(stepsOf({ kind: "mission", goal: "Do it", checks: ["true"], review: false })).toEqual([{ id: "s1", kind: "mission", goal: "Do it", checks: ["true"], review: false }]);
     expect(stepsOf({ kind: "steps", steps: [say("a"), say("b")] })).toEqual([say("a"), say("b")]);

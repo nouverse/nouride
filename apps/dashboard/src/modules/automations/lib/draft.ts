@@ -57,7 +57,8 @@ function stepOfOne(payload: AutomationSummary["payload"]): Step {
     case "agentTurn":
       return { id: ONE, kind: "agentTurn", message: one.message ?? "", ...(one.model ? { model: one.model } : {}) };
     case "command":
-      return { id: ONE, kind: "command", argv: Array.isArray(one.argv) ? one.argv.map(String) : [], ...(one.cwd ? { cwd: one.cwd } : {}), ...(typeof one.timeoutMs === "number" ? { timeoutMs: one.timeoutMs } : {}) };
+      // A script it keeps goes with it: a page that dropped it would save a job that runs its program on nothing.
+      return { id: ONE, kind: "command", argv: Array.isArray(one.argv) ? one.argv.map(String) : [], ...(one.script ? { script: one.script } : {}), ...(one.cwd ? { cwd: one.cwd } : {}), ...(typeof one.timeoutMs === "number" ? { timeoutMs: one.timeoutMs } : {}) };
     case "mission":
       return { id: ONE, kind: "mission", goal: one.goal ?? "", ...(one.checks?.length ? { checks: one.checks } : {}), ...(one.review !== undefined ? { review: one.review } : {}) };
   }
@@ -134,7 +135,7 @@ export function payloadOf(draft: Pick<Draft, "steps" | "then" | "list">): JobPay
     case "agentTurn":
       return { kind: "agentTurn", message: step.message.trim(), ...(step.model ? { model: step.model } : {}) };
     case "command":
-      return { kind: "command", argv: step.argv, ...(step.cwd ? { cwd: step.cwd } : {}), ...(step.timeoutMs !== undefined ? { timeoutMs: step.timeoutMs } : {}), then: draft.then };
+      return { kind: "command", argv: step.argv, ...(step.script ? { script: step.script } : {}), ...(step.cwd ? { cwd: step.cwd } : {}), ...(step.timeoutMs !== undefined ? { timeoutMs: step.timeoutMs } : {}), then: draft.then };
     case "mission":
       return { kind: "mission", goal: step.goal.trim(), ...(step.checks?.length ? { checks: step.checks } : {}), ...(step.review !== undefined ? { review: step.review } : {}) };
     case "approval":

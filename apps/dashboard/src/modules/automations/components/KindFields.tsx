@@ -112,14 +112,26 @@ function CommandStep({ step, alone, onChange }: { step: Of<"command">; alone: { 
   const seconds = step.timeoutMs !== undefined ? String(step.timeoutMs / 1000) : "";
   return (
     <>
-      <Field label="Command" hint="Runs on this server with no AI, and nobody is asked first. What it prints goes to the next step.">
-        <input
-          className="input w-full font-mono text-[13px]"
-          value={shellLine(step.argv)}
-          placeholder="scripts/check-queue.sh" // plain-words-ok: an example of the command this field takes
-          onChange={(event) => onChange({ ...step, argv: argvOf(event.target.value) })}
-        />
-      </Field>
+      {step.script ? (
+        // A script the automation keeps: its text is what is changed, never the line that only names what runs it.
+        <Field label="Script" hint="Runs on this server with no AI, and nobody is asked first. It reads what the step before said, and what it prints goes to the next step.">
+          <textarea
+            className="textarea min-h-40 w-full font-mono text-[13px]"
+            value={step.script.text}
+            spellCheck={false}
+            onChange={(event) => onChange({ ...step, script: { ...step.script!, text: event.target.value } })}
+          />
+        </Field>
+      ) : (
+        <Field label="Command" hint="Runs on this server with no AI, and nobody is asked first. What it prints goes to the next step.">
+          <input
+            className="input w-full font-mono text-[13px]"
+            value={shellLine(step.argv)}
+            placeholder="scripts/check-queue.sh" // plain-words-ok: an example of the command this field takes
+            onChange={(event) => onChange({ ...step, argv: argvOf(event.target.value) })}
+          />
+        </Field>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Give up after (seconds)" hint="Empty: the usual limit.">
           <input
