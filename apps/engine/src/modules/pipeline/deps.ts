@@ -243,6 +243,11 @@ export interface PipelineDeps {
    * starts (`background-helper.ts`). Nothing a person waits on asks it. Absent, nothing waits.
    */
   load?: BoxBusy;
+  /**
+   * How full the machine is now, as a line for a turn's message, or null where it has room (`commons/box-full.ts`).
+   * Absent, nothing is said: a test names the machine it is about, and most are about none.
+   */
+  full?: () => string | null;
   /** How often a helper waiting for room looks again (`room-wait.ts`, half a minute). Lowered in tests. */
   roomCheckMs?: number;
   /**

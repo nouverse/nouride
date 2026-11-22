@@ -17,6 +17,8 @@ import type { DaemonContext } from "@/commons/context.ts";
 import { alertCooldownsState, spendAlertsState } from "@/commons/daemon-state.ts";
 import { Notifier } from "@/commons/notify.ts";
 import type { BoxBusy } from "@/commons/box-load.ts";
+import { boxFull } from "@/commons/box-full.ts";
+import { commandsCgroup, commandsMemory, diskSpace } from "@nouride/runtime";
 import type { Machine } from "@/commons/machine.ts";
 import { buildScheduler } from "./scheduler.ts";
 import { heldBack } from "@/modules/transfer/held.ts";
@@ -315,6 +317,9 @@ export async function buildTurnMachine(
     users: stores.accounts,
     memory: input.memory,
     load: input.load,
+    // Read from the machine when a turn's message is built, and kept half a minute. The commands' memory only where
+    // they have a cgroup of their own: without one there is no cap to be near, and summing every process costs.
+    full: boxFull(() => ({ commands: commandsCgroup() ? commandsMemory() : null, disk: diskSpace(config.daemon.dataDir) })),
     cronJobs: stores.cron,
     jobWakes: stores.jobWakes,
     config,
