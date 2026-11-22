@@ -36,7 +36,7 @@ import type { ExecutorDeps, TurnBrain, TurnRequest } from "@/modules/llm/executo
 import type { PlanStep } from "@/modules/notes/store.ts";
 import type { CliModel } from "@/commons/daemon-state.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
-import { CliConnection, signedOut, unavailableReason, type Spawn } from "./connection.ts";
+import { CliConnection, signedOut, unavailableReason, type ChildrenOf, type Spawn } from "./connection.ts";
 import { OfferedModels, offeredModels, renewLists } from "./models.ts";
 import { accountLaunch, launchFor, ownFolder, profileDirOf } from "./launch.ts";
 import { FRESH_POLL_MS, FRESH_WAIT_MS, hashedEach, notStartedWith, pause } from "./fresh-secrets.ts";
@@ -57,6 +57,7 @@ import type { NewestVersions } from "./newest.ts";
 import type { Situation } from "./situation.ts";
 import { OwnWords, ownKey, type OwnChat } from "./own-words.ts";
 import { LeftRunning, type LeftRunningFile } from "./left-running.ts";
+import { MACHINE_GROUPS, ownChildren, SessionGroups, type GroupOs, type SessionLeft } from "./session-groups.ts";
 import { SkillCopies, syncSkills } from "./skills.ts";
 import { answeringOf, CliContexts, CliSpending } from "./usage.ts";
 import type { CliAnswering } from "@/modules/pipeline/brain.ts";
@@ -139,6 +140,14 @@ export interface ExternalAgentsDeps {
   commandsUnder?: (pid: number) => number;
   /** The chats whose CLI was left running a command, by session (`left-running.ts`). */
   leftRunning?: LeftRunningFile;
+  /**
+   * The name of the work a conversation's session is, where what that session's commands leave running is somebody's
+   * to end when the work does (a mission's); null for a chat, which ends nothing (`session-groups.ts`).
+   */
+  followed?: (gatewayId: string, chatId: string) => string | null;
+  /** The machine as `session-groups.ts` reads it, and a CLI's children. Absent: the runtime's. */
+  groupOs?: GroupOs;
+  childrenOf?: ChildrenOf;
   /** How long a CLI going on by itself is quiet before what it said is its answer (`own-words.ts`). */
   quietMs?: number;
   /** How long a CLI asked to stop has before it is stopped (`runner.ts`). */
@@ -180,6 +189,8 @@ export class ExternalAgents implements RunnerHost {
   readonly rotation: AccountRotation;
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
+  /** What a followed session's commands started, kept together to be sorted at its work's end. */
+  private readonly groups: SessionGroups;
   /** A CLI being updated, held while its new version installs, and checked after (`cli-update.ts`, 0.8.24). */
   readonly updates: CliUpdates;
   /** What each conversation's CLI session last said of its context (`usage.ts`). */
@@ -214,6 +225,7 @@ export class ExternalAgents implements RunnerHost {
     this.rotation = new AccountRotation({ usable: (row, account) => this.accounts.token(row, account) !== undefined, record: (action, details) => deps.audit?.record({ action, actor: "nouride:system", details }), ...(deps.limits ? { file: deps.limits } : {}), ...(deps.now ? { now: deps.now } : {}) });
     this.ownWords = new OwnWords((chat) => this.onOwnWords?.(chat), deps.quietMs);
     this.left = new LeftRunning(deps.leftRunning, deps.commandsUnder ?? commandsRunningUnder);
+    this.groups = new SessionGroups(deps.groupOs ?? MACHINE_GROUPS);
     this.updates = new CliUpdates({
       runningEntries: () => [...this.running],
       occupied: (cli) => cli.busy || cli.held || this.left.commandsOf(cli) > 0,
@@ -360,6 +372,17 @@ export class ExternalAgents implements RunnerHost {
     this.deps.sessions.save(this.kept);
   }
 
+  /** Told the processes a CLI started for a session it opened, where the conversation's work is followed (`session-groups.ts`). */
+  born(agentId: string, gatewayId: string, chatId: string): ((pids: number[] | null) => void) | undefined {
+    const name = this.deps.followed?.(gatewayId, chatId);
+    return name ? (pids) => this.groups.follow(`${agentId}|${cliSessionKey(gatewayId, chatId)}`, name, pids) : undefined;
+  }
+
+  /** What a followed conversation's session left running, its work over and its session let go; null where it was not followed. */
+  leftBy(agentId: string, gatewayId: string, chatId: string): Promise<SessionLeft | null> {
+    return this.groups.left(`${agentId}|${cliSessionKey(gatewayId, chatId)}`);
+  }
+
   lend(agentId: string, key: string, req: TurnRequest, deps: ExecutorDeps): () => void {
     return this.lent.begin(agentId, key, req, deps);
   }
@@ -446,7 +469,7 @@ export class ExternalAgents implements RunnerHost {
     const start = (async () => {
       const lent = row.mcpEnvHeaders && this.deps.mcpUrl?.() ? this.lent.env(agentId) : {};
       const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, account), ...lent } });
-      const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now);
+      const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now, this.deps.childrenOf ?? ownChildren);
       connection.onOwnWords = (sessionId, update) => {
         // What a helper the CLI started does behind a turn is not the agent's word: it wakes no chat and is in no
         // turn. The agent's own, once the helper has ended, is.

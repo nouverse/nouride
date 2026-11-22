@@ -90,8 +90,30 @@ export class MissionLeft {
   }
 }
 
-/** What the mission's chat is told when something was ended: said, never done in silence. */
-export function leftEndedNotice(called: string, ended: readonly string[]): string {
-  const count = ended.reduce((sum, one) => sum + Number(/\((\d+)\)$/.exec(one)?.[1] ?? 1), 0);
-  return `${called}: ${count === 1 ? "1 process" : `${count} processes`} its commands had left running ${count === 1 ? "was" : "were"} ended with it (${ended.join(", ")}). To keep something running after a mission ends, start it as a service of its own: a process manager, a container, or the system's.`;
+/** Names as a person reads a list of processes: each once, with how many, "node (3)". */
+export function counted(names: readonly string[]): string[] {
+  const seen = new Map<string, number>();
+  for (const name of names) seen.set(name, (seen.get(name) ?? 0) + 1);
+  return [...seen].map(([name, count]) => (count > 1 ? `${name} (${count})` : name));
+}
+
+const total = (said: readonly string[]): number => said.reduce((sum, one) => sum + Number(/\((\d+)\)$/.exec(one)?.[1] ?? 1), 0);
+const processes = (count: number): string => (count === 1 ? "1 process" : `${count} processes`);
+
+/**
+ * What the mission's chat is told when something was ended, or left: said, never done in silence. `apart` is what a
+ * coding CLI's commands started that set itself apart, a session of its own making: left running by the rule, and
+ * named, since nothing else says a build's daemon is still there.
+ */
+export function leftEndedNotice(called: string, ended: readonly string[], apart: readonly string[] = []): string {
+  const said: string[] = [];
+  if (ended.length > 0) {
+    const count = total(ended);
+    said.push(`${processes(count)} its commands had left running ${count === 1 ? "was" : "were"} ended with it (${ended.join(", ")}). To keep something running after a mission ends, start it as a service of its own: a process manager, a container, or the system's.`);
+  }
+  if (apart.length > 0) {
+    const count = total(apart);
+    said.push(`${processes(count)} it started ${count === 1 ? "is" : "are"} still running, set apart in a session of ${count === 1 ? "its" : "their"} own, and ${count === 1 ? "was" : "were"} left (${apart.join(", ")}).`);
+  }
+  return `${called}: ${said.join(" ")}`;
 }

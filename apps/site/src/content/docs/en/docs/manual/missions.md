@@ -323,8 +323,16 @@ everything else, and can look its missions up.
 When a mission ends, what it was running ends with it: its background jobs, and (0.8.42) whatever one of its commands
 started and did not wait for, a build's workers left behind, say. Each is asked to end and, after a moment, made to,
 and the chat is told what was ended. A program that sets itself apart keeps running: a process manager, a container,
-a system service. That is how to keep something up past a mission. This covers the commands Nouride runs for an
-agent; what an agent on a coding CLI starts from the CLI's own shell is the CLI's.
+a system service. That is how to keep something up past a mission.
+
+An agent on a coding CLI runs its commands from the CLI's own shell, where Nouride holds none of them. Since 0.8.43
+what such a mission started is still followed: the process that serves the mission's session is kept in a group of
+its own, and when the mission ends and its session is closed, whatever a command of it started and did not wait for
+is ended with the rest, in the same notice. What set itself apart, a build's own daemon that goes on for the next
+build, is left running, and the notice names it, since nothing else would say it is still there. This needs an
+install whose service hands its control group over, which a systemd install does; in a container, and anywhere
+else, a coding CLI's commands are not followed, and what they leave is left. A CLI that serves all its sessions
+from one process is not followed either: nothing there is one mission's.
 
 Inside a mission, an agent can hand a separate piece to another agent as a mission of its own (one level, no deeper)
 and is told how it ended.

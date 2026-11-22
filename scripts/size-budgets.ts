@@ -35,12 +35,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 553,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, parts, versions, a turn's account and use, a helper's work kept from waking a chat; logic in files beside",
+    lines: 566,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, parts, versions, a turn's account and use, a followed session's leftovers; the logic in files beside",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
-    lines: 405,
-    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, in one loop sharing the turn's state",
+    lines: 406,
+    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, who is told what its session started",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 481,
@@ -55,8 +55,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, which jobs are services, and who is told what a job left running",
   },
   "apps/engine/src/boot/missions.ts": {
-    lines: 411,
-    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches, skill learning at its end too; what its commands left is its own file",
+    lines: 413,
+    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches, skill learning and its coding CLI's leftovers at its end too",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 453,
@@ -82,9 +82,17 @@ export const BUDGET: Record<string, Budget> = {
     lines: 596,
     why: "the missions' one service (start, the dispatcher, a turn's shape and its end with what learns from it, ask, stop, pause, continue, going on after tries, the slots, its jobs, what its commands left)",
   },
+  "packages/gateways/src/channels/telegram/gateway.ts": {
+    lines: 408,
+    why: "one Telegram connection: the bot it starts and what it waits on, its poll and what a failed one becomes, sends in parts at Telegram's pace, files, edits, buttons, the menu; words in files beside",
+  },
+  "packages/gateways/src/commons/resilience.ts": {
+    lines: 409,
+    why: "what every gateway inherits: the connect loop with its teardown, backoff and retry budget, health checks, the bounded send buffer, refusals; a connect's wait is kept in a file beside (connect-wait.ts)",
+  },
   "packages/gateways/src/channels/discord/gateway.ts": {
-    lines: 433,
-    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id (declared), files as a set, buttons, presence, reconnect, the command menu",
+    lines: 438,
+    why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id, files as a set, buttons, presence, reconnect, a login's timeout with why",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {
     lines: 409,

@@ -101,6 +101,7 @@ export function buildTurnParts(
     jobAllowed: (jobId) => cron.get(jobId)?.allowed?.flatMap((allowance) => allowance.keys) ?? [],
     roomForCli: () => externalAgents.room().enough,
     forgetCliSession: (agentId, gatewayId, chatId) => externalAgents.forgetSession(agentId, gatewayId, chatId),
+    cliLeft: (agentId, gatewayId, chatId) => externalAgents.leftBy(agentId, gatewayId, chatId),
     freeToDelete: (agent) => externalAgents.freeToDelete(agent),
     cliSpentNow: (agentId, gatewayId, chatId) => externalAgents.spentNow(agentId, gatewayId, chatId),
     lastSaid: (gatewayId, chatId, senderId) => turns.lastSaid(gatewayId, chatId, senderId),

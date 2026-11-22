@@ -155,6 +155,11 @@ export function isolateCommands(options: { env?: Record<string, string | undefin
   }
 }
 
+/** `<cgroup>/commands` where the split made it, for what groups its own work under it (`process-work-group.ts`). */
+export function commandsCgroup(): string | null {
+  return commandsDir;
+}
+
 /**
  * `cmd`, run in `commands/` — moved there by the shell that starts it, before it starts, so nothing it forks is born
  * beside the daemon. Unchanged where `isolateCommands` made no `commands/`; a move that fails runs it where it is.

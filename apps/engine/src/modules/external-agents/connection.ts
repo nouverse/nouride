@@ -19,6 +19,9 @@ const log = createLogger("external-agents");
 
 export type Spawn = (cmd: string[], opts: { agent: string; cwd: string; env: Record<string, string> }) => LongLivedProcess;
 
+/** The processes the CLI's own process has started and that still run, by the pid the daemon holds for it. */
+export type ChildrenOf = (pid: number) => number[];
+
 /** How many of the CLI's last stderr lines are kept. */
 const STDERR_KEPT = 30;
 
@@ -83,6 +86,9 @@ export class CliConnection {
   private gone: string | null = null;
   /** Sessions being reopened: what the CLI sends for one then is its history replayed, not something it says now. */
   private readonly loading = new Set<string>();
+  /** Sessions being opened now, and how many were ever begun: what tells an open that ran alone from one that did not. */
+  private opening = 0;
+  private opened = 0;
   lastUsed: number;
   /** What a session says with no prompt running — the CLI going on by itself (`own-words.ts`). */
   onOwnWords?: (sessionId: string, update: SessionUpdate) => void;
@@ -97,6 +103,7 @@ export class CliConnection {
     readonly agentId: string,
     private readonly spawn: Spawn,
     private readonly now: () => number = Date.now,
+    private readonly childrenOf: ChildrenOf = () => [],
   ) {
     this.lastUsed = now();
   }
@@ -174,17 +181,42 @@ export class CliConnection {
   }
 
   /**
+   * What the CLI's process started while a session was opened and that still runs: where a CLI serves each session
+   * from a process of its own (Claude Code does, started as the session opens, with no prompt: measured), that
+   * process. Null where it cannot be told: another session was opened at the same time, and a child born then is
+   * either's. Nothing names a session on its process's command line, so the time it was born is what there is.
+   * Every open is counted; the children are read only for one that is `asked` for them.
+   */
+  private async bornWhile<T>(open: () => Promise<T>, asked = false): Promise<{ value: T; born: number[] | null }> {
+    const pid = this.pid;
+    const alone = this.opening === 0;
+    const begun = (this.opened += 1);
+    this.opening += 1;
+    const before = new Set(asked && pid !== undefined ? this.childrenOf(pid) : []);
+    try {
+      const value = await open();
+      const clean = asked && alone && this.opened === begun && pid !== undefined && pid === this.pid;
+      return { value, born: clean ? this.childrenOf(pid).filter((child) => !before.has(child)) : null };
+    } finally {
+      this.opening -= 1;
+    }
+  }
+
+  /**
    * The conversation's session: the one this process opened for it, else the one it kept from before (where the CLI
    * reopens sessions), else a new one — `setUp` runs on a session this process has not used yet (its mode, its model).
+   * `born` is told the processes the CLI started for a session opened here, or null where that cannot be told
+   * (`bornWhile`); not for a session already open.
    */
-  async session(key: string, cwd: string, kept: string | undefined, mcpServers: McpServer[], setUp: (sessionId: string, opened: NewSessionResult | null) => Promise<void>): Promise<string> {
+  async session(key: string, cwd: string, kept: string | undefined, mcpServers: McpServer[], setUp: (sessionId: string, opened: NewSessionResult | null) => Promise<void>, born?: (pids: number[] | null) => void): Promise<string> {
     const client = this.need();
     const known = this.sessions.get(key);
     if (known) return known;
     if (kept && this.handshake?.agentCapabilities?.loadSession) {
       this.loading.add(kept);
       try {
-        const loaded = await client.loadSession(kept, cwd, mcpServers);
+        const { value: loaded, born: started } = await this.bornWhile(() => client.loadSession(kept, cwd, mcpServers), born !== undefined);
+        born?.(started);
         this.loading.delete(kept);
         this.offers(kept, loaded.configOptions);
         this.sessions.set(key, kept);
@@ -196,7 +228,8 @@ export class CliConnection {
         log.info("an external agent's kept session could not be reopened; starting a new one", { agent_id: this.agentId, error: String(err) });
       }
     }
-    const opened = await client.newSession(cwd, mcpServers);
+    const { value: opened, born: started } = await this.bornWhile(() => client.newSession(cwd, mcpServers), born !== undefined);
+    born?.(started);
     this.sessions.set(key, opened.sessionId);
     this.offers(opened.sessionId, opened.configOptions);
     await setUp(opened.sessionId, opened);
@@ -263,7 +296,8 @@ export class CliConnection {
    * (`cli-update.ts`); no model is called.
    */
   async probe(cwd: string): Promise<NewSessionResult> {
-    const opened = await this.need().newSession(cwd);
+    // Counted as an open: what it starts is not a session's that opens beside it.
+    const { value: opened } = await this.bornWhile(() => this.need().newSession(cwd));
     this.lastUsed = this.now();
     // Let go at once: each check left a session open in the agent's live CLI, and a session holds memory there.
     this.letGo(opened.sessionId);

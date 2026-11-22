@@ -343,8 +343,17 @@ Saat misi berakhir, yang sedang dijalankannya ikut berakhir: job latar belakangn
 dimulai salah satu perintahnya tanpa ditunggu, misalnya worker build yang tertinggal. Masing-masing diminta berhenti
 dan, sesaat kemudian, dihentikan, lalu chat-nya diberi tahu apa yang dihentikan. Program yang sengaja memisahkan diri
 tetap jalan: process manager, container, service sistem. Begitulah cara membuat sesuatu tetap hidup setelah misi
-selesai. Ini berlaku untuk perintah yang dijalankan Nouride bagi agent; yang dimulai agent di coding CLI dari shell
-CLI-nya sendiri adalah urusan CLI itu.
+selesai.
+
+Agent di coding CLI menjalankan perintahnya dari shell CLI itu sendiri, jadi Nouride gak memegang satu pun
+perintahnya. Sejak 0.8.43 yang dimulai misi seperti itu tetap diikuti: proses yang melayani sesi misi itu ditaruh
+di kelompoknya sendiri, dan saat misi berakhir dan sesinya ditutup, apa pun yang dimulai sebuah perintahnya tanpa
+ditunggu ikut dihentikan bersama yang lain, dalam pemberitahuan yang sama. Yang sengaja memisahkan diri, misalnya
+daemon milik build yang tetap hidup untuk build berikutnya, dibiarkan jalan, dan pemberitahuannya menyebut namanya,
+karena gak ada tempat lain yang bilang ia masih ada. Ini butuh instalasi yang service-nya menyerahkan control
+group-nya, seperti instalasi systemd; di container, dan di tempat lain, perintah coding CLI gak diikuti, dan yang
+ditinggalkannya dibiarkan. CLI yang melayani semua sesinya dari satu proses juga gak diikuti: di sana gak ada yang
+milik satu misi saja.
 
 Di dalam misi, agent bisa menyerahkan satu bagian terpisah ke agent lain sebagai misi tersendiri (satu tingkat, gak
 lebih dalam), dan diberi tahu bagaimana hasilnya.

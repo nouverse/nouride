@@ -14,6 +14,7 @@ import type { StateRows } from "@/commons/daemon-state.store.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { NewestVersions } from "@/modules/external-agents/newest.ts";
+import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { NotesStore } from "@/modules/notes/store.ts";
 import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
 
@@ -30,6 +31,8 @@ export function startExternalAgents(params: { config: GlobalConfig; state: State
     models: externalModelsState(params.state),
     efforts: externalEffortsState(params.state),
     leftRunning: cliLeftRunningState(params.state),
+    // A mission's session: what its commands leave running ends with the mission (`session-groups.ts`). A chat's is not followed.
+    followed: (gatewayId, chatId) => (gatewayId === MISSION_GATEWAY_ID ? `m-${chatId.replace(/[^A-Za-z0-9_-]/g, "")}` : null),
     limits: cliLimitsState(params.state),
     // A shared account's token is a secret like a provider's key: in the store, never in a file of ours.
     accounts: {
