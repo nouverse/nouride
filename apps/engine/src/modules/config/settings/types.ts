@@ -28,6 +28,7 @@ import {
   type GatewayInstanceConfig,
   type GlobalConfig,
   type ProviderKind,
+  type GatewayWaiting,
 } from "@nouride/shared";
 import { type SecretStore } from "@nouride/secrets";
 import type { AuditPort } from "@/commons/audit.store.ts";
@@ -56,6 +57,8 @@ export const NAME_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 export interface GatewayView extends GatewayInstanceConfig {
   /** Live connection state, or null when this instance was added since the last boot. */
   status: string | null;
+  /** What it waits on while it is not connected, where its adapter said (`BaseGateway.waitingFor`). */
+  waiting?: GatewayWaiting;
   /** Whether `tokenSecret` resolves to anything. A gateway with no credential cannot connect. */
   hasCredential: boolean;
 }
@@ -81,7 +84,7 @@ export interface SettingsDeps {
   secrets: SecretStore;
   providers: ProviderRegistry;
   /** Live gateway states, keyed by instance id. Empty in tests that do not boot adapters. */
-  gatewayStatus: () => Map<string, { status: string }>;
+  gatewayStatus: () => Map<string, { status: string; waiting?: GatewayWaiting | null }>;
   /**
    * Take a live connection down as part of removing it.
    *

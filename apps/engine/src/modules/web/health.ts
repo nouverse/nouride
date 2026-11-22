@@ -150,6 +150,8 @@ export function buildHealth(ctx: DaemonContext, readMemory: () => HealthPayload[
     if (gateway.status === "dead") issues.push(`${name}: dead`);
     else if (gateway.status === "reconnecting") issues.push(`${name}: reconnecting`);
     else if (gateway.status === "disconnected") issues.push(`${name}: disconnected`);
+    // Not up, and it said why: a connect that waits is something to look at, with the reason beside it.
+    else if (gateway.waiting) issues.push(`${name}: ${gateway.status}, waiting. ${gateway.waiting.reason}`);
   }
 
   const walMb = ctx.db.walSizeBytes() / (1024 * 1024);

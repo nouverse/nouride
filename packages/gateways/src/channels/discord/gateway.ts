@@ -43,6 +43,7 @@ import { discordRoomTitle, ThreadOpeners, type RoomChannel } from "./rooms.ts";
 import { heartbeatAlive } from "./heartbeat.ts";
 import { buttonRow, carryOut, discordPress } from "./presses.ts";
 import { BaseGateway, type GatewayIdentity, deliverInParts, UndeliverableError } from "../../commons/resilience.ts";
+import { sayWhatLoginWaitsOn } from "./waits.ts";
 
 /** Discord rejects anything longer. */
 const MAX_MESSAGE_CHARS = 2000;
@@ -328,6 +329,8 @@ export class DiscordGateway extends BaseGateway {
       }),
     );
     logShardLifecycle(client, this.log, current);
+    // A limit met while it logs in is said while it waits (`waits.ts`), and in the timeout's own words below.
+    sayWhatLoginWaitsOn(client, this.log, current, (reason, until) => this.waitingFor(reason, until));
 
     /**
      * Assigned before `login`, not after it resolves.
@@ -341,7 +344,11 @@ export class DiscordGateway extends BaseGateway {
     this.client = client;
 
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new GatewayError(this.id, "login timed out")), 30_000);
+      // What it waited on, where it said: a login that timed out with no reason was the whole of what was known.
+      const timer = setTimeout(
+        contained(this.log, "could not time a login out", () => reject(new GatewayError(this.id, this.waiting ? `login timed out: ${this.waiting.reason}` : "login timed out"))),
+        30_000,
+      );
       client.once(Events.ClientReady, () => {
         try {
           if (current()) {

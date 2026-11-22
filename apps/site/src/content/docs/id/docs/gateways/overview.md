@@ -187,6 +187,19 @@ oleh bot yang ia sapa (di-tag, disebut namanya, atau di-reply): bot itu membalas
 pesannya, dan bot lain di grup diam serta gak membuka permintaan. Gerbangnya menyala sekali per
 koneksi, jadi tanpa ini satu tag bakal disambut dinding kode.
 
+## Koneksi yang sedang menunggu
+
+Koneksi yang belum tersambung bilang apa yang ditunggunya, kalau itu diketahui. Aplikasi chat yang meminta bot
+datang lagi nanti, seperti Telegram setelah beberapa restart berdekatan, ditunggui diam-diam oleh pustaka
+kliennya: koneksinya terbaca "connecting" selama itu berlangsung, pernah sampai setengah jam. Sekarang alasannya
+ada di kartu koneksi itu di dashboard, beserta kapan ia tersambung kalau aplikasinya menyebut waktu, di
+`nouride status`, di antara issue `/health`, dan sekali di log ("waiting to connect"). Ia tersambung sendiri
+begitu waktu tunggunya habis: me-restart-nya gak memperpendek waktu tunggu yang diminta aplikasinya. Kalau Telegram
+menjawab dengan error-nya sendiri, atau gak terjangkau, ia ditanya lagi setelah satu detik, lalu dua, lalu empat,
+sampai paling lama semenit sekali, selama yang diperlukan; sebelum 0.8.43 pustaka kliennya melakukan ini sendiri dan
+menunggu seratus detik, lalu dua ratus, setelah jaringan bermasalah semenit saja. Koneksi yang sudah setengah menit
+belum dijawab dan gak tahu alasannya bilang sebatas itu: "It has not answered yet."
+
 ## Alert
 
 Daemon melaporkan tentang *dirinya sendiri* lewat gateway yang kamu tunjuk, koneksi yang menyerah

@@ -202,7 +202,8 @@ export interface StatusPayload {
   /** Who answers a message that names no agent, and is the front desk of rooms (`[daemon] orchestrator`). */
   orchestrator: string | null;
   agents: AgentSummary[];
-  gateways: { id: string; platform: string; status: string }[];
+  /** `waiting`: why one that is not connected yet waits, as a sentence, where it said. */
+  gateways: { id: string; platform: string; status: string; waiting?: string }[];
   /** What the helper model's work ran into in the last 24 h — none is none. Absent from a daemon before 0.7.25. */
   helpers?: HelperTrouble[];
   /**
