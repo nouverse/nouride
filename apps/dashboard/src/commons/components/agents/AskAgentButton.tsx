@@ -27,11 +27,14 @@ export function AskAgentButton({
   message,
   className,
   variant = "primary",
+  whole = false,
 }: {
   task: string;
   message: string;
   className?: string;
   variant?: "primary" | "soft";
+  /** Its words whole at every width: for a soft one that is not in a page's header, where two "Ask Nouva" on a phone said nothing of which asks what. */
+  whole?: boolean;
 }) {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const me = useMe();
@@ -42,7 +45,7 @@ export function AskAgentButton({
   return (
     <button type="button" title={`Ask ${name} ${task}`} className={cn(look, className)} onClick={() => openFloatingChat({ agent: orchestrator, draft: message })}>
       <MessageSquare size={14} aria-hidden="true" />
-      {variant === "soft" ? (
+      {variant === "soft" && !whole ? (
         <>
           <span className="sm:hidden">Ask {name}</span>
           <span className="hidden sm:inline">

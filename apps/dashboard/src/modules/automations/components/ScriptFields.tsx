@@ -160,7 +160,7 @@ export function ScriptFields({
       <ScriptFacts step={step} agentName={agentName} />
       <div className="flex flex-wrap gap-2">
         {/* Named for what it asks, apart from the page's own "to change it" at its head. */}
-        {asks ? <AskAgentButton task={script.text.trim() ? "to change this script" : "to write this script"} message={asks} variant="soft" /> : null}
+        {asks ? <AskAgentButton task={script.text.trim() ? "to change this script" : "to write this script"} message={asks} variant="soft" whole /> : null}
         <button type="button" aria-expanded={shown} className="btn btn-sm gap-1.5 rounded-xl border-base-content/15 bg-base-100" onClick={() => setShown((was) => !was)}>
           <Code size={14} aria-hidden="true" />
           {shown ? "Hide the script" : "Show the script"}

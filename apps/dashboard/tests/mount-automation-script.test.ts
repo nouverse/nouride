@@ -49,7 +49,7 @@ describe("a script step, read", () => {
   test("its box is called by what it does and says who wrote it; its fields say what is known of it, and its text stays behind a button", async () => {
     shown();
     let sent: { path: string; body: unknown }[] = [];
-    const seen = { box: "", about: "", chips: [] as string[], hidden: false, asks: [] as string[], text: "", written: "" as string | null };
+    const seen = { box: "", about: "", chips: [] as string[], hidden: false, asks: [] as string[], words: [] as string[], text: "", written: "" as string | null };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host, 3);
       seen.box = stepCard(host, "save").textContent ?? "";
@@ -60,6 +60,7 @@ describe("a script step, read", () => {
       seen.hidden = text(host) === null;
       // Its own ask, named apart from the page's at its head.
       seen.asks = [...host.querySelectorAll<HTMLElement>('main button[title^="Ask Nouva"]')].map((button) => button.getAttribute("title") ?? "");
+      seen.words = [...host.querySelectorAll<HTMLElement>('main button[title^="Ask Nouva"]')].map((button) => button.textContent ?? "");
       pressed(host, "Show the script")!.click();
       await eventually(() => text(host) !== null, 2_000, "its text");
       seen.text = text(host)!.value;
@@ -72,6 +73,9 @@ describe("a script step, read", () => {
     expect(seen.chips).toEqual(["Written by Nix", "Python, 4 lines", "No AI", "Uses your saved key: notes_key"]);
     expect(seen.hidden).toBe(true);
     expect(seen.asks).toEqual(["Ask Nouva to change it", "Ask Nouva to change this script"]);
+    // In a step's fields its words are whole at every width: on a phone the page's own, in its head, says "Ask Nouva"
+    // alone, and two of those said nothing of which asks what.
+    expect(seen.words).toEqual(["Ask NouvaAsk Nouva to change it", "Ask Nouva to change this script"]);
     expect(seen.text).toBe(TEXT);
     expect(seen.written).toBe("Python");
     // Its text, who wrote it and the keys it is handed go back as they were: only what was typed changed.
