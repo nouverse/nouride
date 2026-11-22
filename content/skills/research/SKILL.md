@@ -86,7 +86,7 @@ web_search queries: ["PVGIS specific yield southern Germany kWh/kWp", "Germany r
 How to write queries that find the original rather than reports about it:
 
 - **The words the source itself uses.** A regulation is its official name and number ("Regulation (EU) 2016/679",
-  "Peraturan Menteri ESDM Nomor 2 Tahun 2024"), not "privacy rules"; a dataset is the statistics office's table name;
+  "Executive Order 14110"), not "privacy rules"; a dataset is the statistics office's table name;
   a study is its title or its key term.
 - **Restrict to the site that would publish it**: a government's domain (`site:gov.uk`, `site:bund.de`, `site:go.id`),
   the statistics office, the regulator, `site:europa.eu`, `site:who.int`. `filetype:pdf` for reports and laws.
@@ -157,9 +157,9 @@ It prints the source's number, e.g. `[1]`. The same URL added again keeps its nu
 
 - **`--quote` is copied from the page, word for word.** It is the sentence that supports the claim, in the page's language.
   Not your summary of it. `check --verify-quotes` (§7) fetches the page and looks for it.
-- **A page that describes a document is not the document.** A ministry's press release saying "Pasal 13 mengatur
-  bahwa …" gives the ministry's words, not the article's. For what a law, a contract or a paper *says*, fetch the
-  document itself (a regulation: `peraturan.bpk.go.id` or the ministry's JDIH; a PDF: download it, §3) and quote that.
+- **A page that describes a document is not the document.** A ministry's press release saying "Article 13 provides
+  that …" gives the ministry's words, not the article's. For what a law, a contract or a paper *says*, fetch the
+  document itself (a regulation: the official gazette or the legal database of its country, `references/sources.md`; a PDF: download it, §3) and quote that.
 - `--date` is the page's own date (published or updated), as `YYYY-MM-DD`, `YYYY-MM` or `YYYY`; `unknown` if it has
   none. Not today's date; the ledger records that as `accessed` by itself.
 - `--note` for what a reader should know: "vendor's own figure", "contradicts [4]", "for 2023, latest published".

@@ -249,7 +249,7 @@ describe("a clip made for a feed", () => {
 
   test("words are given their time: a second for every 17 characters, counted in the storyboard and answered every round", () => {
     expect(skill).toContain("**Words need time.** A line is on screen, fully arrived, for a second for every 17 characters it has, and never under a second");
-    expect(skill).toContain("`\"Giling tepat sebelum diseduh\" (28 characters: 2 s)`");
+    expect(skill).toContain("`\"Grind it right before you brew\" (30 characters: 2 s)`");
     expect(skill).toContain("- a line of words on screen for less than its time (a second for every 17 characters, never under one)");
     expect(skill).toContain("- words given their time:");
   });

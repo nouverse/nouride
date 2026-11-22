@@ -93,7 +93,7 @@ describe("the rules it kept", () => {
 
   test("the audio's language decides the style, and a kinetic translation follows the acoustic anchor protocol", () => {
     expect(skill).toContain("**The audio's language decides the style.**");
-    expect(skill).toContain("**Translated.** English audio, Indonesian subtitles: `standard`.");
+    expect(skill).toContain("**Translated.** English audio, subtitles in another language: `standard`.");
     expect(skill).toContain("The acoustic anchor protocol");
     expect(skill).toContain("Never spread a sentence's time evenly over the translated words");
     expect(skill).toContain("a gap over 0.3 s ends one");

@@ -74,23 +74,23 @@ The usual case: a Windows laptop over ssh, with no Python. Do not install Python
 Copy once, work here, copy back once:
 
 ```sh
-scp 'laptop:C:/Users/Ani/Documents/Laporan.xlsx' "$TMPDIR/Laporan.xlsx"
-python3 EDIT check "$TMPDIR/Laporan.xlsx"
-python3 EDIT apply "$TMPDIR/Laporan.xlsx" "$TMPDIR/plan.json"           # -> $TMPDIR/Laporan.edited.xlsx
+scp 'laptop:C:/Users/Sam/Documents/Report.xlsx' "$TMPDIR/Report.xlsx"
+python3 EDIT check "$TMPDIR/Report.xlsx"
+python3 EDIT apply "$TMPDIR/Report.xlsx" "$TMPDIR/plan.json"           # -> $TMPDIR/Report.edited.xlsx
 ```
 
 Before copying back, **make sure nobody has it open**. Excel holds an exclusive lock, and overwriting under it
 fails or, worse, is overwritten again by their next save. Never close or kill their Excel; ask them to.
 
 ```sh
-ssh laptop "powershell -NoProfile -Command \"try { [IO.File]::Open('C:\Users\Ani\Documents\Laporan.xlsx','Open','ReadWrite','None').Close(); 'free' } catch { 'LOCKED' }\""
+ssh laptop "powershell -NoProfile -Command \"try { [IO.File]::Open('C:\Users\Sam\Documents\Report.xlsx','Open','ReadWrite','None').Close(); 'free' } catch { 'LOCKED' }\""
 ```
 
 `free`: copy to a new name beside it, keep the original as a backup, then swap, so a failed copy leaves the
 original intact:
 
 ```sh
-scp "$TMPDIR/Laporan.edited.xlsx" 'laptop:C:/Users/Ani/Documents/Laporan.new.xlsx'
+scp "$TMPDIR/Report.edited.xlsx" 'laptop:C:/Users/Sam/Documents/Report.new.xlsx'
 ```
 
 **Then check it arrived, before the swap and before you say "done".** A copy that exited 0 is not a copy that
@@ -99,17 +99,17 @@ SHA-256 on the far side with the local copy (`apply` printed the local pair as `
 
 ```sh
 # Windows (PowerShell over ssh) — Get-FileHash prints the hash in upper case; compare ignoring case
-ssh laptop "powershell -NoProfile -Command \"(Get-Item 'C:\Users\Ani\Documents\Laporan.new.xlsx').Length; (Get-FileHash -Algorithm SHA256 'C:\Users\Ani\Documents\Laporan.new.xlsx').Hash\""
+ssh laptop "powershell -NoProfile -Command \"(Get-Item 'C:\Users\Sam\Documents\Report.new.xlsx').Length; (Get-FileHash -Algorithm SHA256 'C:\Users\Sam\Documents\Report.new.xlsx').Hash\""
 # Linux / macOS
-ssh host "wc -c < '/home/ani/Laporan.new.xlsx'; sha256sum '/home/ani/Laporan.new.xlsx' 2>/dev/null || shasum -a 256 '/home/ani/Laporan.new.xlsx'"
+ssh host "wc -c < '/home/sam/Report.new.xlsx'; sha256sum '/home/sam/Report.new.xlsx' 2>/dev/null || shasum -a 256 '/home/sam/Report.new.xlsx'"
 # the local copy, if you no longer have apply's line
-wc -c < "$TMPDIR/Laporan.edited.xlsx"; sha256sum "$TMPDIR/Laporan.edited.xlsx" 2>/dev/null || shasum -a 256 "$TMPDIR/Laporan.edited.xlsx"
+wc -c < "$TMPDIR/Report.edited.xlsx"; sha256sum "$TMPDIR/Report.edited.xlsx" 2>/dev/null || shasum -a 256 "$TMPDIR/Report.edited.xlsx"
 ```
 
 Both match: swap, keeping the original as a backup, and run the same check once more on the final name:
 
 ```sh
-ssh laptop "powershell -NoProfile -Command \"Copy-Item 'C:\Users\Ani\Documents\Laporan.xlsx' 'C:\Users\Ani\Documents\Laporan.backup.xlsx'; Move-Item -Force 'C:\Users\Ani\Documents\Laporan.new.xlsx' 'C:\Users\Ani\Documents\Laporan.xlsx'\""
+ssh laptop "powershell -NoProfile -Command \"Copy-Item 'C:\Users\Sam\Documents\Report.xlsx' 'C:\Users\Sam\Documents\Report.backup.xlsx'; Move-Item -Force 'C:\Users\Sam\Documents\Report.new.xlsx' 'C:\Users\Sam\Documents\Report.xlsx'\""
 ```
 
 Either differs, or the file is not there: do not swap and do not report it done. Say what the check showed, fix
@@ -199,7 +199,7 @@ section structure and the table setup that came with it.
 | two columns on a report | add `twocolumn` |
 | bigger or smaller text | `10pt` → `11pt` / `12pt`. For 9pt or 8pt the class must become `extarticle` (see below) |
 | US Letter | `a4paper` → `letterpaper` |
-| English instead of Indonesian | drop `\usepackage[bahasa]{babel}` |
+| another language than English | add `\usepackage[<language>]{babel}` (§5) |
 | chapters, a thesis, a book | `{article}` → `{report}` or `{book}`, then `\chapter{...}` |
 | different margins | the `geometry` line, e.g. `margin=2.5cm` |
 
@@ -230,11 +230,11 @@ Tectonic downloads `IEEEtran` on first use, so nothing has to be installed. The 
 Asking about formatting the person has no opinion on wastes a round; assuming on something they
 care about wastes the document.
 
-- **They said it → do it.** "satu kolom", "A4", "pakai bahasa Inggris" is the end of the question.
+- **They said it → do it.** "one column", "A4", "write it in German" is the end of the question.
 - **Report, proposal, letter, memo, summary → single column.** Do not ask. Nobody wants a
   two-column memo.
-- **Paper, makalah, jurnal, skripsi, thesis → two columns**, and say so in one clause when you hand
-  it over ("dua kolom, format artikel. Bilang kalau mau satu kolom"). One sentence, not a question
+- **Paper, journal article, thesis → two columns**, and say so in one clause when you hand
+  it over ("two columns, an article's format. Say so if you want one column"). One sentence, not a question
   that blocks.
 - **Named venue or institution → ask for the template or the guidelines**, once. A university has a
   required margin and font size, and guessing them produces a document that has to be redone.
@@ -296,7 +296,7 @@ and search **both** what it printed and `build/paper.log` for `Overfull`, `undef
 ### Then look at it, before it is sent
 
 `findings: none` is half of done. It cannot see what the document *says*: a title still the template's, a
-table that landed pages from where it is discussed, Indonesian headings over an English body, a page that
+table that landed pages from where it is discussed, the template's English headings over a body in another language, a page that
 came out empty. **Nothing is sent before it is looked at.** texbuild rendered the pages and printed their
 paths (`pages: …`). `read` each picture: every page of a short document; of a long one it renders the
 first three and the last, and `--pages 4-7` renders the pages a finding named. Rendering needs `pdftoppm`
@@ -353,9 +353,11 @@ Fixed column widths beat `tabularx` when the total must be exact. Add them up ag
 
 ## 5. Language
 
-For Indonesian, the templates already load `babel` with `bahasa`. It changes hyphenation and the
-auto-generated words (`Tabel`, `Gambar`, `Daftar Pustaka`). Without it a document reads as English
-typesetting with Indonesian words in it, and the hyphenation is visibly wrong.
+The templates are in English and load no `babel`. For a document in another language, add
+`\usepackage[<language>]{babel}` after `inputenc` (`ngerman`, `french`, `spanish`, ...): it changes hyphenation and
+the auto-generated words ("Table", "Figure", "References"). Without it a document reads as English typesetting
+with another language's words in it, and the hyphenation is visibly wrong. The template's own headings and sample
+text are replaced with the document's, in its language.
 
 ## 6. What this skill is not for
 

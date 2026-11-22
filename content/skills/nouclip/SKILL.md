@@ -176,14 +176,14 @@ measurement. A summary, a transcript from captions or Whisper, and a download ne
 
 - **Same language.** English audio, English subtitles: a kinetic preset (`default`, `hormozi`,
   `storyteller`, `cinematic`). The eye and the ear get the same word at the same moment.
-- **Translated.** English audio, Indonesian subtitles: `standard`. A per-word highlight on a translation
+- **Translated.** English audio, subtitles in another language: `standard`. A per-word highlight on a translation
   lights words the speaker is not saying at that moment, and splits phrases that belong together.
 - **Kinetic on a translation, when the person asks for it.** The acoustic anchor protocol:
   - Never spread a sentence's time evenly over the translated words: word order changes, the speaker
     pauses, and the subtitles drift.
   - Find the bursts of speech in the word timestamps (a gap over 0.3 s ends one) and give each burst
     its own phrase of the translation, 3 to 6 words.
-  - Lock the translation's emphasis words ("BERLAWANAN", "TIDAK ADA LAGI") to the moment the speaker
+  - Lock the translation's emphasis words ("THE OPPOSITE", "NOT ANY MORE") to the moment the speaker
     lands the punchline.
   - Always `--no-scale`.
 

@@ -125,7 +125,7 @@ git -C <repo> fetch origin && git -C <repo> worktree add -b agent/<topic> ../<re
 ## 5. Give it the task: a brief in English
 
 The coding agent sees nothing of your conversation: the brief is all it knows. **Write it in English,
-always**, even when the person wrote to you in Indonesian or any other language. These agents and the
+always**, even when the person wrote to you in another language. These agents and the
 models behind them work best in English, and a brief half in one language and half in another is read
 worse than either. Translate what the person asked faithfully; do not summarise it into something
 vaguer. Keep exactly as they are: code, identifiers, file paths, commands, error messages and anything

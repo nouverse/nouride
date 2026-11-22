@@ -1,6 +1,6 @@
 ---
 name: home-assistant
-description: Control and read a smart home through Home Assistant. Turn lights (lampu), fans, air purifiers, AC (climate), robot vacuums, covers (tirai), TVs and media on or off, set brightness, colour, temperature, fan speed or mode, run scenes and scripts, read sensors (suhu, kelembapan, power), history, logbook, cameras. One helper finds devices by name or room in English or Indonesian. Use whenever someone asks to switch, set or check a device at home, or mentions Home Assistant.
+description: Control and read a smart home through Home Assistant. Turn lights, fans, air purifiers, AC (climate), robot vacuums, covers, TVs and media on or off, set brightness, colour, temperature, fan speed or mode, run scenes and scripts, read sensors (temperature, humidity, power), history, logbook, cameras. One helper finds devices by name or room in English or Indonesian. Use whenever someone asks to switch, set or check a device at home, or mentions Home Assistant.
 requires: python3
 needs_tools: exec, read
 author: Nouride
@@ -37,7 +37,7 @@ It needs only `python3` (standard library). It reads two environment variables:
 
 Set `HA_URL` in the same command (`HA_URL=http://192.168.0.20:8123 python3 HA ping`), or give `--url`. For several
 commands in one `exec`, set it once: `export HA_URL=http://192.168.0.20:8123; python3 HA find …; python3 HA call …`. A secret
-stored under another name (`ha_rumah` → `$HA_RUMAH`) is picked with `--token-env HA_RUMAH`. The script never prints
+stored under another name (`ha_cabin` → `$HA_CABIN`) is picked with `--token-env HA_CABIN`. The script never prints
 the token. Exit codes: `0` done, `1` your arguments were wrong (the message says how), `2` HA refused or has no such
 thing (the message says what it has), `3` HA cannot be reached or the token is missing.
 
@@ -64,15 +64,15 @@ can read and switch devices but gets `401`/`403` on templates, areas and the con
 | You want to | Run |
 |---|---|
 | check the address and token work | `python3 HA ping` |
-| find a device by what the person called it | `python3 HA find lampu dapur` · `find air purifier` · `find --domain climate` · `find --area "kamar tidur"` |
+| find a device by what the person called it | `python3 HA find kitchen light` · `find air purifier` · `find --domain climate` · `find --area "bedroom"` |
 | see the rooms, or what is in one | `python3 HA areas` · `python3 HA areas "living room"` |
-| read a device or sensor | `python3 HA state light.kitchen_lights` (or a name: `state "suhu luar"`; `--all` for every attribute) |
+| read a device or sensor | `python3 HA state light.kitchen_lights` (or a name: `state "outside temperature"`; `--all` for every attribute) |
 | switch or set something | `python3 HA call light.turn_on light.kitchen_lights brightness_pct=60` |
 | know which fields a service takes | `python3 HA services fan` (one domain; with no domain, every domain's service names) |
 | how it changed: on for how long, min/max | `python3 HA history sensor.bedroom_temperature --hours 24` |
 | what happened, and who did it | `python3 HA logbook light.porch --hours 12` (or no entity: everything) |
 | a count or a computed answer | `python3 HA template '{{ states.light | selectattr("state","eq","on") | list | count }}'` |
-| hand a whole sentence to HA's own voice assistant | `python3 HA say "matikan lampu dapur" --language id` |
+| hand a whole sentence to HA's own voice assistant | `python3 HA say "turn off the kitchen lights" --language en` |
 | a camera picture | `python3 HA snapshot camera.front_door`, then `read` the file it names |
 | read, write or delete a UI automation, script or scene | `python3 HA config automation automation.night_purifier` (`--put FILE.json` / `--delete`, after a yes) |
 | a registry, statistics, anything only the WebSocket API has | `python3 HA ws config/device_registry/list --out "$TMPDIR/devices.json"` |
@@ -82,13 +82,13 @@ can read and switch devices but gets `401`/`403` on templates, areas and the con
 ## The loop, every time
 
 **1. Find the entity.** An entity id is `domain.object_id`: `light.kitchen_lights`, `fan.bedroom_purifier`,
-`climate.living_room_ac`, `sensor.outside_temperature`. People say "lampu kamar", "AC ruang tamu", "the purifier".
+`climate.living_room_ac`, `sensor.outside_temperature`. People say "the bedroom light", "the AC in the living room", "the purifier".
 Run `find` with their words. It matches the friendly name, the id, the room (area) and the kind of device, in English
-and Indonesian (`lampu`=light, `kipas`=fan, `AC`=climate, `tirai`/`gorden`=cover, `kamar tidur`=bedroom, `dapur`=
-kitchen, `ruang tamu`=living room, `suhu`=temperature, `kelembapan`=humidity, ...), and tolerates typos.
+or Indonesian words (a light, a fan, the AC, a curtain, the bedroom, the kitchen, the temperature, ...), and tolerates
+typos.
 
 - One clear match → use that id.
-- Several → if the request was about all of them ("matikan semua lampu"), use them all; if it was about one, ask which,
+- Several → if the request was about all of them ("turn all the lights off"), use them all; if it was about one, ask which,
   naming the candidates by their friendly names and rooms. Never pick one at random.
 - None → try other words, `--domain`, or `areas`. Still none → say what you searched for; the device may not be in HA.
 
@@ -108,8 +108,8 @@ it), and checks numbers against the entity's range, because HA answers those mis
 name it does not know is sent anyway with a `note:` line, and named again if HA then refuses. `services DOMAIN`
 lists the fields with examples.
 
-**4. Read it back.** `call` prints the state after the call. Report *that*, not what you asked for: "Lampu dapur
-sudah menyala, 60%". A device that answers slowly (IR air conditioners, cloud devices, covers that take 20 seconds)
+**4. Read it back.** `call` prints the state after the call. Report *that*, not what you asked for: "The kitchen
+light is on, at 60%". A device that answers slowly (IR air conditioners, cloud devices, covers that take 20 seconds)
 may still show the old state, so check again with `state` a little later before saying it failed. A cloud-polled
 device can take up to a minute to report.
 
@@ -131,10 +131,10 @@ python3 HA call cover.set_cover_position cover.living_room_curtain position=50  
 python3 HA call media_player.volume_set media_player.tv volume_level=0.25          # 0 to 1
 python3 HA call scene.turn_on scene.movie_night
 python3 HA call script.turn_on script.goodnight
-python3 HA call notify.mobile_app_budi_phone message="Pintu garasi masih terbuka"   # a push to their phone
+python3 HA call notify.mobile_app_sam_phone message="The garage door is still open"   # a push to their phone
 ```
 
-"All the lights in the kitchen": `find --area dapur --domain light`, then one `call` with every id.
+"All the lights in the kitchen": `find --area kitchen --domain light`, then one `call` with every id.
 "Turn everything off": confirm what "everything" covers first (`find --domain light`, and say how many).
 
 A whole sentence can go to HA's own Assist: `say "turn off the kitchen lights"`. It works when the person's HA has the
@@ -180,7 +180,7 @@ yes in this conversation**, never to get past the refusal on your own. Never rea
 
   ```sh
   python3 HA template '{{ states.light | selectattr("state","eq","on") | map(attribute="name") | join(", ") }}'
-  python3 HA template '{{ area_entities("Dapur") }}'
+  python3 HA template '{{ area_entities("Kitchen") }}'
   python3 HA template '{% for s in states.sensor if s.attributes.device_class == "battery" and s.state | is_number and s.state | float < 20 %}{{ s.name }}: {{ s.state }}%
   {% endfor %}'
   python3 HA template '{{ relative_time(states.binary_sensor.front_door.last_changed) }}'

@@ -123,7 +123,7 @@ close; if it refuses, say so. States move through `opening`/`closing` for up to 
 | volume | `media_player.volume_set media_player.x volume_level=0.3` (0–1) · `volume_up` · `volume_down` · `volume_mute is_volume_muted=true` |
 | input / app | `media_player.select_source media_player.tv source=HDMI 1` (from `source_list`) |
 | play a URL or item | `media_player.play_media media_player.x media_content_id=https://…/a.mp3 media_content_type=music` (newer HA also takes `media={"media_content_id":…,"media_content_type":…}`) |
-| say something on a speaker | `tts.speak` with `media_player_entity_id=media_player.x message="…"` and the TTS entity as target, e.g. `call tts.speak tts.<engine> media_player_entity_id=media_player.kitchen message="Makan malam siap"`; the TTS entity id comes from `find --domain tts` |
+| say something on a speaker | `tts.speak` with `media_player_entity_id=media_player.x message="…"` and the TTS entity as target, e.g. `call tts.speak tts.<engine> media_player_entity_id=media_player.kitchen message="Dinner is ready"`; the TTS entity id comes from `find --domain tts` |
 | search the library | `media_player.search_media media_player.x search_query=Beatles --response` |
 
 `media_title`, `media_artist`, `app_name`, `source` say what is playing.
@@ -147,8 +147,8 @@ fine when asked. `siren.turn_on` makes noise for the neighbours, so ask.
 
 ## notify (a message to a phone or a screen)
 
-`notify.mobile_app_<phone>` sends a push to the HA Companion app on that phone: `call notify.mobile_app_budi_phone
-message="Pintu garasi masih terbuka" title="Rumah"`. `services notify` lists the phones. Add `data={"priority":"high"}`
+`notify.mobile_app_<phone>` sends a push to the HA Companion app on that phone: `call notify.mobile_app_sam_phone
+message="The garage door is still open" title="Home"`. `services notify` lists the phones. Add `data={"priority":"high"}`
 on Android to get it through Do Not Disturb, only when it is urgent. `notify.persistent_notification message=…`
 shows a notification in HA's own sidebar.
 
@@ -157,14 +157,14 @@ shows a notification in HA's own sidebar.
 Read only. `state` gives the value and `unit_of_measurement`; `device_class` names what it measures
 (`temperature`, `humidity`, `pm25`, `co2`, `power`, `energy`, `battery`, `illuminance`, `motion`, `door`, `window`,
 `occupancy`, `moisture` …). A `binary_sensor` is `on`/`off`: for a door `on` means open, for motion `on` means
-motion, for moisture `on` means wet. Say it in words ("pintu depan terbuka sejak 14:02"), never "binary_sensor is on".
+motion, for moisture `on` means wet. Say it in words ("the front door has been open since 14:02"), never "binary_sensor is on".
 
 ## weather, sun, person, zone
 
 - `call weather.get_forecasts weather.home type=daily --response` (or `hourly`, `twice_daily`). The state alone is
   only the current condition.
 - `sun.sun`: `state` is `above_horizon`/`below_horizon`; `sensor.sun_next_rising` etc. when enabled.
-- `person.budi`: `home`, `not_home` or a zone name. Where someone is is theirs, so answer the owner, not anyone who
+- `person.sam`: `home`, `not_home` or a zone name. Where someone is is theirs, so answer the owner, not anyone who
   asks.
 
 ## select, number, input_*

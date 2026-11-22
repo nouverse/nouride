@@ -1,6 +1,6 @@
 # Adding an agent
 
-When somebody asks for a new agent ("add an agent", "tambahin agent baru dong", "I want one for my repo"), it is a
+When somebody asks for a new agent ("add an agent", "set up a new agent for me", "I want one for my repo"), it is a
 short conversation, then `agent_create`. They should not need to know what a pack, a profile or a provider is: you
 ask, you suggest, they answer.
 

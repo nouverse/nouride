@@ -1,6 +1,6 @@
 ---
 name: homelab-ops
-description: Keep a home server, NAS, Raspberry Pi, Proxmox host or this box healthy (disk full, memory, load, failed or crash-looping services, journal errors, Docker/Podman containers restarting, ZFS/RAID/SMART disk health, temperatures, expiring certificates, stale backups, pending updates and reboots). One helper gives a ranked health report, here or over ssh, and a daily check that speaks only when something is wrong. Use when asked to check, monitor or fix a server ("server lemot", "disk penuh").
+description: Keep a home server, NAS, Raspberry Pi, Proxmox host or this box healthy (disk full, memory, load, failed or crash-looping services, journal errors, Docker/Podman containers restarting, ZFS/RAID/SMART disk health, temperatures, expiring certificates, stale backups, pending updates and reboots). One helper gives a ranked health report, here or over ssh, and a daily check that speaks only when something is wrong. Use when asked to check, monitor or fix a server ("it is slow", "the disk is full").
 requires: python3
 needs_tools: exec, read
 author: Nouride
@@ -74,9 +74,9 @@ not checked: smart (smartctl not installed ...)
 - "not checked" is part of the answer: "SMART was not checked because smartmontools is not installed" is a fact the
   person needs, not a detail to drop.
 
-Tell the person in plain words, worst first, at most five lines, with numbers from the report: *"Disk /srv hampir
-penuh (96%, sisa 38 GB). Yang paling besar folder /srv/media/downloads 610 GB. Layanan backup-sync gagal terus
-sejak tadi pagi, sudah 4120 kali mencoba. Ada 12 update keamanan."* Then say what you suggest, and what you need them
+Tell the person in plain words, worst first, at most five lines, with numbers from the report: *"The disk at /srv is
+nearly full (96%, 38 GB left). The largest folder is /srv/media/downloads, 610 GB. The backup-sync service has
+failed since this morning, 4120 tries so far. There are 12 security updates."* Then say what you suggest, and what you need them
 to decide. Never paste the whole report unless they ask.
 
 ## Fix it: what you may do, and what you ask first
@@ -137,9 +137,9 @@ nouride cron add --name server-health --cron "0 7 * * *" --tz Asia/Jakarta \
 
 | They say | Start with |
 |---|---|
-| "server lemot" / slow | `python3 HEALTH --only load,memory,disk,storage,containers`, then `top`/`ps` from the `more` lines; `references/fixes.md` § Slow |
-| "disk penuh" / out of space | `--only disk,containers`, then `du` on the full mount; § Disk full |
-| "website/X tidak bisa dibuka" | `systemctl status X`, `docker ps -a`, `ss -ltnp`, `curl -sS -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:PORT/`; § A service is down |
-| "backup jalan?" | `--only backups --backup <their path>`, and the backup tool's own log; § Backups |
-| "aman nggak?" / is it OK | the full report, top five lines |
-| "update dong" | the update section: list, explain, then ask; § Updates |
+| "the server is slow" | `python3 HEALTH --only load,memory,disk,storage,containers`, then `top`/`ps` from the `more` lines; `references/fixes.md` § Slow |
+| "the disk is full" / out of space | `--only disk,containers`, then `du` on the full mount; § Disk full |
+| "the website / X will not open" | `systemctl status X`, `docker ps -a`, `ss -ltnp`, `curl -sS -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:PORT/`; § A service is down |
+| "are the backups running?" | `--only backups --backup <their path>`, and the backup tool's own log; § Backups |
+| "is it OK?" | the full report, top five lines |
+| "update it" | the update section: list, explain, then ask; § Updates |

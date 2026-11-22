@@ -18,7 +18,7 @@ test("every task gets its own worktree, checked first and removed when finished"
 });
 
 test("the brief is in English even when the person wrote in another language, with identifiers kept as written", () => {
-  expect(skill).toContain("**Write it in English,\nalways**, even when the person wrote to you in Indonesian");
+  expect(skill).toContain("**Write it in English,\nalways**, even when the person wrote to you in another language");
   expect(skill).toContain("Keep exactly as they are: code, identifiers, file paths, commands, error messages");
   expect(skill).toContain("You still answer the person in their own language.");
 });

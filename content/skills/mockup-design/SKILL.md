@@ -93,7 +93,7 @@ Before I draw it, three things:
 3. Is there a look to match: your site, your brand colours, something you like? Or shall I choose?
 ```
 
-When their words already say it ("send me a picture", "kirim link-nya", "just make it"), do not ask: say in one
+When their words already say it ("send me a picture", "send me the link", "just make it"), do not ask: say in one
 line what you took as the answer. With nothing said and nobody to ask, it is pictures (2).
 
 More than about four screens, or screens that need research first, is long work: from a chat, draft it as a mission
@@ -147,8 +147,8 @@ It writes `<work>/mockup/render/` (or `--out DIR`). For a screen named `home`: `
 ```text
 home at mobile (390 wide, 2140px tall): 3 finding(s), outlined in home-mobile-check.png
   1. sideways: the page is 38px wider than the window (390px) and scrolls sideways
-  2. sideways: sticks out 38px past the window: <div.menu-grid> "Kopi Susu Aren", 428px wide (home.html:212, its rule at :48)
-  3. cut: text cut off in height by <div.hero>, which hides what runs past it and holds 96px in 72px: "Buka sampai 22.00" (home.html:180, its rule at :31)
+  2. sideways: sticks out 38px past the window: <div.menu-grid> "Iced Palm Sugar Latte", 428px wide (home.html:212, its rule at :48)
+  3. cut: text cut off in height by <div.hero>, which hides what runs past it and holds 96px in 72px: "Open until 22.00" (home.html:180, its rule at :31)
 ```
 
 **A finding says where the fix is**: the element, what causes it, and the line of your file it stands on and the line
@@ -185,7 +185,7 @@ Round 2, 2 screens, desktop and phone
 - the phone's layout is designed, not the desktop's squeezed: none
 - things that should line up, and space that is even: home, desktop: the cards' titles sit at two heights -> one
 - the same thing looks the same everywhere (a button, a card, a heading): none
-- the words: real, in their language, none cut or wrapped badly: order: "Lanjutkan pembayaran" breaks in two -> shorter
+- the words: real, in their language, none cut or wrapped badly: order: "Continue to payment" breaks in two -> shorter
 - it looks like theirs, not like the last thing I made: none
 - everything they asked for is there, and nothing they did not: missing the "pay later" choice -> added
 ```

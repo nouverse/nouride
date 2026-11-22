@@ -97,7 +97,7 @@ Before I make it, four things:
 4. Do you want the caption for under the post too?
 ```
 
-When their words already say it ("carousel IG", "buat LinkedIn", "just make it"), do not ask: say in one line what you
+When their words already say it ("a carousel for Instagram", "for LinkedIn", "just make it"), do not ask: say in one line what you
 took as the answer. With nothing said and nobody to ask, it is 4:5, and the caption comes with it.
 
 A carousel that needs research first, or more than about ten slides, is long work: from a chat, draft it as a mission
@@ -107,7 +107,7 @@ with `mission`, the form and the outline in its brief.
 
 **Send the outline and end your turn there.** In the turn that sends it you write no file and run no command: the
 next turn, after their yes, is the one that draws. Changing a line of an outline is free; changing a drawn slide is a
-round. Only two things skip the wait: they said to just make it ("langsung aja", "no need to ask"), or you are in a
+round. Only two things skip the wait: they said to just make it ("go ahead", "no need to ask"), or you are in a
 mission, whose brief is the outline they said yes to.
 
 Write it slide by slide, every line that states a fact with its `source:`, where you read it:
@@ -191,8 +191,8 @@ read; and `check-03.png` for a slide where something was found, each finding out
 ```text
 slide 1: 9 word(s), largest text 112px: nothing measured wrong
 slide 3: 64 word(s), largest text 72px: 2 finding(s), outlined in check-03.png
-  1. small: 26px text (under 33, which is 12px on a phone): <p.note> "Berlaku sampai akhir bulan" (slides.html:88, its rule at :31)
-  2. outside: runs 40px past the slide's right edge, where the picture ends: <h2> "Pengiriman ke seluruh Indonesia" (slides.html:86)
+  1. small: 26px text (under 33, which is 12px on a phone): <p.note> "Valid until the end of the month" (slides.html:88, its rule at :31)
+  2. outside: runs 40px past the slide's right edge, where the picture ends: <h2> "Delivery to the whole country" (slides.html:86)
 ```
 
 **A finding says where the fix is**: the element, what causes it, and the line of your file it stands on and the
