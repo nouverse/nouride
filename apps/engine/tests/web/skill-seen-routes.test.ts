@@ -24,7 +24,7 @@ let audit: AuditLog;
 let app: Hono<{ Variables: { principal: unknown } }>;
 let role = "operator";
 let calls: string[];
-let held: { name: string; description: string; why: string; agentId: string; sessionId: string; firstSeenAt: number; lastSeenAt: number; sightings: number; kept: boolean }[];
+let held: { name: string; description: string; why: string; agentId: string; sessionId: string; firstSeenAt: number; lastSeenAt: number; sightings: number; kept: boolean; next: boolean }[];
 
 beforeEach(async () => {
   dir = tempDir("skill-seen");
@@ -33,7 +33,7 @@ beforeEach(async () => {
   audit = new AuditLog(db, () => clock);
   role = "operator";
   calls = [];
-  held = [{ name: "restart-stuck-ingress", description: "Use when the ingress answers 502.", why: "a fix that worked", agentId: "nouva", sessionId: "ses_1", firstSeenAt: 10, lastSeenAt: 20, sightings: 3, kept: true }];
+  held = [{ name: "restart-stuck-ingress", description: "Use when the ingress answers 502.", why: "a fix that worked", agentId: "nouva", sessionId: "ses_1", firstSeenAt: 10, lastSeenAt: 20, sightings: 3, kept: true, next: true }];
   const reflection = {
     candidates: () => held,
     writeCandidate: async (name: string, by: string) => {
@@ -69,7 +69,7 @@ const did = (action: string, details: Record<string, unknown>, agentId = "nouva"
 describe("what learning holds and did, as the page reads it", () => {
   test("each held kind of work, with how often it was seen and whether it can be written now", async () => {
     const seen = (await (await app.request("/skills/learning/seen")).json()) as LearningSeen;
-    expect(seen.seen).toEqual([{ name: "restart-stuck-ingress", description: "Use when the ingress answers 502.", why: "a fix that worked", agentId: "nouva", firstSeenAt: 10, lastSeenAt: 20, sightings: 3, canWrite: true }]);
+    expect(seen.seen).toEqual([{ name: "restart-stuck-ingress", description: "Use when the ingress answers 502.", why: "a fix that worked", agentId: "nouva", firstSeenAt: 10, lastSeenAt: 20, sightings: 3, canWrite: true, writtenNext: true }]);
     expect(seen.recent).toEqual([]);
   });
 

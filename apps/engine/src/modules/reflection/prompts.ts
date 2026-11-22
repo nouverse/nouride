@@ -177,8 +177,9 @@ export const TRIAGE_INSTRUCTION = [
   "   one, the lesson is in the other, and neither gets trusted. Name it for the class, never for",
   "   today: if the name only makes sense for this task, it is the wrong name and you want (1) or (2).",
   "   Seen once does not show that work recurs: a new class is held as a candidate until the same",
-  "   kind of work comes back, in another conversation or in this one after a break, and is written",
-  "   then. If the candidates listed below include this one, name it in `recurs`.",
+  "   kind of work comes back, in another conversation or in this one after a break, or is seen a",
+  "   third time, and is written then. If the candidates listed below include this one, name it in",
+  "   `recurs`.",
   "4. **skip**: genuinely nothing here. The list below is what that actually looks like.",
   "",
   "**You are given one line per skill. Read the ones that might fit.** `read_skill` returns any of",
@@ -480,7 +481,7 @@ export function renderInPlay(names: readonly string[]): string {
 /** The classes of work seen once and held as candidates (`candidates.store.ts`), listed after the skills. */
 export function renderCandidates(candidates: readonly { name: string; description: string; day: string }[]): string {
   return [
-    "Seen once, not skills yet (each is written when the same kind of work comes back):",
+    "Seen before, not skills yet (each is written when the same kind of work comes back):",
     ...candidates.map((candidate) => `- ${candidate.name} (${candidate.day}): ${candidate.description}`),
   ].join("\n");
 }

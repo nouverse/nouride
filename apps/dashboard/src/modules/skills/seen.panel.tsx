@@ -1,10 +1,11 @@
 /**
  * What skill learning holds and what it did lately: the answer to "why did it learn nothing".
  *
- * A new kind of work is held the first time it is seen and written as a skill when it comes back. Until this panel a
- * held one was a row nobody could see, and a look that wrote nothing left a line in a log: the page showed an empty
- * queue, which reads as a feature that is off. Here each held kind of work is named, with how often it was seen, and
- * can be written now or forgotten; under it, the last things learning did or decided not to.
+ * A new kind of work is held the first time it is seen and written as a skill when it comes back, or the third time
+ * it is seen. Until this panel a held one was a row nobody could see, and a look that wrote nothing left a line in a
+ * log: the page showed an empty queue, which reads as a feature that is off. Here each held kind of work is named,
+ * with how often it was seen and whether the next sighting writes it, and can be written now or forgotten; under
+ * it, the last things learning did or decided not to.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,8 +41,8 @@ export function SeenPanel({ editable, agentName }: { editable: boolean; agentNam
 
   return (
     <ListCard
-      title={held.length === 0 ? "Seen once, not a skill yet" : `${held.length} seen once, not a skill yet`}
-      description="A new kind of work becomes a skill when it comes back: in another conversation, or in the same chat after a few hours. You can have one written now."
+      title={held.length === 0 ? "Seen, not a skill yet" : `${held.length} seen, not a skill yet`}
+      description="A new kind of work becomes a skill when it comes back: in another conversation, in the same chat after a few hours, or the third time it is seen. You can have one written now."
     >
       <ErrorNote error={seen.error} />
       {held.length === 0 ? (
@@ -96,6 +97,7 @@ function SeenRow({ work, editable, agentName }: { work: SeenWork; editable: bool
           <p className="mt-1 text-xs text-base-content/65">
             {agentName(work.agentId)} · seen {work.sightings === 1 ? "once" : `${work.sightings} times`} · last {ago(work.lastSeenAt)}
           </p>
+          {work.writtenNext ? <p className="mt-1 text-xs text-base-content/65">It becomes a skill the next time this work is seen.</p> : null}
           {!work.canWrite ? (
             <p className="mt-1 text-xs text-base-content/65">The conversation it was seen in is gone. It is written when the work comes back.</p>
           ) : null}

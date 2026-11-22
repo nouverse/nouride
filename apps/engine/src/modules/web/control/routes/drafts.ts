@@ -149,6 +149,7 @@ export function registerDraftRoutes(control: ControlApp, deps: ControlDeps): voi
       lastSeenAt: held.lastSeenAt,
       sightings: held.sightings,
       canWrite: held.kept,
+      writtenNext: held.next,
     }));
     return c.json({ seen, recent } satisfies LearningSeen);
   });

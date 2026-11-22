@@ -115,7 +115,7 @@ export function LearningSettingsPanel({ canEdit, onShowPending }: { canEdit: boo
           After a conversation that took real working out, a model reads it back and asks one question: is there a
           procedure here that an agent doing work like this again would follow? Facts about your machines belong in
           memory and a task's progress in its work notes, so neither becomes a skill. A new kind of work is only noted
-          the first time, and becomes a skill when it comes back.
+          the first time, and becomes a skill when it comes back or is seen a third time.
         </p>
 
         <fieldset className="space-y-2">

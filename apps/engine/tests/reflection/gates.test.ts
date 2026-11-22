@@ -1,7 +1,7 @@
 /**
  * What the reflection pass may write, checked in code (0.7.28): a new kind of work waits until it comes back (in
- * another conversation, or in the same chat after a break), a draft that names this environment or tells a session is
- * refused, a body past its size is tightened rather than grown, and a new skill is on for the agent whose work it
+ * another conversation, in the same chat after a break, or at its third sighting), a draft that names this
+ * environment or tells a session is refused, a body past its size is tightened rather than grown, and a new skill is on for the agent whose work it
  * came from. A refused draft goes back to its writer once, a revision answers for what it adds, and a skill refused
  * twice is left alone a while.
  */
@@ -100,6 +100,8 @@ describe("a new kind of work waits until it comes back", () => {
     expect(h.drafts.pending()).toEqual([]);
     expect(h.asked).toMatchObject({ triage: 1, written: 0 });
     expect(h.candidates.list().map((held) => held.name)).toEqual(["restart-stuck-ingress"]);
+    // What the page is told of it: seen once, so its next sighting writes nothing unless the work came back.
+    expect(h.reflection.candidates().map((held) => held.next)).toEqual([false]);
   });
 
   test("seen in another conversation: the skill is drafted, and the candidate is done with", async () => {
@@ -109,7 +111,7 @@ describe("a new kind of work waits until it comes back", () => {
     expect(h.drafts.pending().map((draft) => draft.name)).toEqual(["restart-stuck-ingress"]);
     expect(h.candidates.list()).toEqual([]);
     // The second triage was shown what waits, so it could say it was the same work.
-    expect(h.asked.prompts.find((prompt) => prompt.includes("Seen once, not skills yet"))).toContain("restart-stuck-ingress");
+    expect(h.asked.prompts.find((prompt) => prompt.includes("Seen before, not skills yet"))).toContain("restart-stuck-ingress");
   });
 
   test("the same sitting going on is not the work coming back", async () => {
@@ -132,25 +134,40 @@ describe("a new kind of work waits until it comes back", () => {
     expect(h.candidates.list()).toEqual([]);
   });
 
-  test("the break is counted from when the work was last seen, not first: a long sitting is one sitting", async () => {
+  test("the break is counted from when the work was last seen, not first", async () => {
     const h = engine();
     await h.reflection.observe(turn("ses_1"));
-    for (let sighting = 0; sighting < 3; sighting += 1) {
-      h.hours(4);
-      await h.reflection.observe(turn("ses_1"));
-    }
-    expect(h.drafts.pending()).toEqual([]);
-    h.hours(6);
+    h.hours(4);
     await h.reflection.observe(turn("ses_1"));
-    expect(h.drafts.pending()).toHaveLength(1);
+    // Eight hours after the first sighting and four after the last: no break yet, and only the second sighting.
+    expect(h.drafts.pending()).toEqual([]);
+    expect(h.candidates.list().map((held) => held.sightings)).toEqual([2]);
+    // Seen twice: the page says its next sighting writes the skill.
+    expect(h.reflection.candidates().map((held) => held.next)).toEqual([true]);
+  });
+
+  // The day the break rule shipped: one class of work seen five times in one chat, the widest gap five hours forty, and
+  // held five times. Each sighting moved the clock, so a person who works in one chat all day never got the skill.
+  test("the third sighting is written, break or none: three looks naming one class are the work coming back", async () => {
+    const h = engine();
+    await h.reflection.observe(turn("ses_1"));
+    h.hours(1);
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.drafts.pending()).toEqual([]);
+    expect(h.asked.written).toBe(0);
+    h.hours(1);
+    await h.reflection.observe(turn("ses_1"));
+    expect(h.drafts.pending().map((draft) => draft.name)).toEqual(["restart-stuck-ingress"]);
+    expect(h.candidates.list()).toEqual([]);
   });
 
   test("the pass is told the rule in those words", async () => {
     const h = engine();
     await h.reflection.observe(turn("ses_1"));
     await h.reflection.observe(turn("ses_1"));
-    expect(h.asked.prompts[0]).toContain("in another conversation or in this one after a break");
-    expect(h.asked.prompts[1]).toContain("each is written when the same kind of work comes back");
+    expect(h.asked.prompts[0]).toContain("in another conversation or in this one after a break, or is seen a");
+    expect(h.asked.prompts[0]).toContain("third time, and is written then");
+    expect(h.asked.prompts[1]).toContain("Seen before, not skills yet (each is written when the same kind of work comes back)");
   });
 
   test("a second sighting under another name counts when the pass says which candidate it is", async () => {

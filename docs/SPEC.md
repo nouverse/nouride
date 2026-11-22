@@ -1895,7 +1895,8 @@ live box refused in fifteen days were a body a few hundred characters past its s
 class and its "Use when" line and is held as a candidate — no body, no second call. When the same kind of work is
 seen again (triage names the candidate in `recurs`, or picks its name) the skill is written: in another conversation,
 or in the same one six hours or more after it was last seen there, since a chat is one conversation for as long as
-the install lives. A person asking for one skips the wait; a candidate lapses after 30 days, and is done with only
+the install lives; and at its third sighting whatever the time between (`WRITTEN_AT_SIGHTING`, 0.8.43), since the
+break alone left a class seen five times in a day of one chat unwritten. A person asking for one skips the wait; a candidate lapses after 30 days, and is done with only
 once its skill is drafted. One sitting cannot show that work recurs, and on the live box by 2026-10-22 a single audit
 workbook had become a skill.
 

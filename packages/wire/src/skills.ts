@@ -47,6 +47,8 @@ export interface SeenWork {
   sightings: number;
   /** The conversation it was seen in is still kept, so its skill can be written now. */
   canWrite: boolean;
+  /** Seen often enough that the next time it is seen its skill is written, wherever that is. */
+  writtenNext: boolean;
 }
 
 /** One thing skill learning did, or decided not to, as a person reads it. */
