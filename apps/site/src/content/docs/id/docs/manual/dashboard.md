@@ -188,6 +188,10 @@ ada di kotaknya waktu kamu buka lagi.
   ditulis: nama halamannya, alamatnya, dan tentang apa halaman itu kalau memang tentang satu hal, misalnya sebuah misi
   atau sebuah agent. Jadi "yang ini lagi nunggu apa?" yang ditanyakan di halaman sebuah misi artinya misi itu. Pesan
   yang ditulis di halaman Chats tidak menyebut halaman apa pun.
+- **Agent bisa mengubah automation yang sedang kamu buka** (0.8.46). Di halaman sebuah automation, agent juga
+  diperlihatkan automation itu seperti yang dipegang halaman, lengkap dengan perubahan yang belum disimpan, dan
+  perubahan yang kamu minta digambar di atasnya untuk kamu terapkan atau buang. Caranya ada di
+  [Automations](/id/docs/manual/schedule/).
 - **Agent bisa membawamu ke halaman lain.** Di percakapan dari panel, agent juga diberi tahu daftar halaman dashboard,
   jadi "bawa aku ke memory graph" dijawab dengan sebuah link. Tekan, dan halaman itu terbuka di bawah chat, yang tetap
   terbuka; di HP chat-nya disembunyikan supaya halamannya terlihat. Link ke tempat lain terbuka di tab baru, seperti

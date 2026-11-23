@@ -401,6 +401,20 @@ memakai id, riwayat run, dan URL webhook-nya. Di halaman automation itu, perubah
 `enable`, atau `webhook add` atau `rotate`, ditolak dan diarahkan ke `schedule`. Paling banyak sepuluh
 usulan dari satu agent yang boleh menunggu sekaligus, dihitung dari agent yang mengusulkannya.
 
+**Kalau automation-nya sedang terbuka di dashboard** (0.8.46), perubahan yang kamu minta lewat chat di atas
+halamannya dibuat pada isi halaman itu: automation seperti yang ada di situ, termasuk perubahanmu sendiri yang
+belum disimpan, atau automation baru yang belum kamu simpan. Agent membaca yang ada di halamanmu, bukan yang
+tersimpan, lalu menuliskannya kembali utuh. Halaman menggambar hasilnya di atas punyamu, tiap step yang ditambah,
+diubah, atau dihapus diberi tanda, di bawah bar yang bilang apa perubahannya: **As you have it** dan **With the
+change** menampilkan keduanya, dan **Apply** atau **Discard** menjawabnya. Perubahan yang membawa skrip bilang
+begitu, beserta step yang perlu dibaca dulu. Apply gak menyimpan apa pun: perubahannya masuk ke halaman, **Undo**
+menariknya lagi, dan tombol **Save** halaman itu tetap kamu yang menekan. Gak ada yang disimpan di tengah jalan dan
+gak ada yang dinyalakan. Step di chat yang membuat perubahan itu punya **Show the change on the page**, untuk
+menggambarnya lagi selama daemon masih memegangnya (sehari, atau sampai daemon restart). Ini cuma untuk chat di
+dashboard: kalau diminta dari Telegram, Discord, atau WhatsApp, perubahan tetap berupa usulan seperti di atas.
+Automation yang terlalu panjang untuk ditunjukkan utuh ke agent (48.000 karakter seperti yang dikirim halaman)
+diubah di halamannya langsung, dan agent bilang begitu.
+
 Yang menjawab usulan cuma orang, gak pernah agent. Ada yang cuma bisa dinyalakan admin, siapa pun yang meminta:
 perubahan pada job milik agent lain, perubahan pada job yang melapor ke chat lain, dan webhook, sama seperti
 membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia bertanya lagi.

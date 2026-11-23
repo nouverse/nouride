@@ -380,6 +380,18 @@ removes, and **Accept** and **Discard**. An agent that runs `nouride cron add`, 
 `rotate`, is refused and pointed back at `schedule`. At most ten proposals of one agent wait at once, counted by the
 agent that proposed them.
 
+**With the automation open in the dashboard** (0.8.46), a change you ask for in the chat over its page is made to
+what the page holds: the automation as you have it there, your own unsaved changes included, or a new one you have
+not saved yet. The agent reads what is on your page, not what was saved, and writes it back whole. The page draws
+that over yours, each step it adds, changes or removes marked, under a bar that says what the change does:
+**As you have it** and **With the change** show the two, and **Apply** or **Discard** answers it. A change that
+brings a script says so, with the step to read first. Applying saves nothing: the change goes into the page, **Undo**
+takes it back, and the page's own **Save** is still yours to press. Nothing is stored on the way and nothing is
+turned on. The step in the chat that made the change has **Show the change on the page**, to draw it again while
+the daemon still holds it (a day, or until it restarts). This is the dashboard's chat alone: asked in Telegram,
+Discord or WhatsApp, a change is a proposal as above. An automation too long to show the agent whole (48,000
+characters as the page sends it) is changed on the page itself, and the agent says so.
+
 Only a person answers a proposal, never an agent. Some are an admin's to turn on, whoever asked: a change to another
 agent's job, a change to a job that reports to another chat, and a webhook, as making one is. What the old job was
 allowed always does not carry over to its new shape: it asks again.
