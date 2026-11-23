@@ -77,7 +77,10 @@ export function draftChangeWords(now: Draft, then: Draft, home: string): string 
   if (then.name !== now.name) said.push(`Renames it to "${then.name}".`);
   if (startOf(then, home) !== startOf(now, home)) said.push(`It would start ${startOf(then, home)}.`);
   if (then.agentId !== now.agentId) said.push("Another agent would run it.");
-  if (then.gatewayId !== now.gatewayId || then.chatId !== now.chatId || then.delivery.gatewayId !== now.delivery.gatewayId || then.delivery.chatId !== now.delivery.chatId) said.push("It would report to another chat.");
+  // One with no chat picked yet reports nowhere: a change that names one does not move it to "another".
+  if (then.gatewayId !== now.gatewayId || then.chatId !== now.chatId || then.delivery.gatewayId !== now.delivery.gatewayId || then.delivery.chatId !== now.delivery.chatId) {
+    said.push(now.chatId.trim() ? "It would report to another chat." : "It would report to the chat shown under its steps.");
+  }
   // The two marks where it reports: a change that sets or drops one is not one that runs as it does now.
   if (Boolean(then.delivery.once) !== Boolean(now.delivery.once)) said.push(then.delivery.once ? "It would tell once, then turn itself off." : "It would go on telling, and no longer turn itself off.");
   if (Boolean(then.delivery.atOnce) !== Boolean(now.delivery.atOnce)) said.push(then.delivery.atOnce ? "It would tell at once, even in quiet hours." : "What it says in quiet hours would be kept until they end.");

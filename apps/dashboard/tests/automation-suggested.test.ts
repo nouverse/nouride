@@ -104,6 +104,11 @@ describe("the banner's sentence", () => {
     // Reporting elsewhere than it watches is another chat too.
     expect(draftChangeWords(draft(NOW), draft(NOW, { delivery: { mode: "announce", gatewayId: "whatsapp:nouva", chatId: "9" } }), "UTC")).toBe("It would report to another chat.");
     expect(draftChangeWords(draft(NOW), draft(NOW), "UTC")).toBe("It would run as it does now.");
+    // A new automation has no chat picked yet. One an agent filled in was said to report to "another chat" (seen on
+    // the box's sandbox with a real model): it reported nowhere before, and where it would now is drawn under its steps.
+    const unpicked = { ...draft(NOW), chatId: "" };
+    expect(draftChangeWords(unpicked, draft(NOW), "UTC")).toBe("It would report to the chat shown under its steps.");
+    expect(draftChangeWords(unpicked, unpicked, "UTC")).toBe("It would run as it does now.");
   });
 });
 
