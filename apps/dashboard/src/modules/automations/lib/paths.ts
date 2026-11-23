@@ -6,12 +6,16 @@
  * ran after the one above it. A person asked "and if it fails, then what?", and the page answered with a jump. So a
  * path is read as one of four answers:
  *
- * - **stop**: what a step does unless told otherwise. Nothing is drawn.
+ * - **stop**: what a step does unless told otherwise. One quiet line in the step's own box, with a stop's mark: with
+ *   nothing drawn, a person looked for the answer they had just chosen and found no sign of it.
  * - **go on**: the run goes where it goes when the step is done. One line in the step's own box.
  * - **ask**: a wait for a person's OK that only this path reaches, whose yes goes on and whose no ends the run. Drawn in
  *   the step's own box, with the question and both answers; the wait is no box of its own.
  * - **other steps** in its place: a lane at the step's side, which ends in one of two marks, back into the main line or
  *   a stop.
+ *
+ * A step of a lane answers for itself too, with the two answers that need no drawing of their own: stop, or go on to
+ * where it goes when done. A lane of a lane is not drawn, so a question or other steps are a main-line step's to have.
  *
  * Anything else an automation holds (a jump between two steps of the main line, a step two paths reach, a step no path
  * reaches) stays on the main line at its place, with its path said in a chip as before. An automation written by hand
@@ -21,7 +25,7 @@
  * followed: exits only point forward, so this is the one shape in which the main line never falls into a side step.
  */
 
-import { DEFAULT_EXIT, STEPS_MAX, blankStep, forward, landsAt, newStepId, withId, type ExitName, type Step, type StepKind } from "./steps";
+import { DEFAULT_EXIT, STEPS_MAX, blankStep, exitsOf, forward, landsAt, newStepId, withId, type ExitName, type Step, type StepKind } from "./steps";
 
 /** A path that can leave the main line: on a failure (a no, for a wait), or with nothing to say. */
 export type PathExit = "whenFailed" | "whenEmpty";
@@ -73,8 +77,20 @@ export function pathsOf(steps: readonly Step[], fold = true): Paths {
     const ways = reached.get(at) ?? [];
     return ways.length === 1 && ways[0]!.from === from && ways[0]!.exit === exit;
   };
+  // A lane's next step: every way into it is from the step before it, when that one is done among them. Its other
+  // paths may lead there too: "go on anyway", chosen on a step of a lane.
+  const follows = (at: number, from: number): boolean => {
+    const ways = reached.get(at) ?? [];
+    return ways.every((way) => way.from === from) && ways.some((way) => way.exit === "then");
+  };
   const rules = new Map<number, Rule[]>();
   const inside = new Map<number, { owner: number; exit: PathExit; folded: boolean }>();
+  /** A path of a step that leads where the step goes when done: it goes on anyway. */
+  const goesOn = (at: number, exit: PathExit): boolean => {
+    if (steps[at]![exit] === undefined) return false;
+    const to = landsAt(steps, at, exit);
+    return to !== "end" && to === landsAt(steps, at, "then");
+  };
 
   for (const owner of main) {
     const done = landsAt(steps, owner, "then");
@@ -82,7 +98,7 @@ export function pathsOf(steps: readonly Step[], fold = true): Paths {
       if (steps[owner]![exit] === undefined) continue;
       const to = landsAt(steps, owner, exit);
       if (to === "end") continue;
-      if (to === done) {
+      if (goesOn(owner, exit)) {
         rules.set(owner, [...(rules.get(owner) ?? []), { exit, kind: "goOn" }]);
         continue;
       }
@@ -91,7 +107,7 @@ export function pathsOf(steps: readonly Step[], fold = true): Paths {
       if (main.has(to) || !only(to, owner, exit)) continue;
       const lane = [to];
       let next = landsAt(steps, to, "then");
-      while (next !== "end" && !main.has(next) && only(next, lane.at(-1)!, "then") && !lane.includes(next)) {
+      while (next !== "end" && !main.has(next) && follows(next, lane.at(-1)!) && !lane.includes(next)) {
         lane.push(next);
         next = landsAt(steps, next, "then");
       }
@@ -102,6 +118,8 @@ export function pathsOf(steps: readonly Step[], fold = true): Paths {
       const asks = lane.length === 1 && wait.kind === "approval" && next === done && landsAt(steps, to, "whenFailed") === "end";
       rules.set(owner, [...(rules.get(owner) ?? []), asks && fold ? { exit, kind: "ask", at: to } : { exit, kind: "lane", lane, ends }]);
       for (const at of lane) inside.set(at, { owner, exit, folded: asks && fold });
+      // A lane's own steps: each says where it goes on anyway, in its own box.
+      if (!(asks && fold)) for (const at of lane) for (const own of PATH_EXITS) if (goesOn(at, own)) rules.set(at, [...(rules.get(at) ?? []), { exit: own, kind: "goOn" }]);
     }
   }
   return { line: steps.map((_step, at) => at).filter((at) => !inside.has(at)), rules, inside };
@@ -146,15 +164,26 @@ export function choiceOf(steps: readonly Step[], at: number, exit: PathExit, pat
 
 /**
  * The answers a path can be given from the page. A wait says no and is not asked again, silence is no failure to ask
- * about, and a step with nothing after it has nothing to go on to, asked or not. What the step holds now is always
+ * about, and a step with nothing after it has nothing to go on to, asked or not. A step of a lane stops or goes on,
+ * and has no steps of its own. What the step holds now is always
  * among them, whoever wrote it: an answer the page would not offer is still the one shown as chosen.
  */
 export function choicesFor(steps: readonly Step[], at: number, exit: PathExit, paths: Paths = pathsOf(steps)): Choice[] {
   const goesOn = landsAt(steps, at, "then") !== "end";
-  const asks = goesOn && exit === "whenFailed" && steps[at]!.kind !== "approval";
-  const offered: Choice[] = ["stop", ...(goesOn ? (["goOn"] as const) : []), ...(asks ? (["ask"] as const) : []), "lane"];
+  // A step of a lane: a question or other steps would be a lane of a lane, which the canvas does not draw.
+  const side = paths.inside.has(at);
+  const asks = !side && goesOn && exit === "whenFailed" && steps[at]!.kind !== "approval";
+  const offered: Choice[] = ["stop", ...(goesOn ? (["goOn"] as const) : []), ...(asks ? (["ask"] as const) : []), ...(side ? [] : (["lane"] as const))];
   const now = choiceOf(steps, at, exit, paths);
   return offered.includes(now) ? offered : [...offered, now];
+}
+
+/**
+ * The paths a step's box says end the run there: a failure (a no, for a wait) that no answer was chosen for. Silence
+ * ending a run quietly is not said: it is what nearly every step does, and no failure.
+ */
+export function stopsAt(steps: readonly Step[], at: number, paths: Paths): PathExit[] {
+  return exitsOf(steps[at]!).includes("whenFailed") && choiceOf(steps, at, "whenFailed", paths) === "stop" ? ["whenFailed"] : [];
 }
 
 /** The steps a rule holds, by their place. */
@@ -164,6 +193,19 @@ const held = (rule: Rule | undefined): number[] => (rule?.kind === "ask" ? [rule
 function withExit(step: Step, exit: ExitName, go: Step[ExitName]): Step {
   const { [exit]: _was, ...rest } = step;
   return (go === undefined || go === DEFAULT_EXIT[exit] ? rest : { ...rest, [exit]: go }) as Step;
+}
+
+/**
+ * A step with where it goes when done set, and each path of its that went on anyway set with it: "go on" stays "go
+ * on" wherever on is now, and is taken off where there is nothing left to go on to. Without this a lane's step that
+ * went on anyway was left pointing at the step it used to go on to, which the canvas then drew as a jump.
+ */
+function withThen(steps: readonly Step[], at: number, go: Step["then"]): Step {
+  const step = steps[at]!;
+  const done = landsAt(steps, at, "then");
+  const along = PATH_EXITS.filter((exit) => step[exit] !== undefined && done !== "end" && landsAt(steps, at, exit) === done);
+  // To the run's end is what a path does unsaid: `withExit` takes it off.
+  return along.reduce((next, exit) => withExit(next, exit, go ?? "next"), withExit(step, "then", go));
 }
 
 /**
@@ -243,7 +285,7 @@ export function setLaneEnd(steps: readonly Step[], owner: number, exit: PathExit
   const last = rule.lane.at(-1)!;
   const done = landsAt(steps, owner, "then");
   const go: Step["then"] = ends === "stop" || done === "end" ? "end" : { to: steps[done]!.id };
-  return steps.map((step, index) => (index === last ? withExit(step, "then", go === "end" && index === steps.length - 1 ? undefined : go) : step));
+  return steps.map((step, index) => (index === last ? withThen(steps, index, go === "end" && index === steps.length - 1 ? undefined : go) : step));
 }
 
 /** A step added at a lane's end: it takes the lane's ending, and the step before it goes on to it. */
@@ -252,7 +294,7 @@ export function addToLane(steps: readonly Step[], owner: number, exit: PathExit,
   if (rule?.kind !== "lane" || steps.length >= STEPS_MAX) return { steps: [...steps], removed: 0 };
   const last = rule.lane.at(-1)!;
   const made = withExit(blankStep(kind, steps), "then", steps[last]!.then);
-  const list = [...steps.slice(0, last + 1), made, ...steps.slice(last + 1)].map((step, index) => (index === last ? withExit(step, "then", { to: made.id }) : step));
+  const list = [...steps.slice(0, last), withThen(steps, last, { to: made.id }), made, ...steps.slice(last + 1)];
   return { steps: tidyAll(forward(list).steps), opened: made.id, removed: 0 };
 }
 
@@ -325,7 +367,7 @@ export function removeDrawn(steps: readonly Step[], at: number): Step[] {
     // The first of several: the path leads to the second.
     if (index === within.owner && place === 0) return withExit(one, within.exit, lane.length > 1 ? { to: steps[lane[1]!]!.id } : undefined);
     // Any other: the step before it takes what it went on to, the lane's ending for the last.
-    if (place > 0 && index === lane[place - 1]) return withExit(one, "then", step.then === undefined && lane[place + 1] !== undefined ? { to: steps[lane[place + 1]!]!.id } : step.then);
+    if (place > 0 && index === lane[place - 1]) return withThen(steps, index, step.then === undefined && lane[place + 1] !== undefined ? { to: steps[lane[place + 1]!]!.id } : step.then);
     return one;
   });
   const kept = forward(list.filter((_one, index) => index !== at)).steps;
@@ -342,7 +384,7 @@ function lifted(steps: readonly Step[], at: number, paths: Paths): Step[] {
   const below = nextOnLine(paths, at);
   const gone = steps[at]!.id;
   return steps
-    .map((step) => (typeof step.then === "object" && step.then.to === gone && below !== null ? withExit(step, "then", { to: steps[below]!.id }) : step))
+    .map((step, index) => (typeof step.then === "object" && step.then.to === gone && below !== null ? withThen(steps, index, { to: steps[below]!.id }) : step))
     .filter((_step, index) => !group.has(index));
 }
 
@@ -370,7 +412,7 @@ export function moveOnLine(steps: readonly Step[], from: number, to: number): St
   const goes: Step["then"] = done === "end" ? "end" : { to: placed[done]!.id };
   const was = ownThen(steps, from);
   const same = (go: Step[ExitName]): boolean => JSON.stringify(go) === JSON.stringify(was);
-  const hung = rest.map((one) => (one.then !== undefined && same(one.then) ? withExit(one, "then", goes) : one));
+  const hung = group.slice(1).map((index) => (steps[index]!.then !== undefined && same(steps[index]!.then) ? withThen(steps, index, goes) : steps[index]!));
   const list = [...placed.slice(0, at), withExit(lead, "then", goes), ...hung, ...placed.slice(at + 1)];
   return tidyAll(forward(list).steps);
 }

@@ -310,7 +310,7 @@ describe("where the run goes from a step", () => {
   test("other steps in its place hang in a lane at its side that ends in a mark; another answer takes them along, with a way back", async () => {
     shown();
     let sent: { path: string; body: unknown }[] = [];
-    const seen = { boxes: [] as string[], lane: "", kicker: "", told: "", back: "", stop: "", toast: "", gone: [] as string[], undone: [] as string[] };
+    const seen = { boxes: [] as string[], lane: "", kicker: "", told: [] as string[], ends: [] as string[], back: "", stop: "", toast: "", gone: [] as string[], undone: [] as string[] };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       editStep(host, 1).click();
@@ -323,8 +323,10 @@ describe("where the run goes from a step", () => {
       seen.lane = lane().querySelector("p")?.textContent ?? "";
       await eventually(() => host.querySelector('[data-step-fields="s5"]') !== null, 2_000, "the lane's step open");
       seen.kicker = host.querySelector('[data-step-fields="s5"] header p')?.textContent ?? "";
-      // A step of a lane is asked nothing of where the run goes: that is its owner's to say.
-      seen.told = host.querySelector('[data-step-fields="s5"]')?.querySelector("[data-path]") === null ? "not asked" : "asked";
+      // A step of a lane answers for its own failure, with the two answers that need no drawing of their own; and
+      // where its lane ends is set from it, as from the step the lane hangs on.
+      seen.told = answerNames(host, "whenFailed");
+      seen.ends = [...host.querySelectorAll<HTMLElement>('[data-step-fields="s5"] [data-lane-end-field] button')].map((button) => `${button.textContent}${button.getAttribute("aria-pressed") === "true" ? " ✓" : ""}`);
       type(field(host, "What to ask"), "Look into why it failed.");
       seen.back = lane().querySelector("[data-lane-end]")?.textContent ?? "";
 
@@ -348,8 +350,9 @@ describe("where the run goes from a step", () => {
     expect(seen.boxes).toEqual(["check", "s5", "find", "ok", "tell"]);
     expect(seen.lane).toBe("If it fails");
     expect(seen.kicker).toBe("If it fails · Ask an agent");
-    expect(seen.told).toBe("not asked");
-    expect(seen.back).toBe("Then back to “Nouva works on it”");
+    expect(seen.told).toEqual(["Stop and tell me", "Go on anyway"]);
+    expect(seen.ends).toEqual(["Go back to step 2, “Nouva works on it” ✓", "Stop"]);
+    expect(seen.back).toBe("Then back to step 2, “Nouva works on it”");
     expect(seen.stop).toBe("The run stops here");
     expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "s5" } }, { id: "s5", kind: "agentTurn", message: "Look into why it failed.", then: "end" }, FIND, OK, TELL]);
     expect(seen.gone).toEqual(["check", "find", "ok", "tell"]);
@@ -514,5 +517,146 @@ describe("where the run goes from a step", () => {
     ]);
     expect(seen.left).toBe(1);
     expect(steps(sent)).toEqual([CHECK, FIND, OK]);
+  });
+});
+
+describe("what a failure does is seen on the canvas, whatever the answer", () => {
+  test("a step left at a stop says so in its box, as one given another answer says that; a message, which cannot fail, says nothing", async () => {
+    shown();
+    const seen = { stops: {} as Record<string, string>, marks: 0, after: "", rule: "" };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      const stop = (id: string) => stepCard(host, id).querySelector("[data-stops]")?.textContent ?? "";
+      for (const step of STEPS) seen.stops[step.id] = stop(step.id);
+      // Each with a stop's mark before its words: the flag a person looks for.
+      seen.marks = host.querySelectorAll("[data-stops] svg").length;
+      editStep(host, 1).click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "the question");
+      choose(host, "whenFailed", "Go on anyway");
+      await eventually(() => stepCard(host, "check").querySelector('[data-rule-kind="goOn"]') !== null, 2_000, "going on, in the box");
+      seen.after = stop("check");
+      seen.rule = stepCard(host, "check").querySelector("[data-rule]")?.textContent ?? "";
+    });
+    expect(seen.stops).toEqual({
+      check: "If it fails, the run ends, and its chat is told why.",
+      find: "If it fails, the run ends, and its chat is told why.",
+      ok: "If you say no, the run ends. Nothing is counted as failed.",
+      tell: "",
+    });
+    expect(seen.marks).toBe(3);
+    expect(seen.after).toBe("");
+    expect(seen.rule).toBe("If it fails, the run goes on anyway.");
+  });
+});
+
+describe("a lane, changed from the lane itself", () => {
+  const LOOK: AutomationStep = { id: "look", kind: "agentTurn", message: "Look into why it failed.", then: { to: "find" } };
+  const LANED: AutomationStep[] = [{ ...CHECK, then: { to: "find" }, whenFailed: { to: "look" } }, LOOK, FIND, OK, TELL];
+  const lane = (host: HTMLElement) => host.querySelector<HTMLElement>('[data-lane="whenFailed"]')!;
+  const end = (host: HTMLElement) => lane(host).querySelector<HTMLElement>("[data-lane-end]")!;
+
+  test("its end is its mark, pressed: back into the line at a step named by its place, or a stop; and the same from a step of the lane's own fields", async () => {
+    shown(LANED);
+    const seen = { mark: "", offered: [] as string[], stopped: "", field: [] as string[], back: "" };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 5);
+      seen.mark = end(host).textContent ?? "";
+      end(host).querySelector("button")!.click();
+      const items = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitemradio"]')];
+      await eventually(() => items().length === 2, 2_000, "the two ends");
+      seen.offered = items().map((item) => `${item.textContent}${item.getAttribute("aria-checked") === "true" ? " ✓" : ""}`);
+      items()[1]!.click();
+      await eventually(() => end(host).dataset.laneEnd === "stop", 2_000, "the stop");
+      seen.stopped = end(host).textContent ?? "";
+
+      // And from the lane's own step, where "set on that step" used to send a person looking.
+      host.querySelector<HTMLElement>('[aria-label^="Edit the side step"]')!.click();
+      await eventually(() => host.querySelector('[data-step-fields="look"] [data-lane-end-field]') !== null, 2_000, "the lane's end, in its step's fields");
+      const ends = () => [...host.querySelectorAll<HTMLElement>('[data-step-fields="look"] [data-lane-end-field] button')];
+      seen.field = ends().map((button) => `${button.textContent}${button.getAttribute("aria-pressed") === "true" ? " ✓" : ""}`);
+      ends()[0]!.click();
+      await eventually(() => end(host).dataset.laneEnd === "back", 2_000, "back into the line");
+      seen.back = end(host).textContent ?? "";
+      // Stopped and put back: as it was, so there is nothing to save.
+      await eventually(() => saveBar(host) === null, 2_000, "nothing left to save");
+    });
+    expect(seen.mark).toBe("Then back to step 2, “Nouva works on it”");
+    expect(seen.offered).toEqual(["Then back to step 2, “Nouva works on it” ✓", "The run stops here"]);
+    expect(seen.stopped).toBe("The run stops here");
+    expect(seen.field).toEqual(["Go back to step 2, “Nouva works on it”", "Stop ✓"]);
+    expect(seen.back).toBe("Then back to step 2, “Nouva works on it”");
+  });
+
+  test("a step of a lane goes on anyway: said in its own box, the lane still a lane, and saved as the shape that runs it", async () => {
+    shown(LANED);
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { offered: [] as string[], now: [] as string[], rule: "", stop: "", lane: [] as string[], chips: 0 };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 5);
+      host.querySelector<HTMLElement>('[aria-label^="Edit the side step"]')!.click();
+      await eventually(() => pathOf(host, "whenFailed") !== null, 2_000, "what a failure does, asked of a lane's step");
+      seen.offered = answerNames(host, "whenFailed");
+      seen.now = chosen(host, "whenFailed");
+      choose(host, "whenFailed", "Go on anyway");
+      await eventually(() => stepCard(host, "look").querySelector('[data-rule-kind="goOn"]') !== null, 2_000, "going on, in the lane step's box");
+      seen.rule = stepCard(host, "look").querySelector("[data-rule]")?.textContent ?? "";
+      seen.stop = stepCard(host, "look").querySelector("[data-stops]")?.textContent ?? "";
+      seen.lane = [...lane(host).querySelectorAll<HTMLElement>('[data-flow-anchor^="step:"]')].map((box) => box.dataset.flowAnchor!.slice(5));
+      seen.chips = host.querySelectorAll("[data-branch]").length;
+      sent = await saved(host);
+    });
+    expect(seen.offered).toEqual(["Stop and tell me", "Go on anyway"]);
+    expect(seen.now).toEqual(["Stop and tell me"]);
+    expect(seen.rule).toBe("If it fails, the run goes on anyway.");
+    expect(seen.stop).toBe("");
+    expect(seen.lane).toEqual(["look"]);
+    expect(seen.chips).toBe(0);
+    expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "look" } }, { id: "look", kind: "agentTurn", message: "Look into why it failed.", whenFailed: "next" }, FIND, OK, TELL]);
+  });
+});
+
+describe("who does a step", () => {
+  test("is picked by face and by typing a name: each agent with its picture, the list narrowed as it is typed, and only an agent of the list an answer", async () => {
+    shown();
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { rows: [] as string[], faces: 0, field: false, narrowed: [] as string[], none: "", holds: "", face: false, byKey: [] as string[] };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      editStep(host, 2).click();
+      await eventually(() => dropdown(host, "Who does it").button() !== undefined, 2_000, "who does it");
+      seen.rows = await dropdown(host, "Who does it").open();
+      const list = () => host.ownerDocument.body.querySelector<HTMLElement>('[role="listbox"][aria-label="Who does it"]')!;
+      seen.faces = list().querySelectorAll('[role="option"] [role="img"]').length;
+      const find = host.ownerDocument.body.querySelector<HTMLInputElement>('input[aria-label="Find an agent"]');
+      seen.field = find !== null;
+      type(find!, "ni");
+      await eventually(() => list().querySelectorAll('[role="option"]').length === 1, 2_000, "the list narrowed");
+      seen.narrowed = [...list().querySelectorAll('[role="option"] span.truncate')].map((row) => row.textContent ?? "");
+      type(find!, "zz");
+      await eventually(() => list().querySelectorAll('[role="option"]').length === 0, 2_000, "nothing by that name");
+      seen.none = list().textContent ?? "";
+      type(find!, "nix");
+      await eventually(() => list().querySelectorAll('[role="option"]').length === 1, 2_000, "Nix");
+      list().querySelector<HTMLElement>('[role="option"] button')!.click();
+      await eventually(() => dropdown(host, "Who does it").holds() === "Nix", 2_000, "Nix picked");
+      seen.holds = dropdown(host, "Who does it").holds() ?? "";
+      seen.face = dropdown(host, "Who does it").button()!.querySelector('[role="img"]') !== null;
+      // Typed from the button itself: the first letter opens the list with that letter already in its field.
+      const button = dropdown(host, "Who does it").button()!;
+      button.dispatchEvent(new (host.ownerDocument.defaultView as unknown as typeof globalThis).KeyboardEvent("keydown", { key: "x", bubbles: true }));
+      await eventually(() => host.ownerDocument.body.querySelector<HTMLInputElement>('input[aria-label="Find an agent"]')?.value === "x", 2_000, "the list, opened by a letter");
+      seen.byKey = [...list().querySelectorAll('[role="option"] span.truncate')].map((row) => row.textContent ?? "");
+      button.click();
+      sent = await saved(host);
+    });
+    expect(seen.rows).toEqual(["Nouva, who runs this automation", "Nix"]);
+    expect(seen.faces).toBe(2);
+    expect(seen.field).toBe(true);
+    expect(seen.narrowed).toEqual(["Nix"]);
+    expect(seen.none).toBe("No agent called “zz”");
+    expect(seen.holds).toBe("Nix");
+    expect(seen.face).toBe(true);
+    expect(seen.byKey).toEqual(["Nix"]);
+    expect(steps(sent)[1]).toEqual({ ...FIND, agentId: "nix" } as AutomationStep);
   });
 });

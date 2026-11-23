@@ -9,7 +9,7 @@
 
 import { choiceOf, choicesFor, ruleOf, type Choice, type PathExit, type Paths } from "../lib/paths";
 import { landsAt, type Step } from "../lib/steps";
-import { choiceWords, exitChip } from "../lib/words";
+import { choiceWords, exitChip, placeTitle } from "../lib/words";
 import { Choice as ChoiceCard, Segmented } from "./form-parts";
 
 export function PathChoices({
@@ -68,7 +68,7 @@ export function PathChoices({
                   {done !== "end" ? (
                     <Segmented
                       options={[
-                        { value: "back", label: `Then go on to “${titleOf(steps[done]!)}”` },
+                        { value: "back", label: `Then go on to ${placeTitle(paths.line.indexOf(done), titleOf(steps[done]!))}` },
                         { value: "stop", label: "Then stop" },
                       ]}
                       value={rule.ends === "stop" ? "stop" : "back"}

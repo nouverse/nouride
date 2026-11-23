@@ -10,6 +10,9 @@
  * Asked again every ten seconds, as the Schedule page was: a row's last run and its state change on their own.
  *
  * Under the head, the quiet hours: the one setting here that is every automation's, and the server's.
+ *
+ * What the reader left unsaved in this browser is said here too (`lib/kept-draft.ts`): the one they were making, as a
+ * row of its own over the list, and a mark on each automation with changes waiting on its page.
  */
 
 import { useState } from "react";
@@ -34,7 +37,11 @@ import { byPerson, NOBODYS } from "@/commons/lib/by-person";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
+import { useToast } from "@/commons/components/ui/toast";
 import { AutomationRow } from "./components/AutomationRow";
+import { UnsavedNew } from "./components/UnsavedNew";
+import { useKeptDrafts } from "./hooks/use-kept-drafts";
+import { NEW } from "./lib/kept-draft";
 import { QuietHours } from "./components/QuietHours";
 import { counts, matches, rows, searchedIn, type StartFilter } from "./lib/list";
 
@@ -71,6 +78,8 @@ const GRID = "grid grid-cols-1 items-start gap-4 lg:grid-cols-2";
 export default function AutomationsPage({ start, onStart }: { start: StartFilter; onStart: (next: StartFilter) => void }) {
   const me = useMe();
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const kept = useKeptDrafts(me.data?.actor);
   const [search, setSearch] = useState("");
   // An admin reads their own unless they pick otherwise beside the search; anyone else has their own, and no choice.
   const { whose, setWhose, canPick } = useWhose("automations");
@@ -116,8 +125,15 @@ export default function AutomationsPage({ start, onStart }: { start: StartFilter
   // Set apart by person wherever it is not the reader's own list: the person looked at first, or the reader.
   const groups = whose === "mine" ? null : byPerson(drawn, (one) => one.item.person, whose.startsWith("person:") ? whose.slice("person:".length) : self.data?.person?.key);
   const row = ({ key, item, motion }: Moving<AutomationSummary>) => (
-    <AutomationRow key={key} automation={item} home={list.data?.timezone ?? "UTC"} agentName={agentName} writable={writable} admin={isAdmin(me.data ?? null)} motion={motion} onChanged={refresh} />
+    <AutomationRow key={key} automation={item} home={list.data?.timezone ?? "UTC"} agentName={agentName} writable={writable} admin={isAdmin(me.data ?? null)} motion={motion} onChanged={refresh} unsaved={kept.drafts[item.id] !== undefined} />
   );
+  // The one being made and never saved: thrown away from here with a way back, since it is a press and not a question.
+  const making = writable ? kept.drafts[NEW] : undefined;
+  const discardNew = () => {
+    if (!making) return;
+    kept.set(NEW, null);
+    toast.show({ kind: "info", message: "The unsaved automation was discarded", duration: 7_000, action: { label: "Undo", onPress: () => kept.set(NEW, making) } });
+  };
 
   return (
     <div className="space-y-5">
@@ -149,6 +165,8 @@ export default function AutomationsPage({ start, onStart }: { start: StartFilter
           ) : null}
         </StickyBar>
       ) : null}
+
+      {making && !failed ? <UnsavedNew kept={making} onDiscard={discardNew} /> : null}
 
       {failed ? (
         <ErrorNote error={failed} />

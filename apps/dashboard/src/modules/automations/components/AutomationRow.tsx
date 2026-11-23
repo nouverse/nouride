@@ -71,6 +71,7 @@ export function AutomationRow({
   admin,
   motion = "",
   onChanged,
+  unsaved = false,
 }: {
   automation: AutomationSummary;
   /** The server's own time zone. */
@@ -81,6 +82,8 @@ export function AutomationRow({
   /** How the list draws it (`useMotionList`); one that arrives is lit too. */
   motion?: Motion;
   onChanged: () => void;
+  /** The reader left changes to it unsaved in this browser: its page opens on them. */
+  unsaved?: boolean;
 }) {
   const toast = useToast();
   const face = useAgentFace(automation.agentId);
@@ -108,6 +111,11 @@ export function AutomationRow({
             </Link>
           </h2>
           <p className="text-sm text-base-content/65 [overflow-wrap:anywhere]">Starts {startWords(automation.trigger, home)}</p>
+          {unsaved ? (
+            <Tag tone="needs" className="mt-1.5" title="You changed it on its page and did not save. The changes are kept in this browser.">
+              Unsaved changes
+            </Tag>
+          ) : null}
         </div>
         {only ? (
           <Tag className="relative z-[1] mt-1 shrink-0" title="You can read this one, not change it">

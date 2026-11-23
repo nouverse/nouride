@@ -446,11 +446,11 @@
             "argv": [
               "python3"
             ],
-            "name": "Save it",
             "script": {
               "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
               "about": "Saves the summary as today's page."
             },
+            "name": "Save it",
             "then": {
               "to": "s3"
             },
@@ -500,11 +500,11 @@
             "argv": [
               "python3"
             ],
-            "name": "Save it",
             "script": {
               "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
               "about": "Saves the summary as today's page."
             },
+            "name": "Save it",
             "then": {
               "to": "s3"
             },
@@ -748,12 +748,6 @@
             "text": "The shop was down for a while. What was found is above.",
             "name": "Tell the group",
             "then": "end"
-          },
-          {
-            "id": "s4",
-            "kind": "approval",
-            "ask": "Post what was found to the group?",
-            "timeoutMs": 3600000
           }
         ]
       },
@@ -800,12 +794,6 @@
             "text": "The shop was down for a while. What was found is above.",
             "name": "Tell the group",
             "then": "end"
-          },
-          {
-            "id": "s4",
-            "kind": "approval",
-            "ask": "Post what was found to the group?",
-            "timeoutMs": 3600000
           }
         ]
       },
@@ -914,6 +902,55 @@
             "id": "s2",
             "kind": "systemEvent",
             "text": "New order, details above."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "-100200"
+      },
+      "delivery": {
+        "mode": "none"
+      }
+    }
+  },
+  {
+    "name": "New order, the note first",
+    "send": {
+      "change": "New order"
+    },
+    "body": {
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "New order, details above."
+          },
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "A new order came in. Read what was sent and say who ordered what."
+          }
+        ]
+      }
+    },
+    "keeps": {
+      "name": "New order",
+      "start": "webhook",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s2",
+            "kind": "systemEvent",
+            "text": "New order, details above."
+          },
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "A new order came in. Read what was sent and say who ordered what."
           }
         ]
       },
@@ -1060,11 +1097,11 @@
             "argv": [
               "python3"
             ],
-            "name": "Save it",
             "script": {
               "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
               "about": "Saves the summary as today's page."
             },
+            "name": "Save it",
             "whenFailed": "next"
           },
           {
@@ -1092,11 +1129,11 @@
             "argv": [
               "python3"
             ],
-            "name": "Save it",
             "script": {
               "text": "import sys\n\nsummary = sys.stdin.read().strip()\nprint(f\"saved {len(summary)} characters\")\n",
               "about": "Saves the summary as today's page."
             },
+            "name": "Save it",
             "whenFailed": "next"
           },
           {

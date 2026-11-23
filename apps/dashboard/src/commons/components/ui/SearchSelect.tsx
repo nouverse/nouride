@@ -8,10 +8,10 @@
  * list's header it was cut off by the list below it.
  */
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { placeMenu } from "@/commons/lib/menu-place";
+import { outOfSight, placeMenu } from "@/commons/lib/menu-place";
 import { cn } from "@/commons/lib/utils";
 
 export interface SearchSelectOption<V extends string = string> {
@@ -19,6 +19,8 @@ export interface SearchSelectOption<V extends string = string> {
   label: string;
   /** A few characters at the row's far side: how many the choice holds, say. */
   detail?: string;
+  /** A small picture before its words, on its row and on the button while it is the one picked: an agent's face. */
+  lead?: ReactNode;
 }
 
 /** The row the keys move to from `at`, around the ends; a letter goes to the next row that starts with it. */
@@ -79,6 +81,7 @@ function Rows<V extends string>({
             onMouseEnter={() => onActive(index)}
             onClick={() => onPick(option)}
           >
+            {option.lead}
             <span className="min-w-0 flex-1 truncate">{option.label}</span>
             {option.detail ? <span className="shrink-0 font-mono text-xs text-base-content/65">{option.detail}</span> : null}
           </button>
@@ -88,14 +91,23 @@ function Rows<V extends string>({
   );
 }
 
-/** Where the open list is drawn: fixed to its button, followed as the window is resized or anything under it scrolls. */
-function usePlace(open: boolean, trigger: RefObject<HTMLButtonElement | null>, width: number, maxHeight: number, align: "start" | "end"): CSSProperties | null {
+/**
+ * Where the open list is drawn: fixed to its button, followed as the window is resized or anything under it scrolls.
+ * `onAway`: the button scrolled out of sight (out of the window, or out of a card that scrolls its fields), and the
+ * list closes rather than lie over what is there now.
+ */
+function usePlace(open: boolean, trigger: RefObject<HTMLButtonElement | null>, width: number, maxHeight: number, align: "start" | "end", onAway: () => void): CSSProperties | null {
   const [place, setPlace] = useState<CSSProperties | null>(null);
+  const away = useRef(onAway);
+  away.current = onAway;
   useLayoutEffect(() => {
     if (!open) return;
-    const measure = () => {
-      const box = trigger.current?.getBoundingClientRect();
-      if (box) setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width: Math.max(box.width, width), maxHeight }, align) });
+    const measure = (event?: Event) => {
+      const button = trigger.current;
+      if (!button) return;
+      if (event?.type === "scroll" && outOfSight(button, { height: window.innerHeight })) return away.current();
+      const box = button.getBoundingClientRect();
+      setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width: Math.max(box.width, width), maxHeight }, align) });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -155,7 +167,7 @@ export function SearchSelect<V extends string>({
   const panel = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
-  const place = usePlace(open, trigger, width, maxHeight, align);
+  const place = usePlace(open, trigger, width, maxHeight, align, () => setOpen(false));
 
   const query = typed.trim().toLowerCase();
   const rows = query ? options.filter((option) => option.label.toLowerCase().includes(query)) : options;
@@ -218,10 +230,21 @@ export function SearchSelect<V extends string>({
           setActive(Math.max(0, options.findIndex((option) => option.value === value)));
           setOpen((was) => !was);
         }}
+        // A list with a field is typed into from its button too: the first letter opens it, already in the field.
+        onKeyDown={(event) => {
+          if (!searchLabel || open || event.key.length !== 1 || event.key === " " || event.ctrlKey || event.metaKey || event.altKey) return;
+          event.preventDefault();
+          setTyped(event.key);
+          setActive(0);
+          setOpen(true);
+        }}
       >
-        <span className="truncate">
-          {named ? <span className="text-base-content/65">{label}: </span> : null}
-          <span className={named ? "font-semibold" : undefined}>{chosen?.label ?? placeholder}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          {chosen?.lead}
+          <span className="truncate">
+            {named ? <span className="text-base-content/65">{label}: </span> : null}
+            <span className={named ? "font-semibold" : undefined}>{chosen?.label ?? placeholder}</span>
+          </span>
         </span>
         <ChevronDown size={15} aria-hidden="true" className={cn("shrink-0 text-base-content/65 transition-transform", open && "rotate-180")} />
       </button>

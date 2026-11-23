@@ -173,7 +173,7 @@ export function Flow({
       <FlowLinks links={links} active={active} version={version} className={cn("transition-opacity duration-150", held && "opacity-0")} />
 
       {editing ? (
-        <PopoverSheet open={addAt !== null} onClose={() => setAddAt(null)} anchor={anchor} label="Add a step" width={340}>
+        <PopoverSheet open={addAt !== null} onClose={() => setAddAt(null)} anchor={anchor} label="Add a step" width={340} align="center">
           <StepPicker
             onPick={(kind) => {
               if (addAt && "owner" in addAt) mode.editor.addToLane(addAt.owner, addAt.exit, kind);

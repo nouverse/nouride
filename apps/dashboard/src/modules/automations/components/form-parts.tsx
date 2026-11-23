@@ -1,6 +1,27 @@
-/** The automation page's small form pieces: a card that is a radio button, and a segmented switch. */
+/** The automation page's small form pieces: a card that is a radio button, a segmented switch, and the frame a pressed box's fields stand in. */
 
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+
+/**
+ * A pressed box's fields as they are laid out: what they are of on top, the fields, and what ends them (Done, Delete).
+ * Beside the canvas their card is as tall as the window has room for, and no taller: the head and the foot stay in
+ * sight, and the fields scroll between them, to the card's own edges. In a box on a phone nothing holds its height,
+ * and it is the three in a column.
+ */
+export function FieldsFrame({ head, foot, children, mark }: { head?: ReactNode; foot: ReactNode; children: ReactNode; /** What a test finds these fields by. */ mark: Record<`data-${string}`, string> }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" {...mark}>
+      {head ? <header className="shrink-0 pb-4">{head}</header> : null}
+      <div data-fields-body className="min-h-0 flex-1 space-y-4 xl:-mx-5 xl:overflow-y-auto xl:overscroll-contain xl:px-5 xl:py-0.5 xl:[scrollbar-width:thin]">
+        {children}
+      </div>
+      <div data-fields-foot className="mt-4 shrink-0 xl:-mx-5 xl:border-t xl:border-base-content/[0.08] xl:px-5 xl:pt-3.5">
+        {foot}
+      </div>
+    </div>
+  );
+}
 
 /** A card that is a radio button. Big enough to carry the sentence that makes the choice obvious. */
 export function Choice({

@@ -15,6 +15,7 @@
 import type { AutomationStart, AutomationSummary, JobInput, JobPatch, JobPayloadInput, WebhookInput } from "@nouride/wire";
 import { draftFromTrigger, triggerBody, type TriggerDraft } from "./trigger";
 import { EXITS, newStepId, stepProblems, type Step, type StepProblem } from "./steps";
+import { drawnName } from "./words";
 
 type OneThing = Exclude<JobPayloadInput, { kind: "steps" }>;
 /** What a lone command's output is worth: posted as it is, or handed to the automation's agent. */
@@ -217,7 +218,8 @@ export function draftProblems(draft: Draft): { problems: DraftProblem[]; steps: 
   if (!draft.agentId) problems.push({ part: "who", message: "Pick the agent that runs it." });
   if (!draft.gatewayId || !draft.chatId.trim()) problems.push({ part: "who", message: "Pick the chat it reports to." });
   const steps = stepProblems(draft.steps, draft.agentId);
-  if (steps.length > 0) problems.push({ part: "steps", message: steps[0]!.index === null ? steps[0]!.message : `Step ${steps[0]!.index + 1}: ${steps[0]!.message}` });
+  // Named as it is drawn: a step under a lane is not "step 5" because two steps of the list hang beside the one over it.
+  if (steps.length > 0) problems.push({ part: "steps", message: steps[0]!.index === null ? steps[0]!.message : `${drawnName(draft.steps, steps[0]!.index)}: ${steps[0]!.message}` });
   return { problems, steps };
 }
 

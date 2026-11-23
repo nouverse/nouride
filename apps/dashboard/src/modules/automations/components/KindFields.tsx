@@ -4,6 +4,8 @@
  * step's own card.
  */
 
+import type { Look } from "@/commons/cat/look";
+import { AgentSelect } from "@/commons/components/agents/AgentSelect";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Field } from "@/commons/components/ui/ui";
@@ -19,6 +21,8 @@ type Of<K extends Step["kind"]> = Extract<Step, { kind: K }>;
 export interface AgentChoice {
   id: string;
   name: string;
+  /** Its face, where the daemon has the agent. */
+  look?: Look | undefined;
 }
 
 /** What a script's fields need of the page around them. */
@@ -37,14 +41,13 @@ const AREA = "textarea w-full text-sm leading-relaxed";
 /** Whose step it is: the automation's own agent unless another is picked, who then starts from what the step before said. */
 function StepAgent({ value, own, agents, onChange }: { value: string | undefined; own: string; agents: readonly AgentChoice[]; onChange: (agentId: string | undefined) => void }) {
   if (agents.length < 2) return null;
-  const ownName = agents.find((agent) => agent.id === own)?.name ?? own;
+  const mine = agents.find((agent) => agent.id === own);
+  const ownName = mine?.name ?? own;
   return (
     <Field label="Who does it" hint="Another agent starts fresh, with what the step before said.">
-      <SearchSelect
+      <AgentSelect
         label="Who does it"
-        align="start"
-        className="w-full"
-        options={[{ value: "", label: `${ownName}, who runs this automation` }, ...agents.filter((agent) => agent.id !== own).map((agent) => ({ value: agent.id, label: agent.name }))]}
+        picks={[{ value: "", name: ownName, look: mine?.look, words: `${ownName}, who runs this automation` }, ...agents.filter((agent) => agent.id !== own).map((agent) => ({ value: agent.id, name: agent.name, look: agent.look }))]}
         value={value && value !== own ? value : ""}
         onChange={(next) => onChange(next || undefined)}
       />

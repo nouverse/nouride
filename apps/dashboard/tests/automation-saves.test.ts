@@ -141,16 +141,22 @@ function saves(): Save[] {
   // The question taken off again: the wait goes with it.
   const digestNow = choose(digest, 1, "whenFailed", "goOn");
 
-  // The list changed: renamed, a step moved above the wait, the step two paths led to deleted, and another time to start.
+  // The list changed: renamed, the wait taken out of the steps that run when the check fails, the step two paths led
+  // to deleted, and another time to start. Those steps are a lane (a step of it goes on with nothing to say, and is
+  // still its lane's step), so none of them is dragged along the main line.
   let shopNow: Draft = { ...shop, name: "Shop check", trigger: { ...shop.trigger, mode: "daily", time: "07:00", days: [] } };
-  shopNow = move(shopNow, 4, 3);
-  shopNow = remove(shopNow, 5);
+  shopNow = remove(shopNow, 3);
+  shopNow = remove(shopNow, 4);
+
 
   // The one thing becomes a list: its command, a step for the agent that read its output, and the step added.
   const backupNow = add(backup, "systemEvent", { text: "Backup checked." });
 
   // Where the webhook's automation reports, and that it stays quiet.
   const orderNow: Draft = { ...order, chatId: "-100200", delivery: { mode: "none" } };
+
+  // Then a step of it dragged above the one before it, on a plain list: the daemon holds the change above by now.
+  const orderMoved = move(orderNow, 1, 0);
 
   return [
     made(shop),
@@ -165,6 +171,7 @@ function saves(): Save[] {
     changed("Shop health check, changed", shop, shopNow),
     changed("Backup check, with a second step", backup, backupNow),
     changed("New order, reporting elsewhere and quiet", order, orderNow),
+    changed("New order, the note first", orderNow, orderMoved),
     changed("Backup watch, back into the line and for a day", watch, watchNow),
     changed("Morning digest, going on without asking", digest, digestNow),
   ];
@@ -202,8 +209,15 @@ test("the saves are of every kind of step, every way a path can go, each way to 
   expect(all.find((save) => save.name === "Backup watch")!.keeps.delivery).toEqual({ mode: "announce", once: true, lasts: 21_600_000 });
   expect(all.find((save) => save.name === "Backup watch, back into the line and for a day")!.body).toMatchObject({ delivery: { mode: "announce", once: true, lasts: 86_400_000 } });
   expect(all.filter((save) => "change" in save.send).length).toBeGreaterThanOrEqual(3);
-  // A change sends what changed: the renamed, reordered list sends its name, its steps and its time, and no chat.
+  // A change sends what changed: the renamed, shortened list sends its name, its steps and its time, and no chat.
   expect(Object.keys(all.find((save) => save.name === "Shop health check, changed")!.body as object).sort()).toEqual(["cron", "name", "payload", "tz"]);
+  // The check's own steps for a failure are a lane, one of which goes on with nothing to say; with the wait and the
+  // step two paths led to gone, the lane is the three left, in the order they run.
+  expect(named("Shop health check").map((step) => step.id)).toEqual(["s1", "s2", "s3", "s4", "s5", "s6"]);
+  expect(named("Shop health check, changed").map((step) => [step.id, step.then, step.whenEmpty])).toEqual([["s1", "end", undefined], ["s2", undefined, "next"], ["s3", undefined, undefined], ["s5", "end", undefined]]);
+  // A dragged step: the list in its new order, and nothing but the list sent.
+  expect(named("New order, the note first").map((step) => step.kind)).toEqual(["systemEvent", "agentTurn"]);
+  expect(Object.keys(all.find((save) => save.name === "New order, the note first")!.body as object)).toEqual(["payload"]);
   // A path that led to a deleted step is gone from what is sent, not sent pointing nowhere.
   const shopNow = (all.find((save) => save.name === "Shop health check, changed")!.keeps.payload as { steps: Step[] }).steps;
   expect(shopNow.flatMap((step) => [step.then, step.whenFailed, step.whenEmpty]).filter((go) => typeof go === "object")).toEqual([]);

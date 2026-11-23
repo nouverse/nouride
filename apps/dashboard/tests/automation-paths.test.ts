@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { AutomationStep } from "@nouride/wire";
-import { addToLane, chipExits, choiceOf, choicesFor, choosePath, groupOf, insertOnLine, moveOnLine, pathsOf, removeDrawn, ruleOf, setLaneEnd } from "@/modules/automations/lib/paths";
+import { addToLane, chipExits, choiceOf, choicesFor, choosePath, groupOf, insertOnLine, moveOnLine, pathsOf, removeDrawn, ruleOf, setLaneEnd, stopsAt } from "@/modules/automations/lib/paths";
 import { forward, landsAt, type ExitName, type Step } from "@/modules/automations/lib/steps";
 
 type Exits = Pick<AutomationStep, "then" | "whenFailed" | "whenEmpty">;
@@ -387,5 +387,114 @@ describe("a step of the main line moved", () => {
     expect(walk(steps, { save: "failed" })).toEqual(["save", "ok", "sum", "tell"]);
     expect(ruleOf(pathsOf(steps), 0, "whenFailed")?.kind).toBe("ask");
     sound(steps);
+  });
+});
+
+/** Check, and when it fails: look, then write, then back to tell. The lane has two steps of its own. */
+const TWO = [run("check", { then: to("tell"), whenFailed: to("look") }), ask("look"), ask("write", { then: to("tell") }), say("tell"), say("bye")];
+
+describe("a step of a lane answers for itself", () => {
+  test("it is offered a stop or going on, and no steps of its own: a lane of a lane is not drawn", () => {
+    expect(choicesFor(TWO, 1, "whenFailed")).toEqual(["stop", "goOn"]);
+    expect(choicesFor(TWO, 1, "whenEmpty")).toEqual(["stop", "goOn"]);
+    // The step that owns the lane keeps all four.
+    expect(choicesFor(TWO, 0, "whenFailed")).toEqual(["stop", "goOn", "ask", "lane"]);
+    // The last step of a lane that stops has nothing to go on to.
+    const stops = setLaneEnd(TWO, 0, "whenFailed", "stop");
+    expect(choicesFor(stops, 2, "whenFailed")).toEqual(["stop"]);
+  });
+
+  test("unless told otherwise it stops there: said of every step that can fail, and of no message, which cannot", () => {
+    const paths = pathsOf(TWO);
+    expect(TWO.map((_step, at) => stopsAt(TWO, at, paths))).toEqual([[], ["whenFailed"], ["whenFailed"], [], []]);
+    const asked = pathsOf(ASKS);
+    // A question in its box is the answer; the plain step before it stops.
+    expect(ASKS.map((_step, at) => stopsAt(ASKS, at, asked))).toEqual([["whenFailed"], [], ["whenFailed"], []]);
+  });
+
+  test("go on, in the middle of a lane: the lane is still a lane, the step says so in its box, and a failed run goes on down it", () => {
+    const chosen = choosePath(TWO, 1, "whenFailed", "goOn").steps;
+    sound(chosen);
+    const paths = pathsOf(chosen);
+    expect(paths.rules.get(0)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [1, 2], ends: { back: 3 } }]);
+    expect(paths.rules.get(1)).toEqual([{ exit: "whenFailed", kind: "goOn" }]);
+    expect(choiceOf(chosen, 1, "whenFailed", paths)).toBe("goOn");
+    expect(chipExits(chosen, 1, paths)).toEqual([]);
+    expect(stopsAt(chosen, 1, paths)).toEqual([]);
+    expect(walk(chosen, { check: "failed", look: "failed" })).toEqual(["check", "look", "write", "tell", "bye"]);
+    // And back to a stop: as it was written before.
+    expect(choosePath(chosen, 1, "whenFailed", "stop").steps).toEqual(TWO);
+  });
+
+  test("go on, at a lane's end: back into the main line where the lane goes back", () => {
+    const chosen = choosePath(TWO, 2, "whenFailed", "goOn").steps;
+    sound(chosen);
+    expect(pathsOf(chosen).rules.get(2)).toEqual([{ exit: "whenFailed", kind: "goOn" }]);
+    expect(pathsOf(chosen).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [1, 2], ends: { back: 3 } }]);
+    expect(walk(chosen, { check: "failed", write: "failed" })).toEqual(["check", "look", "write", "tell", "bye"]);
+    expect(walk(TWO, { check: "failed", write: "failed" })).toEqual(["check", "look", "write"]);
+  });
+
+  /**
+   * The same check with a second lane, for silence, between its first lane and the step both go back to. A lane's last
+   * step then names the step it goes back to (the next step in the list is the other lane's), and so does its going on:
+   * the shape in which a path left pointing where it used to go is a jump, or runs the other lane's step.
+   */
+  const DUO = [run("check", { then: to("tell"), whenFailed: to("look"), whenEmpty: to("quiet") }), ask("look"), ask("write", { then: to("tell") }), say("quiet", { then: to("tell") }), say("tell"), say("bye")];
+  const at = (steps: readonly Step[], id: string) => ids(steps).indexOf(id);
+  const goesOn = (steps: readonly Step[], id: string) => expect([pathsOf(steps).rules.get(at(steps, id)), chipExits(steps, at(steps, id), pathsOf(steps))]).toEqual([[{ exit: "whenFailed", kind: "goOn" }], []]);
+
+  test("the two lanes are read, and going on at the first one's end names the step it goes back to", () => {
+    expect(pathsOf(DUO).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [1, 2], ends: { back: 4 } }, { exit: "whenEmpty", kind: "lane", lane: [3], ends: { back: 4 } }]);
+    const last = choosePath(DUO, 2, "whenFailed", "goOn").steps;
+    sound(last);
+    expect(last[2]).toMatchObject({ then: to("tell"), whenFailed: to("tell") });
+    goesOn(last, "write");
+  });
+
+  test("a step added after one that goes on: it goes on to the new step, not past it", () => {
+    const added = addToLane(choosePath(DUO, 2, "whenFailed", "goOn").steps, 0, "whenFailed", "systemEvent").steps;
+    sound(added);
+    goesOn(added, "write");
+    const made = added[3]!.id;
+    expect(walk(added, { check: "failed", write: "failed" })).toEqual(["check", "look", "write", made, "tell", "bye"]);
+  });
+
+  test("its lane set to stop: there is nothing left to go on to, and no jump is left behind", () => {
+    const stopped = setLaneEnd(choosePath(DUO, 2, "whenFailed", "goOn").steps, 0, "whenFailed", "stop");
+    sound(stopped);
+    expect(stopped[2]!.whenFailed).toBeUndefined();
+    expect(chipExits(stopped, 2, pathsOf(stopped))).toEqual([]);
+    expect(walk(stopped, { check: "failed", write: "failed" })).toEqual(["check", "look", "write"]);
+  });
+
+  test("the step after one that goes on, taken out: it goes on to what the lane goes back to, never into the other lane", () => {
+    const middle = choosePath(DUO, 1, "whenFailed", "goOn").steps;
+    expect(walk(middle, { check: "failed", look: "failed" })).toEqual(["check", "look", "write", "tell", "bye"]);
+    const without = removeDrawn(middle, 2);
+    sound(without);
+    goesOn(without, "look");
+    expect(walk(without, { check: "failed", look: "failed" })).toEqual(["check", "look", "tell", "bye"]);
+  });
+
+  test("the step its lane goes back to, taken out: going on goes where the lane goes now", () => {
+    const without = removeDrawn(choosePath(DUO, 2, "whenFailed", "goOn").steps, 4);
+    sound(without);
+    goesOn(without, "write");
+    expect(walk(without, { check: "failed", write: "failed" })).toEqual(["check", "look", "write", "bye"]);
+  });
+
+  test("its step moved down the line, with its lanes: going on goes back in where the lane does now; at the end there is nothing to go on to", () => {
+    const last = choosePath(DUO, 2, "whenFailed", "goOn").steps;
+    const down = moveOnLine(last, 0, 1);
+    sound(down);
+    expect(line(down)).toEqual(["tell", "check", "bye"]);
+    goesOn(down, "write");
+    expect(walk(down, { check: "failed", write: "failed" })).toEqual(["tell", "check", "look", "write", "bye"]);
+    const end = moveOnLine(last, 0, 2);
+    sound(end);
+    expect(line(end)).toEqual(["tell", "bye", "check"]);
+    expect(chipExits(end, at(end, "write"), pathsOf(end))).toEqual([]);
+    expect(walk(end, { check: "failed", write: "failed" })).toEqual(["tell", "bye", "check", "look", "write"]);
   });
 });

@@ -81,6 +81,8 @@ export function FloatingChat({ pathname }: { pathname: string }) {
         ref={button}
         type="button"
         aria-expanded={state.open}
+        // What a panel that reaches the window's foot keeps clear of (`use-panel-room.ts`).
+        data-floating-chat-button=""
         aria-label={state.open ? `Minimize the chat with ${name}` : label}
         title={state.open ? "Minimize the chat" : label}
         onClick={() => (state.open ? closeFloatingChat() : openFloatingChat({ agent: opensOn }))}

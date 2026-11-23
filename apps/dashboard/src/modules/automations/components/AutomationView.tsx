@@ -14,7 +14,7 @@
  * that changes it: its steps and its runs are read, and what a run waits for is its own person's to answer.
  */
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { JobRunSummary } from "@nouride/wire";
@@ -27,11 +27,13 @@ import { useWaitingSteps } from "@/commons/hooks/use-waiting-steps";
 import { api } from "@/commons/lib/api";
 import { answeredBy, readsOnly } from "@/commons/lib/by-person";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
-import { useOrchestratorFirst } from "@/commons/components/agents/AgentName";
+import { useAgentChoices } from "../hooks/use-agent-choices";
 import { useDrawn, type AutomationDetail } from "../hooks/use-drawn";
 import { OPEN_OWNER, useEditor, type Editor } from "../hooks/use-editor";
+import { useGoToLack } from "../hooks/use-go-to-lack";
 import { useSave, type Saving } from "../hooks/use-save";
 import { draftOf, draftProblems, turnsIntoList, type Draft } from "../lib/draft";
+import { NEW, keptKey } from "../lib/kept-draft";
 import { pathsOf } from "../lib/paths";
 import { outcomesOf, whenWords } from "../lib/runs";
 import type { Step, StepProblem } from "../lib/steps";
@@ -40,7 +42,7 @@ import { AutomationCanvas } from "./AutomationCanvas";
 import { AutomationHeader } from "./AutomationHeader";
 import type { AgentChoice } from "./KindFields";
 import { OpenFields, opensFields } from "./OpenFields";
-import { AtRest, PanelCard, Whose } from "./Panel";
+import { AtRest, OlderDraft, PanelCard, Whose } from "./Panel";
 import { SaveBar } from "./SaveBar";
 import type { FlowMode } from "./StepItem";
 import { SuggestedBanner } from "./SuggestedBanner";
@@ -73,19 +75,22 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const laptop = useDesktop();
   // Whether this page may change it: the account may change automations, and this one is not another person's.
   const [writable, admin] = [canWrite(me.data ?? null) && !(automation && readsOnly(automation)), isAdmin(me.data ?? null)];
-  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways, retry: false });
   const { labelOf } = useKnownChats();
   const waiting = useWaitingSteps();
-  const agents = useOrchestratorFirst(status.data?.agents ?? [], (agent) => agent.id).map((agent) => ({ id: agent.id, name: agent.displayName || agent.id }));
-  const agentName = (id: string) => agents.find((agent) => agent.id === id)?.name ?? id;
+  const { agents, agentName } = useAgentChoices();
 
   const loaded = useMemo(() => (automation ? draftOf(automation, home) : blank), [automation, blank, home]);
-  const editor = useEditor(loaded, fresh);
+  // Its draft is kept in this browser as it changes, for the reader alone: only where the page can change it.
+  const who = me.data?.actor;
+  const keeping = useMemo(() => (who && writable && !automation?.proposal ? { key: keptKey(who), id: automation?.id ?? NEW } : null), [who, writable, automation?.id, automation?.proposal]);
+  const editor = useEditor(loaded, fresh, keeping);
   const { draft, open } = editor;
   const { runs, view, setView, runId, side, setSide, suggested, run, showsSuggested, shown, marks, showRun } = useDrawn(detail, loaded, draft, home);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["automations"] });
   const saving = useSave(automation?.id ?? null, loaded, draft, (id) => {
+    // Saved: nothing of it is left to keep. One just made is another page's now, and this one's draft would open on the next "New automation".
+    editor.forgetKept();
     if (fresh) void navigate({ to: "/automations/$id", params: { id } });
     else editor.discard();
   });
@@ -104,6 +109,9 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
     : editable
       ? editing(editor, agents, stepIssues, saving.refused, remove)
       : { kind: "read" };
+
+  const page = useRef<HTMLDivElement>(null);
+  const showLack = useGoToLack(page, problems[0], stepIssues[0], draft.steps, editor);
 
   // What is open, as its fields: a step's, how it starts, where its results go. Only while the steps can be changed.
   const close = () => editor.setOpen(null);
@@ -127,6 +135,7 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
       />
     ) : null;
   const gone = () => {
+    editor.forgetKept();
     refresh();
     void navigate({ to: "/automations" });
   };
@@ -135,7 +144,7 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const atRest = <AtRest automation={automation} runs={runs} picked={run?.id ?? null} onPick={(picked) => showRun(picked.id)} canAllow={automation?.start === "webhook" ? admin : writable} />;
 
   return (
-    <div className="space-y-5">
+    <div ref={page} className="space-y-5">
       <AutomationHeader
         automation={automation}
         draft={draft}
@@ -182,6 +191,8 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
         />
       ) : null}
 
+      {editor.olderAt !== null && editable ? <OlderDraft at={editor.olderAt} onShow={editor.bringBack} onDrop={editor.dropOlder} /> : null}
+
       {/* Whose it is, over the canvas where there is no room beside it. */}
       {whose && !laptop ? <PanelCard label="Whose it is">{whose}</PanelCard> : null}
 
@@ -206,11 +217,15 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
           fresh={fresh}
           saving={saving.pending}
           lacks={problems[0]?.message ?? null}
-          notes={turnsIntoList(fresh ? null : loaded, draft)}
+          // Opened on what was left unsaved: said, with when, since nothing else on the page tells it from what is saved.
+          notes={[...(editor.keptAt !== null ? [`You left this unsaved (${whenWords(editor.keptAt)}). It was kept in this browser.`] : []), ...turnsIntoList(fresh ? null : loaded, draft)]}
           error={saving.error}
           onSave={saving.save}
+          onLacks={showLack}
           onDiscard={() => {
             saving.forget();
+            // Cancel throws it away; "Automations" over the page leaves it kept.
+            editor.forgetKept();
             if (fresh) void navigate({ to: "/automations" });
             else editor.discard();
           }}

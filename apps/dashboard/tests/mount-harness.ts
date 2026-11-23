@@ -442,6 +442,9 @@ export function useMountHarness(): void {
     errors = [];
     answer({});
     painted = [];
+    // Each test is a browser nothing was kept in: a group pinned or an automation left unsaved by one test would be
+    // there for the next, in this file or another.
+    (globalThis as { localStorage?: Storage }).localStorage?.clear();
     // What a test saved does not wait for a restart in the next one, in this file or another. Imported here, as the
     // pages are: the dashboard's modules are loaded once the browser's globals are in place.
     (await import("@/commons/lib/restart")).forgetRestartPending();
@@ -612,7 +615,8 @@ export const type = (input: HTMLInputElement | HTMLTextAreaElement, text: string
 export const dropdown = (host: HTMLElement, label: string) => {
   const button = () => [...host.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="listbox"]')].find((one) => one.getAttribute("aria-label")?.startsWith(`${label}: `));
   const rows = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>(`[role="listbox"][aria-label="${label}"] [role="option"] button`)];
-  const named = (row: HTMLElement) => row.querySelector("span")?.textContent?.trim() ?? "";
+  // Its words, which a picture may stand before (an agent's face).
+  const named = (row: HTMLElement) => row.querySelector("span.truncate")?.textContent?.trim() ?? "";
   const open = async () => {
     if (rows().length === 0) button()!.click();
     await eventually(() => rows().length > 0, 2_000, `the ${label} list`);

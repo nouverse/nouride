@@ -15,6 +15,7 @@
  * runs again and again at a time. Each is said in the box where it is on, for a reader who cannot open its fields.
  */
 
+import { AgentSelect } from "@/commons/components/agents/AgentSelect";
 import type { ReactNode } from "react";
 import { Send, VolumeX } from "lucide-react";
 import type { GatewayInstance } from "@nouride/wire";
@@ -27,6 +28,7 @@ import { platformName } from "@/commons/lib/platform";
 import { useQuietHours } from "../hooks/use-quiet-hours";
 import { deliveryOf, onAClock, savesAsList, sessionOf, withLasts, withMark, type Draft } from "../lib/draft";
 import { LASTS_HINT, ONCE_HINT, atOnceHint, hoursWords, lastsChoices, marksWords } from "../lib/watch";
+import { FieldsFrame } from "./form-parts";
 import type { AgentChoice } from "./KindFields";
 import { StepBox } from "./StepBox";
 
@@ -127,13 +129,24 @@ export function ResultsFields({
   // What the hours are is said under the switch that overrides them: asked only while that switch is on the page.
   const quiet = useQuietHours(true);
   return (
-    <div className="space-y-4" data-results-fields>
-      <header>
-        <p className="font-mono text-xs font-semibold tracking-wider text-base-content/65 uppercase">Results</p>
-        <h2 className="mt-0.5 text-lg text-base-content">Who runs it, and where it reports</h2>
-      </header>
+    <FieldsFrame
+      mark={{ "data-results-fields": "" }}
+      head={
+        <>
+          <p className="font-mono text-xs font-semibold tracking-wider text-base-content/65 uppercase">Results</p>
+          <h2 className="mt-0.5 text-lg text-base-content">Who runs it, and where it reports</h2>
+        </>
+      }
+      foot={
+        <div className="flex justify-end">
+          <button type="button" className="btn btn-primary btn-sm rounded-xl px-5" onClick={onDone}>
+            Done
+          </button>
+        </div>
+      }
+    >
       <Field label="Agent" hint={fresh ? "Whose skills and tools it runs with." : "Chosen when it was made. To hand it to another agent, make a new one."}>
-        <SearchSelect label="Agent" align="start" className="w-full" disabled={!fresh} options={agents.map((agent) => ({ value: agent.id, label: agent.name }))} value={draft.agentId} placeholder={draft.agentId} onChange={(agentId) => set({ agentId })} />
+        <AgentSelect label="Agent" disabled={!fresh} picks={agents.map((agent) => ({ value: agent.id, name: agent.name, look: agent.look }))} value={draft.agentId} placeholder={draft.agentId} onChange={(agentId) => set({ agentId })} />
       </Field>
       <ChatPicker gateways={gateways} gatewayId={draft.gatewayId} onGateway={(gatewayId) => set({ gatewayId })} chatId={draft.chatId} onChat={(chatId) => set({ chatId })} />
       {delivery.mode === "webhook" ? (
@@ -179,11 +192,6 @@ export function ResultsFields({
           onChange={(session) => set({ session })}
         />
       </Field>
-      <div className="flex justify-end">
-        <button type="button" className="btn btn-primary btn-sm rounded-xl px-5" onClick={onDone}>
-          Done
-        </button>
-      </div>
-    </div>
+    </FieldsFrame>
   );
 }

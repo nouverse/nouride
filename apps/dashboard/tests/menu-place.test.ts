@@ -6,7 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { offScreen, placeMenu } from "@/commons/lib/menu-place";
+import { offScreen, placeMenu, scrolledOut } from "@/commons/lib/menu-place";
 
 const phone = { width: 393, height: 800 };
 const at = (left: number, top: number, width = 140, height = 36) => ({ left, right: left + width, top, bottom: top + height });
@@ -39,6 +39,44 @@ describe("where a dropdown goes", () => {
     const cramped = placeMenu(at(100, 60), { width: 393, height: 260 }, { width: 200, maxHeight: 300 }, "start");
     expect(cramped.top).toBe(102);
     expect(cramped.maxHeight).toBe(260 - 96 - 6 - 8);
+  });
+
+  test("one that says how tall it is opens where it is seen whole: the list of a step's kinds under a button low in the window", () => {
+    const view = { width: 1649, height: 932 };
+    // As it was found: the button 608 px down, 300 px under it, and a list of 504 px cut off there with 590 px above.
+    const low = placeMenu(at(688, 586, 124, 44), view, { width: 340, maxHeight: 560, height: 504 }, "center");
+    expect(low).toEqual({ left: 580, width: 340, bottom: 932 - 586 + 6, maxHeight: 560 });
+    // High in the window it opens under its button, whole.
+    const high = placeMenu(at(688, 255, 124, 44), view, { width: 340, maxHeight: 560, height: 504 }, "center");
+    expect(high).toEqual({ left: 580, width: 340, top: 305, maxHeight: 560 });
+    // Seen whole on neither side: the side with more room, cut to that room, where it scrolls in itself.
+    const middle = placeMenu(at(688, 400, 124, 44), view, { width: 340, maxHeight: 560, height: 504 }, "center");
+    expect(middle).toEqual({ left: 580, width: 340, top: 450, maxHeight: 932 - 444 - 6 - 8 });
+    const short = placeMenu(at(688, 400, 124, 44), { width: 1649, height: 600 }, { width: 340, maxHeight: 560, height: 504 }, "center");
+    expect(short.top).toBeUndefined();
+    expect(short.maxHeight).toBe(400 - 6 - 8);
+    // Without a height the old rule stands: 240 px under the button is room enough, whatever the list holds.
+    expect(placeMenu(at(688, 586, 124, 44), view, { width: 340, maxHeight: 560 }, "center").top).toBe(636);
+  });
+
+  test("lined up with its button's middle, and still kept inside the window", () => {
+    expect(placeMenu(at(100, 100, 40), phone, { width: 120, maxHeight: 300 }, "center").left).toBe(60);
+    expect(placeMenu(at(10, 100, 40), phone, { width: 120, maxHeight: 300 }, "center").left).toBe(8);
+    expect(placeMenu(at(350, 100, 40), phone, { width: 120, maxHeight: 300 }, "center").left).toBe(393 - 8 - 120);
+  });
+
+  test("a menu whose button scrolled out of the card it is in closes: under the card's edge is out of sight", () => {
+    const card = { top: 140, bottom: 900 };
+    // In the card, and at its very edges still showing.
+    expect(scrolledOut(at(1100, 400), [card])).toBe(false);
+    expect(scrolledOut(at(1100, 110), [card])).toBe(false);
+    expect(scrolledOut(at(1100, 880), [card])).toBe(false);
+    // Scrolled up under its head, or down past its foot.
+    expect(scrolledOut(at(1100, 90), [card])).toBe(true);
+    expect(scrolledOut(at(1100, 904), [card])).toBe(true);
+    // In sight in its own list, and that list scrolled out of the card around it.
+    expect(scrolledOut(at(1100, 60), [{ top: 40, bottom: 120 }, card])).toBe(true);
+    expect(scrolledOut(at(1100, 400), [])).toBe(false);
   });
 
   test("a menu whose button scrolled out of the window closes, rather than float over the page", () => {
