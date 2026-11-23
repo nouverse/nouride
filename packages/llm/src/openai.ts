@@ -139,7 +139,7 @@ export class OpenAIProvider implements LLMProvider {
   readonly kind = "openai" as const;
   readonly baseUrl: string;
   readonly cacheLifetimeMs?: number;
-  private readonly effort = new EffortGuard();
+  private readonly effort = new EffortGuard({ none: true });
   private readonly temperature = new TemperatureGuard();
   /** Google's own endpoint, which refuses a step whose first call comes back unsigned (`GEMINI_SKIP_SIGNATURE`). */
   private readonly signsCalls: boolean;
@@ -363,10 +363,10 @@ export class OpenAIProvider implements LLMProvider {
 
   /** Through the two guards: a model that refuses `temperature` or `effort` is asked again without it (`temperature.ts`, `effort.ts`). */
   private async post(params: ChatParams, stream: boolean): Promise<Response> {
-    return await this.temperature.post(params, (kept) => this.effort.post(kept, (asked) => this.send(asked, stream)));
+    return await this.temperature.post(params, (kept) => this.effort.post(kept, (asked, reasoning) => this.send(asked, stream, reasoning)));
   }
 
-  private async send(params: ChatParams, stream: boolean): Promise<Response> {
+  private async send(params: ChatParams, stream: boolean, reasoning?: "none"): Promise<Response> {
     const messages: WireMessage[] = [];
     // OpenAI caches matching prefixes automatically — there is no field for a breakpoint, so the
     // caller's cache hints are dropped and only their *order* matters. Joining the blocks keeps the
@@ -403,8 +403,9 @@ export class OpenAIProvider implements LLMProvider {
         // In the field the profile names: OpenAI's own API refuses `max_tokens` for its newer models, and a server
         // that only speaks the format may know nothing else. One field, never both: a strict server refuses a pair.
         ...(params.maxTokens !== undefined ? { [this.options.maxTokensField ?? "max_tokens"]: params.maxTokens } : {}),
-        // The level as the operator wrote it: an endpoint that does not know `xhigh` says so on the first call.
-        ...(params.effort ? { reasoning_effort: params.effort } : {}),
+        // The level as the operator wrote it: an endpoint that does not know `xhigh` says so on the first call. `none`
+        // is the guard's, for a model that takes no tools while it reasons (`EffortGuard`).
+        ...(reasoning ? { reasoning_effort: reasoning } : params.effort ? { reasoning_effort: params.effort } : {}),
         // `false` said outright: a proxy that defaults to streaming when the field is absent — 9Router does —
         // otherwise streams to a caller that turned streaming off.
         ...(stream ? { stream: true, stream_options: { include_usage: true } } : { stream: false }),
