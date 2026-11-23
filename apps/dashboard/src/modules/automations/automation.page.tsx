@@ -4,6 +4,7 @@
  * hidden tab asks for nothing, which is the query client's own rule for an interval.
  */
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle } from "lucide-react";
@@ -11,8 +12,11 @@ import { DetailLoading } from "@/commons/components/ui/Skeleton";
 import { Card, EmptyState, ErrorNote } from "@/commons/components/ui/ui";
 import { api } from "@/commons/lib/api";
 import { ApiError } from "@/commons/lib/api.client";
+import { useMe } from "@/commons/lib/session";
 import { AutomationView } from "./components/AutomationView";
+import { keep, keptOf } from "./hooks/use-kept-drafts";
 import { blankDraft } from "./lib/draft";
+import { keptKey } from "./lib/kept-draft";
 import { live } from "./lib/runs";
 
 const LIVE_MS = 2_000;
@@ -27,6 +31,13 @@ export default function AutomationPage({ id }: { id: string }) {
     refetchInterval: (query) => (query.state.data?.runs.some(live) ? LIVE_MS : SETTLED_MS),
     retry: (count, error) => !(error instanceof ApiError && (error.status === 404 || error.status === 501)) && count < 2,
   });
+
+  // One that is gone has no page to open its unsaved changes on: what this browser kept of it goes with it.
+  const who = useMe().data?.actor;
+  const gone = found.error instanceof ApiError && found.error.status === 404 && !found.data;
+  useEffect(() => {
+    if (gone && who && keptOf({ key: keptKey(who), id })) keep({ key: keptKey(who), id }, null);
+  }, [gone, who, id]);
 
   if (found.isLoading) return <DetailLoading cards={3} />;
   if (!found.data) {

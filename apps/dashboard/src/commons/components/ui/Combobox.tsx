@@ -30,7 +30,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, CornerDownLeft, Loader2 } from "lucide-react";
-import { placeMenu } from "@/commons/lib/menu-place";
+import { outOfSight, placeMenu } from "@/commons/lib/menu-place";
 import { cn } from "@/commons/lib/utils";
 
 export interface ComboboxProps {
@@ -106,9 +106,13 @@ export function Combobox(props: ComboboxProps) {
   const showing = open && rows.length > 0 && (query !== "" || browsing || whole);
   useLayoutEffect(() => {
     if (!showing) return;
-    const measure = () => {
-      const box = inputRef.current?.getBoundingClientRect();
-      if (!box) return;
+    const measure = (event?: Event) => {
+      const field = inputRef.current;
+      if (!field) return;
+      // The field scrolled out of sight, out of the window or of a card that scrolls its fields: the list closes
+      // rather than follow it over what is there now. The list's own scroll is not the field's.
+      if (event?.type === "scroll" && !(event.target instanceof Node && listRef.current?.contains(event.target)) && outOfSight(field, { height: window.innerHeight })) return setOpen(false);
+      const box = field.getBoundingClientRect();
       // The field's own width, kept inside the window, flipped up when there is no room below (`placeMenu`).
       setPlace({ position: "fixed", ...placeMenu(box, { width: window.innerWidth, height: window.innerHeight }, { width: box.width, maxHeight: 240 }, "start") });
     };

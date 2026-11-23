@@ -15,7 +15,7 @@ import type { AutomationStart, AutomationSummary } from "@nouride/wire";
 import type { Draft } from "../lib/draft";
 import { describeDraft, triggerBody } from "../lib/trigger";
 import { START } from "../lib/words";
-import { Choice } from "./form-parts";
+import { Choice, FieldsFrame } from "./form-parts";
 import { HookAddress } from "./Reach";
 import { StepBox } from "./StepBox";
 import { TriggerFields } from "./TriggerFields";
@@ -103,11 +103,22 @@ export function StartFields({
   const fresh = automation === null;
   const hook = automation?.hook;
   return (
-    <div className="space-y-4" data-start-fields>
-      <header>
-        <p className="font-mono text-xs font-semibold tracking-wider text-base-content/65 uppercase">Start</p>
-        <h2 className="mt-0.5 text-lg text-base-content">When it runs</h2>
-      </header>
+    <FieldsFrame
+      mark={{ "data-start-fields": "" }}
+      head={
+        <>
+          <p className="font-mono text-xs font-semibold tracking-wider text-base-content/65 uppercase">Start</p>
+          <h2 className="mt-0.5 text-lg text-base-content">When it runs</h2>
+        </>
+      }
+      foot={
+        <div className="flex justify-end">
+          <button type="button" className="btn btn-primary btn-sm rounded-xl px-5" onClick={onDone}>
+            Done
+          </button>
+        </div>
+      }
+    >
       {fresh || draft.start !== "webhook" ? (
         <div role="radiogroup" aria-label="How it starts" className="grid grid-cols-1 gap-2">
           {CHOICES.filter((choice) => fresh || choice.start !== "webhook").map(({ start, hint }) => (
@@ -128,11 +139,6 @@ export function StartFields({
       {draft.start === "webhook" && fresh ? <p className="text-sm text-base-content/75">Its address is made when you save. Whatever calls that address starts it, and what was sent is handed to the first step that reads it.</p> : null}
       {draft.start === "webhook" && !fresh ? <p className="text-xs text-base-content/65">A webhook stays a webhook: its address is what everything that calls it knows it by.</p> : null}
       {automation && hook && !automation.proposal ? <HookAddress automation={{ ...automation, hook }} canEdit={writable} admin={admin} onChanged={onChanged} /> : null}
-      <div className="flex justify-end">
-        <button type="button" className="btn btn-primary btn-sm rounded-xl px-5" onClick={onDone}>
-          Done
-        </button>
-      </div>
-    </div>
+    </FieldsFrame>
   );
 }

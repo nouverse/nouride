@@ -68,7 +68,8 @@ describe("a script step, read", () => {
       type(field(host, "What it does"), "Saves the summary to the notes page.");
       sent = await saved(host);
     });
-    expect(seen.box).toBe("Saves the summary as today's page.A script Nix wrote · no AI");
+    // Its words, and what a failure does, which every box that can fail says.
+    expect(seen.box).toBe("Saves the summary as today's page.A script Nix wrote · no AIIf it fails, the run ends, and its chat is told why.");
     expect(seen.about).toBe("Saves the summary as today's page.");
     expect(seen.chips).toEqual(["Written by Nix", "Python, 4 lines", "No AI", "Uses your saved key: notes_key"]);
     expect(seen.hidden).toBe(true);
@@ -96,7 +97,7 @@ describe("a script step, read", () => {
       seen.written = dropdown(host, "Written in").holds();
       seen.offered = await dropdown(host, "Written in").open();
     });
-    expect(seen.box).toBe("Counts to one.A script · no AI");
+    expect(seen.box).toBe("Counts to one.A script · no AIIf it fails, the run ends, and its chat is told why.");
     expect(seen.chips).toEqual(["deno run, 1 line", "No AI"]);
     expect(seen.written).toBe("deno run");
     expect(seen.offered).toEqual(["Shell", "Python", "JavaScript (Bun)", "JavaScript (Node)", "deno run"]);
@@ -255,7 +256,7 @@ describe("a script step, written", () => {
     expect(seen.text).toBe("curl -sf https://shop.example.com/health");
     expect(seen.lacks).toContain("Step 1: Say what the script does, in one line.");
     expect(seen.disabled).toBe(true);
-    expect(seen.box).toBe("Checks that the shop answers.A script · no AI");
+    expect(seen.box).toBe("Checks that the shop answers.A script · no AIIf it fails, the run ends, and its chat is told why.");
     expect(steps(sent)).toEqual([{ id: "check", kind: "command", argv: ["sh"], script: { text: "curl -sf https://shop.example.com/health\necho ok", about: "Checks that the shop answers." } }, TELL]);
   });
 

@@ -122,7 +122,7 @@ describe("who and where", () => {
     // Who and where in a line under its name, and where its results go as the canvas's last box.
     expect(seen.head).toContain("every day at 07:00 · Nouva runs it · sends to Telegram, DM · Gading");
     expect(seen.who).toBe("Results go to TelegramDM · Gading");
-    expect(seen.step).toBe("Start a missionSum up the week's mail.");
+    expect(seen.step).toBe("Start a missionSum up the week's mail.If it fails, the run ends, and its chat is told why.");
     // Narrowed to what the field holds: the chat it reports to now, by its name.
     expect(seen.offered).toContain("DM · Gading5550001111");
     expect(seen.quiet).toBe(true);

@@ -7,7 +7,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { offScreen, placeMenu } from "@/commons/lib/menu-place";
+import { outOfSight, placeMenu } from "@/commons/lib/menu-place";
 
 export function DropdownMenu({
   trigger,
@@ -40,8 +40,8 @@ export function DropdownMenu({
     if (!open) return;
     const measure = () => {
       const box = button.current?.getBoundingClientRect();
-      if (!box) return;
-      if (offScreen(box, { height: window.innerHeight })) {
+      if (!box || !button.current) return;
+      if (outOfSight(button.current, { height: window.innerHeight })) {
         setOpen(false);
         return;
       }

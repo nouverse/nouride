@@ -7,10 +7,16 @@
  * it, and every place is measured in it. Measured again when that box changes size, when the window does, and
  * whenever `version` changes (a step moved, a card opened). Drawn in the room the flow keeps at its side
  * (`FLOW_SIDE`); a flow too narrow for it, a phone's, draws none, and says each jump in words where it leaves.
+ *
+ * A lane's way back into the main line is drawn here too (`back`): a thread from the lane's end to the step it goes
+ * back to. "Then back to step 2" was words alone, and with four boxes of one title a person could not see which box
+ * they meant. Down the gap between the steps and a lane that stands beside them; down the steps' other side for a
+ * lane that hangs under its step, where the flow has room there. On a phone the boxes fill the flow, and the words
+ * are the whole of it.
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { arrowHead, jumpPath, lanes, type Span } from "@/commons/lib/flow-path";
+import { arrowHead, jumpPath, lanes, returnPath, type Span } from "@/commons/lib/flow-path";
 import { cn } from "@/commons/lib/utils";
 
 /** One jump: the anchor it leaves from and the anchor it lands on, by their names in the flow. */
@@ -20,6 +26,8 @@ export interface FlowLink {
   to: string;
   /** The run took it: drawn stronger, in the colour of what is done. */
   taken?: boolean;
+  /** A lane's way back: it leaves from the near side of where the lane ends, and runs down beside the steps. */
+  back?: boolean;
 }
 
 /** The room a flow keeps at its right for these lines, from a tablet's width up: the class its column carries. */
@@ -28,8 +36,24 @@ export const FLOW_SIDE = "md:pr-16";
 const FIRST_LANE = 18;
 const LANE_GAP = 11;
 
+/** How far past the steps' edge a way back runs down, and the least room between a lane and the steps for one to be drawn. */
+const BACK_FIRST = 16;
+const BACK_ROOM = 34;
+/** The least a way back down the steps' left stands in from the flow's own edge. */
+const BACK_LEAST = 6;
+
 interface Drawn extends Span {
   side: number;
+  back: boolean;
+  /** It comes in at the step's left: a way back down the steps' far side. */
+  left: boolean;
+}
+
+interface Placed {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }
 
 /**
@@ -50,15 +74,28 @@ function measure(flow: HTMLElement, links: readonly FlowLink[]): Drawn[] {
     const found = flow.querySelector<HTMLElement>(`[data-flow-anchor="${name}"]`);
     return found ? placeIn(flow, found) : null;
   };
-  const spans = links.flatMap((link): Span[] => {
+  const ends = (link: FlowLink): { from: Placed; to: Placed }[] => {
     const [from, to] = [anchor(link.from), anchor(link.to)];
-    if (!from || !to) return [];
-    // Out from the middle of where it leaves, in to the head of the card it lands on, a little below its top edge.
-    return [{ key: link.key, from: { x: from.left + from.width, y: from.top + from.height / 2 }, to: { x: to.left + to.width + 7, y: to.top + Math.min(30, to.height / 2) } }];
-  });
-  const lane = lanes(spans);
-  const edge = Math.max(0, ...spans.map((span) => span.to.x));
-  return spans.map((span) => ({ ...span, side: edge + FIRST_LANE + (lane.get(span.key) ?? 0) * LANE_GAP }));
+    return from && to ? [{ from, to }] : [];
+  };
+  // In to the head of the card it lands on, a little below its top edge.
+  const head = (to: Placed) => to.top + Math.min(30, to.height / 2);
+  // A jump leaves from the far end of its chip, out to the side of the flow.
+  const jumps = links.filter((link) => !link.back).flatMap((link) => ends(link).map(({ from, to }): Span => ({ key: link.key, from: { x: from.left + from.width, y: from.top + from.height / 2 }, to: { x: to.left + to.width + 7, y: head(to) } })));
+  // A way back leaves from the near end of where its lane ends. Beside the steps it runs down the gap between them
+  // and comes in at the step's right; from a lane under its step it runs down the steps' left and comes in there.
+  const backs = links.filter((link) => link.back).flatMap((link) => ends(link).map(({ from, to }) => ({ key: link.key, from: { x: from.left - 4, y: from.top + from.height / 2 }, right: to.left + to.width + 7, left: to.left - 7, y: head(to) })));
+  const beside = backs.filter((back) => back.from.x - back.right >= BACK_ROOM).map((back): Span => ({ key: back.key, from: back.from, to: { x: back.right, y: back.y } }));
+  const under = backs.filter((back) => back.from.x - back.right < BACK_ROOM).map((back): Span => ({ key: back.key, from: back.from, to: { x: back.left, y: back.y } }));
+  const [lane, gap, far] = [lanes(jumps), lanes(beside), lanes(under)];
+  const edge = Math.max(0, ...jumps.map((jump) => jump.to.x));
+  return [
+    ...jumps.map((jump) => ({ ...jump, back: false, left: false, side: edge + FIRST_LANE + (lane.get(jump.key) ?? 0) * LANE_GAP })),
+    // Each beside the step it lands on; two whose stretches overlap, a little apart.
+    ...beside.map((back) => ({ ...back, back: true, left: false, side: back.to.x + BACK_FIRST + (gap.get(back.key) ?? 0) * LANE_GAP })),
+    // Only where the flow has room left of its steps: on a phone they fill it.
+    ...under.map((back) => ({ ...back, back: true, left: true, side: Math.min(back.from.x, back.to.x) - BACK_FIRST - (far.get(back.key) ?? 0) * LANE_GAP })).filter((back) => back.side >= BACK_LEAST),
+  ];
 }
 
 export function FlowLinks({
@@ -100,12 +137,15 @@ export function FlowLinks({
       <svg className="size-full overflow-visible">
         {drawn.map((jump) => {
           const state = active === jump.key ? "active" : links.find((link) => link.key === jump.key)?.taken ? "taken" : "idle";
-          const tone = state === "active" ? "text-secondary" : state === "taken" ? "text-success" : "text-base-content";
+          // A way back is in the colour of its lane's end, which says the same in words, and is a dashed thread
+          // that is seen at rest: it is how the lane is read, where a jump's line is an aside.
+          const tone = state === "active" ? "text-secondary" : state === "taken" || jump.back ? "text-success" : "text-base-content";
+          const idle = state === "idle";
           return (
             // A line nobody is asking about is a faint row of dots: there, and out of the cards' way.
-            <g key={jump.key} data-flow-link={jump.key} data-state={state} opacity={state === "idle" ? 0.4 : 1} className={cn("transition-colors duration-150", tone)}>
-              <path d={jumpPath(jump.from, jump.to, jump.side)} fill="none" stroke="currentColor" strokeWidth={state === "idle" ? 1.5 : 2.25} strokeLinecap="round" strokeDasharray={state === "idle" ? "1 5" : undefined} />
-              <path d={arrowHead(jump.to)} fill="currentColor" />
+            <g key={jump.key} data-flow-link={jump.key} data-back={jump.back ? "" : undefined} data-state={state} opacity={idle ? (jump.back ? 0.75 : 0.4) : 1} className={cn("transition-colors duration-150", tone)}>
+              <path d={jump.back ? returnPath(jump.from, jump.to, jump.side) : jumpPath(jump.from, jump.to, jump.side)} fill="none" stroke="currentColor" strokeWidth={idle ? (jump.back ? 1.75 : 1.5) : 2.25} strokeLinecap="round" strokeDasharray={idle ? (jump.back ? "5 5" : "1 5") : undefined} />
+              <path d={arrowHead(jump.to, 6, jump.left ? "left" : "right")} fill="currentColor" />
             </g>
           );
         })}

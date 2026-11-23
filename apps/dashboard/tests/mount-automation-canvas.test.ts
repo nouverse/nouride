@@ -44,7 +44,7 @@ async function atWidth(px: number, during: () => Promise<void>): Promise<void> {
 describe("a pressed box's fields", () => {
   test("open beside the canvas where there is room, one box at a time, and the last runs come back when it is closed", async () => {
     shown();
-    const seen = { rest: "", panel: [] as string[], step: "", inBox: true, start: "", results: "", closed: "", states: [] as (string | undefined)[] };
+    const seen = { rest: "", panel: [] as string[], card: [] as string[], scrolls: [] as string[], held: [] as string[], step: "", inBox: true, start: "", results: "", closed: "", states: [] as (string | undefined)[] };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       seen.rest = host.querySelector("main aside")?.textContent ?? "";
@@ -52,6 +52,13 @@ describe("a pressed box's fields", () => {
       editStep(host, 2).click();
       await eventually(() => panel(host) !== null, 2_000, "the panel");
       seen.step = panel(host)!.querySelector("header")?.textContent ?? "";
+      // The card is the frame: what scrolls is its fields, and its head and its Done are not among them.
+      seen.card = (panel(host)!.closest("section")?.getAttribute("class") ?? "").split(/\s+/);
+      const body = panel(host)!.querySelector<HTMLElement>("[data-fields-body]")!;
+      seen.scrolls = (body.getAttribute("class") ?? "").split(/\s+/);
+      seen.held = ["header", "[data-fields-foot]"].map((part) => `${part} ${panel(host)!.querySelector(part) !== null && !body.contains(panel(host)!.querySelector(part)) ? "stays" : "scrolls away"}`);
+      seen.held.push(`Done ${[...panel(host)!.querySelectorAll("[data-fields-foot] button")].some((button) => button.textContent === "Done") ? "in the foot" : "not in the foot"}`);
+      seen.held.push(`the answers ${body.querySelector("[data-path]") ? "in the fields" : "out of the fields"}`);
       // Not in the box too: the canvas stays as it was, with the pressed box lit.
       seen.inBox = stepCard(host, "find").querySelector("[data-step-fields]") !== null;
       seen.states = STEPS.map((step) => stepCard(host, step.id).dataset.state);
@@ -66,9 +73,14 @@ describe("a pressed box's fields", () => {
       seen.closed = host.querySelector("main aside")?.textContent ?? "";
     });
     expect(seen.rest).toBe("Recent runsIt has not run yet.");
-    // It stays where it is and scrolls in itself, no taller than the window under the page's head: a script's fields
-    // are longer than a window, and the page scrolled with them until the canvas was out of sight.
-    expect(seen.panel).toEqual(expect.arrayContaining(["xl:sticky", "xl:top-4", "xl:max-h-[calc(100dvh-13rem)]", "xl:overflow-y-auto", "xl:w-[25rem]"]));
+    // It stays where it is, as tall as the window has room for (measured, with the old guess until it is), and it is
+    // not what scrolls: a card scrolled under its edge lost its top and its Done. The card clips, its fields scroll
+    // inside it, and its head and foot stand outside them.
+    expect(seen.panel).toEqual(expect.arrayContaining(["xl:sticky", "xl:top-4", "xl:max-h-[var(--panel-room,calc(100dvh-13rem))]", "xl:-mb-[var(--panel-room,calc(100dvh-13rem))]", "xl:flex-col", "xl:w-[23.5rem]"]));
+    expect(seen.panel.filter((name) => name.includes("overflow"))).toEqual([]);
+    expect(seen.card).toEqual(expect.arrayContaining(["xl:flex", "xl:min-h-0", "xl:flex-col", "xl:overflow-hidden"]));
+    expect(seen.scrolls).toEqual(expect.arrayContaining(["min-h-0", "flex-1", "xl:overflow-y-auto", "xl:overscroll-contain"]));
+    expect(seen.held).toEqual(["header stays", "[data-fields-foot] stays", "Done in the foot", "the answers in the fields"]);
     expect(seen.step).toBe("Step 2 · Ask an agentNouva works on it");
     expect(seen.inBox).toBe(false);
     expect(seen.states).toEqual([undefined, "open", undefined, undefined]);
@@ -162,6 +174,25 @@ describe("the room the canvas has", () => {
 });
 
 describe("steps added on the canvas", () => {
+  test("the list of kinds scrolls in itself where the window has no room for all of it, and is not cut off at its own edge", async () => {
+    shown();
+    let classes: string[] = [];
+    let kinds = 0;
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      labelled(host, "Add a step at the end").click();
+      const dialog = () => host.ownerDocument.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Add a step"]');
+      await eventually(() => dialog() !== null, 2_000, "the picker");
+      classes = (dialog()!.getAttribute("class") ?? "").split(/\s+/);
+      kinds = dialog()!.querySelectorAll("button").length;
+    });
+    // Under a button low in the window it was 300 px of a 500 px list, cut where it ended: its last kinds out of reach.
+    expect(kinds).toBe(6);
+    expect(classes).toContain("overflow-y-auto");
+    expect(classes).not.toContain("overflow-hidden");
+  });
+
+
   test("a step picked for a lane stands at the lane's end, before its mark, and takes the lane's ending", async () => {
     // What runs if the check fails, then back to the step below.
     const LOOK: AutomationStep = { id: "look", kind: "agentTurn", message: "Look into why it failed.", then: { to: "find" } };
@@ -182,7 +213,7 @@ describe("steps added on the canvas", () => {
     });
     expect(seen.lane).toEqual(["look", "s6"]);
     expect(seen.kicker).toBe("If it fails · Send a message");
-    expect(seen.end).toBe("Then back to “Nouva works on it”");
+    expect(seen.end).toBe("Then back to step 2, “Nouva works on it”");
     expect((sent[0]?.body as { payload: { steps: AutomationStep[] } }).payload.steps).toEqual([
       { ...CHECK, then: { to: "find" }, whenFailed: { to: "look" } },
       { id: "look", kind: "agentTurn", message: "Look into why it failed." },
@@ -213,7 +244,7 @@ describe("steps added on the canvas", () => {
       type(field(host, "What it does"), "Says what day it is.");
       sent = await saved(host);
     });
-    expect(seen.box).toBe("Run a scriptA script · no AI");
+    expect(seen.box).toBe("Run a scriptA script · no AIIf it fails, the run ends, and its chat is told why.");
     expect(seen.ask).toEqual(["Ask Nouva to write this script"]);
     expect(seen.written).toBe("Shell");
     expect(seen.lacks).toEqual(["Step 5: Write the script, or ask an agent to write it.", "Step 5: Say what the script does, in one line."]);

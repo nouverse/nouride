@@ -210,7 +210,7 @@ describe("the switch that lets a run go on only when what a step says has change
     expect(seen.before).not.toContain(SAYS);
     expect(seen.on).toBe(true);
     // Under its words, in its own box.
-    expect(seen.card).toBe(`Run a scriptdf -h /${SAYS}`);
+    expect(seen.card).toBe(`Run a scriptdf -h /${SAYS}If it fails, the run ends, and its chat is told why.`);
     expect(seen.others).toEqual([]);
     expect(sent).toEqual([{ path: "/cron/cron_e", body: { payload: { kind: "steps", steps: [{ ...CHECK, onlyChanged: true }, FIND, FIX, OK, TELL] } } }]);
   });

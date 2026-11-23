@@ -266,8 +266,9 @@ describe("a button's words", () => {
     // As equal halves of a bar that ends short of the chat's button, "Save automation" was two lines in a one-line button.
     let both: string[][] = [];
     await renderPage("/automations/new", async (host) => {
-      await eventually(() => host.querySelectorAll('[aria-label="Unsaved changes"] button').length === 2, 3_000, "the bar that saves");
-      both = [...host.querySelectorAll('[aria-label="Unsaved changes"] button')].map(classes);
+      // Its two buttons: what it lacks is a line that is pressed too, and no button of the row.
+      await eventually(() => host.querySelectorAll('[aria-label="Unsaved changes"] button.btn').length === 2, 3_000, "the bar that saves");
+      both = [...host.querySelectorAll('[aria-label="Unsaved changes"] button.btn')].map(classes);
     });
     expect(both).toHaveLength(2);
     expect(both.filter((button) => button.includes("whitespace-nowrap") && button.includes("max-sm:flex-auto")).length).toBe(2);

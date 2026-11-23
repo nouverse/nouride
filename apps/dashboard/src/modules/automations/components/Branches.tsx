@@ -12,12 +12,15 @@
 import { ArrowRight, CornerDownRight } from "lucide-react";
 import { cn } from "@/commons/lib/utils";
 import { landsAt, type ExitName, type Step } from "../lib/steps";
-import { exitChip, exitGoes } from "../lib/words";
+import { drawnName, exitChip, exitGoes } from "../lib/words";
 
 /** A step's card and a path's chip, as `FlowLinks` finds them, and a jump's own name. */
 export const stepAnchor = (id: string): string => `step:${id}`;
 export const exitAnchor = (id: string, exit: ExitName): string => `exit:${id}:${exit}`;
 export const jumpKey = (id: string, exit: ExitName): string => `${id}:${exit}`;
+/** Where a lane ends, as `FlowLinks` finds it, and its way back's own name: by the step the lane hangs on and its path. */
+export const laneEndAnchor = (id: string, exit: ExitName): string => `lane-end:${id}:${exit}`;
+export const backKey = (id: string, exit: ExitName): string => `lane:${id}:${exit}`;
 
 export function Branches({
   steps,
@@ -45,7 +48,7 @@ export function Branches({
   const step = steps[index]!;
   if (exits.length === 0) return null;
   return (
-    <ul aria-label={`Where the run goes from step ${index + 1}`} className="mt-2 flex list-none flex-col items-start gap-1.5 pl-3">
+    <ul aria-label={`Where the run goes from ${drawnName(steps, index).toLowerCase()}`} className="mt-2 flex list-none flex-col items-start gap-1.5 pl-3">
       {exits.map((exit) => {
         const to = landsAt(steps, index, exit);
         const key = jumpKey(step.id, exit);

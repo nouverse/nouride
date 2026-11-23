@@ -6,7 +6,7 @@
 
 import { Bot, Clock, Hand, MessageSquare, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
-import type { Choice, PathExit } from "./paths";
+import { pathsOf, type Choice, type PathExit, type Paths } from "./paths";
 import { canWatch, exitOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind } from "./steps";
 
 export interface KindLook {
@@ -106,6 +106,33 @@ export function choiceWords(step: Pick<Step, "kind">, exit: PathExit, choice: Ch
 /** A step's own rule as its box says it, after the path's name: "the run goes on anyway." */
 export const GOES_ON = "the run goes on anyway.";
 
+/**
+ * What a box says of a path left at a stop, after the path's name: the same words its answer has in the step's fields,
+ * so the box and the choice never say two things. "If it fails, the run ends, and its chat is told why."
+ */
+export function stopsWords(step: Pick<Step, "kind">, exit: PathExit): string {
+  const hint = choiceWords(step, exit, "stop").hint;
+  return `${hint.charAt(0).toLowerCase()}${hint.slice(1)}`;
+}
+
+/**
+ * A step as the page names it to a person: by its place on the main line as it is drawn, and a step that runs in
+ * another's place by that step and its path. The list's own count called the third box "step 5" once a lane hung over
+ * it, in the bar that says what a save still lacks.
+ */
+export function drawnName(steps: readonly Step[], at: number, paths: Paths = pathsOf(steps)): string {
+  const place = paths.line.indexOf(at);
+  if (place >= 0) return `Step ${place + 1}`;
+  // Not on the line, it is a step of a rule (`pathsOf`): the line is every step that is not.
+  const within = paths.inside.get(at)!;
+  const owner = paths.line.indexOf(within.owner);
+  // A question asked in a step's own box is that step's; a lane's step is the step's, on that path.
+  return within.folded ? `Step ${owner + 1}` : `Step ${owner + 1}, ${exitChip(steps[within.owner]!, within.exit).toLowerCase()}`;
+}
+
+/** A step of the main line as another box names it: by its place and its title, since five steps can share a title. */
+export const placeTitle = (place: number, title: string): string => (place >= 0 ? `step ${place + 1}, “${title}”` : `“${title}”`);
+
 /** A path's question in a step's editor: what happened for the run to take it. */
 export function exitAsks(step: Step, exit: ExitName): string {
   if (exit === "then") return step.kind === "approval" ? "When you say yes" : "When it is done";
@@ -120,13 +147,22 @@ export function exitChip(step: Step, exit: ExitName): string {
   return "With nothing to say";
 }
 
-/** Where a path leads, in a few words: "go on", "end here", or a later step by its number and title. */
-export function exitGoes(steps: readonly Step[], index: number, exit: ExitName, titleOf: (step: Step) => string): string {
+/**
+ * Where a path leads, in a few words: "go on", "end here", or a later step by its number and title. Its number is its
+ * place on the main line as drawn; a step of a lane has none, and is said by its title.
+ */
+export function exitGoes(steps: readonly Step[], index: number, exit: ExitName, titleOf: (step: Step) => string, paths: Paths = pathsOf(steps)): string {
   const go = exitOf(steps[index]!, exit);
   if (go === "end") return "end here";
   const to = landsAt(steps, index, exit);
   if (to === "end") return go === "next" ? "go on" : "end here";
-  return go === "next" ? "go on" : `step ${to + 1}, ${titleOf(steps[to]!)}`;
+  return go === "next" ? "go on" : landingName(steps, to, titleOf, paths);
+}
+
+/** A step a path lands on, as a list of where to go names it: "step 3, Tell me". A lane's step has no number. */
+export function landingName(steps: readonly Step[], to: number, titleOf: (step: Step) => string, paths: Paths = pathsOf(steps)): string {
+  const place = paths.line.indexOf(to);
+  return place >= 0 ? `step ${place + 1}, ${titleOf(steps[to]!)}` : titleOf(steps[to]!);
 }
 
 /** What "end the run" means for a path, as its dropdown says it: a failure ends it failed, silence ends it quietly. */

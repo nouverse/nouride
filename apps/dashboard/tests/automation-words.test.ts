@@ -5,7 +5,8 @@
 
 import { describe, expect, test } from "bun:test";
 import type { Step } from "@/modules/automations/lib/steps";
-import { KIND, START, choiceWords, endWords, exitAsks, exitChip, exitGoes, sameAgainWords, stepFacts, stepLine, stepTitle } from "@/modules/automations/lib/words";
+import { blankDraft, draftProblems, type Draft } from "@/modules/automations/lib/draft";
+import { KIND, START, choiceWords, drawnName, endWords, exitAsks, exitChip, exitGoes, landingName, sameAgainWords, stepFacts, stepLine, stepTitle } from "@/modules/automations/lib/words";
 
 const command: Step = { id: "a", kind: "command", argv: ["sh", "-lc", "curl -sf  https://shop.example.com/health"] };
 const turn: Step = { id: "b", kind: "agentTurn", message: "Find out why.\nSay what you found." };
@@ -115,5 +116,34 @@ describe("a path's words", () => {
 
   test("ending the run means something else on each path", () => {
     expect([endWords("then"), endWords("whenFailed"), endWords("whenEmpty")]).toEqual(["End the run here", "End the run, as failed", "End the run quietly"]);
+  });
+});
+
+describe("a step named to a person, by where it is drawn", () => {
+  const ask = (id: string, more: Partial<Step> = {}): Step => ({ id, kind: "agentTurn", message: id, ...more }) as Step;
+  // Two steps run in the second step's place when it fails, then the line goes on: the list holds six, the line four.
+  const LANED: Step[] = [ask("a", { whenFailed: { to: "d" } }), { id: "b", kind: "command", argv: ["sh"], then: { to: "d" }, whenFailed: { to: "l1" } }, ask("l1"), ask("l2", { then: { to: "d" } }), ask("d", { name: "Tell me" }), { id: "e", kind: "systemEvent", text: "bye" }];
+  // A question asked in the second step's own box: the wait is a step of the list and no box of the canvas.
+  const ASKED: Step[] = [ask("a"), { id: "b", kind: "command", argv: ["sh"], then: { to: "c" }, whenFailed: { to: "w" } }, { id: "w", kind: "approval", ask: "", then: { to: "c" } }, ask("c")];
+
+  test("a step of the main line by its place as drawn, a lane's step by the step it runs for and its path, a question by the step that asks it", () => {
+    expect(LANED.map((_step, at) => drawnName(LANED, at))).toEqual(["Step 1", "Step 2", "Step 2, if it fails", "Step 2, if it fails", "Step 3", "Step 4"]);
+    expect(ASKED.map((_step, at) => drawnName(ASKED, at))).toEqual(["Step 1", "Step 2", "Step 2", "Step 3"]);
+  });
+
+  test("a path that jumps names the step it lands on by that place too: the fifth of the list is the third box", () => {
+    const titled = (step: Step) => step.name ?? step.id;
+    expect(exitGoes(LANED, 0, "whenFailed", titled)).toBe("step 3, Tell me");
+    // As the list of where a step may go when done names each: the last box is the fourth, and a lane's step has no number.
+    expect([landingName(LANED, 5, titled), landingName(LANED, 3, titled)]).toEqual(["step 4, e", "l2"]);
+  });
+
+  test("what a save lacks is said of the box a person sees, not of the list's count", () => {
+    const draft = (steps: Step[]): Draft => ({ ...blankDraft("nouva", "telegram:nouva", "UTC"), name: "Check", chatId: "8142", steps });
+    const lacks = (steps: Step[]) => draftProblems(draft(steps)).problems.map((problem) => problem.message);
+    const empty = (id: string) => (step: Step): Step => (step.id === id ? ({ ...step, message: "" } as Step) : step);
+    expect(lacks(LANED.map(empty("l2")))).toEqual(["Step 2, if it fails: Write what to ask the agent."]);
+    expect(lacks(LANED.map(empty("d")))).toEqual(["Step 3: Write what to ask the agent."]);
+    expect(lacks(ASKED)).toEqual(["Step 2: Write the question to ask."]);
   });
 });

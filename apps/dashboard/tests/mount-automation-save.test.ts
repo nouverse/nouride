@@ -39,7 +39,7 @@ describe("one thing, and a list", () => {
       type(field(host, "What to ask"), "Sum up the news.");
       sent = await save(host);
     });
-    expect(card).toBe("Nouva works on itSum up the mail.");
+    expect(card).toBe("Nouva works on itSum up the mail.If it fails, the run ends, and its chat is told why.");
     expect(sent).toEqual([{ path: "/cron/cron_e", body: { payload: { kind: "agentTurn", message: "Sum up the news." } } }]);
   });
 
@@ -179,6 +179,44 @@ describe("a new automation", () => {
     expect(seen.who).toContain("Pick the chat it reports to.");
     expect(sent).toEqual([{ path: "/cron", body: { agentId: "nouva", name: "Morning brief", payload: { kind: "agentTurn", message: "Sum up the mail." }, target: { gatewayId: "telegram:nouva", chatId: "-100200" }, delivery: { mode: "announce" }, every: "15m" } }]);
     expect(seen.went).toBe("/automations/cron_new");
+  });
+
+  test("what it lacks is pressed to be taken there: the name's own field, the box that holds the chat, the step left unwritten", async () => {
+    answer(TWO_AGENTS);
+    const seen = { name: "", who: "", closed: false, step: "", said: [] as string[] };
+    await renderPage("/automations/new", async (host) => {
+      await eventually(() => saveBar(host) !== null, 3_000, "the bar");
+      const lacks = () => saveBar(host)!.querySelector<HTMLElement>("[data-lacks]")!;
+      seen.said.push(lacks().textContent ?? "");
+      lacks().click();
+      seen.name = host.ownerDocument.activeElement?.getAttribute("aria-label") ?? "";
+      type(host.querySelector('input[aria-label="Name"]') as HTMLInputElement, "Morning brief");
+      await eventually(() => lacks().textContent === "Pick the chat it reports to.", 2_000, "the next thing");
+      seen.said.push(lacks().textContent ?? "");
+      lacks().click();
+      await eventually(() => host.querySelector("main [data-results-fields]") !== null, 2_000, "where its results go, opened");
+      seen.who = host.querySelector("main [data-results-fields] header")?.textContent ?? "";
+      type(host.querySelector('input[placeholder="Pick a chat, or type its id"]') as HTMLInputElement, "-100200");
+      // A step added and left with nothing written: closed, then found again from the bar.
+      ([...host.querySelectorAll("button")].find((button) => button.textContent?.includes("Add the first step")) as HTMLElement).click();
+      const kinds = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add a step"] button')];
+      await eventually(() => kinds().length === 6, 2_000, "the picker");
+      kinds().find((button) => button.querySelector("span span")?.textContent === "Ask an agent")!.click();
+      await eventually(() => host.querySelector('main [data-step-fields="s1"]') !== null, 2_000, "the step's fields");
+      ([...host.querySelectorAll<HTMLElement>('main [data-step-fields="s1"] button')].find((button) => button.textContent === "Done") as HTMLElement).click();
+      await eventually(() => host.querySelector("main [data-step-fields]") === null, 2_000, "its fields closed");
+      seen.closed = true;
+      await eventually(() => lacks().textContent?.startsWith("Step 1: ") === true, 2_000, "what the step lacks");
+      seen.said.push(lacks().textContent ?? "");
+      lacks().click();
+      await eventually(() => host.querySelector('main [data-step-fields="s1"]') !== null, 2_000, "the step opened again");
+      seen.step = host.querySelector("main [data-step-fields]")?.getAttribute("data-step-fields") ?? "";
+    });
+    expect(seen.said).toEqual(["Give it a name.", "Pick the chat it reports to.", "Step 1: Write what to ask the agent."]);
+    expect(seen.name).toBe("Name");
+    expect(seen.who).toBe("ResultsWho runs it, and where it reports");
+    expect(seen.closed).toBe(true);
+    expect(seen.step).toBe("s1");
   });
 
   test("started by hand it is sent as that; started by its address it is made through the webhooks' door, with no time", async () => {

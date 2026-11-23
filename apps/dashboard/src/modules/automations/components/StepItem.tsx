@@ -1,6 +1,7 @@
 /**
- * One step of the main line with what hangs on it: its box, its own rules as a strip in that box, the lanes that run in
- * its place at its side, and a chip for a path the canvas has no drawing for (`lib/paths.ts`).
+ * One step of the main line with what hangs on it: its box, its own rules as a strip in that box (a stop among them:
+ * every box that can fail says what a failure does), the lanes that run in its place at its side, and a chip for a
+ * path the canvas has no drawing for (`lib/paths.ts`).
  *
  * The same box three ways, by what the page is showing: being edited (a press opens its fields beside the canvas, or in
  * the box on a phone; a handle and a menu show when the pointer or the focus is on it), over a run (how it went, or that
@@ -16,14 +17,14 @@ import type { Grip } from "@/commons/components/ui/ReorderList";
 import { Tag } from "@/commons/components/ui/Tag";
 import { cn } from "@/commons/lib/utils";
 import type { Editor } from "../hooks/use-editor";
-import { chipExits, type Paths, type PathExit, type Rule } from "../lib/paths";
+import { chipExits, stopsAt, type Paths, type PathExit, type Rule } from "../lib/paths";
 import { exitTaken, outcomeWords, type Tone } from "../lib/runs";
 import { STEPS_MAX, type Step } from "../lib/steps";
 import type { Mark } from "../lib/suggested";
 import { KIND, exitChip, partTitle, stepFacts, stepLine } from "../lib/words";
-import { Branches, stepAnchor } from "./Branches";
+import { Branches, backKey, laneEndAnchor, stepAnchor } from "./Branches";
 import type { AgentChoice } from "./KindFields";
-import { FactStrip, LaneEnd, LaneLine, RuleStrip } from "./PathRules";
+import { FactStrip, LaneEnd, LaneLine, RuleStrip, StopStrip, laneBackChoices } from "./PathRules";
 import { ScriptRead } from "./ScriptFields";
 import { StepBox, type BoxLook } from "./StepBox";
 import { ResetNotes } from "./StepFields";
@@ -155,14 +156,19 @@ function Box({ index, place, side, grip, shared }: { index: number; place: numbe
   const lacks = (rule: Rule): string | undefined => (mode.kind === "edit" && rule.kind === "ask" ? mode.problems.get(rule.at) : undefined);
   // `reads` is there only for an automation that is one command and no list: among other steps the next step reads it.
   const facts = stepFacts(step, shared.reads);
+  // A failure no answer was chosen for ends the run here: said, so the answer "stop" is seen on the canvas as the others are.
+  const stops = stopsAt(steps, index, paths);
   const strip =
-    rules.length + facts.length > 0 ? (
+    rules.length + facts.length + stops.length > 0 ? (
       <>
         {facts.map((fact) => (
           <FactStrip key={fact}>{fact}</FactStrip>
         ))}
         {rules.map((rule) => (
           <RuleStrip key={rule.exit} step={step} rule={rule} question={rule.kind === "ask" ? (steps[rule.at] as Extract<Step, { kind: "approval" }>).ask : undefined} taken={left === rule.exit} lacking={lacks(rule) !== undefined} />
+        ))}
+        {stops.map((exit) => (
+          <StopStrip key={exit} step={step} exit={exit} taken={left === exit} />
         ))}
       </>
     ) : null;
@@ -242,6 +248,8 @@ function Lane({ owner, rule, shared, onAdd }: { owner: number; rule: Extract<Rul
   const leftBy = went(step.id) ? exitTaken(went(step.id)!.status) : null;
   const taken = leftBy === rule.exit;
   const name = exitChip(step, rule.exit);
+  const editor = mode.kind === "edit" ? mode.editor : null;
+  const way = backKey(step.id, rule.exit);
   return (
     <section data-lane={rule.exit} data-taken={taken ? "" : undefined} aria-label={`${name}: what runs in its place`} className="relative">
       {/* The line from the step's box to its lane, where the lane stands at its side. */}
@@ -264,7 +272,13 @@ function Lane({ owner, rule, shared, onAdd }: { owner: number; rule: Extract<Rul
           <Plus size={13} strokeWidth={2.5} aria-hidden="true" /> Add a step
         </button>
       ) : null}
-      <LaneEnd ends={rule.ends === "stop" ? "stop" : "back"} title={rule.ends === "stop" ? undefined : titleOf(steps[rule.ends.back]!)} />
+      <LaneEnd
+        anchor={laneEndAnchor(step.id, rule.exit)}
+        backs={laneBackChoices(steps, owner, rule, shared.paths, titleOf)}
+        onSet={editor ? (ends) => editor.laneEnd(owner, rule.exit, ends) : undefined}
+        // The pointer on where the lane ends lights its way back and the step it lands on.
+        onActive={rule.ends === "stop" ? undefined : (on) => shared.onActive(on ? way : null)}
+      />
     </section>
   );
 }

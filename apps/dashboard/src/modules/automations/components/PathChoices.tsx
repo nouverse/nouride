@@ -7,10 +7,11 @@
  * "Do something else" draws its steps beside this one, and says here where the run goes after them.
  */
 
-import { choiceOf, choicesFor, ruleOf, type Choice, type PathExit, type Paths } from "../lib/paths";
+import { choiceOf, choicesFor, ruleOf, type Choice, type LaneEnds, type PathExit, type Paths } from "../lib/paths";
 import { landsAt, type Step } from "../lib/steps";
 import { choiceWords, exitChip } from "../lib/words";
-import { Choice as ChoiceCard, Segmented } from "./form-parts";
+import { Choice as ChoiceCard } from "./form-parts";
+import { LaneEndPick, laneBackChoices } from "./PathRules";
 
 export function PathChoices({
   steps,
@@ -30,14 +31,13 @@ export function PathChoices({
   onChoose: (choice: Exclude<Choice, "jump">) => void;
   /** The question of "Ask me first", as it is typed. */
   onQuestion: (at: number, ask: string) => void;
-  onLaneEnd: (ends: "stop" | "back") => void;
+  onLaneEnd: (ends: LaneEnds) => void;
 }) {
   const step = steps[index]!;
   const now = choiceOf(steps, index, exit, paths);
   const rule = ruleOf(paths, index, exit);
   const name = exitChip(step, exit);
   const to = landsAt(steps, index, exit);
-  const done = landsAt(steps, index, "then");
   const jumpsTo = to === "end" ? "" : `step ${paths.line.indexOf(to) + 1}, ${titleOf(steps[to]!)}`;
   return (
     <fieldset data-path={exit} className="space-y-1.5">
@@ -63,18 +63,9 @@ export function PathChoices({
                 </label>
               ) : null}
               {now === choice && rule?.kind === "lane" ? (
-                <div className="mt-1.5 space-y-1.5">
-                  <p className="text-xs text-base-content/65">Its steps are drawn beside this one. Press one to write it.</p>
-                  {done !== "end" ? (
-                    <Segmented
-                      options={[
-                        { value: "back", label: `Then go on to “${titleOf(steps[done]!)}”` },
-                        { value: "stop", label: "Then stop" },
-                      ]}
-                      value={rule.ends === "stop" ? "stop" : "back"}
-                      onChange={(ends) => onLaneEnd(ends as "stop" | "back")}
-                    />
-                  ) : null}
+                <div data-lane-end-field className="mt-1.5 space-y-1.5">
+                  <p className="text-xs text-base-content/65">Its steps are drawn beside this one. Press one to write it. After them:</p>
+                  <LaneEndPick backs={laneBackChoices(steps, index, rule, paths, titleOf)} onSet={onLaneEnd} />
                 </div>
               ) : null}
             </div>

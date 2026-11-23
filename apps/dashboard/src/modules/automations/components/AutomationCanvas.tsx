@@ -4,9 +4,10 @@
  * the page.
  */
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { JobRunSummary } from "@nouride/wire";
 import { OPEN_RESULTS, OPEN_START, type Editor } from "../hooks/use-editor";
+import { usePanelRoom } from "../hooks/use-panel-room";
 import { savesAsList, type Draft, type DraftProblem } from "../lib/draft";
 import { whenWords } from "../lib/runs";
 import type { Mark } from "../lib/suggested";
@@ -54,6 +55,8 @@ export function AutomationCanvas({
   beside: ReactNode;
 }) {
   const { open } = editor;
+  const panel = useRef<HTMLElement>(null);
+  usePanelRoom(panel);
   const press = (key: string) => (editable ? () => editor.setOpen(open === key ? null : key) : undefined);
   const inPlace = (key: string): ReactNode => (!laptop && open === key ? fields : null);
   const lacking = (part: DraftProblem["part"]) => (editable && lacks?.part === part ? lacks.message : undefined);
@@ -90,11 +93,13 @@ export function AutomationCanvas({
         />
       </div>
       {/* Beside the canvas from the width `useDesktop` reads, which is where the page opens a box's fields there. It
-          stays where it is and scrolls in itself: a script's fields are taller than a window, and the page scrolled
-          with them until the canvas they belong to was out of sight. As tall as the window less the page's head over
-          it (its name, and the tabs: about 13rem), so its end is in sight before the page is scrolled at all. The
-          margin and padding leave its cards' shadows the room a box that scrolls would cut. */}
-      <aside data-panel className="w-full space-y-4 xl:sticky xl:top-4 xl:-m-3 xl:max-h-[calc(100dvh-13rem)] xl:w-[25rem] xl:shrink-0 xl:overflow-y-auto xl:overscroll-contain xl:p-3 xl:[scrollbar-width:thin]">
+          stays where it is while the page scrolls, as tall as the window has room for (`usePanelRoom`), and what it
+          holds scrolls inside its own card (`FieldsFrame`): the card's edges, its title and its Done never leave. It
+          was a box that scrolled whole cards under an edge nobody could see, a card's top and its Done with them.
+          The margin under it takes its height back out of the row: it may stand lower than a short canvas ends, and
+          the page is no taller for it. Its width is the room its card had inside the box that scrolled: a wider one
+          left the canvas short of the room a lane needs beside its step. */}
+      <aside ref={panel} data-panel className="w-full space-y-4 xl:sticky xl:top-4 xl:-mb-[var(--panel-room,calc(100dvh-13rem))] xl:flex xl:max-h-[var(--panel-room,calc(100dvh-13rem))] xl:w-[23.5rem] xl:shrink-0 xl:flex-col xl:gap-4 xl:space-y-0">
         {beside}
       </aside>
     </div>

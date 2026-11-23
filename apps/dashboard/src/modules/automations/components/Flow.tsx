@@ -20,7 +20,7 @@ import { pathTaken } from "../lib/runs";
 import { STEPS_MAX, landsAt, type Step } from "../lib/steps";
 import type { Mark } from "../lib/suggested";
 import { stepTitle } from "../lib/words";
-import { exitAnchor, jumpKey, stepAnchor } from "./Branches";
+import { backKey, exitAnchor, jumpKey, laneEndAnchor, stepAnchor } from "./Branches";
 import { Connector, StepPicker } from "./Connector";
 import { LANED_ROW, PLAIN_ROW, StepItem, type FlowMode, type Inline } from "./StepItem";
 
@@ -79,7 +79,15 @@ export function Flow({
       return to === "end" ? [] : [{ key: jumpKey(step.id, exit), from: exitAnchor(step.id, exit), to: stepAnchor(steps[to]!.id), taken: legs.some((leg) => leg.from === index && leg.exit === exit) }];
     }),
   );
-  const landsOn = links.find((link) => link.key === active)?.to ?? null;
+  // A lane's way back into the main line: a thread from where the lane ends to the step it goes back to.
+  const backs: FlowLink[] = [...paths.rules].flatMap(([owner, rules]) =>
+    rules.flatMap((rule): FlowLink[] => {
+      if (rule.kind !== "lane" || rule.ends === "stop") return [];
+      return [{ key: backKey(steps[owner]!.id, rule.exit), from: laneEndAnchor(steps[owner]!.id, rule.exit), to: stepAnchor(steps[rule.ends.back]!.id), back: true }];
+    }),
+  );
+  const drawn = [...links, ...backs];
+  const landsOn = drawn.find((link) => link.key === active)?.to ?? null;
 
   const full = steps.length >= STEPS_MAX;
   const picker = (at: AddAt) => (button: HTMLButtonElement) => {
@@ -88,8 +96,9 @@ export function Flow({
   };
   const add = editing && !full ? (before: number | null) => picker({ before }) : null;
   const show = (to: number) => flow.current?.querySelector(`[data-flow-anchor="${stepAnchor(steps[to]!.id)}"]`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-  // Everything a box's place depends on that the canvas's own size does not show: the order, and what is open in it.
-  const version = `${mode.kind} ${steps.map((step) => step.id).join(" ")} ${inline?.key ?? ""}`;
+  // Everything a box's place depends on that the canvas's own size does not show: the order, what is open in it, and
+  // where each lane goes back to, which moves no box and is a thread to another one.
+  const version = `${mode.kind} ${steps.map((step) => step.id).join(" ")} ${inline?.key ?? ""} ${backs.map((back) => back.to).join(" ")}`;
   const lined = (node: ReactNode) => (
     <div className={row}>
       <div className="min-w-0">{node}</div>
@@ -170,10 +179,10 @@ export function Flow({
       {editing ? <p className="mt-4 text-center text-[13px] text-base-content/65">Press a box to change it.</p> : null}
 
       {/* Out of sight while a box is held: the lines are measured from where the boxes belong, not where one is dragged. */}
-      <FlowLinks links={links} active={active} version={version} className={cn("transition-opacity duration-150", held && "opacity-0")} />
+      <FlowLinks links={drawn} active={active} version={version} className={cn("transition-opacity duration-150", held && "opacity-0")} />
 
       {editing ? (
-        <PopoverSheet open={addAt !== null} onClose={() => setAddAt(null)} anchor={anchor} label="Add a step" width={340}>
+        <PopoverSheet open={addAt !== null} onClose={() => setAddAt(null)} anchor={anchor} label="Add a step" width={340} align="center">
           <StepPicker
             onPick={(kind) => {
               if (addAt && "owner" in addAt) mode.editor.addToLane(addAt.owner, addAt.exit, kind);

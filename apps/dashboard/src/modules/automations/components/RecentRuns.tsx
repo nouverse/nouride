@@ -32,12 +32,13 @@ export function RecentRuns({
   whom?: string | undefined;
 }) {
   return (
-    <section aria-label="Recent runs" className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft">
+    <section aria-label="Recent runs" className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-4 shadow-soft xl:flex xl:min-h-0 xl:flex-col">
       <h2 className="px-1 text-lg text-base-content">Recent runs</h2>
       {runs.length === 0 ? (
         <p className="px-1 pt-1.5 text-sm text-base-content/65">It has not run yet.</p>
       ) : (
-        <Expandable maxHeight="max-h-[26rem]" className="mt-2">
+        // Shown whole it can be longer than the window: beside the canvas it scrolls in its card, as a box's fields do.
+        <Expandable maxHeight="max-h-[26rem]" className="mt-2 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:[scrollbar-width:thin]">
           <ul className="list-none space-y-0.5">
             {runs.map((run) => {
               const { label, tone } = runWords(run, whom);

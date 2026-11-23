@@ -75,6 +75,16 @@ in the box itself on a narrower one and on a phone; with nothing pressed, the la
 a plus shows on the line between two boxes, and a box is dragged to move it. Nothing changes until you press
 **Save**.
 
+What you have not saved is kept in the browser you made it in (0.8.45), so a page you left opens on your changes
+again, and says so. On the Automations list, one you were making and never saved is a row of its own, with
+**Continue** and **Discard**, and an automation with changes waiting on its page is marked **Unsaved changes**.
+**Save** and **Cancel** (or **Discard changes**) are what end it. It stays in that browser: it is not on your phone,
+and nobody else sees it. If the automation was changed by someone else while your changes waited, the page shows it
+as it is saved now and offers yours beside it.
+
+The bar that saves says what is still missing, one thing at a time. Press that line and you are taken to it: the
+name's field, or the box that holds it, opened.
+
 ![One automation's page: a box for how it starts, a box for each step with what happens if it fails, and its recent runs](/media/dashboard-automation-steps.png)
 
 ### Where a run goes next
@@ -89,15 +99,23 @@ answers (0.8.44):
 | **Ask me first** | you are asked, with why it failed. Yes goes on, no stops there |
 | **Do something else** | other steps run in its place. They are drawn beside the step (under it, set in, where there is no room beside), and end one of two ways: back into the steps below, or with a stop |
 
-"Go on anyway" and "Ask me first" are said in the step's own box, with the question and where each answer leads. A
-wait's **no** is asked the same way: stop there, go on anyway, or do something else.
+Every step's box says what a failure does (0.8.45): a step left at "Stop and tell me" says so under its words, with
+a stop's mark, and "Go on anyway" and "Ask me first" are said there too, with the question and where each answer
+leads. A wait's **no** is asked the same way: stop there, go on anyway, or do something else.
+
+The steps that run in a step's place answer for themselves as well (0.8.45): each can stop, which is what it does
+unless you pick otherwise, or go on anyway. A question or steps of their own belong to a step of the main line.
+Where those steps end is said under them, and that mark is pressed to change it: **back** to any step further down
+the line, each named by its number, or **stop**. A thread is drawn from the mark to the step they go back to, and
+the pointer on the mark lights that step. The same choice is in the fields of each of those steps.
 
 A step with **nothing to say** (a script that printed nothing, an agent with nothing to report) ends the run quietly,
 so a check that finds nothing wakes nobody. Under **More about this step** it can go on anyway, or do something else.
 
 A run only ever goes forward, so it always ends. An automation written at the command line or by an agent can hold a
 path the page has no drawing for, such as a jump from one step to a later one: it is shown as a small label under the
-step with a line to where it lands, and stays as it is until you pick another answer.
+step with a line to where it lands, and stays as it is until you pick another answer. Where a step goes once it is
+done is under **More about this step** on that step: **Go on to the next step** there means the step drawn below it.
 
 A shop check, for example:
 

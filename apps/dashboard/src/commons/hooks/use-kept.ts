@@ -53,6 +53,13 @@ function write(key: string, value: unknown): void {
   for (const listener of listeners.get(key) ?? []) listener();
 }
 
+/**
+ * What a key holds now, and a write to it, outside a component's render: for a page that keeps what is typed as it is
+ * typed and must not be drawn again by its own write. Whoever shows the key through `useKept` follows the write.
+ */
+export const keptNow = <T,>(key: string, fallback: T, valid: (value: unknown) => value is T): T => read(key, fallback, valid);
+export const keepNow = (key: string, value: unknown): void => write(key, value);
+
 export function useKept<T>(key: string, fallback: T, valid: (value: unknown) => value is T): [T, (next: T | ((was: T) => T)) => void] {
   const subscribe = useCallback(
     (listener: () => void) => {

@@ -104,6 +104,10 @@ export function OpenFields({
         if (kept) onWent(kept);
       }}
       onLaneEnd={(exit, ends) => editor.laneEnd(at, exit, ends)}
+      onOwnLaneEnd={(ends) => {
+        const within = paths.inside.get(at);
+        if (within) editor.laneEnd(within.owner, within.exit, ends);
+      }}
       onMove={place >= 0 ? (by) => editor.move(place, place + by) : null}
       onDuplicate={place >= 0 ? () => editor.duplicate(at) : null}
       onRemove={() => onRemove(at)}
