@@ -501,20 +501,29 @@ describe("on the page that makes a new one", () => {
   test("the agent's change fills the page's own draft: applied, it is there to name, change and save as the person's", async () => {
     answer(base());
     const posted = recordPosts(SENT);
-    const seen = { order: [] as string[], name: "", save: false, at: "" };
+    const seen = { order: [] as string[], name: "", save: false, at: "", headShown: "", barShown: "", headApplied: "" };
+    const head = (host: HTMLElement) => host.querySelector("main header")?.textContent ?? "";
     try {
       await renderPage("/automations/new", async (host, app) => {
         await eventually(() => host.textContent?.includes("Add the first step") === true, 4_000, "the page that makes one");
         await asked(host, "make one that checks the shop");
         answer({ ...written("edit_4", change({ name: "Shop check, made here" }), null), [PAGE]: detail(automation()) });
         await eventually(() => bar(host) !== null, 4_000, "the change, drawn on the page");
+        seen.headShown = head(host);
+        seen.barShown = bar(host)!.textContent ?? "";
         press(host, "Apply");
         await eventually(() => drawn(host).length === 4, 2_000, "its steps on the page");
+        seen.headApplied = head(host);
         seen.order = drawn(host);
         seen.name = (host.querySelector('input[aria-label="Name"]') as HTMLInputElement | null)?.value ?? "";
         seen.save = saveBar(host) !== null;
         seen.at = app.location();
       });
+      // While the change waits, the head is the automation as the person has it, all of it: its name, how it starts,
+      // and no chat, none being picked. The chat the change names is the bar's to say and the canvas's to show.
+      expect(seen.headShown).not.toContain("sends to");
+      expect(seen.barShown).toContain("It would report to the chat shown under its steps.");
+      expect(seen.headApplied).toContain("sends to Telegram");
       expect(seen.order).toEqual(["check", "find", "tell", "s4"]);
       expect(seen.name).toBe("Shop check, made here");
       expect(seen.save).toBe(true);

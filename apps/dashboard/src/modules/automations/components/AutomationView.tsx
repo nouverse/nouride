@@ -157,7 +157,9 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
         automation={automation}
         draft={draft}
         home={home}
-        reports={reportsWords(shown, labelOf)}
+        // As the person has it, like its name and how it starts beside it: where a change that waits would report is
+        // the bar's to say. Read from what is drawn, it said a chat no one had picked yet.
+        reports={reportsWords(draft, labelOf)}
         onWhose={() => editor.setOpen(open === OPEN_OWNER ? null : OPEN_OWNER)}
         agentName={agentName}
         canName={writable && !automation?.proposal}
