@@ -14,6 +14,12 @@ export interface ToolCall {
    * the tool said a field was missing, and the model retried the same call to the iteration cap.
    */
   argumentsError?: { raw: string; reason: string };
+  /**
+   * What the provider sent beside the call and wants back with it, unread: an OpenAI-compatible `extra_content`.
+   * Gemini puts its thought signature there (`{ google: { thought_signature } }`) and refuses, with a 400, the next
+   * request of a turn whose first call in a step comes back without it.
+   */
+  extraContent?: Record<string, unknown>;
 }
 
 /**
