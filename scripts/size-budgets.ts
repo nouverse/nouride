@@ -35,12 +35,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 566,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, parts, versions, a turn's account and use, a followed session's leftovers; the logic in files beside",
+    lines: 569,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools and what they made, parts, versions, a turn's account and use, a followed session's leftovers",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
-    lines: 406,
-    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, who is told what its session started",
+    lines: 407,
+    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, what its lent calls made, the lookout for a turn held for helpers, the message kept as sent",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 498,

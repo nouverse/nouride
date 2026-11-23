@@ -387,6 +387,10 @@ export class ExternalAgents implements RunnerHost {
     return this.lent.begin(agentId, key, req, deps);
   }
 
+  made(agentId: string, key: string): { page?: string; liveEdit?: string } | null {
+    return this.lent.takeMade(agentId, key);
+  }
+
   /**
    * Nouride's MCP server, as a session of this conversation is given it: only to a CLI that speaks MCP over HTTP, and
    * only where this box serves HTTP — without either, the CLI works without Nouride's tools.

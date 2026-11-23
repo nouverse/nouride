@@ -70,8 +70,12 @@ export class UpdateReader {
   constructor(
     private readonly sink: UpdateSink,
     private readonly now: () => number = Date.now,
-    /** How this CLI's connector marks a helper's call and says the CLI's own turn ended (`CliRow`); neither where it says none. */
-    private readonly says: { helper?: CliRow["helper"]; ended?: CliRow["ended"] } = {},
+    /**
+     * How this CLI's connector marks a helper's call and says the CLI's own turn ended (`CliRow`); neither where it
+     * says none. `made`: what a tool of Nouride's the CLI called made that a page follows, handed over once
+     * (`LentTools.takeMade`), for the step that ends next.
+     */
+    private readonly says: { helper?: CliRow["helper"]; ended?: CliRow["ended"]; made?: () => { page?: string; liveEdit?: string } | null } = {},
   ) {}
 
   /** When the CLI's own turn last ended, where nothing of the agent's own came since; null while it works. */
@@ -281,11 +285,16 @@ export class UpdateReader {
     const failed = call.status === "failed";
     const said = resultLine(call);
     const ms = this.now() - open.startedAt;
+    // What a call of Nouride's made goes on the agent's own step that ends next: the call's own, which the CLI says
+    // has ended once its answer is back. Never on a helper's step or a failed one, where it waits for the next.
+    const made = open.own && !failed ? (this.says.made?.() ?? null) : null;
     this.sink.activity("tool_done", `${open.name} ${failed ? "failed" : "ok"}${said ? `: ${said}` : ""} · ${ms}ms`, {
       callId: call.toolCallId,
       name: open.name,
       error: failed,
       outcome: failed ? "failed" : "ok",
+      ...(made?.page ? { page: made.page } : {}),
+      ...(made?.liveEdit ? { liveEdit: made.liveEdit } : {}),
     });
     this.done.push({ name: open.name, ok: !failed });
     // The agent's last own call has ended: what waited for it goes in now, whatever a helper still runs.
