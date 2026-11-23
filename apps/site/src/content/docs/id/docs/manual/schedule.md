@@ -112,8 +112,10 @@ persetujuan ditanyakan dengan cara yang sama: berhenti di situ, lanjut saja, ata
 Langkah-langkah yang jalan menggantikan sebuah langkah juga menjawab untuk dirinya sendiri (0.8.45): masing-masing
 bisa berhenti, dan itu yang terjadi kalau kamu gak memilih yang lain, atau lanjut saja. Pertanyaan atau langkah
 pengganti sendiri hanya dimiliki langkah di jalur utama. Di mana langkah-langkah itu berakhir ditulis di bawahnya,
-dan tanda itu bisa ditekan untuk mengubahnya: **kembali** ke langkah tempat jalur utama lanjut, disebut dengan
-nomornya, atau **berhenti**. Pilihan yang sama ada di isian tiap langkah itu.
+dan tanda itu bisa ditekan untuk mengubahnya: **kembali** ke langkah mana pun yang lebih bawah di jalur utama,
+masing-masing disebut dengan nomornya, atau **berhenti**. Sebuah benang digambar dari tanda itu ke langkah tempat
+mereka kembali, dan langkah itu menyala saat penunjuk ada di atas tandanya. Pilihan yang sama ada di isian tiap
+langkah itu.
 
 Langkah yang **gak punya apa-apa untuk dikatakan** (skrip yang gak mencetak apa pun, agent yang gak punya laporan)
 mengakhiri automation dengan diam, jadi pengecekan yang gak menemukan apa-apa gak membangunkan siapa pun. Di bawah

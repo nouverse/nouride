@@ -105,8 +105,9 @@ leads. A wait's **no** is asked the same way: stop there, go on anyway, or do so
 
 The steps that run in a step's place answer for themselves as well (0.8.45): each can stop, which is what it does
 unless you pick otherwise, or go on anyway. A question or steps of their own belong to a step of the main line.
-Where those steps end is said under them, and that mark is pressed to change it: **back** to the step the line goes
-on with, named by its number, or **stop**. The same is in the fields of each of those steps.
+Where those steps end is said under them, and that mark is pressed to change it: **back** to any step further down
+the line, each named by its number, or **stop**. A thread is drawn from the mark to the step they go back to, and
+the pointer on the mark lights that step. The same choice is in the fields of each of those steps.
 
 A step with **nothing to say** (a script that printed nothing, an agent with nothing to report) ends the run quietly,
 so a check that finds nothing wakes nobody. Under **More about this step** it can go on anyway, or do something else.
