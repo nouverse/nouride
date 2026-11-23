@@ -76,3 +76,9 @@ export function serveWebSocket(on: { open: (ws: ServerWebSocket) => void; messag
 export function startHelloServer() {
   return serveWebSocket({ open: (ws) => ws.send("hello") });
 }
+
+/** An HTTP server on `hostname`, answering with `answer`. */
+export function serveHttp(hostname: string, answer: (req: Request) => Response) {
+  const server = Bun.serve({ port: 0, hostname, fetch: answer });
+  return { port: server.port as number, stop: (force?: boolean) => server.stop(force) };
+}

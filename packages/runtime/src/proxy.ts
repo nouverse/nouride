@@ -54,3 +54,35 @@ export function proxyAgentFor(target: string, env: Env = process.env): Agent | u
   // `proxy` is not one of Node's agent options; it is the one Bun's `ws` reads.
   return proxy ? new Agent({ proxy } as AgentOptions) : undefined;
 }
+
+/**
+ * Make the global `WebSocket` take the proxy the environment names, as `fetch` does.
+ *
+ * For a library that builds its sockets with the global class and offers no way to hand it an agent or a proxy:
+ * discord.js's gateway, which takes the global `WebSocket` under Bun and keeps the one it found when it was first
+ * imported. So it is called before that import, and every socket the process opens afterwards follows `proxyFor`,
+ * reading the environment as it is when the socket is made. Once per process: a second call changes nothing. A
+ * caller that names its own `proxy` keeps it.
+ */
+export function proxyWebSockets(): void {
+  if (webSocketsProxied) return;
+  webSocketsProxied = true;
+  const Native = globalThis.WebSocket;
+  class ProxiedWebSocket extends Native {
+    constructor(url: string | URL, protocolsOrOptions?: string | string[] | Bun.WebSocketOptions) {
+      const proxy = proxyFor(url);
+      if (!proxy) {
+        super(url, protocolsOrOptions as Bun.WebSocketOptions);
+        return;
+      }
+      const options: Bun.WebSocketOptions =
+        protocolsOrOptions === undefined || typeof protocolsOrOptions === "string" || Array.isArray(protocolsOrOptions)
+          ? { protocols: protocolsOrOptions, proxy }
+          : { proxy, ...protocolsOrOptions };
+      super(url, options);
+    }
+  }
+  globalThis.WebSocket = ProxiedWebSocket as typeof WebSocket;
+}
+
+let webSocketsProxied = false;
