@@ -6,10 +6,10 @@
  * needs-you and its start on a yes were there already.
  */
 
-import { plural, titleFromGoal } from "@nouride/shared";
+import { hoursLimit, missionLimitRefusal, plural, titleFromGoal, type MissionsSection } from "@nouride/shared";
 import { GAP } from "./notices.ts";
-import { shortId } from "./page.ts";
-import { briefFilesOf, briefRefusal, startRefusal, titleRefusal, type StartRequest } from "./start.ts";
+import { millions, shortId } from "./page.ts";
+import { briefFilesOf, briefRefusal, LIMIT_KEYS, startRefusal, titleRefusal, type StartRequest } from "./start.ts";
 import type { MissionsPort } from "./missions.store.ts";
 import type { Mission } from "./types.ts";
 import { ownFolderOf } from "./worktree.ts";
@@ -49,6 +49,24 @@ export function signedOffBy(mission: Pick<Mission, "checks" | "reviewOn" | "acce
   return [mission.reviewOn ? "the reviewer" : "", person ? "you" : ""].filter(Boolean).join(", then ") || "its checks";
 }
 
+/** The settings a draft's own limits are read against. */
+type LimitSettings = Pick<MissionsSection, "limitHours" | "limitTurns" | "limitTokens">;
+
+/**
+ * A draft's limits where they are its own and not the settings', as the person reads them before starting it — or
+ * null. Their start is their yes to these: an agent may draft with more than the settings give, and nothing else
+ * would put that in front of them.
+ */
+export function ownLimits(mission: Pick<Mission, "limits">, settings: LimitSettings): string | null {
+  const { hours, turns, tokens } = mission.limits;
+  const own = [
+    hours !== settings.limitHours ? `${hoursLimit(hours)} of work (usually ${hoursLimit(settings.limitHours)})` : "",
+    turns !== settings.limitTurns ? `${turns} ${plural(turns, "turn")} (usually ${settings.limitTurns})` : "",
+    tokens !== settings.limitTokens ? `${millions(tokens)} tokens (usually ${millions(settings.limitTokens)})` : "",
+  ].filter(Boolean);
+  return own.length > 0 ? `Its own limits before it asks you whether to go on: ${own.join(" · ")}` : null;
+}
+
 /**
  * The draft's notice: what the person decides on before anything runs, with a line saying what changed when it is sent
  * again after an edit. The proposal said "💡 … proposes a mission" and its goal, and the person started it without the
@@ -56,7 +74,7 @@ export function signedOffBy(mission: Pick<Mission, "checks" | "reviewOn" | "acce
  * words. A person who wanted two drafts to follow the mission at work left them unstarted, since nothing said that
  * a start then is a place in the queue and not a second mission at once.
  */
-export function draftNotice(mission: Pick<Mission, "id" | "title" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = [], behind: string | null = null): string {
+export function draftNotice(mission: Pick<Mission, "id" | "title" | "goal" | "agentId" | "byAgent" | "checks" | "reviewOn" | "accept" | "jobId">, brief: boolean, changed: readonly string[] = [], behind: string | null = null, limits: string | null = null): string {
   const id = shortId(mission.id);
   const who = mission.byAgent && mission.byAgent !== mission.agentId ? `${mission.agentId}, drafted by ${mission.byAgent}` : mission.agentId;
   const checks = mission.checks.length === 0 ? "no checks" : `${mission.checks.length} ${plural(mission.checks.length, "check")}`;
@@ -66,6 +84,8 @@ export function draftNotice(mission: Pick<Mission, "id" | "title" | "goal" | "ag
     `📝 Draft ${id} · ${who}: ${mission.title.trim() || "untitled"}`,
     mission.goal.trim(),
     `${checks} · signed off by: ${signedOffBy(mission)} · brief: ${brief ? "on the mission's page" : "none"}`,
+    // Its own limits (`ownLimits`), where it has any: none, and the notice is as it always was.
+    ...(limits ? [limits] : []),
     `Start it: /mission accept ${id} · drop it: /mission stop ${id}`,
     ...(behind ? [`Started now, it waits its turn: ${behind}. It then starts by itself.`] : []),
   ].join(GAP);
@@ -80,7 +100,10 @@ export function draftChangedLine(mission: Pick<Mission, "id">, changed: readonly
   return `✎ Draft ${id} changed: ${changed.join(", ")}. Start it: /mission accept ${id} · drop it: /mission stop ${id}`;
 }
 
-/** What may change in a draft — the start's own fields; `limits` from the dashboard only, as an agent raises none. */
+/**
+ * What may change in a draft — the start's own fields, its limits among them: by the person on its page, or by the
+ * agent that drafted it, whose change the person reads in its notice before they start it.
+ */
 export interface DraftChange {
   title?: string;
   goal?: string;
@@ -157,10 +180,12 @@ export function changedDraft(
     next.branch = change.branch?.trim() || null;
     changed.push(next.branch ? `branch ${next.branch}` : "the default branch");
   }
-  for (const key of ["hours", "turns", "tokens"] as const) {
+  for (const key of LIMIT_KEYS) {
     const value = change.limits?.[key];
     if (value === undefined || value === mission.limits[key]) continue;
-    if (!Number.isFinite(value) || value <= 0) return { refused: `A limit is a number above zero: ${key}.` };
+    // The bounds its setting keeps: a draft held 1000 hours where the settings refuse past 168.
+    const why = missionLimitRefusal(key, value, `Its ${key} limit`);
+    if (why) return { refused: why };
     next.limits[key] = value;
     changed.push(`its ${key} limit`);
   }

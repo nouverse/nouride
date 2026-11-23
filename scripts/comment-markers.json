@@ -387,7 +387,7 @@
   "apps/engine/src/modules/attachments/vision.ts": { "version": 1 },
   "apps/engine/src/modules/config/advanced.ts": { "version": 1 },
   "apps/engine/src/modules/config/config-file.ts": { "version": 2 },
-  "apps/engine/src/modules/config/defaults.ts": { "version": 6, "date": 1 },
+  "apps/engine/src/modules/config/defaults.ts": { "version": 5, "date": 1 },
   "apps/engine/src/modules/config/global/external-clis.ts": { "version": 1 },
   "apps/engine/src/modules/config/global/gone-keys.ts": { "version": 3 },
   "apps/engine/src/modules/config/global/index.ts": { "version": 6 },

@@ -23,7 +23,7 @@
  * repeating the literals. A schema that advertises a value the loader rejects is worse than no schema.
  */
 
-import { LLM_EFFORTS, MAX_BACKGROUND_HELPERS, MOST_MISSIONS_PER_AGENT, UPDATE_TRACKS, type GlobalConfig } from "@nouride/shared";
+import { LLM_EFFORTS, MAX_BACKGROUND_HELPERS, MISSION_LIMIT_BOUNDS, MOST_MISSIONS_PER_AGENT, UPDATE_TRACKS, type GlobalConfig } from "@nouride/shared";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 import { ADVANCED_KEYS } from "@/modules/config/advanced.ts";
 import { fallbackKeyNames, isSearchKind, resolveSearch, SEARCH_KINDS } from "@/modules/tools/builtins/search-backends.ts";
@@ -147,9 +147,10 @@ const CONFIG_BOUNDS: Record<string, { min?: number; max?: number; fraction?: tru
   "missions.per_agent": { min: 1, max: MOST_MISSIONS_PER_AGENT },
   // No fixed most: as high as every agent at once, which only the agents loaded know (`missions/slots.ts`).
   "missions.max_running": { min: 1 },
-  "missions.limit_hours": { min: 0.25, max: 168, fraction: true },
-  "missions.limit_turns": { min: 1, max: 1000 },
-  "missions.limit_tokens": { min: 100_000 },
+  // One mission's own limits keep the same (`MISSION_LIMIT_BOUNDS`).
+  "missions.limit_hours": MISSION_LIMIT_BOUNDS.hours,
+  "missions.limit_turns": MISSION_LIMIT_BOUNDS.turns,
+  "missions.limit_tokens": MISSION_LIMIT_BOUNDS.tokens,
   "queue.max_concurrent_per_agent": { min: 1 },
   "queue.max_queue_depth": { min: 1 },
   "rollover.at_hour": { max: 23 },

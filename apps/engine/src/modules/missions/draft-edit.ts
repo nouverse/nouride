@@ -7,7 +7,7 @@ import { createLogger } from "@nouride/shared";
 import { buttonsFor } from "./actions.ts";
 import { blockedBy } from "./decide.ts";
 import type { MissionsDeps } from "./deps.ts";
-import { changedDraft, draftChangedLine, draftNotice, type DraftChange, type DraftEditor } from "./drafts.ts";
+import { changedDraft, draftChangedLine, draftNotice, ownLimits, type DraftChange, type DraftEditor } from "./drafts.ts";
 import type { Missions } from "./missions.ts";
 import { paged } from "./notices.ts";
 import type { Mission } from "./types.ts";
@@ -29,8 +29,9 @@ export async function announceDraft(deps: MissionsDeps, mission: Mission, brief?
     log.warn("a draft's folder or brief could not be written", { mission: mission.id, error: failed });
   }
   // What the dispatcher would hold it back for were it started now: said, so a start is known to be a place in the queue.
-  const behind = blockedBy(mission, deps.store.open(), deps.settings());
-  const whole = paged(draftNotice(mission, has, changed, behind), deps.pageOf?.(mission));
+  const settings = deps.settings();
+  const behind = blockedBy(mission, deps.store.open(), settings);
+  const whole = paged(draftNotice(mission, has, changed, behind, ownLimits(mission, settings)), deps.pageOf?.(mission));
   // Its one notice: sent when it is made, rewritten where it stands when it changes (`draft-notices.ts`). A daemon
   // with no such chat (a test bench) says it as any notice.
   if (deps.tellDraft) await deps.tellDraft(mission, whole, changed.length > 0 ? paged(draftChangedLine(mission, changed), deps.pageOf?.(mission)) : null, buttonsFor(mission) ?? []);

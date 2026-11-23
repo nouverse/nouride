@@ -1232,16 +1232,16 @@
   "/policy/missions": {
     "perAgent": 1,
     "maxRunning": 1,
-    "limitHours": 8,
-    "limitTurns": 100,
-    "limitTokens": 100000000,
+    "limitHours": 12,
+    "limitTurns": 250,
+    "limitTokens": 250000000,
     "auto": true,
     "defaults": {
       "perAgent": 1,
       "maxRunning": 1,
-      "limitHours": 8,
-      "limitTurns": 100,
-      "limitTokens": 100000000
+      "limitHours": 12,
+      "limitTurns": 250,
+      "limitTokens": 250000000
     },
     "bounds": {
       "perAgent": {

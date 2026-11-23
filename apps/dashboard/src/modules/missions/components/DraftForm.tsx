@@ -1,5 +1,5 @@
 /**
- * A draft changed before it starts (0.8.11): the new-mission form's fields, its limits and its
+ * A draft changed before it starts (0.8.11): the new-mission form's fields, its own three limits and its
  * brief, prefilled from the draft. Only what was changed is sent; the daemon checks it as a start and says what changed,
  * and sends the draft's notice to its chat again. A started mission has no such form: its checks stay its own.
  */
@@ -26,8 +26,12 @@ interface Values {
   branch: string;
   hours: string;
   turns: string;
+  /** In millions, as the Limits card takes them: 250, not 250000000, which nobody reads at a glance. */
+  tokens: string;
   brief: string;
 }
+
+const MILLION = 1_000_000;
 
 /** The form's values as the draft has them: its own folder shown as empty, as the new-mission form takes it. */
 function valuesOf(mission: MissionView, brief: string | null, ownFolder: boolean): Values {
@@ -42,6 +46,7 @@ function valuesOf(mission: MissionView, brief: string | null, ownFolder: boolean
     branch: mission.branch ?? "",
     hours: String(mission.limits.hours),
     turns: String(mission.limits.turns),
+    tokens: String(mission.limits.tokens / MILLION),
     brief: brief ?? "",
   };
 }
@@ -50,6 +55,12 @@ function valuesOf(mission: MissionView, brief: string | null, ownFolder: boolean
 function changeOf(before: Values, after: Values): MissionEdit {
   const checks = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
   const number = (text: string) => Number(text.trim());
+  // Its own limits, the ones retyped: tokens sent as tokens.
+  const limits = {
+    ...(after.hours.trim() !== before.hours.trim() ? { hours: number(after.hours) } : {}),
+    ...(after.turns.trim() !== before.turns.trim() ? { turns: number(after.turns) } : {}),
+    ...(after.tokens.trim() !== before.tokens.trim() ? { tokens: Math.round(number(after.tokens) * MILLION) } : {}),
+  };
   return {
     ...(after.title.trim() !== before.title.trim() ? { title: after.title.trim() } : {}),
     ...(after.goal.trim() !== before.goal.trim() ? { goal: after.goal.trim() } : {}),
@@ -58,9 +69,7 @@ function changeOf(before: Values, after: Values): MissionEdit {
     ...(after.accept !== before.accept ? { accept: after.accept } : {}),
     ...(after.workdir.trim() !== before.workdir.trim() ? { workdir: after.workdir.trim() || null } : {}),
     ...(after.branch.trim() !== before.branch.trim() ? { branch: after.branch.trim() || null } : {}),
-    ...(after.hours.trim() !== before.hours.trim() || after.turns.trim() !== before.turns.trim()
-      ? { limits: { ...(after.hours.trim() !== before.hours.trim() ? { hours: number(after.hours) } : {}), ...(after.turns.trim() !== before.turns.trim() ? { turns: number(after.turns) } : {}) } }
-      : {}),
+    ...(Object.keys(limits).length > 0 ? { limits } : {}),
     ...(after.brief !== before.brief ? { brief: after.brief } : {}),
   };
 }
@@ -143,13 +152,23 @@ export function DraftForm({ mission, brief, ownFolder, writable }: { mission: Mi
           <input className="input input-sm w-full rounded-xl font-mono text-xs" value={values.branch} disabled={!values.workdir.trim()} onChange={(e) => set("branch")(e.target.value)} />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-4 sm:max-w-sm">
-        <Field label="Hours">
-          <input className="input input-sm w-full rounded-xl" inputMode="decimal" value={values.hours} onChange={(e) => set("hours")(e.target.value)} />
-        </Field>
-        <Field label="Turns">
-          <input className="input input-sm w-full rounded-xl" inputMode="numeric" value={values.turns} onChange={(e) => set("turns")(e.target.value)} />
-        </Field>
+      {/* This mission's own, where it stops to ask whether to go on: the Limits card's three, for this one alone. */}
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-3 gap-4 sm:max-w-md">
+          <Field label="Hours">
+            <input className="input input-sm w-full rounded-xl tabular-nums" inputMode="decimal" value={values.hours} onChange={(e) => set("hours")(e.target.value)} />
+          </Field>
+          <Field label="Turns">
+            <input className="input input-sm w-full rounded-xl tabular-nums" inputMode="numeric" value={values.turns} onChange={(e) => set("turns")(e.target.value)} />
+          </Field>
+          <Field label="Tokens">{/* plain-words-ok: tokens, the unit a model's use is billed in, as the Limits card names it */}
+            <span className="input input-sm w-full rounded-xl">
+              <input className="min-w-0 grow tabular-nums" inputMode="decimal" value={values.tokens} onChange={(e) => set("tokens")(e.target.value)} />
+              <span className="text-base-content/65">M</span>
+            </span>
+          </Field>
+        </div>
+        <p className="text-[11px] leading-snug text-base-content/65">Where this mission stops to ask you whether to go on. Only this one: the limits every mission starts with stay as they are.</p>
       </div>
 
       <ErrorNote error={save.error} />

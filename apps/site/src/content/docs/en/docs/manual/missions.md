@@ -42,6 +42,10 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   **Delete** on its page: a draft goes at once, since nothing of it has run.
 - **Who signs it off** is in the draft: you, once its checks pass, unless the agent chose a reviewer for it, as it does
   when you are away ("do it, I'm off to sleep"). You can change it in the draft.
+- **Its own limits** (0.8.46), when it has any: a line in the draft, `Its own limits before it asks you whether to go
+  on: 24h of work (usually 12h) · 400M tokens (usually 250M)`. The agent names them when you ask ("give it two days")
+  or when the work is known to need more or less; your start is your yes to them. A draft with no such line follows
+  your [limits](#limits). Change them by telling the agent, or in the draft's form on its page.
 - A draft nobody starts stays in the board's Backlog until someone starts or drops it, however long that is: a draft
   never expires. It is not counted among what needs you, and you are not reminded of it.
 - **A draft's notice is one message.** When the agent changes the draft, that message is rewritten where it stands,
@@ -281,12 +285,19 @@ withdraws what it parked. It runs at your approval level, as you.
 |---|---|---|
 | `per_agent` | 1 | missions working at once for one agent. One being checked does not count, since its reviewer is not the agent. An agent may have its own, 1 to 4 |
 | `max_running` | what the machine has room for, 1 to 4 | missions running at once on the box |
-| `limit_hours` | 8 | hours of work; time waiting for you is not counted |
-| `limit_turns` | 100 | turns (each up to `max_tool_iterations` steps), the reviewer's and failed checks' included |
-| `limit_tokens` | 100,000,000 | input and output tokens, the reviewer's included |
+| `limit_hours` | 12 | hours of work; time waiting for you is not counted |
+| `limit_turns` | 250 | turns (each up to `max_tool_iterations` steps), the reviewer's and failed checks' included |
+| `limit_tokens` | 250,000,000 | input and output tokens, the reviewer's included |
 
-They are `[missions]` in `config.toml`, also under **Limits** on the dashboard's Missions page, with no restart. A mission takes them when it starts. One
-waiting for you holds no slot; the next waits in the queue and says what for.
+They are `[missions]` in `config.toml`, also under **Limits** on the dashboard's Missions page, with no restart. A mission takes them when it is made: a change reaches the
+missions started or drafted after it. One waiting for you holds no slot; the next waits in the queue and says what for.
+The three limits were 8 hours, 100 turns and 100,000,000 tokens before 0.8.46; a value you set yourself is kept.
+
+**One mission's own limits** (0.8.46) leave these as they are. An agent names them on its draft (`limit_hours`,
+`limit_turns`, `limit_tokens`), each within what the setting itself may be (a quarter of an hour to 168 hours, 1 to
+1,000 turns, 100,000 tokens or more), and the draft shows them to you before you start it. You change them in the
+draft's form: **Hours**, **Turns** and **Tokens**, in millions. A piece of work a mission hands to another agent, and
+an automation's mission step, start with nobody there to say yes, so they keep the settings.
 
 **One agent's own number of missions at once** is on its Settings page, **Missions at once**, or `[missions] per_agent`
 in its own `config.toml`: three for an agent that does long work, one for the rest. The box's `max_running` still

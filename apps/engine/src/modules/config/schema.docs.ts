@@ -265,19 +265,19 @@ export const ANNOTATIONS: Record<string, Annotation> = {
   },
   "missions.limit_hours": { live: true,
     description: "Hours a mission may work before it stops and asks to continue. Time waiting for a person is not counted.",
-    caveat: "A mission takes its limits when it starts: a change reaches the missions started after it.",
-    example: "limit_hours = 8",
+    caveat: "A mission takes its limits when it is made: a change reaches the missions started or drafted after it. One mission may be given its own at its draft, without changing this.",
+    example: "limit_hours = 12",
   },
   "missions.limit_turns": { live: true,
     description: "Turns a mission may take before it stops and asks to continue, the reviewer's and failed checks' included.",
-    example: "limit_turns = 100",
+    example: "limit_turns = 250",
   },
   "missions.limit_tokens": { live: true,
     description:
       "Input and output tokens a mission may spend before it stops and asks to continue, its helpers and the reviewer " +
       "included. Tokens rather than money, because tokens are always counted and a price is not always known.",
     caveat: "The daily cap in `[llm.limits]` still holds on top.",
-    example: "limit_tokens = 100000000",
+    example: "limit_tokens = 250000000",
   },
 
   // ── alerts ────────────────────────────────────────────────────────────────

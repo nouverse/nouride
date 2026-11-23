@@ -339,12 +339,13 @@ quiet_after_minutes = 5
 # Long work an agent finishes alone (0.8.0): started with /mission, from the dashboard, or by the agent when the work
 # needs one. It runs turn after turn from a page of its own, survives restarts, parks what needs your approval and goes
 # on with the rest, and is done only when its checks pass. These are the five limits; a mission takes them when it
-# starts. A mission waiting for you holds no slot, and the time it waits is not counted.
+# is made. A mission waiting for you holds no slot, and the time it waits is not counted. An agent may draft one
+# mission with limits of its own, shown to you before you start it: these stay as they are.
 per_agent = 1           # running at once for one agent; an agent's pack may set its own [missions] per_agent
 # max_running = 3       # running at once on this box; unset: what this machine has room for, at most 4 (as [delegate])
-limit_hours = 8         # hours of work before it stops and asks to continue
-limit_turns = 100       # turns before it stops and asks to continue
-limit_tokens = 100000000 # input and output tokens before it stops and asks to continue
+limit_hours = 12        # hours of work before it stops and asks to continue
+limit_turns = 250       # turns before it stops and asks to continue
+limit_tokens = 250000000 # input and output tokens before it stops and asks to continue
 
 [alerts]
 # Where the daemon reports on ITSELF: a gateway that gave up reconnecting, a session that needs

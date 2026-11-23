@@ -27,7 +27,7 @@ import { markRead, tellMission, unreadTold, type TellAnswer } from "./tell.ts";
 import { MissionStore } from "./missions.store.ts";
 import { goesOnNotice, needsYouNotice, paged, queuedNotice, startedNotice } from "./notices.ts";
 import { announceDraft, editDraft, type DraftEdited } from "./draft-edit.ts";
-import { briefPath, isDraft, type DraftChange, type DraftEditor } from "./drafts.ts";
+import { briefPath, isDraft, ownLimits, type DraftChange, type DraftEditor } from "./drafts.ts";
 import { sendReport, tellEnded } from "./results.ts";
 import { limitsLine, missionPage, shortId, type LimitsShown } from "./page.ts";
 import { MissionCounts } from "./counts.ts";
@@ -147,6 +147,11 @@ export class Missions implements TurnShaper {
   /** The limits it was stopped at, as they read then — for a person's continue (`person.ts`); empty where none is known. */
   limitsStoppedAt(id: string): MissionLimit[] {
     return this.stoppedAt.get(id) ?? [];
+  }
+
+  /** Its limits where they are its own and not the settings', as its draft's notice says them — or null (`drafts.ts`). */
+  ownLimits(mission: Mission): string | null {
+    return ownLimits(mission, this.deps.settings());
   }
 
   /** Where it stands against its limits, in one line (`page.ts` `limitsLine`). */

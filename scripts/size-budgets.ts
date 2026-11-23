@@ -83,8 +83,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 599,
-    why: "the missions' one service (start, dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, slots, its jobs, what commands left); +3: an agent's open ones, for /mission",
+    lines: 602,
+    why: "the missions' one service (start, dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, slots, its jobs, what commands left); +3: a draft's own limits, in words",
   },
   "packages/gateways/src/channels/telegram/gateway.ts": {
     lines: 408,
