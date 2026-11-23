@@ -33,6 +33,20 @@ interface MemorySettingsView {
   semantic: { enabled: boolean; provider: string; model: string };
 }
 
+/**
+ * Search by meaning as typed: `<provider>/<embedding model>` switches it on with that model, and `on` or `off` turns
+ * the switch alone. The daemon asks the model for one embedding before it switches on, and says why when it stays off.
+ * Without this an agent asked to set search by meaning up could add the provider and not finish: the switch was the
+ * dashboard's alone.
+ */
+function semanticAsTyped(raw: string): Record<string, unknown> {
+  const word = raw.trim().toLowerCase();
+  if (["on", "true", "yes"].includes(word)) return { semantic: { enabled: true } };
+  if (["off", "false", "no", "-"].includes(word)) return { semantic: { enabled: false } };
+  const slash = raw.indexOf("/");
+  return { semantic: slash > 0 ? { enabled: true, provider: raw.slice(0, slash), model: raw.slice(slash + 1) } : { enabled: true, model: raw } };
+}
+
 /** What `/memory/status` says of the pass's backlog — `modules/memory/backlog.ts`. Absent from daemons before 0.7.12. */
 interface BacklogView {
   waiting: number;
@@ -104,6 +118,8 @@ const SETTABLE: Record<string, (raw: string) => Record<string, unknown>> = {
   recall: field("recall", bool),
   transcript_days: field("transcriptDays", number),
   archive: field("archive", bool),
+  semantic: semanticAsTyped,
+  semantic_dimensions: (raw) => ({ semantic: { dimensions: Number(raw) } }),
 };
 
 /**
@@ -122,6 +138,21 @@ function sayBacklog(backlog: BacklogView): void {
   const over = backlog.days === 7 ? "over the last 7 days" : `over the ${backlog.days} day(s) since the first conversation`;
   say(`${YELLOW}!${RESET} ${backlog.behind.length ? "falling behind" : "more waiting than a week of nights files"}: ${pace || "no conversations lately"} ${over}, and the pass files ${backlog.perNight} per agent a night`);
   say(`${DIM}  nouride memory set pass_per_night ${backlog.enough} files what waits within a week at this pace; pass_max_tokens caps what a night may spend${RESET}`);
+}
+
+/** Search by meaning as `/memory/status` says it stands: how many items have a vector, and whether the model answers. */
+interface SemanticView {
+  items: number;
+  running: boolean;
+  reachable: boolean | null;
+}
+
+/** The settings' last line: off, or the model with how far its vectors are, and that it is not answering where it is not. */
+function saySemantic(set: MemorySettingsView["semantic"], stands: SemanticView | undefined): void {
+  if (!set.enabled) return say(`${BOLD}semantic search${RESET}  off`);
+  const far = stands ? ` ${DIM}${stands.items.toLocaleString("en-US")} item(s) embedded${stands.running ? ", embedding now" : ""}${RESET}` : "";
+  const silent = stands?.reachable === false ? ` ${YELLOW}the model is not responding: search falls back to words${RESET}` : "";
+  say(`${BOLD}semantic search${RESET}  ${set.provider} · ${set.model}${far}${silent}`);
 }
 
 /** The pass's runs, as `/memory/status` says them. `runningSince`, `next` and a run's `scheduled` are absent before 0.7.27. */
@@ -184,7 +215,7 @@ export async function memoryCommand(client: Client, args: string[]): Promise<voi
     const budget = view.passMaxTokens ? `, at most ${view.passMaxTokens.toLocaleString("en-US")} tokens a night` : "";
     say(`${BOLD}nightly pass${RESET}     ${view.pass ? `at ${view.passAt}` : "off"} ${DIM}${view.passPerNight} per agent per night${budget}, ${view.maxAttempts} attempts, with ${view.passProvider ? `${view.passProvider}/${view.passModel}` : view.passModel ? `each agent's own ${view.passModel}-tier model` : "each agent's own model"}${RESET}`);
     // An operator's to read; anyone may read the settings, so a refusal here leaves the line out rather than the command.
-    const status = view.pass ? await client.softGet<{ backlog?: BacklogView; pass?: PassRunsView | null }>("/memory/status").catch(() => null) : null;
+    const status = view.pass || view.semantic.enabled ? await client.softGet<{ backlog?: BacklogView; pass?: PassRunsView | null; semantic?: SemanticView }>("/memory/status").catch(() => null) : null;
     if (status?.pass) sayRuns(status.pass);
     if (status?.backlog) sayBacklog(status.backlog);
     say(`${BOLD}facts${RESET}            ${view.facts} ${DIM}(a person's own setting on the Memory page wins)${RESET}`);
@@ -192,14 +223,18 @@ export async function memoryCommand(client: Client, args: string[]): Promise<voi
     say(`${BOLD}recall${RESET}           ${view.recall === false ? "off: nothing remembered goes into prompts; agents still search" : "on"} ${DIM}(a person's own setting on the Memory page wins)${RESET}`);
     say(`${BOLD}prompt_recent${RESET}    ${view.promptRecent} conversation summaries in each prompt`);
     say(`${BOLD}transcripts${RESET}      ${view.transcriptDays === 0 ? "kept forever" : `readable ${view.transcriptDays} day(s)${view.archive ? ", then archived" : ", then dropped"}`}`);
-    return say(`${BOLD}semantic search${RESET}  ${view.semantic.enabled ? `${view.semantic.provider} · ${view.semantic.model}` : "off"}`);
+    return saySemantic(view.semantic, status?.semantic);
   }
 
   if (action === "set") {
     const setting = target ? SETTABLE[target] : undefined;
     if (!setting || value === undefined) usageLines(`nouride memory set <${Object.keys(SETTABLE).join("|")}> <value>`);
-    const answer = await client.put<{ restartRequired?: boolean }>("/memory/settings", setting(value));
-    return saidSaved(`${target} = ${value}`, answer);
+    const change = setting(value);
+    const answer = await client.put<{ restartRequired?: boolean }>("/memory/settings", change);
+    saidSaved(`${target} = ${value}`, answer);
+    // What is already remembered has no vector yet: found by its words until it has one.
+    if ((change.semantic as { enabled?: boolean } | undefined)?.enabled) say(`${DIM}nouride memory embed gives what is already remembered its vectors now${RESET}`);
+    return;
   }
 
   if (action === "episodes") {

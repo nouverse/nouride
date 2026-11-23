@@ -254,6 +254,13 @@ sendiri (`bge-m3`), OpenAI (`text-embedding-3-small`) atau Gemini (`gemini-embed
 disimpan di indeks dan dicari secara brute force, yang masih wajar sampai puluhan ribu percakapan di
 hardware kecil. Embed yang gagal jatuh kembali ke kata kunci, gak pernah ke error.
 
+Kamu gak harus menyiapkannya sendiri (0.8.46): di **Knowledge & Memory**, **Settings**, kartu Semantic search
+punya **Ask Nouva to set up semantic search**. Tombol itu membuka chat dengan orchestrator kamu dan sebuah
+permintaan yang sudah ditulis, supaya model embedding jalan di mesin ini, di server kamu yang lain, atau
+lewat layanan cloud. Agent-nya bertanya dulu sebelum memasang apa pun, menambahkan provider-nya, lalu
+menyalakan pencarian semantik dengan `nouride memory set semantic <provider>/<model>`, yang cuma berhasil
+setelah modelnya menjawab.
+
 ## Di dashboard
 
 ### Halaman Knowledge & Memory
