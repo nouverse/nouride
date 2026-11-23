@@ -29,10 +29,13 @@ describe("the line of a jump", () => {
     expect(returnPath({ x: 400, y: 100 }, { x: 327, y: 112 }, 343, 14)).toBe("M 400 100 H 349 Q 343 100 343 106 V 106 Q 343 112 337 112 H 327");
     // Its side a few pixels from where it starts: no corner is wider than that.
     expect(returnPath({ x: 348, y: 100 }, { x: 327, y: 300 }, 343, 14)).toBe("M 348 100 H 348 Q 343 100 343 105 V 295 Q 343 300 338 300 H 327");
+    // From a lane under its step: out past the steps' left, down, and back in to the step from that side.
+    expect(returnPath({ x: 154, y: 100 }, { x: 113, y: 300 }, 97, 14)).toBe("M 154 100 H 111 Q 97 100 97 114 V 286 Q 97 300 111 300 H 113");
   });
 
-  test("the arrow's head points in at the step from the side", () => {
+  test("the arrow's head points in at the step from the side it came down", () => {
     expect(arrowHead({ x: 607, y: 400 }, 6)).toBe("M 607 400 l 6 -4.199999999999999 v 8.399999999999999 z");
+    expect(arrowHead({ x: 113, y: 400 }, 6, "left")).toBe("M 113 400 l -6 -4.199999999999999 v 8.399999999999999 z");
   });
 
   test("two jumps whose stretches overlap get a lane each; one that ends before the next begins shares its lane", () => {
@@ -124,8 +127,8 @@ describe("the picture over a flow", () => {
 });
 
 describe("a lane's way back, drawn", () => {
-  /** A main column of steps 320 wide, a lane beside it from 392 or under it from 24, and where the lane ends. */
-  async function laned(laneLeft: number) {
+  /** A main column of steps 320 wide from `mainLeft`, a lane beside it or under it from `laneLeft`, and where the lane ends. */
+  async function laned(laneLeft: number, mainLeft = 0) {
     const { createElement } = await import("react");
     const { createRoot } = await import("react-dom/client");
     const { FlowLinks } = await import("@/commons/components/ui/FlowLinks");
@@ -138,8 +141,8 @@ describe("a lane's way back, drawn", () => {
         { "data-flow": "edit" },
         createElement("div", { "data-flow-anchor": "lane-end:a:whenFailed", ref: at({ left: laneLeft, top: 400, width: 200, height: 32 }) }),
         createElement("div", { "data-flow-anchor": "lane-end:a:whenEmpty", ref: at({ left: laneLeft, top: 460, width: 200, height: 32 }) }),
-        createElement("div", { "data-flow-anchor": "step:b", ref: at({ left: 0, top: 500, width: 320, height: 80 }) }),
-        createElement("div", { "data-flow-anchor": "step:c", ref: at({ left: 0, top: 640, width: 320, height: 80 }) }),
+        createElement("div", { "data-flow-anchor": "step:b", ref: at({ left: mainLeft, top: 500, width: 320, height: 80 }) }),
+        createElement("div", { "data-flow-anchor": "step:c", ref: at({ left: mainLeft, top: 640, width: 320, height: 80 }) }),
         createElement("div", { "data-flow-anchor": "exit:b", ref: at({ left: 12, top: 590, width: 140, height: 20 }) }),
         createElement(FlowLinks, {
           links: [
@@ -157,7 +160,8 @@ describe("a lane's way back, drawn", () => {
     const root = createRoot(host);
     root.render(createElement(Flow));
     const drawn = () => [...host.querySelectorAll("[data-flow-link]")].map((link) => ({ key: link.getAttribute("data-flow-link"), back: link.hasAttribute("data-back"), state: link.getAttribute("data-state"), d: link.querySelector("path")?.getAttribute("d"), dashed: link.querySelector("path")?.getAttribute("stroke-dasharray") ?? null }));
-    return { drawn, done: () => (root.unmount(), host.remove()) };
+    const heads = () => [...host.querySelectorAll("[data-flow-link]")].map((link) => link.querySelectorAll("path")[1]?.getAttribute("d"));
+    return { drawn, heads, done: () => (root.unmount(), host.remove()) };
   }
 
   test("beside the steps: a thread from the near end of where each lane ends to the step it goes back to, in the gap between them", async () => {
@@ -177,7 +181,24 @@ describe("a lane's way back, drawn", () => {
     }
   });
 
-  test("under its step there is no gap to run a thread down: none is drawn, and the lane's end says it in words", async () => {
+  test("a lane under its step has no gap beside the steps: its thread runs down their left and comes in at the step from there", async () => {
+    // The steps from 120, a lane set in under its step from 158: where it ends is 154, left of the steps' right edge.
+    const flow = await laned(158, 120);
+    try {
+      await eventually(() => flow.drawn().length === 3, 2_000, "the jump and the two ways back");
+      expect(flow.drawn().slice(1)).toEqual([
+        // In at the step's left (113), down a side 16 left of the steps; the second, within the first's stretch, 11 further.
+        { key: "lane:a:whenFailed", back: true, state: "idle", d: returnPath({ x: 154, y: 416 }, { x: 113, y: 670 }, 97), dashed: "5 5" },
+        { key: "lane:a:whenEmpty", back: true, state: "taken", d: returnPath({ x: 154, y: 476 }, { x: 113, y: 530 }, 86), dashed: null },
+      ]);
+      // Each arrow's head points in from the side its line came down: the jump's from the right, the threads' from the left.
+      expect(flow.heads()).toEqual([arrowHead({ x: 447, y: 670 }), arrowHead({ x: 113, y: 670 }, 6, "left"), arrowHead({ x: 113, y: 530 }, 6, "left")]);
+    } finally {
+      flow.done();
+    }
+  });
+
+  test("where the steps fill the flow, as on a phone, there is no room for a thread: none is drawn, and the lane's end says it in words", async () => {
     const flow = await laned(24);
     try {
       await eventually(() => flow.drawn().length === 1, 2_000, "the jump alone");

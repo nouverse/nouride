@@ -746,8 +746,7 @@
             "id": "s5",
             "kind": "systemEvent",
             "text": "The shop was down for a while. What was found is above.",
-            "name": "Tell the group",
-            "then": "end"
+            "name": "Tell the group"
           }
         ]
       },
@@ -792,8 +791,7 @@
             "id": "s5",
             "kind": "systemEvent",
             "text": "The shop was down for a while. What was found is above.",
-            "name": "Tell the group",
-            "then": "end"
+            "name": "Tell the group"
           }
         ]
       },

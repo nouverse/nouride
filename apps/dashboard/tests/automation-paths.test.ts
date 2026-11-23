@@ -388,6 +388,107 @@ describe("a step taken out", () => {
   });
 });
 
+describe("what a live box showed, and what walking the page's operations then found", () => {
+  // A, then B with a step in its place where it fails, then C and D: as a person draws it on the page.
+  const DRAWN = choosePath([say("a"), run("b"), say("c"), say("d")], 1, "whenFailed", "lane").steps;
+  const laneStep = DRAWN[2]!.id;
+
+  test("a step with steps in its place, dragged to the top: it goes on to the step drawn below it, and every box it was dragged over is still run", () => {
+    expect(ids(DRAWN)).toEqual(["a", "b", laneStep, "c", "d"]);
+    const top = moveOnLine(DRAWN, 1, 0);
+    sound(top);
+    expect(line(top)).toEqual(["b", "a", "c", "d"]);
+    // It kept going on to "c", the step that used to follow it: "a" was drawn under it and never run.
+    expect(walk(top)).toEqual(["b", "a", "c", "d"]);
+    expect(top.flatMap((_step, at) => chipExits(top, at, pathsOf(top)))).toEqual([]);
+    // Its lane with it, back in where it goes on now.
+    expect(pathsOf(top).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [1], ends: { back: 2 } }]);
+    expect(walk(top, { b: "failed" })).toEqual(["b", laneStep, "a", "c", "d"]);
+    // One place up and one place down are the same story.
+    for (const to of [0, 2, 3]) {
+      const moved = moveOnLine(DRAWN, 1, to);
+      sound(moved);
+      expect(walk(moved)).toEqual(line(moved));
+      expect(walk(moved, { b: "failed" }).filter((id) => id !== laneStep)).toEqual(line(moved));
+    }
+  });
+
+  test("a lane set to a step further down keeps naming it through a move while that step is still below, and else goes back where its step goes on", () => {
+    const far = setLaneEnd(DRAWN, 1, "whenFailed", { to: "d" });
+    expect(walk(far, { b: "failed" })).toEqual(["a", "b", laneStep, "d"]);
+    const up = moveOnLine(far, 1, 0);
+    sound(up);
+    expect(walk(up, { b: "failed" })).toEqual(["b", laneStep, "d"]);
+    // Below the step it named: there is nothing of that name ahead, so it goes back where its step goes on, the end.
+    const last = moveOnLine(far, 1, 3);
+    sound(last);
+    expect(line(last)).toEqual(["a", "c", "d", "b"]);
+    expect(pathsOf(last).rules.get(3)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [4], ends: "stop" }]);
+  });
+
+  test("a lane that stops, moved up from the list's end, still stops: its last step says so where a step now follows it", () => {
+    const ends = setLaneEnd(choosePath([say("a"), say("c"), run("b")], 2, "whenFailed", "lane").steps, 2, "whenFailed", "stop");
+    const lane = ends[3]!.id;
+    expect(ends[3]!.then).toBeUndefined();
+    const up = moveOnLine(ends, 2, 0);
+    sound(up);
+    expect(walk(up, { b: "failed" })).toEqual(["b", lane]);
+    expect(walk(up)).toEqual(["b", "a", "c"]);
+  });
+
+  test("a step that goes on anyway, given steps in its place for its other path: going on still goes on, past those steps", () => {
+    const goes = choosePath([run("a"), say("b"), say("c")], 0, "whenFailed", "goOn").steps;
+    const both = choosePath(goes, 0, "whenEmpty", "lane").steps;
+    sound(both);
+    // "The next step" would have been the step just put after it: a failure ran the steps meant for silence.
+    expect(pathsOf(both).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "goOn" }, { exit: "whenEmpty", kind: "lane", lane: [1], ends: { back: 2 } }]);
+    expect(walk(both, { a: "failed" })).toEqual(["a", "b", "c"]);
+    // Those steps taken away again: it is as it was, going on to "the next step" in those words.
+    expect(choosePath(both, 0, "whenEmpty", "stop").steps).toEqual(goes);
+    // And the other way round, and with a question.
+    const asks = choosePath(choosePath([run("a"), say("b"), say("c")], 0, "whenEmpty", "goOn").steps, 0, "whenFailed", "ask").steps;
+    sound(asks);
+    expect(pathsOf(asks).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "ask", at: 1 }, { exit: "whenEmpty", kind: "goOn" }]);
+    expect(walk(asks, { a: "empty" })).toEqual(["a", "b", "c"]);
+  });
+
+  test("the last step with steps in its place for both its paths: each lane ends the run, and neither runs into the other", () => {
+    const one = choosePath([say("a"), run("b")], 1, "whenFailed", "lane").steps;
+    const two = choosePath(one, 1, "whenEmpty", "lane").steps;
+    sound(two);
+    const [silent, failed] = [two[2]!.id, two[3]!.id];
+    expect(pathsOf(two).rules.get(1)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [3], ends: "stop" }, { exit: "whenEmpty", kind: "lane", lane: [2], ends: "stop" }]);
+    expect(walk(two, { b: "empty" })).toEqual(["a", "b", silent]);
+    expect(walk(two, { b: "failed" })).toEqual(["a", "b", failed]);
+  });
+
+  test("going on anyway that had nothing left to go on to is no rule, and a step added later does not bring it back", () => {
+    const goes = choosePath([say("a"), run("b"), say("c")], 1, "whenFailed", "goOn").steps;
+    const last = removeDrawn(goes, 2);
+    expect(last[1]!.whenFailed).toBeUndefined();
+    expect(choiceOf(last, 1, "whenFailed")).toBe("stop");
+    // As a list written elsewhere, or by an older page, holds it: the canvas draws no rule, and none comes of adding a step.
+    const held = [say("a"), run("b", { whenFailed: "next" })];
+    const added = insertOnLine(held, null, say("d"));
+    expect(choiceOf(added, 1, "whenFailed")).toBe("stop");
+    expect(walk(added, { b: "failed" })).toEqual(["a", "b"]);
+    expect(choiceOf(choosePath(held, 1, "whenEmpty", "lane").steps, 1, "whenFailed")).toBe("stop");
+    expect(choiceOf(moveOnLine(held, 1, 0), 0, "whenFailed")).toBe("stop");
+  });
+
+  test("the step after one that asks first, deleted with nothing below it: the question is still that step's question, not a step of the line", () => {
+    const asks = choosePath([say("a"), run("b"), say("c")], 1, "whenFailed", "ask").steps;
+    const wait = asks[2]!.id;
+    const without = removeDrawn(asks, 3);
+    sound(without);
+    // The step went on into its own question: asked on every run, with nothing having failed.
+    expect(walk(without)).toEqual(["a", "b"]);
+    expect(line(without)).toEqual(["a", "b"]);
+    expect(pathsOf(without, false).rules.get(1)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [2], ends: "stop" }]);
+    expect(walk(without, { b: "failed" })).toEqual(["a", "b", wait]);
+  });
+});
+
 describe("a step of the main line moved", () => {
   test("a plain step moves as a step of a list does", () => {
     expect(ids(moveOnLine(PLAIN, 0, 1))).toEqual(["save", "sum", "tell"]);
@@ -414,6 +515,33 @@ describe("a step of the main line moved", () => {
     expect(ids(top)).toEqual(["c", "a", "b", "d"]);
     expect(top[1]!.whenFailed).toBeUndefined();
     sound(top);
+    // The same in one move, past every step between.
+    const jump = [run("a", { whenFailed: to("d") }), say("b"), wait("c"), say("d")];
+    const behind = moveOnLine(jump, 3, 0);
+    expect(ids(behind)).toEqual(["d", "a", "b", "c"]);
+    expect(behind[1]!.whenFailed).toBeUndefined();
+    sound(behind);
+  });
+
+  test("going on anyway, which the page writes as \"the next step\", goes on to whatever is drawn below after a move, and again after the next", () => {
+    const goes = choosePath([run("a"), say("b"), say("c")], 0, "whenFailed", "goOn").steps;
+    expect(goes[0]!.whenFailed).toBe("next");
+    const one = moveOnLine(goes, 1, 2);
+    sound(one);
+    expect(ids(one)).toEqual(["a", "c", "b"]);
+    expect(one[0]).toEqual(run("a", { whenFailed: "next" }));
+    expect(walk(one, { a: "failed" })).toEqual(["a", "c", "b"]);
+    const two = moveOnLine(one, 1, 2);
+    expect(two).toEqual(goes);
+    // With steps in its place for silence, the step names where it goes, and so does its going on: both follow it.
+    const laned = choosePath(goes, 0, "whenEmpty", "lane").steps;
+    sound(laned);
+    expect(laned[0]).toMatchObject({ then: to("b"), whenFailed: to("b") });
+    const moved = moveOnLine(laned, 0, 1);
+    sound(moved);
+    expect(line(moved)).toEqual(["b", "a", "c"]);
+    expect(pathsOf(moved).rules.get(1)).toEqual([{ exit: "whenFailed", kind: "goOn" }, { exit: "whenEmpty", kind: "lane", lane: [2], ends: { back: 3 } }]);
+    expect(walk(moved, { a: "failed" })).toEqual(["b", "a", "c"]);
   });
 
   test("moved to the end, its rule's way back becomes the run's end", () => {

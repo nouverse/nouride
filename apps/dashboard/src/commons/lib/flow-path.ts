@@ -50,24 +50,26 @@ export function jumpPath(from: Point, to: Point, side: number, radius = 14): str
 }
 
 /**
- * The path of a lane's way back into the main line: from where the lane ends, in toward the steps, a rounded turn
- * down beside them, and in to the step it goes back to, from that step's side. The mirror of a jump: `side` is left
- * of where it starts and right of where it lands.
+ * The path of a lane's way back into the main line: from where the lane ends, a run to the side it goes down, a
+ * rounded turn down beside the steps, and in to the step it goes back to. Down the gap between the steps and a lane
+ * that stands beside them (`side` between the two), or down the steps' far side for a lane that hangs under its step
+ * (`side` past both): each turn is made toward where it leads.
  */
 export function returnPath(from: Point, to: Point, side: number, radius = 14): string {
   const down = Math.max(0, to.y - from.y);
-  const r = Math.max(0, Math.min(radius, down / 2, from.x - side, side - to.x));
+  const r = Math.max(0, Math.min(radius, down / 2, Math.abs(from.x - side), Math.abs(to.x - side)));
+  const [out, back] = [from.x >= side ? 1 : -1, to.x >= side ? 1 : -1];
   return [
     `M ${from.x} ${from.y}`,
-    `H ${side + r}`,
+    `H ${side + out * r}`,
     `Q ${side} ${from.y} ${side} ${from.y + r}`,
     `V ${to.y - r}`,
-    `Q ${side} ${to.y} ${side - r} ${to.y}`,
+    `Q ${side} ${to.y} ${side + back * r} ${to.y}`,
     `H ${to.x}`,
   ].join(" ");
 }
 
-/** The arrow's head where a jump lands, pointing in at the step from the side. */
-export function arrowHead(at: Point, size = 6): string {
-  return `M ${at.x} ${at.y} l ${size} ${-size * 0.7} v ${size * 1.4} z`;
+/** The arrow's head where a jump lands, pointing in at the step from the side it came down: its right, or its left. */
+export function arrowHead(at: Point, size = 6, from: "right" | "left" = "right"): string {
+  return `M ${at.x} ${at.y} l ${from === "right" ? size : -size} ${-size * 0.7} v ${size * 1.4} z`;
 }

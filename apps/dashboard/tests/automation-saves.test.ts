@@ -212,9 +212,10 @@ test("the saves are of every kind of step, every way a path can go, each way to 
   // A change sends what changed: the renamed, shortened list sends its name, its steps and its time, and no chat.
   expect(Object.keys(all.find((save) => save.name === "Shop health check, changed")!.body as object).sort()).toEqual(["cron", "name", "payload", "tz"]);
   // The check's own steps for a failure are a lane, one of which goes on with nothing to say; with the wait and the
-  // step two paths led to gone, the lane is the three left, in the order they run.
+  // step two paths led to gone, the lane is the three left, in the order they run. Its last step is the last of the
+  // list now, and ends the run by being that.
   expect(named("Shop health check").map((step) => step.id)).toEqual(["s1", "s2", "s3", "s4", "s5", "s6"]);
-  expect(named("Shop health check, changed").map((step) => [step.id, step.then, step.whenEmpty])).toEqual([["s1", "end", undefined], ["s2", undefined, "next"], ["s3", undefined, undefined], ["s5", "end", undefined]]);
+  expect(named("Shop health check, changed").map((step) => [step.id, step.then, step.whenEmpty])).toEqual([["s1", "end", undefined], ["s2", undefined, "next"], ["s3", undefined, undefined], ["s5", undefined, undefined]]);
   // A dragged step: the list in its new order, and nothing but the list sent.
   expect(named("New order, the note first").map((step) => step.kind)).toEqual(["systemEvent", "agentTurn"]);
   expect(Object.keys(all.find((save) => save.name === "New order, the note first")!.body as object)).toEqual(["payload"]);

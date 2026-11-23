@@ -553,6 +553,8 @@ describe("what a failure does is seen on the canvas, whatever the answer", () =>
 
 describe("a lane, changed from the lane itself", () => {
   const LOOK: AutomationStep = { id: "look", kind: "agentTurn", message: "Look into why it failed.", then: { to: "find" } };
+  /** The same step where it goes on to the step right after it in the list, and so says nothing. */
+  const LOOK_PLAIN: AutomationStep = { id: "look", kind: "agentTurn", message: "Look into why it failed." };
   const LANED: AutomationStep[] = [{ ...CHECK, then: { to: "find" }, whenFailed: { to: "look" } }, LOOK, FIND, OK, TELL];
   const lane = (host: HTMLElement) => host.querySelector<HTMLElement>('[data-lane="whenFailed"]')!;
   const end = (host: HTMLElement) => lane(host).querySelector<HTMLElement>("[data-lane-end]")!;
@@ -610,6 +612,32 @@ describe("a lane, changed from the lane itself", () => {
     expect(seen.holds).toBe("Stop");
     expect(seen.field).toEqual(["Go back to step 2, “Nouva works on it”", "Go back to step 3, “Wait for your OK”", "Go back to step 4, “Tell the group”", "Stop"]);
     expect(seen.back).toBe("Then back to step 2, “Nouva works on it”");
+  });
+
+  test("the step a lane hangs on, moved up the line: it goes on to the step drawn below it now, with no jump over the steps it passed", async () => {
+    // Check, then find with a step in its place where it fails, then the wait and the message.
+    const HUNG: AutomationStep[] = [CHECK, { ...FIND, then: { to: "ok" }, whenFailed: { to: "look" } }, { ...LOOK, then: { to: "ok" } }, OK, TELL];
+    shown(HUNG);
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { before: 0, order: [] as string[], jumps: 0, lane: [] as string[], end: "" };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 5);
+      seen.before = host.querySelectorAll("[data-branch]").length;
+      await stepMenu(host, 2, "Move up");
+      await eventually(() => drawn(host)[0] === "find", 2_000, "find at the top");
+      seen.order = drawn(host);
+      // It kept going on to the wait, past the check it was moved over: a label said so, and the check never ran.
+      seen.jumps = host.querySelectorAll("[data-branch]").length;
+      seen.lane = [...lane(host).querySelectorAll<HTMLElement>('[data-flow-anchor^="step:"]')].map((box) => box.dataset.flowAnchor!.slice(5));
+      seen.end = end(host).textContent ?? "";
+      sent = await saved(host);
+    });
+    expect(seen.before).toBe(0);
+    expect(seen.order).toEqual(["find", "look", "check", "ok", "tell"]);
+    expect(seen.jumps).toBe(0);
+    expect(seen.lane).toEqual(["look"]);
+    expect(seen.end).toBe("Then back to step 2, “Run a script”");
+    expect(steps(sent)).toEqual([{ ...FIND, then: { to: "check" }, whenFailed: { to: "look" } }, LOOK_PLAIN, CHECK, OK, TELL]);
   });
 
   test("one a reader may not change shows where its lane ends, named for its thread, with nothing to press", async () => {

@@ -170,9 +170,10 @@ describe("adding and copying", () => {
     // A step of a lane is copied by nothing: it is its owner's.
     expect(copyOnLine(steps, 1)).toEqual(steps);
     // One that ended the run when done, with two steps in its place where it fails: it goes on to its copy, which
-    // ends the run as it did, and the lane still stops where it stopped.
+    // ends the run as it did (by being the last, which a last step does not say), and the lane still stops where it
+    // stopped.
     const ends = [run("a", { then: "end", whenFailed: { to: "l" } }), say("l"), say("c")];
-    expect(copyOnLine(ends, 0)).toEqual([run("a", { then: { to: "s4" }, whenFailed: { to: "l" } }), say("l"), say("c", { then: "end" }), run("a", { id: "s4", then: "end" })]);
+    expect(copyOnLine(ends, 0)).toEqual([run("a", { then: { to: "s4" }, whenFailed: { to: "l" } }), say("l"), say("c", { then: "end" }), run("a", { id: "s4" })]);
   });
 });
 
