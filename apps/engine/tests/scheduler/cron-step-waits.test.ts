@@ -115,6 +115,97 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+/**
+ * A mission step that drafts: the mission is put in its person's Backlog and nothing is started, so there is nothing
+ * to wait for. A step could only start one, and long work an automation prepared ran at once, with nobody having
+ * looked at what it was about to do.
+ */
+describe("a mission step that drafts", () => {
+  const DRAFTED = 'Drafted the mission "weekly" (msn_draft1). It waits in the Backlog and runs once it is started.';
+  const draft = (id: string, goal: string, exits: Exits = {}): JobStep => ({ id, kind: "mission", goal, draft: true, ...exits });
+  /** The missions' answer for a step that drafts, and for one that starts. */
+  const drafting = (h: { started: { job: Job; body: string | undefined }[] }, busy?: string): Partial<CronExecutors> => ({
+    startMission: (one, body) => {
+      h.started.push({ job: one, body });
+      if (one.payload.kind === "mission" && one.payload.draft) return busy ? { busy, waits: true } : { drafted: "msn_draft1", said: DRAFTED };
+      return { started: `msn_${h.started.length}` };
+    },
+  });
+
+  test("in the middle: the step is done at once, the run does not wait, and the next step is handed the line that says so", async () => {
+    const made = job([ask("collect", "Collect the issues."), draft("plan", "Fix them."), ask("report", "Say what was prepared.", { agentId: "nix" })]);
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    const h = hands(drafting(record));
+
+    const outcome = await h.scheduler.runNow(made.id, "tester");
+
+    // Over in one go: no wait, no state kept.
+    expect(outcome).toMatchObject({ status: "success", result: "nix answered" });
+    expect(run(made.id).finishedAt).toBeDefined();
+    expect(run(made.id).waiting).toBeUndefined();
+    expect(went(made.id)).toEqual(["collect:done", "plan:done", "report:done"]);
+    // The draft was handed what the step before said, as a mission that starts is, and its step names it.
+    expect(record.started).toHaveLength(1);
+    expect(record.started[0]!.body).toBe("nouva answered");
+    expect(record.started[0]!.job.payload).toMatchObject({ kind: "mission", goal: "Fix them.", draft: true });
+    expect(run(made.id).steps![1]).toMatchObject({ status: "done", said: DRAFTED, missionId: "msn_draft1", drafted: true });
+    expect(h.turns[1]!.message).toContain("The step that drafted a mission ran before this step and said what is below.");
+    expect(h.turns[1]!.message).toContain(DRAFTED);
+    expect(store.get(made.id)!.runCount).toBe(1);
+  });
+
+  test("as the last step: the run ends with the line, and it is not sent a second time beside the draft's own notice", async () => {
+    const made = job([ask("collect", "Collect the issues."), draft("plan", "Fix them.")]);
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    const h = hands(drafting(record));
+    expect(await h.scheduler.runNow(made.id, "tester")).toMatchObject({ status: "success", result: DRAFTED });
+    expect(h.delivered).toEqual([]);
+    expect(went(made.id)).toEqual(["collect:done", "plan:done"]);
+  });
+
+  test("its last draft still waiting: the run stops at that step and says which draft, not that a mission is at work", async () => {
+    const made = job([ask("collect", "Collect the issues."), draft("plan", "Fix them."), say("done", "Prepared.")]);
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    const h = hands(drafting(record, "msn_old"));
+    expect(await h.scheduler.runNow(made.id, "tester")).toMatchObject({ status: "skipped", result: "the last run's draft, mission msn_old, still waits to be started: start it or drop it" });
+    expect(went(made.id)).toEqual(["collect:done", "plan:skipped"]);
+    expect(run(made.id).steps![1]!.said).toBe("its last draft, mission msn_old, still waits to be started");
+    expect(h.delivered).toEqual([]);
+  });
+
+  test("a step that starts, in the same list, still waits for its mission", async () => {
+    const made = job([draft("plan", "Prepare the fix."), mission("fix", "Fix them.")]);
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    const h = hands(drafting(record));
+    expect((await h.scheduler.runNow(made.id, "tester")).status).toBe("waiting");
+    expect(went(made.id)).toEqual(["plan:done", "fix:waiting"]);
+    // The step that starts is handed the drafted line, as any step is handed what the one before said.
+    expect(record.started[1]!.body).toBe(DRAFTED);
+  });
+
+  test("a run that drafted has told its chat, by the draft's own notice: a job set to tell once turns itself off after it", async () => {
+    const once = { delivery: { mode: "announce" as const, once: true as const }, trigger: { kind: "webhook" as const } };
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    // As the last step; with a later step that ends the run with nothing to say; and as the one thing a job does.
+    const last = job([draft("plan", "Fix them.")], once);
+    const middle = job([draft("plan", "Fix them."), { id: "look", kind: "command", argv: ["true"] }], once);
+    const alone = store.create({ agentId: "nouva", name: "weekly", trigger: { kind: "webhook" }, payload: { kind: "mission", goal: "Sum up the week.", draft: true }, target: { gatewayId: "telegram:main", chatId: "12345" }, createdBy: "8142", delivery: { mode: "announce", once: true } });
+    for (const made of [last, middle, alone]) {
+      // Called, not started by hand: a person trying a job out has not been told what it watches for.
+      await hands(drafting(record)).scheduler.runNow(made.id, "hook", {});
+      expect(store.get(made.id)).toMatchObject({ enabled: false, disabledReason: "told" });
+    }
+  });
+
+  test("a job that is one mission, drafted: each run says so and is done; one still waiting is skipped", async () => {
+    const one = store.create({ agentId: "nouva", name: "weekly", trigger: { kind: "manual" }, payload: { kind: "mission", goal: "Sum up the week.", draft: true }, target: { gatewayId: "telegram:main", chatId: "12345" }, createdBy: "8142" });
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    expect(await hands(drafting(record)).scheduler.runNow(one.id, "tester")).toMatchObject({ status: "success", result: DRAFTED });
+    expect(run(one.id)).toMatchObject({ status: "success", result: DRAFTED });
+    expect(await hands(drafting(record, "msn_old")).scheduler.runNow(one.id, "tester")).toMatchObject({ status: "skipped", result: "the last run's draft, mission msn_old, still waits to be started: start it or drop it" });
+  });
+});
+
 describe("a mission as a step", () => {
   test("in the middle: the run waits for it, is not over, and goes on with its result when it ends", async () => {
     const made = job([ask("collect", "Collect the issues."), mission("fix", "Fix them."), ask("report", "Write what was done.", { agentId: "nix" })]);

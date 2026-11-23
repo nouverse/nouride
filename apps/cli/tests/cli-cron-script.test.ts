@@ -70,6 +70,16 @@ test("`add --script` sends the file's text as it is, with what runs it, what it 
   expect((posts[0]!.body as { payload: unknown }).payload).toEqual({ kind: "command", argv: ["python3"], script: { text, about: "Says done once the file holds it.", secrets: ["notes_key", "mail.key"] }, then: "deliver" });
 });
 
+test("`add --mission` starts its mission each run; with `--draft` each run drafts it and starts nothing", async () => {
+  const starts = client();
+  await ran(() => cron(starts.made, ["add", "--name", "weekly", "--cron", "0 9 * * 1", "--mission", "Sum up the week.", "--check", "test -s OUT.md", "--no-review", ...WHERE]));
+  expect((starts.posts[0]!.body as { payload: unknown }).payload).toEqual({ kind: "mission", goal: "Sum up the week.", checks: ["test -s OUT.md"], review: false });
+
+  const drafts = client();
+  await ran(() => cron(drafts.made, ["add", "--name", "weekly", "--cron", "0 9 * * 1", "--mission", "Sum up the week.", "--draft", ...WHERE]));
+  expect((drafts.posts[0]!.body as { payload: unknown }).payload).toEqual({ kind: "mission", goal: "Sum up the week.", draft: true });
+});
+
 test("with no `--run` it is a shell script; no secrets named, none are sent; `--then agent` hands what it printed to the agent", async () => {
   const file = join(dir, "check.sh");
   writeFileSync(file, "df -h / | tail -1\n");

@@ -115,7 +115,7 @@ describe("each kind, written in its card", () => {
   test("a command's line and limit, an agent's words and who does it, a wait's question and how long, a name, and another kind", async () => {
     shown();
     let sent: { path: string; body: unknown }[] = [];
-    const seen = { titles: [] as string[], agents: [] as string[], kinds: [] as string[] };
+    const seen = { titles: [] as string[], agents: [] as string[], kinds: [] as string[], begins: [] as string[], draftLine: false };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host);
       editStep(host, 1).click();
@@ -142,6 +142,11 @@ describe("each kind, written in its card", () => {
       await dropdown(host, "Kind of step").pick("Start a mission");
       await eventually(() => host.textContent?.includes("The run waits here until the mission ends") === true, 2_000, "the mission's fields");
       seen.titles = STEPS.map((step) => stepCard(host, step.id).querySelector("button")?.textContent ?? "");
+      // Started, unless it is left as a draft: asked first among the mission's fields, and said under them.
+      seen.begins = [dropdown(host, "When the run gets here").holds() ?? "", ...(await dropdown(host, "When the run gets here").open())];
+      await dropdown(host, "When the run gets here").pick("Leave it in the Backlog as a draft");
+      await eventually(() => host.textContent?.includes("Nothing starts by itself.") === true, 2_000, "the draft's line");
+      seen.draftLine = !host.textContent!.includes("The run waits here until the mission ends");
       sent = await saved(host);
     });
     expect(seen.agents).toEqual(["Nouva, who runs this automation", "Nix"]);
@@ -156,8 +161,10 @@ describe("each kind, written in its card", () => {
       { id: "find", kind: "agentTurn", message: "Look into it.", agentId: "nix" },
       { id: "ok", kind: "approval", ask: "Post it?", timeoutMs: 3_600_000 },
       // The words it held are the new kind's: a message's text is the mission's goal.
-      { id: "tell", name: "Say so", kind: "mission", goal: "The shop was down." },
+      { id: "tell", name: "Say so", kind: "mission", goal: "The shop was down.", draft: true },
     ]);
+    expect(seen.begins).toEqual(["Start the mission and wait for it", "Start the mission and wait for it", "Leave it in the Backlog as a draft"]);
+    expect(seen.draftLine).toBe(true);
   });
 
   test("a step left with something missing says so on its card, and Discard changes puts the page back", async () => {

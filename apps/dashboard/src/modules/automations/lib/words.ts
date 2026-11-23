@@ -24,7 +24,7 @@ export const KIND: Record<StepKind, KindLook> = {
   agentTurn: { icon: Bot, label: "Ask an agent", hint: "An agent works on it with its tools, and hands on what it found.", tile: "bg-primary/15 text-primary" },
   command: { icon: Terminal, label: "Run a script", hint: "A small program on this server, with no AI. What it prints goes to the next step.", tile: "bg-base-content/[0.07] text-base-content/80" },
   systemEvent: { icon: MessageSquare, label: "Send a message", hint: "Your words, sent as written to where it reports. No AI.", tile: "bg-info/15 text-info" },
-  mission: { icon: Target, label: "Start a mission", hint: "Long work, checked. The run waits until the mission ends.", tile: "bg-secondary/10 text-secondary" },
+  mission: { icon: Target, label: "Start a mission", hint: "Long work, checked. The run waits until it ends, or leaves it as a draft for you to start.", tile: "bg-secondary/10 text-secondary" },
   approval: { icon: Hand, label: "Wait for your OK", hint: "The run stops and asks you. It goes on when you say yes.", tile: "bg-accent/15 text-accent" },
   parallel: { icon: Split, label: "Several at the same time", hint: "Agents and commands that start together. What each says is joined and handed on.", tile: "bg-primary/15 text-primary" },
 };
@@ -47,7 +47,8 @@ export function stepTitle(step: Step, agent: string): string {
     case "systemEvent":
       return "Send a message";
     case "mission":
-      return "Start a mission";
+      // One the run only drafts starts nothing: its box must not say it does.
+      return step.draft ? "Draft a mission" : "Start a mission";
     case "approval":
       return "Wait for your OK";
     case "parallel":

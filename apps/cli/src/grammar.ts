@@ -170,7 +170,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
         "--name <name>", "--at <when>", "--every <interval>", "--cron <expression>", "--tz <zone>", "--gateway <id>", "--chat <id>",
         "--agent <id>", "--text <message>", "--message <prompt>", "--command <shell>", "--then <agent>", "--cwd <dir>",
         "--script <file>", "--run <program>", "--about <words>", "--secrets <names>",
-        "--mission <goal>", "--check <command>", "--no-review", "--steps <file>", "--manual", "--session <mode>", "--quiet", "--keep",
+        "--mission <goal>", "--check <command>", "--no-review", "--draft", "--steps <file>", "--manual", "--session <mode>", "--quiet", "--keep",
         "--once", "--for <length>",
       ],
       update: ["--name <name>", "--at <when>", "--every <interval>", "--cron <expression>", "--tz <zone>", "--text <message>", "--message <prompt>", "--steps <file>", "--agent <id>"],

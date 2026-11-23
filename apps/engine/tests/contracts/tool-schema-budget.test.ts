@@ -76,7 +76,11 @@ const size = (name: string) => JSON.stringify(tools.get(name)!.definition).lengt
 // 4,840 for a watch's script that ends well until its moment comes (~40, at 4,839): `test -f done && cat done` ends in
 // an error while the file is not there, and a watch written that way told its chat it had failed once a minute where
 // it should have said nothing (seen on the box's sandbox, in a release's live run).
-const PER_TOOL = 4_840;
+// 5,020 for a mission a job drafts (~175, at 5,013): `schedule`'s `draft`, for a job and for a step. A job could
+// only start its mission, so long work an automation prepared ran with nobody having read what it was about to do;
+// the field says what a draft does to the run (nothing starts, the run goes on), which is what a model must know to
+// put a step after it.
+const PER_TOOL = 5_020;
 /** All of them together, which no single agent holds but the default-rich ones come close to. */
 // 32,500 since exec's `service`: a server started as an ordinary job ended the turn and never woke it,
 // and the parameter that fixes it has to say when to use it instead of `background`. 32,800 since
@@ -189,7 +193,8 @@ const PER_TOOL = 4_840;
 // `limit_tokens`, and one sentence of when to name them. The settings bounded every mission the same, so work known to
 // need more had its person raise them for all. The sentence says left out is usual: a model that fills every field it
 // is offered would give each draft numbers of its own. Tokens say "written whole", where 250 would be read as millions.
-const TOTAL = 53_300;
+// 53,480 for a mission a job drafts (~175, measured at 53,470): the reason is at `PER_TOOL`.
+const TOTAL = 53_480;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -200,9 +205,9 @@ const TOTAL = 53_300;
  * against 50,899). 46,300 with the words a person has for a mission (measured at 46,290 against 51,121). 47,720 with
  * `schedule`'s script and a watch's end (measured at 47,712 against 52,543). 47,760 with a watch's script that ends
  * well until its moment comes (measured at 47,752 against 52,583). 48,470 with a draft's own limits (measured at 48,465
- * against 53,296).
+ * against 53,296). 48,640 with a mission a job drafts (measured at 48,639 against 53,470).
  */
-const SENT = 48_470;
+const SENT = 48_640;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

@@ -58,7 +58,8 @@ its plan, go with it; the chat keeps one line, `→ mission msn_3f2a91, running`
 `/mission <goal>` asks the agent you address for a draft of that goal: it reads what it needs, writes the brief and
 checks, or asks you first when the goal is unclear. `/goal` is the same command. A mission you write on the dashboard's
 form, and an automation's mission step, still start at once: you wrote the first, and nobody is there to press Start
-for the second.
+for the second. An automation's step can be set to leave its mission as a draft instead (0.8.46):
+[a mission in the middle](/en/docs/manual/schedule/#a-mission-in-the-middle).
 
 `/mission` with nothing after it lists what has not ended, as the Missions page has it: **Needs you**, **Working** and
 **Backlog** (the drafts not started), each with its count. Missions that are done, failed or stopped are not listed;
@@ -297,7 +298,8 @@ The three limits were 8 hours, 100 turns and 100,000,000 tokens before 0.8.46; a
 `limit_turns`, `limit_tokens`), each within what the setting itself may be (a quarter of an hour to 168 hours, 1 to
 1,000 turns, 100,000 tokens or more), and the draft shows them to you before you start it. You change them in the
 draft's form: **Hours**, **Turns** and **Tokens**, in millions. A piece of work a mission hands to another agent, and
-an automation's mission step, start with nobody there to say yes, so they keep the settings.
+an automation's mission step, start with nobody there to say yes, so they keep the settings. A mission an automation
+leaves as a draft takes the settings too, and you change them in its form before you start it.
 
 **One agent's own number of missions at once** is on its Settings page, **Missions at once**, or `[missions] per_agent`
 in its own `config.toml`: three for an agent that does long work, one for the rest. The box's `max_running` still

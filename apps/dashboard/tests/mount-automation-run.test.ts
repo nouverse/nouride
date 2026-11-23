@@ -126,6 +126,37 @@ describe("a run that waits for a person, as the engine answers it", () => {
 describe("each way a step can end", () => {
   const NINE: AutomationStep[] = ["a", "b", "c", "d", "e", "f", "g", "h", "i"].map((id) => ({ id, kind: id === "d" ? "mission" : id === "e" || id === "f" ? "approval" : "command", ...(id === "d" ? { goal: "Fix it" } : id === "e" || id === "f" ? { ask: "Go?" } : { argv: ["true"] }) }) as AutomationStep);
 
+  test("a step that drafted its mission is done, and its link says drafted, not started", async () => {
+    const said = 'Drafted the mission "Weekly plan" (msn_3f2a91). It waits in the Backlog and runs once it is started.';
+    // Each step up to it in the order the run took them: a step's outcome is drawn where the run's path reaches it.
+    const before: StepRunOutcome[] = ["a", "b", "c"].map((id) => ({ id, kind: "command", status: "done", startedAt: 1, ms: 20, said: "three open" }));
+    const outcomes: StepRunOutcome[] = [...before, { id: "d", kind: "mission", status: "done", startedAt: 1, ms: 30, said, missionId: "msn_3f2a91", drafted: true }];
+    const started: StepRunOutcome[] = [...before, { id: "d", kind: "mission", status: "done", startedAt: 1, ms: 30, said: "Two fixed.", missionId: "msn_9" }];
+    const seen = { chip: "", link: "", href: "", other: "" };
+    answer({ [PAGE]: detail(automation({ payload: { kind: "steps", steps: NINE } }), [run("success", outcomes)]) });
+    // A run that is over is drawn over the steps once it is picked from Recent runs.
+    const drawn = async (host: HTMLElement) => {
+      await flowDrawn(host, 9);
+      host.querySelector<HTMLElement>('[aria-label="Recent runs"] li > button')!.click();
+      await eventually(() => chip(host, "d") !== "", 2_000, "the run drawn over the steps");
+    };
+    await renderPage(PAGE, async (host) => {
+      await drawn(host);
+      seen.chip = chip(host, "d");
+      seen.link = stepCard(host, "d").querySelector("a")?.textContent?.trim() ?? "";
+      seen.href = stepCard(host, "d").querySelector("a")?.getAttribute("href") ?? "";
+    });
+    answer({ [PAGE]: detail(automation({ payload: { kind: "steps", steps: NINE } }), [run("success", started)]) });
+    await renderPage(PAGE, async (host) => {
+      await drawn(host);
+      seen.other = stepCard(host, "d").querySelector("a")?.textContent?.trim() ?? "";
+    });
+    expect(seen.chip).toStartWith("Done");
+    expect(seen.link).toBe("See the mission it drafted");
+    expect(seen.href).toBe("/dashboard/missions/msn_3f2a91");
+    expect(seen.other).toBe("See the mission it started");
+  });
+
   test("done and how long, failed, nothing to say, at work, waiting for its mission with the way to it, a no, no answer, skipped, cut off", async () => {
     const outcomes: StepRunOutcome[] = [
       { id: "a", kind: "command", status: "done", startedAt: 1, ms: 48_000, said: "all good" },

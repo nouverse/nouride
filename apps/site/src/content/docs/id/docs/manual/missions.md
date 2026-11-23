@@ -61,7 +61,8 @@ Catatan yang sudah ia tulis tentang tugas itu, dan rencananya, ikut pindah; chat
 kamu sapa membuat draft dari tujuan itu: ia membaca yang perlu, menulis brief dan cek-nya, atau bertanya dulu kalau
 tujuannya belum jelas. `/goal` adalah perintah yang sama. Misi yang kamu tulis di form dashboard, dan langkah misi di
 otomasi, tetap langsung jalan: yang pertama kamu sendiri yang menulis, dan yang kedua tidak ada orang yang bisa menekan
-Start.
+Start. Langkah otomasi bisa diatur supaya misinya ditinggal sebagai draft (0.8.46):
+[mission di tengah](/id/docs/manual/schedule/#mission-di-tengah).
 
 `/mission` tanpa kata lain menampilkan yang belum selesai, seperti di halaman Missions: **Needs you**, **Working**, dan
 **Backlog** (draft yang belum dimulai), masing-masing dengan jumlahnya. Misi yang sudah selesai, gagal, atau dihentikan
@@ -316,7 +317,9 @@ berikutnya menunggu di antrean dan bilang sedang menunggu apa. Sebelum 0.8.46 ti
 `limit_turns`, `limit_tokens`), masing-masing dalam rentang yang boleh untuk setelannya (seperempat jam sampai 168
 jam, 1 sampai 1.000 giliran, 100.000 token atau lebih), dan draft menunjukkannya ke kamu sebelum kamu mulai. Kamu
 mengubahnya di form draft: **Hours**, **Turns** dan **Tokens**, dalam juta. Bagian kerja yang diserahkan sebuah misi
-ke agent lain, dan langkah misi di sebuah automation, mulai tanpa ada yang bilang ya, jadi tetap memakai setelan.
+ke agent lain, dan langkah misi di sebuah automation, mulai tanpa ada yang bilang ya, jadi tetap memakai setelan. Misi
+yang ditinggal sebuah automation sebagai draft juga memakai setelan, dan kamu mengubahnya di form draft-nya sebelum
+memulainya.
 
 **Jumlah misi bersamaan untuk satu agent** diatur di halaman Settings agent itu, **Missions at once**, atau
 `[missions] per_agent` di `config.toml` miliknya sendiri: tiga untuk agent yang mengerjakan pekerjaan panjang, satu

@@ -319,6 +319,44 @@ describe("an agent proposes a list", () => {
     expect(card).toContain("It stays off until somebody turns it on.");
   });
 
+  /**
+   * A mission that is drafted, not started: through each door a job comes in by, kept as a yes, a no left out, and
+   * anything else refused with the step named. Its card says first that nothing starts, which is what a person turning
+   * it on would otherwise be surprised by.
+   */
+  test("a mission step that drafts: written with `draft`, kept, and said on the card as what waits in the Backlog", async () => {
+    const { propose, posted, made } = tool();
+    expect((await propose({ steps: [{ prompt: "Collect the issues." }, { mission: "Fix them.", agent: "nix", draft: true }, { mission: "Report on them.", draft: false }] })).isError).toBe(false);
+    const steps = (posted[0]!.payload as unknown as { steps: Record<string, unknown>[] }).steps;
+    expect(steps[1]).toEqual({ id: "s2", kind: "mission", goal: "Fix them.", draft: true, agentId: "nix" });
+    expect(steps[2]).toEqual({ id: "s3", kind: "mission", goal: "Report on them." });
+    const card = proposalCard(posted[0]!, "cron 0 9 * * 1", { buttons: true });
+    expect(card).toContain('2. drafts a mission, which waits in the Backlog until a person starts it, for nix: "Fix them.", then a reviewer agrees');
+    expect(card).toContain('3. a mission for nouva: "Report on them.", then a reviewer agrees');
+    // A job that is one mission takes it the same way.
+    expect((await propose({ mission: "Sum up the week.", draft: true })).isError).toBe(false);
+    expect(posted[1]!.payload).toEqual({ kind: "mission", goal: "Sum up the week.", draft: true });
+    expect(proposalCard(posted[1]!, "cron 0 9 * * 1", { buttons: true })).toContain('Does: drafts a mission, which waits in the Backlog until a person starts it, for nouva: "Sum up the week.", then a reviewer agrees');
+    // What the agent reads: the field, for a job and for a step, and what it does to the run.
+    const fields = (made.definition.parameters as { properties: Record<string, { description?: string; items?: { properties: Record<string, unknown> } }> }).properties;
+    expect(fields.draft!.description).toBe("Mission, or a step's: drafted for the person to start from their Backlog, not started; the run goes on.");
+    expect(Object.keys(fields.steps!.items!.properties)).toContain("draft");
+  });
+
+  test("the control API keeps a yes, leaves a no out, and refuses anything else with the step named", async () => {
+    const app = control();
+    const body = (payload: unknown) => ({ agentId: "nouva", name: "weekly", cron: "0 9 * * 1", payload, target: { gatewayId: "telegram:main", chatId: "1" } });
+    const made = async (payload: unknown) => ((await (await call(app, "POST", "/cron", body(payload))).json()) as { job?: Job; error?: string });
+    expect((await made({ kind: "steps", steps: [{ kind: "mission", goal: "Fix them.", draft: true }, { kind: "mission", goal: "Report.", draft: false }] })).job!.payload).toEqual({
+      kind: "steps",
+      steps: [{ id: "s1", kind: "mission", goal: "Fix them.", draft: true }, { id: "s2", kind: "mission", goal: "Report." }],
+    });
+    expect((await made({ kind: "mission", goal: "Sum up the week.", draft: true })).job!.payload).toEqual({ kind: "mission", goal: "Sum up the week.", draft: true });
+    expect((await made({ kind: "mission", goal: "Sum up the week.", draft: false })).job!.payload).toEqual({ kind: "mission", goal: "Sum up the week." });
+    expect((await made({ kind: "steps", steps: [{ kind: "mission", goal: "Fix them.", draft: "yes" }] })).error).toBe("step 1: a mission's `draft` is true, to draft it for a person to start, or left out, to start it.");
+    expect((await made({ kind: "mission", goal: "Sum up the week.", draft: 1 })).error).toBe("a mission's `draft` is true, to draft it for a person to start, or left out, to start it.");
+  });
+
   test("one started by hand is proposed with `manual`, and its card says when it runs", async () => {
     const { propose, posted } = tool();
     expect((await propose({ when: "manual", steps: [{ text: "Started." }] })).isError).toBe(false);

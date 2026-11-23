@@ -43,7 +43,7 @@ import {
 import type { CronPort, RunOutcome, RunState } from "@/modules/cron/cron.store.ts";
 import { APPROVAL_WAIT_MS, type StepHands } from "./steps.ts";
 import { StepRuns, type Parked } from "./step-runs.ts";
-import type { MissionEnd } from "@/modules/missions/job-runs.ts";
+import { busyLine, type JobRun as MissionBegun, type MissionEnd } from "@/modules/missions/job-runs.ts";
 import { deliverResult, reportFailure, undelivered, type Delivered } from "./delivery.ts";
 import { endJob } from "./ending.ts";
 import { runJobCommand } from "./job-command.ts";
@@ -115,7 +115,7 @@ export interface CronExecutors {
    * Start a `mission` job's run (0.8.0): the mission it started, the one of its runs still working — a job runs one at
    * a time — or why it could not start. Absent where missions are not run.
    */
-  startMission?(job: Job, body: string | undefined): { started: string } | { busy: string } | { refused: string };
+  startMission?(job: Job, body: string | undefined): MissionBegun;
   /** The daemon's alert channel (`[alerts]`), keyed for its cooldown. Absent means a failure is in the log only. */
   alert?(key: string, text: string): Promise<unknown>;
   /** Whether an agent is asleep (0.8.0): a run of its job due then is recorded as skipped, whatever the job runs. */
@@ -592,9 +592,11 @@ export class CronScheduler {
          * ends at the reviewer. The run records which mission it started; that mission's page and its notices in the
          * job's chat say how it went. A run due while the last one still works is skipped, and says so.
          */
-        const run = this.options.executors.startMission?.(job, trigger?.body) ?? { refused: "missions are not run in this process" };
-        if ("busy" in run) return { status: "skipped", result: `the last run, mission ${run.busy}, is still working` };
+        const run: MissionBegun = this.options.executors.startMission?.(job, trigger?.body) ?? { refused: "missions are not run in this process" };
+        if ("busy" in run) return { status: "skipped", result: busyLine(run) };
         if ("refused" in run) return { status: "error", result: run.refused };
+        // Drafted: nothing runs until its person starts it, and its notice in the job's chat is what tells them.
+        if ("drafted" in run) return { status: "success", result: run.said, told: true };
         return { status: "success", result: `started mission ${run.started}`, ...told };
       }
 

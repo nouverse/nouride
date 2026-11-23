@@ -131,6 +131,7 @@ function doesOf(args: Record<string, unknown>): OneKind | string {
         goal: value,
         ...(checks.length > 0 ? { checks } : {}),
         ...(args.no_review === true ? { review: false } : typeof args.review === "string" && args.review.trim() ? { review: args.review.trim() } : {}),
+        ...(args.draft === true ? { draft: true as const } : {}),
       };
     }
   }
@@ -298,6 +299,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           checks: { type: "array", items: { type: "string" }, description: "Mission: commands that say a run is done." },
           review: { type: "string", description: "Mission: what the reviewer checks." },
           no_review: { type: "boolean", description: "Mission: no reviewer." },
+          draft: { type: "boolean", description: "Mission, or a step's: drafted for the person to start from their Backlog, not started; the run goes on." },
           steps: {
             type: "array",
             description:
@@ -314,6 +316,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
                 secrets: { type: "array", items: { type: "string" } },
                 prompt: { type: "string" },
                 mission: { type: "string" },
+                draft: { type: "boolean" },
                 ask: { type: "string" },
                 // Each of them is written as a step is, so its fields are not spelled out a second time on every request.
                 together: { type: "array", items: { type: "object" } },

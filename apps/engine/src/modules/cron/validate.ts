@@ -281,8 +281,10 @@ function approvalProblems(step: Extract<JobStep, { kind: "approval" }>, at: stri
   }
 }
 
-function missionProblems(payload: { goal: string; checks?: string[]; review?: string | false }, delivery: JobDelivery | undefined): void {
+function missionProblems(payload: { goal: string; checks?: string[]; review?: string | false; draft?: unknown }, delivery: JobDelivery | undefined): void {
   if (!payload.goal.trim()) throw new CronValidationError("a mission needs a goal: what should be true when a run is done.", "goal");
+  // Said or left out: a `draft` that is anything else would start a mission its writer meant to wait.
+  if (payload.draft !== undefined && payload.draft !== true) throw new CronValidationError("a mission's `draft` is true, to draft it for a person to start, or left out, to start it.", "goal");
   if (payload.goal.length > GOAL_MAX) throw new CronValidationError(`keep a mission's goal under ${GOAL_MAX} characters: write the detail to a file and name its absolute path in the goal.`, "goal");
   const checks = payload.checks ?? [];
   if (checks.length > CHECKS_MAX || checks.some((check) => typeof check !== "string" || !check.trim() || check.length > CHECK_MAX)) {

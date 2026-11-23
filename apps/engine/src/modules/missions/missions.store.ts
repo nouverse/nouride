@@ -242,10 +242,24 @@ export class MissionStore {
       .map(fromRow);
   }
 
-  /** A job's run still open (0.8.0): a job runs one at a time, so a run due meanwhile is skipped. */
+  /**
+   * A job's run still open (0.8.0): a job runs one at a time, so a run due meanwhile is skipped. One the job only
+   * drafted is not a run: nothing of it works until a person starts it, and held as one it kept the job's other
+   * missions from starting for as long as it waited.
+   */
   openForJob(jobId: string): Mission | null {
     const row = this.db
-      .prepare<Row>("SELECT * FROM missions WHERE job_id = ? AND status IN ('queued', 'running', 'waiting', 'checking') ORDER BY created_at DESC LIMIT 1")
+      .prepare<Row>(
+        "SELECT * FROM missions WHERE job_id = ? AND status IN ('queued', 'running', 'waiting', 'checking') AND NOT (status = 'waiting' AND wait_kind = 'accept' AND started_at IS NULL) ORDER BY created_at DESC LIMIT 1",
+      )
+      .get(jobId);
+    return row ? fromRow(row) : null;
+  }
+
+  /** The draft a job made that still waits for its start, the newest: a job keeps one waiting at a time. */
+  draftForJob(jobId: string): Mission | null {
+    const row = this.db
+      .prepare<Row>("SELECT * FROM missions WHERE job_id = ? AND status = 'waiting' AND wait_kind = 'accept' AND started_at IS NULL ORDER BY created_at DESC LIMIT 1")
       .get(jobId);
     return row ? fromRow(row) : null;
   }

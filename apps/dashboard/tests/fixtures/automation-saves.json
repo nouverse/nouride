@@ -705,6 +705,127 @@
     }
   },
   {
+    "name": "Weekly plan",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Weekly plan",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "Read last week's notes and list what is still open."
+          },
+          {
+            "id": "s2",
+            "kind": "mission",
+            "goal": "Close what is still open from last week.",
+            "name": "Draft the work",
+            "checks": [
+              "test -s DONE.md"
+            ],
+            "review": false,
+            "draft": true
+          },
+          {
+            "id": "s3",
+            "kind": "systemEvent",
+            "text": "This week's work is drafted. Start it when you are ready."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "cron": "0 8 * * 1",
+      "tz": "Asia/Jakarta"
+    },
+    "keeps": {
+      "name": "Weekly plan",
+      "start": "scheduled",
+      "payload": {
+        "kind": "steps",
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "agentTurn",
+            "message": "Read last week's notes and list what is still open."
+          },
+          {
+            "id": "s2",
+            "kind": "mission",
+            "goal": "Close what is still open from last week.",
+            "name": "Draft the work",
+            "checks": [
+              "test -s DONE.md"
+            ],
+            "review": false,
+            "draft": true
+          },
+          {
+            "id": "s3",
+            "kind": "systemEvent",
+            "text": "This week's work is drafted. Start it when you are ready."
+          }
+        ]
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
+    "name": "Monday prep",
+    "send": {
+      "create": "/cron"
+    },
+    "body": {
+      "agentId": "nouva",
+      "name": "Monday prep",
+      "payload": {
+        "kind": "mission",
+        "goal": "Prepare the week's report from the notes.",
+        "draft": true
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      },
+      "manual": true
+    },
+    "keeps": {
+      "name": "Monday prep",
+      "start": "manual",
+      "payload": {
+        "kind": "mission",
+        "goal": "Prepare the week's report from the notes.",
+        "draft": true
+      },
+      "target": {
+        "gatewayId": "telegram:nouva",
+        "chatId": "8142"
+      },
+      "delivery": {
+        "mode": "announce"
+      }
+    }
+  },
+  {
     "name": "Shop health check, changed",
     "send": {
       "change": "Shop health check"

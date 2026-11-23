@@ -30,6 +30,10 @@ describe("an automation as a draft", () => {
     expect(payloadOf({ steps: [{ id: "s1", kind: "command", argv: ["sh"], script }], then: "deliver", list: false })).toEqual({ kind: "command", argv: ["sh"], script, then: "deliver" });
     expect(stepsOf({ kind: "command", argv: ["sh", "-lc", "ls"], cwd: "/srv", timeoutMs: 5000, then: "agentTurn" })).toEqual([{ id: "s1", kind: "command", argv: ["sh", "-lc", "ls"], cwd: "/srv", timeoutMs: 5000 }]);
     expect(stepsOf({ kind: "mission", goal: "Do it", checks: ["true"], review: false })).toEqual([{ id: "s1", kind: "mission", goal: "Do it", checks: ["true"], review: false }]);
+    // A mission the run drafts: read as one, saved as one, and a no is nothing written.
+    expect(stepsOf({ kind: "mission", goal: "Do it", draft: true })).toEqual([{ id: "s1", kind: "mission", goal: "Do it", draft: true }]);
+    expect(payloadOf({ steps: [{ id: "s1", kind: "mission", goal: "Do it", draft: true }], then: "deliver", list: false })).toEqual({ kind: "mission", goal: "Do it", draft: true });
+    expect(payloadOf({ steps: [{ id: "s1", kind: "mission", goal: "Do it" }], then: "deliver", list: false })).toEqual({ kind: "mission", goal: "Do it" });
     expect(stepsOf({ kind: "steps", steps: [say("a"), say("b")] })).toEqual([say("a"), say("b")]);
   });
 
