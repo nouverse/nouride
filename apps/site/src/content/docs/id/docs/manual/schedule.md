@@ -79,6 +79,17 @@ terbuka di samping kanvas kalau jendelanya lebar, atau di dalam kotak itu sendir
 kalau gak ada yang ditekan, run-run terakhir ada di sana. **Add a step** ada di bawah langkah terakhir, tanda plus muncul di garis antara dua kotak,
 dan kotak bisa diseret untuk dipindah. Gak ada yang berubah sebelum kamu menekan **Save**.
 
+Yang belum kamu simpan disimpan sementara di browser tempat kamu membuatnya (0.8.45), jadi halaman yang kamu
+tinggalkan terbuka lagi dengan perubahanmu, dan bilang begitu. Di daftar Automations, automation yang sedang kamu
+buat dan belum pernah disimpan muncul sebagai baris sendiri, dengan **Continue** dan **Discard**, dan automation
+yang punya perubahan menunggu di halamannya diberi tanda **Unsaved changes**. **Save** dan **Cancel** (atau
+**Discard changes**) yang mengakhirinya. Ia hanya ada di browser itu: gak ada di ponselmu, dan gak dilihat orang
+lain. Kalau automation-nya diubah orang lain selagi perubahanmu menunggu, halaman menampilkannya seperti yang
+tersimpan sekarang dan menawarkan perubahanmu di sampingnya.
+
+Bilah untuk menyimpan bilang apa yang masih kurang, satu per satu. Tekan baris itu dan kamu dibawa ke sana: isian
+nama, atau kotak yang memuatnya, dalam keadaan terbuka.
+
 ![Halaman satu automation: kotak untuk awalnya, kotak untuk tiap langkah beserta apa yang terjadi kalau gagal, dan run terakhirnya](/media/dashboard-automation-steps.png)
 
 ### Ke mana automation lanjut
@@ -93,9 +104,16 @@ sendiri, dengan empat jawaban (0.8.44):
 | **Ask me first** | kamu ditanya, beserta kenapa ia gagal. Ya berarti lanjut, tidak berarti berhenti di situ |
 | **Do something else** | langkah lain jalan menggantikannya. Langkah-langkah itu digambar di samping langkahnya (di bawahnya, menjorok, kalau gak ada ruang di samping), dan berakhir dengan salah satu dari dua cara: kembali ke langkah-langkah di bawah, atau berhenti |
 
-"Go on anyway" dan "Ask me first" ditulis di kotak langkah itu sendiri, lengkap dengan pertanyaannya dan ke mana tiap
-jawaban membawa. Jawaban **tidak** pada langkah yang menunggu persetujuan ditanyakan dengan cara yang sama: berhenti
-di situ, lanjut saja, atau kerjakan hal lain.
+Kotak tiap langkah bilang apa yang terjadi kalau ia gagal (0.8.45): langkah yang dibiarkan di "Stop and tell me"
+menuliskannya di bawah kata-katanya, dengan tanda berhenti, dan "Go on anyway" serta "Ask me first" juga ditulis di
+sana, lengkap dengan pertanyaannya dan ke mana tiap jawaban membawa. Jawaban **tidak** pada langkah yang menunggu
+persetujuan ditanyakan dengan cara yang sama: berhenti di situ, lanjut saja, atau kerjakan hal lain.
+
+Langkah-langkah yang jalan menggantikan sebuah langkah juga menjawab untuk dirinya sendiri (0.8.45): masing-masing
+bisa berhenti, dan itu yang terjadi kalau kamu gak memilih yang lain, atau lanjut saja. Pertanyaan atau langkah
+pengganti sendiri hanya dimiliki langkah di jalur utama. Di mana langkah-langkah itu berakhir ditulis di bawahnya,
+dan tanda itu bisa ditekan untuk mengubahnya: **kembali** ke langkah tempat jalur utama lanjut, disebut dengan
+nomornya, atau **berhenti**. Pilihan yang sama ada di isian tiap langkah itu.
 
 Langkah yang **gak punya apa-apa untuk dikatakan** (skrip yang gak mencetak apa pun, agent yang gak punya laporan)
 mengakhiri automation dengan diam, jadi pengecekan yang gak menemukan apa-apa gak membangunkan siapa pun. Di bawah
