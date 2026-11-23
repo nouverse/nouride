@@ -29,21 +29,28 @@ const REPORT: ImportReport = {
   kept: "/home/nouride/.nouride/before-import-2026-11-20T01-00-00", live: false,
 };
 
-/** Every request the page sends that is not a read, by method and path, with its body: a piece of a file by its size. */
+/**
+ * Every request the page sends that is not a read, by method and path, with its body: a piece of a file by its size.
+ * And each read, by its path alone: what a page asked for without being asked to.
+ */
 function recordWrites(answers: Record<string, (body: unknown) => { status: number; body: unknown }> = {}) {
   const sent: { method: string; path: string; body: unknown }[] = [];
+  const read: string[] = [];
   const spy = globalThis.fetch;
   globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
     const url = new URL(String(typeof input === "string" ? input : (input as Request).url), "http://localhost");
     const method = init?.method ?? "GET";
-    if (method === "GET") return (spy as typeof fetch)(input as RequestInfo, init);
     const path = `${url.pathname.replace(/^\/api\/control/, "")}${url.search}`;
+    if (method === "GET") {
+      read.push(path);
+      return (spy as typeof fetch)(input as RequestInfo, init);
+    }
     const body = init?.body instanceof Blob ? { piece: init.body.size } : init?.body ? JSON.parse(String(init.body)) : null;
     sent.push({ method, path, body });
     const reply = answers[path]?.(body) ?? { status: 200, body: {} };
     return new Response(JSON.stringify(reply.body), { status: reply.status, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
-  return { sent, restore: () => void (globalThis.fetch = spy) };
+  return { sent, read, restore: () => void (globalThis.fetch = spy) };
 }
 
 let record: ReturnType<typeof recordWrites> | null = null;
@@ -57,6 +64,12 @@ const button = (root: ParentNode, label: string) => [...root.querySelectorAll("b
 const passwords = (root: ParentNode) => [...root.querySelectorAll('input[type="password"]')] as unknown as HTMLInputElement[];
 const boxes = (root: ParentNode) => [...root.querySelectorAll('input[type="checkbox"]')] as unknown as HTMLInputElement[];
 const dialog = () => dom.document.querySelector("dialog[open]") as unknown as HTMLElement | null;
+/** The count asked for by its button, and waited for: what a person does before they read the sizes. */
+async function counted(host: HTMLElement): Promise<void> {
+  await eventually(() => button(host, "Count how large it will be") !== undefined, 3_000, "the count's button");
+  button(host, "Count how large it will be")!.click();
+  await eventually(() => card(host, "data-export-holds") !== null, 3_000, "the count");
+}
 
 /** A file picked in the card's hidden input, as a person's pick is: `size` bytes. */
 function pick(host: HTMLElement, size: number): void {
@@ -74,6 +87,8 @@ describe("the words of a file", () => {
       "Memory: 40 files, 200 KB",
       "The agents' own folders: 2 files, 2 KB",
     ]);
+    // A large install's count is read with its thousands apart.
+    expect(holdsLines({ workspace: { files: 1_241_040, bytes: 38 * 1024 ** 3 } }, 0).at(-1)).toBe("The agents' own folders: 1,241,040 files, 38.0 GB");
   });
 
   test("what waits for Go live, and what did not come, each only where there is something of it", () => {
@@ -95,7 +110,7 @@ describe("making the file", () => {
   test("says what it will hold first; the button waits for a password typed twice, twelve characters or more, and sends it once", async () => {
     const seen = { lines: [] as string[], folders: "", empty: true, short: true, differ: true, ready: false, said: "" };
     await renderPage("/transfer", async (host) => {
-      await eventually(() => card(host, "data-export-holds") !== null, 3_000, "the plan");
+      await counted(host);
       record = recordWrites({ "/transfer/export": () => ({ status: 202, body: { ...STATE, export: { state: "working", done: { files: 3, bytes: 1024 }, total: PLAN.bytes } } }) });
       const at = card(host, "data-export")!;
       seen.lines = [...at.querySelectorAll("[data-export-holds] li")].map((line) => line.textContent ?? "");
@@ -122,14 +137,73 @@ describe("making the file", () => {
     expect(seen.folders).toContain("310 files, 80.0 MB");
     expect([seen.empty, seen.short, seen.differ, seen.ready]).toEqual([true, true, true, true]);
     expect(record!.sent).toEqual([{ method: "POST", path: "/transfer/export", body: { passphrase: "a long walk to the river", folders: false } }]);
-    expect(seen.said).toContain("Making the file: 3 files");
+    expect(seen.said).toContain("Making the file: 3 files, 1 KB of about 5.2 MB.");
+  });
+
+  /**
+   * The count reads every file of the install. Made as the page opened, it was still running on the daemon after a
+   * person had gone on to another page, and every page was slow until it ended.
+   */
+  test("nothing is counted as the page opens: it says what a file holds in words, and counts by its button, once for both sizes", async () => {
+    const seen = { early: "", lines: null as Element | null, tick: "", secrets: "", sized: "", withFolders: [] as string[], larger: "", again: false };
+    record = recordWrites();
+    const plans = () => record!.read.filter((path) => path.startsWith("/transfer/plan")).length;
+    let before = -1;
+    let after = -1;
+    let ticked = -1;
+    let twice = -1;
+    await renderPage("/transfer", async (host) => {
+      await eventually(() => button(host, "Count how large it will be") !== undefined, 3_000, "the count's button");
+      const at = card(host, "data-export")!;
+      seen.early = card(host, "data-export-everything")!.textContent ?? "";
+      seen.lines = card(host, "data-export-holds");
+      seen.tick = boxes(at)[0]!.closest("label")!.textContent ?? "";
+      seen.secrets = boxes(at)[1]!.closest("label")!.textContent ?? "";
+      before = plans();
+      button(host, "Count how large it will be")!.click();
+      await eventually(() => card(host, "data-export-holds") !== null, 3_000, "the count");
+      after = plans();
+      seen.sized = at.textContent ?? "";
+      boxes(at)[0]!.click();
+      await eventually(() => (at.textContent ?? "").includes("The agents' own folders: 310 files"), 2_000, "the folders in the list");
+      seen.withFolders = [...at.querySelectorAll("[data-export-holds] li")].map((line) => line.textContent ?? "");
+      seen.larger = at.textContent ?? "";
+      ticked = plans();
+      seen.again = button(host, "Count again") !== undefined;
+      button(host, "Count again")!.click();
+      await eventually(() => plans() === 2, 2_000, "the second count");
+      twice = plans();
+    });
+    expect(seen.early).toContain("Everything this Nouride keeps");
+    expect(seen.lines).toBeNull();
+    // The folders' tick says no size it has not counted; the secrets' count is known without one.
+    expect(seen.tick).not.toMatch(/\d+ files/);
+    expect(seen.secrets).toContain("The secrets (4), locked with a password");
+    expect([before, after, ticked, twice]).toEqual([0, 1, 1, 2]);
+    expect(seen.sized).toContain("About 5.2 MB before it is packed");
+    expect(seen.withFolders.at(-1)).toBe("The agents' own folders: 310 files, 80.0 MB");
+    expect(seen.larger).toContain("About 85.2 MB before it is packed");
+    expect(seen.again).toBe(true);
+  });
+
+  test("a file being made says it is counting what goes in until its size is known, with no number of its own", async () => {
+    answer({ "/transfer": { status: 200, body: { ...STATE, export: { state: "working", done: { files: 0, bytes: 0 } } } } });
+    let said = "";
+    let bar: string | null = "";
+    await renderPage("/transfer", async (host) => {
+      await eventually(() => card(host, "data-export-working") !== null, 3_000, "the progress");
+      said = card(host, "data-export-working")!.textContent ?? "";
+      bar = card(host, "data-export-working")!.querySelector("progress")!.getAttribute("value");
+    });
+    expect(said).toBe("Making the file: counting what goes in.");
+    expect(bar).toBeNull();
   });
 
   test("without the secrets it says none go in before the button is pressed, and asks for no password; the folders are asked for by their tick", async () => {
     let note = "";
     let fields = -1;
     await renderPage("/transfer", async (host) => {
-      await eventually(() => card(host, "data-export-holds") !== null, 3_000, "the plan");
+      await eventually(() => card(host, "data-export") !== null, 3_000, "the card");
       record = recordWrites({ "/transfer/export": () => ({ status: 202, body: STATE }) });
       const at = card(host, "data-export")!;
       const [folders, secrets] = boxes(at);
@@ -148,7 +222,8 @@ describe("making the file", () => {
   });
 
   test("where no secret is kept there is nothing to lock: no tick, no password, and the file is asked for without them", async () => {
-    answer({ "/transfer/plan": { status: 200, body: { ...PLAN, secrets: 0 } } });
+    // Known from the page's first answer, with nothing counted: the count is a person's to ask for.
+    answer({ "/transfer": { status: 200, body: { ...STATE, secrets: 0 } }, "/transfer/plan": { status: 200, body: {}, hold: true } });
     let said = "";
     let fields = -1;
     let ticks = -1;

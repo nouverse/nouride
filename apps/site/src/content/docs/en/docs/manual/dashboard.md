@@ -377,8 +377,10 @@ commands and decisions. On **Logs**, anyone else has the two other tabs: what ra
 still running in the background.
 
 **Export and import** (0.8.41, an admin's) takes everything this Nouride holds to another machine as one file, or
-brings such a file in. The page says what the file will hold before it is made; the secrets go in only locked with a
-password you type, and the agents' own folders only when ticked. A file brought in is shown beside what is here
+brings such a file in. The page says what the file will hold before it is made, and counts how large when you press
+**Count how large it will be** (0.8.46; before, it counted as the page opened, which on a large install slowed every
+page until it ended); the secrets go in only locked with a password you type, and the agents' own folders only when
+ticked. A file brought in is shown beside what is here
 before anything is replaced, asks for the word `replace` and ten seconds, and replaces everything: nothing is merged.
 Afterwards the page leads with what came and what did not, and the connections and automations wait for **Go live**.
 [Move Nouride to another machine](/en/docs/deployment/move-to-another-machine/) has the steps.

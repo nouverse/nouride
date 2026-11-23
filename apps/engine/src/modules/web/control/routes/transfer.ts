@@ -49,9 +49,9 @@ export function registerTransferRoutes(control: ControlApp, deps: ControlDeps, g
     return c.json(service().state() satisfies TransferState);
   });
 
-  control.get("/transfer/plan", (c) => {
+  control.get("/transfer/plan", async (c) => {
     if (!admin(c)) return c.json(ADMIN_ONLY, 403);
-    return c.json(service().plan(c.req.query("folders") === "1") satisfies ExportPlan);
+    return c.json((await service().plan(c.req.query("folders") === "1")) satisfies ExportPlan);
   });
 
   control.post("/transfer/export", async (c) => {

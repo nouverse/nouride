@@ -45,6 +45,8 @@ export interface TransferDeps {
 export class Transfer {
   private exporting: ExportStatus = { state: "none" };
   private opened: OpenedImport | null = null;
+  /** The counts being made, by whether the agents' folders are in them: a second ask joins the one that is running. */
+  private readonly counting = new Map<boolean, Promise<ExportPlan>>();
 
   constructor(private readonly deps: TransferDeps) {}
 
@@ -74,13 +76,25 @@ export class Transfer {
       failed: lastImportFailure(this.data),
       staged: importStaged(this.data),
       held: heldBack(this.deps.state),
+      secrets: this.secretCount(),
     };
   }
 
-  plan(folders: boolean): ExportPlan {
-    const plan = exportPlan({ config: this.deps.config(), configPath: this.deps.configPath, dbPath: join(this.data, "nouride.db"), folders, credential: this.deps.credential });
-    ensureDir(this.exportDir, 0o700);
-    return { ...plan, secrets: this.secretCount(), freeBytes: freeDiskBytes(this.exportDir) };
+  /**
+   * What an export would hold, counted: every file of the install is read for its size, which on a large one takes a
+   * while, so it is made when asked for and never as a page opens. Asked again while it runs, it is the same count.
+   */
+  plan(folders: boolean): Promise<ExportPlan> {
+    const running = this.counting.get(folders);
+    if (running) return running;
+    const count = exportPlan({ config: this.deps.config(), configPath: this.deps.configPath, dbPath: join(this.data, "nouride.db"), folders, credential: this.deps.credential })
+      .then((plan): ExportPlan => {
+        ensureDir(this.exportDir, 0o700);
+        return { ...plan, secrets: this.secretCount(), freeBytes: freeDiskBytes(this.exportDir) };
+      })
+      .finally(() => this.counting.delete(folders));
+    this.counting.set(folders, count);
+    return count;
   }
 
   /** The last export, as it stands: one made by an earlier run of the daemon is found on disk. */
@@ -109,12 +123,12 @@ export class Transfer {
       return { ok: false, why: "short", error: `the passphrase is shorter than ${PASSPHRASE_MIN} characters` };
     }
     const config = this.deps.config();
-    const total = exportPlan({ config, configPath: this.deps.configPath, dbPath: join(this.data, "nouride.db"), folders: asked.folders, credential: this.deps.credential }).bytes;
     removePath(this.exportDir);
     ensureDir(this.exportDir, 0o700);
     const name = `nouride-export-${new Date(this.now()).toISOString().slice(0, 16).replace(/[:T]/g, "-")}.tar.gz`;
     const store = passphrase === null ? null : this.deps.secrets.sealedCopyText();
-    this.exporting = { state: "working", done: { files: 0, bytes: 0 }, total };
+    // No size yet: the export counts what goes in as it gathers it, and says so then (`onCounted`).
+    this.exporting = { state: "working", done: { files: 0, bytes: 0 } };
     void writeExport({
       config,
       configPath: this.deps.configPath,
@@ -127,6 +141,9 @@ export class Transfer {
       credential: this.deps.credential,
       ...(passphrase !== null && store !== null ? { secrets: { passphrase, store, count } } : {}),
       now: () => this.now(),
+      onCounted: (total) => {
+        if (this.exporting.state === "working") this.exporting = { ...this.exporting, total };
+      },
       onProgress: (done) => {
         if (this.exporting.state === "working") this.exporting = { ...this.exporting, done: { ...done } };
       },
@@ -183,7 +200,7 @@ export class Transfer {
     this.opened = opened;
     const config = this.deps.config();
     const { manifest } = opened;
-    const here = exportPlan({ config, configPath: this.deps.configPath, dbPath: join(this.data, "nouride.db"), folders: manifest.folders, credential: this.deps.credential });
+    const here = await exportPlan({ config, configPath: this.deps.configPath, dbPath: join(this.data, "nouride.db"), folders: manifest.folders, credential: this.deps.credential });
     const people = placesOf(config, this.deps.configPath, false).find((place) => place.name === "config/people");
     return {
       version: manifest.version,

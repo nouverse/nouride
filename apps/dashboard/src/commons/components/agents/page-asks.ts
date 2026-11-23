@@ -31,6 +31,7 @@ export const PAGE_ASKS = {
   logs: { task: "to read the logs", message: "Read the recent logs and tell me, in plain words, whether anything is wrong." },
   system: { task: "how this machine is doing", message: "How is this machine doing? Check its memory and its disk, and tell me in plain words." },
   files: { task: "what can be cleared", message: "Look at what takes the most room in my agents' workspaces, and tell me in plain words what is safe to delete. Do not delete anything yet." },
+  transfer: { task: "about export and import", message: "I want to take this Nouride to another machine, or bring one in here: … Tell me what goes with it and what does not, and walk me through it." },
   box: { task: "how the box is doing", message: "How is my box doing? Check its disk, its memory and its updates, and tell me in plain words." },
 } as const satisfies Record<string, PageAsk>;
 

@@ -391,8 +391,10 @@ orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, d
 latar belakang.
 
 **Export and import** (0.8.41, khusus admin) membawa semua isi Nouride ini ke mesin lain sebagai satu file, atau
-memasukkan file seperti itu ke sini. Halamannya bilang apa isi file sebelum dibuat; secret cuma ikut kalau dikunci
-dengan password yang kamu ketik, dan folder milik agent cuma kalau dicentang. File yang dimasukkan ditampilkan di
+memasukkan file seperti itu ke sini. Halamannya bilang apa isi file sebelum dibuat, dan menghitung besarnya waktu
+kamu menekan **Count how large it will be** (0.8.46; sebelumnya dihitung begitu halaman dibuka, yang di install
+besar bikin semua halaman lambat sampai selesai); secret cuma ikut kalau dikunci dengan password yang kamu ketik,
+dan folder milik agent cuma kalau dicentang. File yang dimasukkan ditampilkan di
 samping isi yang ada sebelum ada yang diganti, meminta kata `replace` dan sepuluh detik, lalu menggantikan semuanya:
 gak ada yang digabung. Setelah itu halamannya dibuka dengan apa yang ikut dan apa yang gak, dan koneksi serta
 automation menunggu **Go live**.

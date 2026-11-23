@@ -17,7 +17,8 @@ const PART_WORDS: Record<keyof TransferParts, string> = {
   workspace: "The agents' own folders",
 };
 
-const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+// With its thousands apart: an agents' folder of 1241040 files is read as a number only with them.
+const count = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString("en-US")} ${n === 1 ? one : many}`;
 
 /** The lines of what a file holds: the database first, then each part that has a file in it. */
 export function holdsLines(parts: TransferParts, database: number): string[] {

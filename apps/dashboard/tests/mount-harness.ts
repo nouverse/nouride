@@ -151,7 +151,7 @@ export const RESPONSES: Record<string, unknown> = {
    * Hand-written: export and import. What the routes answer is this machine's own (the room on its disk, the size of
    * its database as it stands), which no fixture written on another machine would hold.
    */
-  "/transfer": { export: { state: "none" }, upload: null, imported: null, restarts: true, failed: null, staged: false, held: false },
+  "/transfer": { export: { state: "none" }, upload: null, imported: null, restarts: true, failed: null, staged: false, held: false, secrets: 4 },
   "/transfer/plan": {
     parts: { config: { files: 3, bytes: 4096 }, agents: { files: 12, bytes: 20_480 }, memory: { files: 40, bytes: 204_800 }, attachments: { files: 2, bytes: 1024 } },
     database: 5 * 1024 * 1024, folders: { files: 310, bytes: 80 * 1024 * 1024 }, bytes: 5 * 1024 * 1024 + 230_400, secrets: 4, freeBytes: 20 * 1024 ** 3,

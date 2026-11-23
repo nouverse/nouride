@@ -6,7 +6,7 @@ import { control, post, request } from "./api.client";
 export const transferApi = {
   transfer: () => request<TransferState>(`${control}/transfer`),
   /** What a file would hold and how large, before it is made. */
-  exportPlan: (folders: boolean) => request<ExportPlan>(`${control}/transfer/plan${folders ? "?folders=1" : ""}`),
+  exportPlan: () => request<ExportPlan>(`${control}/transfer/plan`),
   /** `password` null: a file that holds no secrets, which the page says before it asks. */
   startExport: (input: { password: string | null; folders: boolean }) =>
     post<TransferState>(`${control}/transfer/export`, input.password === null ? { secrets: false, folders: input.folders } : { passphrase: input.password, folders: input.folders }),
