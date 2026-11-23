@@ -49,6 +49,24 @@ export function jumpPath(from: Point, to: Point, side: number, radius = 14): str
   ].join(" ");
 }
 
+/**
+ * The path of a lane's way back into the main line: from where the lane ends, in toward the steps, a rounded turn
+ * down beside them, and in to the step it goes back to, from that step's side. The mirror of a jump: `side` is left
+ * of where it starts and right of where it lands.
+ */
+export function returnPath(from: Point, to: Point, side: number, radius = 14): string {
+  const down = Math.max(0, to.y - from.y);
+  const r = Math.max(0, Math.min(radius, down / 2, from.x - side, side - to.x));
+  return [
+    `M ${from.x} ${from.y}`,
+    `H ${side + r}`,
+    `Q ${side} ${from.y} ${side} ${from.y + r}`,
+    `V ${to.y - r}`,
+    `Q ${side} ${to.y} ${side - r} ${to.y}`,
+    `H ${to.x}`,
+  ].join(" ");
+}
+
 /** The arrow's head where a jump lands, pointing in at the step from the side. */
 export function arrowHead(at: Point, size = 6): string {
   return `M ${at.x} ${at.y} l ${size} ${-size * 0.7} v ${size * 1.4} z`;

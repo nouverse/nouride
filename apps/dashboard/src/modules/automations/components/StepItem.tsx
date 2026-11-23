@@ -19,12 +19,12 @@ import { cn } from "@/commons/lib/utils";
 import type { Editor } from "../hooks/use-editor";
 import { chipExits, stopsAt, type Paths, type PathExit, type Rule } from "../lib/paths";
 import { exitTaken, outcomeWords, type Tone } from "../lib/runs";
-import { STEPS_MAX, landsAt, type Step } from "../lib/steps";
+import { STEPS_MAX, type Step } from "../lib/steps";
 import type { Mark } from "../lib/suggested";
-import { KIND, exitChip, partTitle, placeTitle, stepFacts, stepLine } from "../lib/words";
-import { Branches, stepAnchor } from "./Branches";
+import { KIND, exitChip, partTitle, stepFacts, stepLine } from "../lib/words";
+import { Branches, backKey, laneEndAnchor, stepAnchor } from "./Branches";
 import type { AgentChoice } from "./KindFields";
-import { FactStrip, LaneEnd, LaneLine, RuleStrip, StopStrip } from "./PathRules";
+import { FactStrip, LaneEnd, LaneLine, RuleStrip, StopStrip, laneBackChoices } from "./PathRules";
 import { ScriptRead } from "./ScriptFields";
 import { StepBox, type BoxLook } from "./StepBox";
 import { ResetNotes } from "./StepFields";
@@ -248,10 +248,8 @@ function Lane({ owner, rule, shared, onAdd }: { owner: number; rule: Extract<Rul
   const leftBy = went(step.id) ? exitTaken(went(step.id)!.status) : null;
   const taken = leftBy === rule.exit;
   const name = exitChip(step, rule.exit);
-  // Where its end can be set to go back: the step the main line goes on with after the step it hangs on. None after the last.
-  const done = landsAt(steps, owner, "then");
-  const back = rule.ends !== "stop" ? rule.ends.back : done === "end" ? null : done;
   const editor = mode.kind === "edit" ? mode.editor : null;
+  const way = backKey(step.id, rule.exit);
   return (
     <section data-lane={rule.exit} data-taken={taken ? "" : undefined} aria-label={`${name}: what runs in its place`} className="relative">
       {/* The line from the step's box to its lane, where the lane stands at its side. */}
@@ -275,9 +273,11 @@ function Lane({ owner, rule, shared, onAdd }: { owner: number; rule: Extract<Rul
         </button>
       ) : null}
       <LaneEnd
-        ends={rule.ends === "stop" ? "stop" : "back"}
-        back={back === null ? undefined : placeTitle(shared.paths.line.indexOf(back), titleOf(steps[back]!))}
+        anchor={laneEndAnchor(step.id, rule.exit)}
+        backs={laneBackChoices(steps, owner, rule, shared.paths, titleOf)}
         onSet={editor ? (ends) => editor.laneEnd(owner, rule.exit, ends) : undefined}
+        // The pointer on where the lane ends lights its way back and the step it lands on.
+        onActive={rule.ends === "stop" ? undefined : (on) => shared.onActive(on ? way : null)}
       />
     </section>
   );

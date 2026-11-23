@@ -10,16 +10,18 @@
  * arrow on, a hand.
  *
  * A lane's end is a mark and never words alone: a line back with the step it rejoins named by its place, or a stop.
- * While the steps are changed the mark is pressed to set it: it was set only in the fields of the step the lane hangs
- * on, where a person who had the lane in front of them did not look.
+ * While the steps are changed the mark is pressed to set it, to any step the run passes after the one the lane hangs
+ * on: it was set only in the fields of that step, where a person who had the lane in front of them did not look, and
+ * only to the step right after it.
  */
 
 import { ArrowDown, ChevronDown, CornerDownLeft, Hand, Square } from "lucide-react";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
+import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { cn } from "@/commons/lib/utils";
-import type { PathExit, Rule } from "../lib/paths";
+import { laneBacks, type PathExit, type Paths, type Rule } from "../lib/paths";
 import type { Step } from "../lib/steps";
-import { GOES_ON, exitChip, stopsWords } from "../lib/words";
+import { GOES_ON, exitChip, placeTitle, stopsWords } from "../lib/words";
 
 const MARK = "mt-[3px] shrink-0";
 
@@ -84,64 +86,125 @@ export function FactStrip({ children }: { children: string }) {
   );
 }
 
-/** A lane's two ends, as its mark and its fields offer them. `back`: the step the main line goes on with, named. */
-const laneEndWords = (back: string): Record<"back" | "stop", string> => ({ back: `Then back to ${back}`, stop: "The run stops here" });
+/** A step a lane can go back to, as its end offers it: by its id, and named by its place and title. */
+export interface LaneBack {
+  id: string;
+  name: string;
+  chosen: boolean;
+}
+
+/** The steps of the main line a lane can go back to, each as its end names it, with the one it goes back to now. */
+export function laneBackChoices(steps: readonly Step[], owner: number, rule: Extract<Rule, { kind: "lane" }>, paths: Paths, titleOf: (step: Step) => string): LaneBack[] {
+  const now = rule.ends === "stop" ? null : rule.ends.back;
+  return laneBacks(steps, owner, rule.lane).map((at) => ({ id: steps[at]!.id, name: placeTitle(paths.line.indexOf(at), titleOf(steps[at]!)), chosen: at === now }));
+}
 
 const END_ITEM = "min-h-10 items-start gap-2.5 rounded-xl py-2 text-left text-sm leading-snug";
+const STOPS = "The run stops here";
 
 /**
  * Where a lane ends: back into the main line at a step, named, or a stop. `onSet`: the mark is pressed to choose
- * between the two, where the steps are being changed and the main line goes on to a step at all.
+ * among every step the lane can go back to and a stop, where the steps are being changed. `onActive`: the pointer or
+ * the focus is on it, which lights its way back and the step that lands on.
  */
-export function LaneEnd({ ends, back, onSet }: { ends: "stop" | "back"; /** The step the main line goes on with, as it is named: `step 4, “Tell me”`. */ back?: string | undefined; onSet?: ((ends: "stop" | "back") => void) | undefined }) {
-  const words = laneEndWords(back ?? "");
-  const mark = ends === "back" ? <CornerDownLeft size={13} aria-hidden="true" className="shrink-0" /> : <Square size={10} aria-hidden="true" className="shrink-0 fill-secondary text-secondary" />;
-  const ink = ends === "back" ? "text-success" : "text-base-content/75";
-  if (!onSet || !back) {
+export function LaneEnd({
+  anchor,
+  backs,
+  onSet,
+  onActive,
+}: {
+  /** Its name for the thread drawn from it (`FlowLinks`). */
+  anchor: string;
+  /** The steps it can go back to, the one it goes back to now marked; none marked is a stop. */
+  backs: readonly LaneBack[];
+  onSet?: ((ends: "stop" | { to: string }) => void) | undefined;
+  onActive?: ((on: boolean) => void) | undefined;
+}) {
+  const now = backs.find((back) => back.chosen);
+  const ends = now ? "back" : "stop";
+  const words = now ? `Then back to ${now.name}` : STOPS;
+  const mark = now ? <CornerDownLeft size={13} aria-hidden="true" className="shrink-0" /> : <Square size={10} aria-hidden="true" className="shrink-0 fill-secondary text-secondary" />;
+  const ink = now ? "text-success" : "text-base-content/75";
+  const hover = onActive ? { onMouseEnter: () => onActive(true), onMouseLeave: () => onActive(false), onFocus: () => onActive(true), onBlur: () => onActive(false) } : {};
+  if (!onSet || backs.length === 0) {
     return (
-      <p data-lane-end={ends} className={cn("mt-2 flex items-center gap-1.5 pl-1 text-xs font-bold", ink)}>
+      <p data-lane-end={ends} data-flow-anchor={anchor} className={cn("mt-2 flex items-center gap-1.5 pl-1 text-xs font-bold", ink)} {...hover}>
         {mark}
-        <span className="min-w-0 [overflow-wrap:anywhere]">{words[ends]}</span>
+        <span className="min-w-0 [overflow-wrap:anywhere]">{words}</span>
       </p>
     );
   }
   return (
-    <div data-lane-end={ends} className="mt-1.5">
+    // As wide as its words, so the thread drawn from it leaves from where they begin.
+    <div data-lane-end={ends} data-flow-anchor={anchor} className="mt-1.5 w-fit max-w-full" {...hover}>
       <DropdownMenu
         trigger={
           <>
             {mark}
-            <span className="min-w-0 [overflow-wrap:anywhere]">{words[ends]}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">{words}</span>
             <ChevronDown size={13} aria-hidden="true" className="shrink-0 opacity-70" />
           </>
         }
         triggerClassName={cn("inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border border-transparent px-2 py-1 text-left text-xs font-bold outline-none transition-colors hover:border-base-content/15 hover:bg-base-100 focus-visible:ring-2 focus-visible:ring-secondary/50", ink)}
-        ariaLabel={`After these steps: ${words[ends]}. Change it`}
-        width={272}
+        ariaLabel={`After these steps: ${words}. Change it`}
+        width={288}
         align="start"
         menuClassName="rounded-2xl border border-base-content/[0.08] bg-base-100 p-1.5 shadow-soft"
       >
-        {(close) =>
-          (["back", "stop"] as const).map((one) => (
-            <li key={one}>
+        {(close) => (
+          <>
+            {backs.map((back) => (
+              <li key={back.id}>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={back.chosen}
+                  className={cn(END_ITEM, back.chosen && "font-bold text-secondary")}
+                  onClick={() => {
+                    close();
+                    if (!back.chosen) onSet({ to: back.id });
+                  }}
+                >
+                  <CornerDownLeft size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+                  <span className="min-w-0 [overflow-wrap:anywhere]">Back to {back.name}</span>
+                </button>
+              </li>
+            ))}
+            <li>
               <button
                 type="button"
                 role="menuitemradio"
-                aria-checked={ends === one}
-                className={cn(END_ITEM, ends === one && "font-bold text-secondary")}
+                aria-checked={!now}
+                className={cn(END_ITEM, !now && "font-bold text-secondary")}
                 onClick={() => {
                   close();
-                  if (one !== ends) onSet(one);
+                  if (now) onSet("stop");
                 }}
               >
-                {one === "back" ? <CornerDownLeft size={14} aria-hidden="true" className="mt-0.5 shrink-0" /> : <Square size={10} aria-hidden="true" className="mt-1.5 shrink-0 fill-current" />}
-                <span className="min-w-0 [overflow-wrap:anywhere]">{words[one]}</span>
+                <Square size={10} aria-hidden="true" className="mt-1.5 shrink-0 fill-current" />
+                <span className="min-w-0">{STOPS}</span>
               </button>
             </li>
-          ))
-        }
+          </>
+        )}
       </DropdownMenu>
     </div>
+  );
+}
+
+/** The same choice as a field of a step's fields: every step the lane can go back to, and a stop. */
+export function LaneEndPick({ backs, onSet }: { backs: readonly LaneBack[]; onSet: (ends: "stop" | { to: string }) => void }) {
+  if (backs.length === 0) return <p className="text-sm text-base-content/85">The run stops: nothing follows the step they run for.</p>;
+  return (
+    <SearchSelect
+      label="After these steps"
+      align="start"
+      className="w-full bg-base-100"
+      width={320}
+      options={[...backs.map((back) => ({ value: back.id, label: `Go back to ${back.name}` })), { value: "", label: "Stop" }]}
+      value={backs.find((back) => back.chosen)?.id ?? ""}
+      onChange={(next) => onSet(next ? { to: next } : "stop")}
+    />
   );
 }
 

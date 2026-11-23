@@ -18,6 +18,9 @@ import { drawnName, exitChip, exitGoes } from "../lib/words";
 export const stepAnchor = (id: string): string => `step:${id}`;
 export const exitAnchor = (id: string, exit: ExitName): string => `exit:${id}:${exit}`;
 export const jumpKey = (id: string, exit: ExitName): string => `${id}:${exit}`;
+/** Where a lane ends, as `FlowLinks` finds it, and its way back's own name: by the step the lane hangs on and its path. */
+export const laneEndAnchor = (id: string, exit: ExitName): string => `lane-end:${id}:${exit}`;
+export const backKey = (id: string, exit: ExitName): string => `lane:${id}:${exit}`;
 
 export function Branches({
   steps,

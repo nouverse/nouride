@@ -326,13 +326,15 @@ describe("where the run goes from a step", () => {
       // A step of a lane answers for its own failure, with the two answers that need no drawing of their own; and
       // where its lane ends is set from it, as from the step the lane hangs on.
       seen.told = answerNames(host, "whenFailed");
-      seen.ends = [...host.querySelectorAll<HTMLElement>('[data-step-fields="s5"] [data-lane-end-field] button')].map((button) => `${button.textContent}${button.getAttribute("aria-pressed") === "true" ? " ✓" : ""}`);
+      seen.ends = [dropdown(host, "After these steps").holds() ?? "", ...(await dropdown(host, "After these steps").open())];
+      dropdown(host, "After these steps").button()!.click();
       type(field(host, "What to ask"), "Look into why it failed.");
       seen.back = lane().querySelector("[data-lane-end]")?.textContent ?? "";
 
       editStep(host, 1).click();
-      await eventually(() => pressed(host, "Then stop") !== undefined, 2_000, "the lane's end");
-      pressed(host, "Then stop")!.click();
+      // On the step the lane hangs on, under the answer that made it: the same list.
+      await eventually(() => host.querySelector('[data-step-fields="check"] [data-lane-end-field]') !== null, 2_000, "the lane's end");
+      await dropdown(host, "After these steps").pick("Stop");
       await eventually(() => lane().querySelector('[data-lane-end="stop"]') !== null, 2_000, "the stop");
       seen.stop = lane().querySelector("[data-lane-end]")?.textContent ?? "";
 
@@ -351,7 +353,7 @@ describe("where the run goes from a step", () => {
     expect(seen.lane).toBe("If it fails");
     expect(seen.kicker).toBe("If it fails · Ask an agent");
     expect(seen.told).toEqual(["Stop and tell me", "Go on anyway"]);
-    expect(seen.ends).toEqual(["Go back to step 2, “Nouva works on it” ✓", "Stop"]);
+    expect(seen.ends).toEqual(["Go back to step 2, “Nouva works on it”", "Go back to step 2, “Nouva works on it”", "Go back to step 3, “Wait for your OK”", "Go back to step 4, “Tell the group”", "Stop"]);
     expect(seen.back).toBe("Then back to step 2, “Nouva works on it”");
     expect(seen.stop).toBe("The run stops here");
     expect(steps(sent)).toEqual([{ ...CHECK, then: { to: "find" }, whenFailed: { to: "s5" } }, { id: "s5", kind: "agentTurn", message: "Look into why it failed.", then: "end" }, FIND, OK, TELL]);
@@ -555,36 +557,69 @@ describe("a lane, changed from the lane itself", () => {
   const lane = (host: HTMLElement) => host.querySelector<HTMLElement>('[data-lane="whenFailed"]')!;
   const end = (host: HTMLElement) => lane(host).querySelector<HTMLElement>("[data-lane-end]")!;
 
-  test("its end is its mark, pressed: back into the line at a step named by its place, or a stop; and the same from a step of the lane's own fields", async () => {
+  test("its end is its mark, pressed: back into the line at any step after the one it hangs on, each named by its place, or a stop; and the same from a step of the lane's own fields", async () => {
     shown(LANED);
-    const seen = { mark: "", offered: [] as string[], stopped: "", field: [] as string[], back: "" };
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { mark: "", anchor: "", lit: "", offered: [] as string[], far: "", stopped: "", field: [] as string[], holds: "", back: "", saved: "" };
     await renderPage(PAGE, async (host) => {
       await flowDrawn(host, 5);
       seen.mark = end(host).textContent ?? "";
-      end(host).querySelector("button")!.click();
+      // Named for the thread drawn from it to the step it goes back to, which the pointer on it lights.
+      seen.anchor = end(host).dataset.flowAnchor ?? "";
+      const Mouse = (window as unknown as { MouseEvent: typeof MouseEvent }).MouseEvent;
+      end(host).dispatchEvent(new Mouse("mouseover", { bubbles: true }));
+      await eventually(() => stepCard(host, "find").dataset.state === "target", 2_000, "the step it goes back to, lit");
+      seen.lit = STEPS.map((step) => stepCard(host, step.id).dataset.state ?? "").join(",");
+      end(host).dispatchEvent(new Mouse("mouseout", { bubbles: true }));
+      await eventually(() => stepCard(host, "find").dataset.state !== "target", 2_000, "the pointer gone");
       const items = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitemradio"]')];
-      await eventually(() => items().length === 2, 2_000, "the two ends");
-      seen.offered = items().map((item) => `${item.textContent}${item.getAttribute("aria-checked") === "true" ? " ✓" : ""}`);
-      items()[1]!.click();
+      const pick = async (words: string) => {
+        end(host).querySelector("button")!.click();
+        await eventually(() => items().length === 4, 2_000, "every step it can go back to, and a stop");
+        const offered = items().map((item) => `${item.textContent}${item.getAttribute("aria-checked") === "true" ? " ✓" : ""}`);
+        items().find((item) => item.textContent === words)!.click();
+        return offered;
+      };
+      // Past the step that follows it: the last step of the line.
+      seen.offered = await pick("Back to step 4, “Tell the group”");
+      await eventually(() => end(host).textContent?.includes("step 4") === true, 2_000, "back at the last step");
+      seen.far = end(host).textContent ?? "";
+      sent = await saved(host);
+      seen.saved = JSON.stringify(steps(sent)[1]);
+      await pick("The run stops here");
       await eventually(() => end(host).dataset.laneEnd === "stop", 2_000, "the stop");
       seen.stopped = end(host).textContent ?? "";
 
       // And from the lane's own step, where "set on that step" used to send a person looking.
       host.querySelector<HTMLElement>('[aria-label^="Edit the side step"]')!.click();
       await eventually(() => host.querySelector('[data-step-fields="look"] [data-lane-end-field]') !== null, 2_000, "the lane's end, in its step's fields");
-      const ends = () => [...host.querySelectorAll<HTMLElement>('[data-step-fields="look"] [data-lane-end-field] button')];
-      seen.field = ends().map((button) => `${button.textContent}${button.getAttribute("aria-pressed") === "true" ? " ✓" : ""}`);
-      ends()[0]!.click();
+      seen.holds = dropdown(host, "After these steps").holds() ?? "";
+      seen.field = await dropdown(host, "After these steps").open();
+      await dropdown(host, "After these steps").pick("Go back to step 2, “Nouva works on it”");
       await eventually(() => end(host).dataset.laneEnd === "back", 2_000, "back into the line");
       seen.back = end(host).textContent ?? "";
-      // Stopped and put back: as it was, so there is nothing to save.
-      await eventually(() => saveBar(host) === null, 2_000, "nothing left to save");
     });
     expect(seen.mark).toBe("Then back to step 2, “Nouva works on it”");
-    expect(seen.offered).toEqual(["Then back to step 2, “Nouva works on it” ✓", "The run stops here"]);
+    expect(seen.anchor).toBe("lane-end:check:whenFailed");
+    expect(seen.lit).toBe(",target,,");
+    expect(seen.offered).toEqual(["Back to step 2, “Nouva works on it” ✓", "Back to step 3, “Wait for your OK”", "Back to step 4, “Tell the group”", "The run stops here"]);
+    expect(seen.far).toBe("Then back to step 4, “Tell the group”");
+    // Saved as the lane's last step going on to that step, by its name.
+    expect(seen.saved).toBe(JSON.stringify({ id: "look", kind: "agentTurn", message: "Look into why it failed.", then: { to: "tell" } }));
     expect(seen.stopped).toBe("The run stops here");
-    expect(seen.field).toEqual(["Go back to step 2, “Nouva works on it”", "Stop ✓"]);
+    expect(seen.holds).toBe("Stop");
+    expect(seen.field).toEqual(["Go back to step 2, “Nouva works on it”", "Go back to step 3, “Wait for your OK”", "Go back to step 4, “Tell the group”", "Stop"]);
     expect(seen.back).toBe("Then back to step 2, “Nouva works on it”");
+  });
+
+  test("one a reader may not change shows where its lane ends, named for its thread, with nothing to press", async () => {
+    answer({ [PAGE]: detail(automation({ payload: { kind: "steps", steps: LANED } })), ...TWO_AGENTS, ...AS_VIEWER });
+    let seen: unknown[] = [];
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 5);
+      seen = [end(host).tagName, end(host).dataset.flowAnchor, end(host).textContent, end(host).querySelector("button") === null];
+    });
+    expect(seen).toEqual(["P", "lane-end:check:whenFailed", "Then back to step 2, “Nouva works on it”", true]);
   });
 
   test("a step of a lane goes on anyway: said in its own box, the lane still a lane, and saved as the shape that runs it", async () => {

@@ -18,12 +18,13 @@ import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 import { Field } from "@/commons/components/ui/ui";
 import type { Then } from "../lib/draft";
-import { PATH_EXITS, chipExits, ruleOf, type Choice, type PathExit, type Paths, type Rule } from "../lib/paths";
-import { DEFAULT_EXIT, KINDS, STEPS_MAX, canWatch, exitFrom, exitOf, exitValue, exitsOf, landsAt, watching, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+import { PATH_EXITS, chipExits, ruleOf, type Choice, type LaneEnds, type PathExit, type Paths, type Rule } from "../lib/paths";
+import { DEFAULT_EXIT, KINDS, STEPS_MAX, canWatch, exitFrom, exitOf, exitValue, exitsOf, watching, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
 import { KIND, endWords, exitAsks, exitChip, landingName, placeTitle, sameAgainWords } from "../lib/words";
 import { KindFields, type AgentChoice, type ScriptContext } from "./KindFields";
-import { FieldsFrame, Segmented } from "./form-parts";
+import { FieldsFrame } from "./form-parts";
 import { PathChoices } from "./PathChoices";
+import { LaneEndPick, laneBackChoices } from "./PathRules";
 
 /** A path a move or a delete put back to its default, said on the step's box until it is read. */
 export function ResetNotes({ step, resets, onForget }: { step: Step; resets: readonly ExitReset[]; onForget: (reset: ExitReset) => void }) {
@@ -55,27 +56,14 @@ function doneChoices(steps: readonly Step[], index: number, titleOf: (step: Step
 }
 
 /**
- * Where the lane a step is in ends, set from that step: back into the main line at the step its owner goes on with, or
- * a stop. With nothing after the owner there is only the stop, and it is said.
+ * Where the lane a step is in ends, set from that step: back into the main line at any step the run passes after the
+ * one the lane hangs on, or a stop.
  */
-function LaneEndField({ steps, paths, within, lane, titleOf, onSet }: { steps: readonly Step[]; paths: Paths; within: { owner: number; exit: PathExit }; lane: Extract<Rule, { kind: "lane" }>; titleOf: (step: Step) => string; onSet: (ends: "stop" | "back") => void }) {
-  const after = landsAt(steps, within.owner, "then");
-  const back = lane.ends === "stop" ? after : lane.ends.back;
+function LaneEndField({ steps, paths, within, lane, titleOf, onSet }: { steps: readonly Step[]; paths: Paths; within: { owner: number; exit: PathExit }; lane: Extract<Rule, { kind: "lane" }>; titleOf: (step: Step) => string; onSet: (ends: LaneEnds) => void }) {
   return (
     <fieldset data-lane-end-field className="space-y-1.5">
       <legend className="mb-1.5 font-mono text-xs font-semibold tracking-wider text-base-content/85 uppercase">After these steps</legend>
-      {back !== "end" ? (
-        <Segmented
-          options={[
-            { value: "back", label: `Go back to ${placeTitle(paths.line.indexOf(back), titleOf(steps[back]!))}` },
-            { value: "stop", label: "Stop" },
-          ]}
-          value={lane.ends === "stop" ? "stop" : "back"}
-          onChange={(ends) => onSet(ends as "stop" | "back")}
-        />
-      ) : (
-        <p className="text-sm text-base-content/85">The run stops: nothing follows the step they run for.</p>
-      )}
+      <LaneEndPick backs={laneBackChoices(steps, within.owner, lane, paths, titleOf)} onSet={onSet} />
       <p className="text-xs text-base-content/65">
         This step and the ones drawn with it run in place of {placeTitle(paths.line.indexOf(within.owner), titleOf(steps[within.owner]!))}: {exitChip(steps[within.owner]!, within.exit).toLowerCase()}.
       </p>
@@ -147,9 +135,9 @@ export function StepFields({
   onKind: (kind: StepKind) => void;
   onExit: (exit: ExitName, go: StepExit) => void;
   onChoose: (exit: PathExit, choice: Exclude<Choice, "jump">) => void;
-  onLaneEnd: (exit: PathExit, ends: "stop" | "back") => void;
+  onLaneEnd: (exit: PathExit, ends: LaneEnds) => void;
   /** Where the lane this step is in ends, set from the step itself. */
-  onOwnLaneEnd: (ends: "stop" | "back") => void;
+  onOwnLaneEnd: (ends: LaneEnds) => void;
   /** One place up or down the main line. None for a step of a lane. */
   onMove: ((by: -1 | 1) => void) | null;
   onDuplicate: (() => void) | null;

@@ -19,7 +19,7 @@ import type { StepExit } from "@nouride/wire";
 import { useUnsaved } from "@/commons/lib/unsaved";
 import { changed, settled, type Draft } from "../lib/draft";
 import { baseOf, restored, type KeptDraft } from "../lib/kept-draft";
-import { addOnLine, addToLane, choosePath, copyOnLine, moveOnLine, pathsOf, removeDrawn, setLaneEnd, type Choice, type PathExit } from "../lib/paths";
+import { addOnLine, addToLane, choosePath, copyOnLine, moveOnLine, pathsOf, removeDrawn, setLaneEnd, type Choice, type LaneEnds, type PathExit } from "../lib/paths";
 import { asKind, replaceStep, resetsBetween, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
 import { keep, keptOf, type Keeping } from "./use-kept-drafts";
 
@@ -76,8 +76,8 @@ export interface Editor {
   remove: (index: number) => Draft;
   /** One of a step's paths given an answer (`lib/paths.ts`). Hands back the draft as it was where steps went with the old answer. */
   choose: (index: number, exit: PathExit, choice: Exclude<Choice, "jump">) => Draft | null;
-  /** Where a lane ends: back into the main line, or a stop. */
-  laneEnd: (index: number, exit: PathExit, ends: "stop" | "back") => void;
+  /** Where a lane ends: back into the main line at a step, or a stop. */
+  laneEnd: (index: number, exit: PathExit, ends: LaneEnds) => void;
   /** A step added at a lane's end, opened to be written. */
   addToLane: (index: number, exit: PathExit, kind: StepKind) => void;
   /** Puts a draft back whole: what an undo does. */

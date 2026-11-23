@@ -278,13 +278,33 @@ export function choosePath(steps: readonly Step[], at: number, exit: PathExit, c
   return { steps: forward(list).steps, opened: id, removed: gone.size };
 }
 
-/** Where a lane ends, set: back into the main line at the step its owner goes on to, or a stop. */
-export function setLaneEnd(steps: readonly Step[], owner: number, exit: PathExit, ends: "stop" | "back"): Step[] {
+/**
+ * The steps of the main line a lane can go back to: those the run passes after the step the lane hangs on, in the
+ * order it passes them. Each stands after the lane in the list, since a path only goes forward.
+ */
+export function laneBacks(steps: readonly Step[], owner: number, lane: readonly number[]): number[] {
+  const last = Math.max(owner, ...lane);
+  const found: number[] = [];
+  for (let at = landsAt(steps, owner, "then"); at !== "end" && !found.includes(at); at = landsAt(steps, at, "then")) if (at > last) found.push(at);
+  return found;
+}
+
+/** Where a lane ends, as it is asked for: a stop, back where its step goes on (`back`), or back at a step by its id. */
+export type LaneEnds = "stop" | "back" | { to: string };
+
+/**
+ * Where a lane ends, set: a stop, or back into the main line at any step the run passes after the one the lane hangs
+ * on. It was the next step or nothing: other steps in a step's place often end past the step that follows it.
+ */
+export function setLaneEnd(steps: readonly Step[], owner: number, exit: PathExit, ends: LaneEnds): Step[] {
   const rule = ruleOf(pathsOf(steps, false), owner, exit);
   if (rule?.kind !== "lane") return [...steps];
   const last = rule.lane.at(-1)!;
-  const done = landsAt(steps, owner, "then");
-  const go: Step["then"] = ends === "stop" || done === "end" ? "end" : { to: steps[done]!.id };
+  const backs = laneBacks(steps, owner, rule.lane);
+  const back = typeof ends === "object" ? backs.find((at) => steps[at]!.id === ends.to) : backs[0];
+  // A step it cannot go back to (one behind it, one of another lane, one that is gone) changes nothing.
+  if (typeof ends === "object" && back === undefined) return [...steps];
+  const go: Step["then"] = ends === "stop" || back === undefined ? "end" : { to: steps[back]!.id };
   return steps.map((step, index) => (index === last ? withThen(steps, index, go === "end" && index === steps.length - 1 ? undefined : go) : step));
 }
 

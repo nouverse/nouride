@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { AutomationStep } from "@nouride/wire";
-import { addToLane, chipExits, choiceOf, choicesFor, choosePath, groupOf, insertOnLine, moveOnLine, pathsOf, removeDrawn, ruleOf, setLaneEnd, stopsAt } from "@/modules/automations/lib/paths";
+import { addToLane, chipExits, choiceOf, choicesFor, choosePath, groupOf, insertOnLine, laneBacks, moveOnLine, pathsOf, removeDrawn, ruleOf, setLaneEnd, stopsAt } from "@/modules/automations/lib/paths";
 import { forward, landsAt, type ExitName, type Step } from "@/modules/automations/lib/steps";
 
 type Exits = Pick<AutomationStep, "then" | "whenFailed" | "whenEmpty">;
@@ -275,6 +275,48 @@ describe("a lane", () => {
     expect(pathsOf(chosen.steps).rules.get(1)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [2, 3], ends: { back: 4 } }]);
     expect(walk(chosen.steps, { save: "failed" })).toEqual(["sum", "save", "file", "s5", "tell"]);
     sound(chosen.steps);
+  });
+});
+
+describe("where a lane goes back to", () => {
+  // Check, with two steps in its place when it fails, then tell, ask and bye down the line.
+  const LONG = [run("check", { then: to("tell"), whenFailed: to("look") }), ask("look"), ask("write", { then: to("tell") }), say("tell"), wait("ok"), say("bye")];
+
+  test("any step the run passes after the one the lane hangs on, in the order it passes them", () => {
+    expect(laneBacks(LONG, 0, [1, 2]).map((at) => LONG[at]!.id)).toEqual(["tell", "ok", "bye"]);
+    // Past a step the line jumps over: only what the run passes.
+    const jumps = [run("check", { then: to("bye"), whenFailed: to("look") }), ask("look", { then: to("bye") }), say("tell"), say("bye")];
+    expect(laneBacks(jumps, 0, [1]).map((at) => jumps[at]!.id)).toEqual(["bye"]);
+    // The last step of the line has nothing after it.
+    expect(laneBacks([say("a"), run("check", { whenFailed: to("look") }), ask("look")], 1, [2])).toEqual([]);
+    // A step of the line that stands before the lane in the list, as one written by hand can: a path only goes
+    // forward, so the lane cannot go back to it.
+    const before = [run("check", { whenFailed: to("look") }), say("tell", { then: "end" }), ask("look")];
+    expect(pathsOf(before).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [2], ends: "stop" }]);
+    expect(laneBacks(before, 0, [2])).toEqual([]);
+  });
+
+  test("set to a step further down: the lane's last step goes on to it by name, and a failed run skips what lies between", () => {
+    const far = setLaneEnd(LONG, 0, "whenFailed", { to: "bye" });
+    sound(far);
+    expect(pathsOf(far).rules.get(0)).toEqual([{ exit: "whenFailed", kind: "lane", lane: [1, 2], ends: { back: 5 } }]);
+    expect(walk(far, { check: "failed" })).toEqual(["check", "look", "write", "bye"]);
+    expect(walk(far)).toEqual(["check", "tell", "ok", "bye"]);
+    // And to the step in between, then back where its step goes on, then a stop.
+    expect(walk(setLaneEnd(far, 0, "whenFailed", { to: "ok" }), { check: "failed" })).toEqual(["check", "look", "write", "ok", "bye"]);
+    expect(setLaneEnd(far, 0, "whenFailed", "back")).toEqual(LONG);
+    expect(walk(setLaneEnd(far, 0, "whenFailed", "stop"), { check: "failed" })).toEqual(["check", "look", "write"]);
+  });
+
+  test("a step it cannot go back to changes nothing: one of its own lane, the step it hangs on, one that is not there", () => {
+    for (const id of ["look", "check", "gone"]) expect(setLaneEnd(LONG, 0, "whenFailed", { to: id })).toEqual(LONG);
+  });
+
+  test("the step it goes back to taken out: it goes back to the step drawn below that", () => {
+    const far = setLaneEnd(LONG, 0, "whenFailed", { to: "ok" });
+    const without = removeDrawn(far, 4);
+    sound(without);
+    expect(walk(without, { check: "failed" })).toEqual(["check", "look", "write", "bye"]);
   });
 });
 
