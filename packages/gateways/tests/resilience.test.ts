@@ -10,12 +10,14 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type {
-  GatewayEvent,
-  GatewayResilienceConfig,
-  GatewayStatus,
-  MessageEnvelope,
-  OutboundMessage,
+import {
+  addLogSink,
+  type GatewayEvent,
+  type GatewayResilienceConfig,
+  type GatewayStatus,
+  type LogEntry,
+  type MessageEnvelope,
+  type OutboundMessage,
 } from "@nouride/shared";
 import { BaseGateway, PartialDeliveryError, remainingAfter, UndeliverableError } from "../src/commons/resilience.ts";
 import { eventually, sleep } from "./wait.ts";
@@ -688,6 +690,28 @@ describe("stopping", () => {
     // interesting number — that this one call happened is.
     expect(gateway.disconnectCalls).toBe(before + 1);
     expect(statuses).toEqual(["disconnected"]);
+  });
+
+  test("a stop with messages still held says how many are lost, and a stop with none says nothing", async () => {
+    // Held for a connection that is down, they go with the process: before this line nothing counted them.
+    const lost: LogEntry[] = [];
+    addLogSink((entry) => void (entry.message.startsWith("stopped with unsent messages") && lost.push(entry)));
+
+    const held = new FakeGateway();
+    await held.send(outbound("the first words"));
+    await held.send(outbound("the second words"));
+    await held.stop();
+    expect(lost.map((entry) => [entry.level, entry.component, entry.data])).toEqual([["warn", "gateway.telegram:test", { count: 2 }]]);
+    // The count only: a message's words are a person's, and a log is read by more people than a chat is.
+    expect(JSON.stringify(lost)).not.toContain("words");
+
+    lost.length = 0;
+    const empty = new FakeGateway();
+    await empty.start();
+    await empty.send(outbound("sent"));
+    await empty.stop();
+    expect(empty.delivered).toHaveLength(1);
+    expect(lost).toEqual([]);
   });
 
   test("a disconnect that throws does not break shutdown", async () => {

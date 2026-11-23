@@ -345,6 +345,9 @@ export abstract class BaseGateway implements Gateway {
     } catch (err) {
       this.log.warn("disconnect failed during stop", { error: String(err) });
     }
+    // What was held for a connection that was down goes with the process, and nothing said so: the count is the
+    // one figure that tells whether the hold needs a table. The count only, never a message's words.
+    if (this.outboundBuffer.length > 0) this.log.warn("stopped with unsent messages, which are lost", { count: this.outboundBuffer.length });
     this.setStatus("disconnected");
   }
 
