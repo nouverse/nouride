@@ -95,6 +95,8 @@ export interface TurnStep {
   outcome?: TurnEventData["tool_done"]["outcome"];
   /** The dashboard page of what a call made or changed (`tool_done.page`, 1.9). */
   page?: string;
+  /** A change the call wrote to what the person has open on a page, by its id (`tool_done.liveEdit`, 1.10). */
+  liveEdit?: string;
   /** A `steer` that is a person's edit: the message it changes (`steer.editOf`, 1.3). */
   editOf?: string;
 }

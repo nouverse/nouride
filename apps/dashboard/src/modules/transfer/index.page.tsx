@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { EmptyState, ErrorNote, PageHeader } from "@/commons/components/ui/ui";
+import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 import { ShieldCheck } from "lucide-react";
 import { ExportCard } from "./components/ExportCard";
 import { ImportCard } from "@/commons/components/transfer/ImportCard";
@@ -29,7 +30,7 @@ export default function TransferPage() {
 
   return (
     <div className="space-y-6 *:animate-fade">
-      <PageHeader title="Export and import" description="Take everything this Nouride holds to another machine as one file, or bring such a file in here." />
+      <PageHeader ask={admin ? PAGE_ASKS.transfer : undefined} title="Export and import" description="Take everything this Nouride holds to another machine as one file, or bring such a file in here." />
       {!admin ? (
         <EmptyState icon={ShieldCheck} title="Only an admin can do this" description="A file like this holds every chat and memory, and bringing one in replaces them." />
       ) : (

@@ -178,6 +178,9 @@ export class WhatsAppGateway extends BaseGateway {
   /** Groups' subjects, as the bridge said them on their messages (0.7.24) — what `roomTitle` answers. */
   private readonly titles = new Map<string, string>();
 
+  /** Up when WhatsApp says so — the bridge's `ready` — not when the bridge is: `BaseGateway.opensOnConnect`. */
+  protected override readonly opensOnConnect = false;
+
   constructor(private readonly options: WhatsAppGatewayOptions) {
     super(options, { ...WHATSAPP_PACING, ...options.resilience });
   }
@@ -253,10 +256,10 @@ export class WhatsAppGateway extends BaseGateway {
   }
 
   /**
-   * Wait for the bridge to finish signing in.
+   * Wait for the bridge to finish signing in again.
    *
-   * The gateway reports `connected` as soon as the bridge process is reachable, which is what lets a
-   * QR be fetched at all — but reachable is not signed in. A reply written in that window used to be
+   * The gateway is `connected` from WhatsApp's first `ready` and stays so while the link drops and the
+   * bridge opens it again — and in that window it is not signed in. A reply written there used to be
    * handed straight to Baileys, which threw `authState.creds.me.id is undefined` and the message was
    * dropped. It cost a real answer to a real person: they were approved, they messaged, and nothing
    * came back.
@@ -586,6 +589,8 @@ export class WhatsAppGateway extends BaseGateway {
         this.refused.clear();
         for (const waiter of this.linkWaiters.splice(0)) waiter.resolve();
         this.log.info("whatsapp linked", { number: maskedNumber(event.jid) });
+        // The first `ready` of this bridge is what makes the gateway `connected` (`opensOnConnect`).
+        void this.opened();
         // What waited for the link goes now: nothing else would send it while the bridge stays connected.
         void this.flushBuffer();
         return;
@@ -595,9 +600,12 @@ export class WhatsAppGateway extends BaseGateway {
         // phone rather than a terminal.
         this.qrCode = { qr: event.qr, at: Date.now() };
         this.log.info("whatsapp pairing code ready; scan it from the dashboard");
+        this.waitingOnPerson("Waiting for the phone to scan the pairing code.");
         return;
 
       case "status":
+        // Not open yet, and WhatsApp closed this try: the reason is what this connection waits on.
+        if (event.status === "connecting" && event.reason && this.status === "connecting") this.waitingFor(event.reason);
         // The bridge trying again says `connecting`, never seen above — but the link is gone from that moment.
         if (event.status !== "connected" && this.linked) {
           this.linked = false;

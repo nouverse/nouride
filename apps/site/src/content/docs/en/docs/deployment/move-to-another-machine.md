@@ -33,8 +33,9 @@ installed (`node_modules`, `.venv`) are left out of them.
 ## 1. Export on the old machine
 
 From the dashboard, as an admin: **Settings**, then **Export and import**. The page says what the file will hold
-and how large it is before you press **Make the file**. Type a password for the secrets twice, at least twelve
-characters, or untick the secrets. Tick the agents' own folders if you want them. When the file is made, press
+before you press **Make the file**. How many files and how large is counted when you press **Count how large it
+will be** (0.8.46): the count reads every file, so on an install with many files it takes a while, and nothing is
+counted until you ask. Type a password for the secrets twice, at least twelve characters, or untick the secrets. Tick the agents' own folders if you want them. When the file is made, press
 **Download**.
 
 From a terminal, on the machine itself:

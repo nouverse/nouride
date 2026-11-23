@@ -68,7 +68,7 @@ export function StepRun({
       {asking ? <StepQuestion runId={run.id} name={name} said={before} until={asking.until} canAnswer={canAnswer} whom={whom} /> : null}
       {outcome.missionId ? (
         <Link to="/missions/$missionId" params={{ missionId: outcome.missionId }} className="group flex items-center gap-1.5 self-start text-sm font-medium text-secondary">
-          {outcome.status === "waiting" ? "See the mission it waits for" : "See the mission it started"}
+          {outcome.status === "waiting" ? "See the mission it waits for" : outcome.drafted ? "See the mission it drafted" : "See the mission it started"}
           <ArrowRight size={14} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5" />
         </Link>
       ) : null}

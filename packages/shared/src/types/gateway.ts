@@ -75,6 +75,8 @@ export interface GatewayResilienceConfig {
   teardownTimeoutMs?: number;
   /** How long a connect may go unanswered before the connection says it is still waiting — `BaseGateway`. */
   slowConnectMs?: number;
+  /** How often a connection that has spent its retry budget tries again by itself — `BaseGateway`'s `SLOW_RETRY_MS`. */
+  slowRetryMs?: number;
 }
 
 export const DEFAULT_RESILIENCE: GatewayResilienceConfig = {
@@ -89,8 +91,14 @@ export const DEFAULT_RESILIENCE: GatewayResilienceConfig = {
 
 export type GatewayEvent =
   | { type: "status"; gatewayId: string; status: GatewayStatus; error?: string }
-  /** `auth_failed`: the platform refused its credentials, so no reconnect was tried past the first. */
-  | { type: "dead"; gatewayId: string; attempts: number; reason?: "auth_failed"; detail?: string }
+  /** The platform refused its credentials, so no reconnect was tried past the first: it stays down until it has one that works. */
+  | { type: "dead"; gatewayId: string; attempts: number; reason: "auth_failed"; detail?: string }
+  /**
+   * The retry budget is spent and the platform still cannot be reached. Not dead: it goes on trying by itself every
+   * `retryEveryMs`. Said once, when the fast tries run out; `back` is said once the connection has held again.
+   */
+  | { type: "unreachable"; gatewayId: string; attempts: number; retryEveryMs: number }
+  | { type: "back"; gatewayId: string }
   | { type: "session_expired"; gatewayId: string }
   /**
    * The platform accepted a message and then refused to deliver it.

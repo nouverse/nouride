@@ -131,6 +131,13 @@ function saves(): Save[] {
   watch = laneEnds(watch, 0, "whenFailed", "stop");
   watch = choose(watch, 0, "whenEmpty", "goOn");
 
+  // A mission the run drafts and does not start: as a step, with the run going on to say so, and as the one thing.
+  let plan = fresh({ name: "Weekly plan", trigger: { ...fresh({}).trigger, mode: "daily", time: "08:00", days: [1] } });
+  plan = add(plan, "agentTurn", { message: "Read last week's notes and list what is still open." });
+  plan = add(plan, "mission", { name: "Draft the work", goal: "Close what is still open from last week.", checks: ["test -s DONE.md"], review: false, draft: true });
+  plan = add(plan, "systemEvent", { text: "This week's work is drafted. Start it when you are ready." });
+  const prep = add(fresh({ name: "Monday prep", start: "manual" }), "mission", { goal: "Prepare the week's report from the notes.", draft: true });
+
   // A script as the one thing an automation does, started by hand.
   const room = add(fresh({ name: "Disk room", start: "manual" }), "command", { argv: ["sh"], script: { text: "df -h / | tail -1\n", about: "Says how full the disk is." } });
 
@@ -168,6 +175,8 @@ function saves(): Save[] {
     made(digest),
     made(watch),
     made(room),
+    made(plan),
+    made(prep),
     changed("Shop health check, changed", shop, shopNow),
     changed("Backup check, with a second step", backup, backupNow),
     changed("New order, reporting elsewhere and quiet", order, orderNow),
@@ -196,7 +205,7 @@ test("the saves are of every kind of step, every way a path can go, each way to 
   expect(goes).toContain("next");
   expect(goes.some((go) => typeof go === "object")).toBe(true);
   expect([...new Set(all.map((save) => save.keeps.start))].sort()).toEqual(["manual", "scheduled", "webhook"]);
-  expect([...new Set(payloads.map((payload) => payload.kind))].sort()).toEqual(["agentTurn", "command", "steps", "systemEvent"]);
+  expect([...new Set(payloads.map((payload) => payload.kind))].sort()).toEqual(["agentTurn", "command", "mission", "steps", "systemEvent"]);
   // What the canvas writes of its own: a script in a list and as the one thing, a question, a lane that stops and
   // one that goes back, a failure that goes on, a step marked to watch, and a time it lasts.
   const named = (name: string) => (all.find((save) => save.name === name)!.keeps.payload as { steps: Step[] }).steps;

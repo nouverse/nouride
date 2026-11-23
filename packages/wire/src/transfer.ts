@@ -26,7 +26,7 @@ export interface ExportPlan {
 /** An export being made, or the last one made. */
 export interface ExportStatus {
   state: "none" | "working" | "ready" | "failed";
-  /** While it works: how far, against the plan's size. */
+  /** While it works: how far, and against what size once what goes in has been counted. */
   done?: { files: number; bytes: number };
   total?: number;
   /** When ready: the file's name and size, when it was made, and whether it holds the secrets and the folders. */
@@ -88,4 +88,6 @@ export interface TransferState {
   staged: boolean;
   /** Whether connections and automations are held back: imported, and not live. */
   held: boolean;
+  /** How many secrets are kept here: whether an export has any to lock, known before anything is counted. */
+  secrets: number;
 }

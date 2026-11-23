@@ -76,6 +76,8 @@ export interface RunnerHost {
   keepPlan?(key: { agentId: string; gatewayId: string; chatId: string }, steps: PlanStep[]): Promise<void>;
   /** Lend the CLI Nouride's tools for this turn, over MCP; returns the turn's end. */
   lend?(agentId: string, key: string, req: TurnRequest, deps: ExecutorDeps): () => void;
+  /** What the conversation's lent calls made that a page follows, handed over once (`LentTools.takeMade`). */
+  made?(agentId: string, key: string): { page?: string; liveEdit?: string } | null;
   /** Nouride's MCP server as this conversation's session is given it, or none. */
   mcpServers?(agentId: string, key: string, connection: CliConnection): McpServer[];
   /** The agent's skills copied where its CLI reads them; returns those it could not read. */
@@ -324,7 +326,7 @@ export class ExternalTurnRunner {
             this.host.spending?.set(agentId, key, spentBefore + read.spent);
             this.host.spent?.(agentId, req.gatewayId, req.chatId);
           },
-        }, undefined, { ...(cli.row.helper ? { helper: cli.row.helper } : {}), ...(cli.row.ended ? { ended: cli.row.ended } : {}) });
+        }, undefined, { ...(cli.row.helper ? { helper: cli.row.helper } : {}), ...(cli.row.ended ? { ended: cli.row.ended } : {}), made: () => this.host.made?.(agentId, key) ?? null });
         reader = read;
         let reason: AcpStopReason = "end_turn";
         if (follow) {

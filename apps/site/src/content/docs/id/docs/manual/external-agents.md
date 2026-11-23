@@ -38,11 +38,11 @@ itu sendiri:
   distro bisa lebih tua dari 22.
 - **macOS**: `npm i -g @agentclientprotocol/claude-agent-acp` sebagai dirimu sendiri, dengan Node dari Homebrew. Daemon
   jalan sebagai kamu, dengan Homebrew paling depan di `PATH`-nya.
-- **Docker**: image-nya gak punya Node; `node` di dalamnya cuma pengganti dari Bun. Pasang dengan `docker exec nouride
-  nouride pkg install nodejs npm` (tetap ada setelah container dibuat ulang, 0.8.15), atau build image dengan
-  `--build-arg EXTRA_PACKAGES="nodejs npm"` (paket Alpine di image itu membawa Node 24); lalu install adapter-nya ke volume,
-  supaya tetap ada setelah container dibuat ulang:
+- **Docker**: Node.js dan npm sudah ada di image (0.8.46; Node 24, dari paket Alpine di image itu). Install
+  adapter-nya ke volume, supaya tetap ada setelah container dibuat ulang:
   `docker exec -u bun -e NPM_CONFIG_PREFIX=/app/.nouride nouride npm i -g @agentclientprotocol/claude-agent-acp`.
+  Image sebelum 0.8.46 gak punya Node: di sana, `docker exec nouride nouride pkg install nodejs npm` dulu (tetap ada
+  setelah container dibuat ulang).
 
 Atau minta orchestrator lewat chat: dia meng-install salah satunya untuk semua agent, setelah admin bilang ya (sejak
 0.8.9 cuma admin yang menjawabnya, di chat satu-satu juga: install-nya jalan sebagai user daemon). Dashboard bisa

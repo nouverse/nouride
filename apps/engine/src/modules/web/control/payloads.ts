@@ -107,6 +107,8 @@ function cronPayloadFrom(raw: unknown): JobPayload {
       ...(checks.length > 0 ? { checks } : {}),
       // `false` turns the reviewer off; criteria in words, or nothing for the goal itself.
       ...(payload.review === false ? { review: false } : typeof payload.review === "string" && payload.review.trim() ? { review: payload.review.trim() } : {}),
+      // A no is leaving it out; anything but a yes or a no is kept as written, for the refusal to name (`validate.ts`).
+      ...(payload.draft === undefined || payload.draft === false ? {} : { draft: payload.draft as true }),
     };
   }
   if (kind === "steps") return { kind, steps: stepsFrom(payload.steps) };

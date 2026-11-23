@@ -8,6 +8,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -42,7 +43,7 @@ afterEach(() => {
   dir = "";
 });
 
-const put = (path: string, text: string): void => {
+const put = (path: string, text: string | Uint8Array): void => {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, text);
 };
@@ -86,7 +87,7 @@ async function daemon(name: string, how: { restarts?: boolean; role?: string } =
     const whole = raw.clone();
     return { status: raw.status, body: (await raw.json().catch(() => null)) as T, raw: whole };
   };
-  return { root, home, data, configPath, db, state, secrets, config, call, restarted, started, audited };
+  return { root, home, data, configPath, db, state, secrets, config, call, restarted, started, audited, transfer };
 }
 
 /** An export made on the old machine through its routes, and its bytes as a browser would download them. */
@@ -115,6 +116,59 @@ async function upload(to: Awaited<ReturnType<typeof daemon>>, file: Uint8Array, 
   }
 }
 
+/**
+ * The count reads every file of the install for its size. It ran whole on the daemon's one thread, at each look at the
+ * page and again as an export began: 26 seconds on a box whose agents' folders held 1.2 million files, with every chat
+ * and the dashboard still for all of it.
+ */
+describe("the count of what an export will hold", () => {
+  test("the daemon goes on with its other work while a large install is counted", async () => {
+    const old = await daemon("old");
+    for (let at = 0; at < 2_000; at += 1) put(join(old.home, `memory/old/day-${at}.md`), "x");
+    // What the daemon would do next (a request to answer, a timer due) waits for a turn of its loop, as this does. A
+    // second request made here would not show it: one already in hand goes on between a count's own steps, loop or no.
+    let turns = 0;
+    let counting = true;
+    const turn = (): void => {
+      turns += 1;
+      if (counting) setImmediate(turn);
+    };
+    setImmediate(turn);
+    const counted = await old.transfer.plan(false).then((plan) => ({ plan, turns }));
+    counting = false;
+    expect(counted.plan.parts.memory).toEqual({ files: 2_000, bytes: 2_000 });
+    // Let go of every hundred files: twenty times in two thousand.
+    expect(counted.turns).toBeGreaterThanOrEqual(20);
+  });
+
+  test("asked again while it runs, it is the same count, and a new one once that has ended", async () => {
+    const old = await daemon("old");
+    const first = old.transfer.plan(false);
+    expect(old.transfer.plan(false)).toBe(first);
+    // With the agents' folders it is another answer, and its own count.
+    expect(old.transfer.plan(true)).not.toBe(first);
+    await first;
+    const later = old.transfer.plan(false);
+    expect(later).not.toBe(first);
+    expect(await later).toEqual(await first);
+  });
+
+  test("an export begins without one, and says its size once what goes in is counted", async () => {
+    const old = await daemon("old");
+    const large = 8 * 1024 * 1024;
+    // Bytes that do not pack: the file is long enough in the making to be seen at work.
+    put(join(old.home, "memory/old/large.bin"), randomBytes(large));
+    const started = await old.call<TransferState>("POST", "/transfer/export", { secrets: false });
+    expect(started.status).toBe(202);
+    expect(started.body.export).toEqual({ state: "working", done: { files: 0, bytes: 0 } });
+    const seen: TransferState["export"][] = [];
+    await eventually(() => seen.push(old.transfer.state().export) > 0 && seen.at(-1)!.state === "ready", 20_000, "the export");
+    const sized = seen.find((one) => one.state === "working" && one.total !== undefined);
+    expect(sized?.total).toBeGreaterThan(large);
+    expect(sized!.total!).toBeLessThan(large + 1024 * 1024);
+  });
+});
+
 describe("the page's export", () => {
   test("says what the file will hold before it is made; a passphrase or a plain no is asked for; the file is an admin's alone", async () => {
     const old = await daemon("old");
@@ -122,6 +176,8 @@ describe("the page's export", () => {
     const plan = await old.call<ExportPlan>("GET", "/transfer/plan");
     expect(plan.body).toMatchObject({ secrets: 1, parts: { config: { files: 1 }, agents: { files: 1 } } });
     expect(plan.body.bytes).toBeGreaterThan(0);
+    // How many secrets there are is known without that count: the page asks for a password, or does not, as it opens.
+    expect((await old.call<TransferState>("GET", "/transfer")).body.secrets).toBe(1);
     // Neither a passphrase nor the word that there is none; and one too short.
     expect((await old.call("POST", "/transfer/export", { folders: false })).status).toBe(400);
     const short = await old.call<{ plain: string }>("POST", "/transfer/export", { passphrase: "too short" });
@@ -130,6 +186,7 @@ describe("the page's export", () => {
     expect((await old.call("GET", "/transfer/export/download")).status).toBe(404);
     // With no secret kept there is nothing to seal: the file is made with none, whatever was typed.
     const bare = await daemon("bare");
+    expect((await bare.call<TransferState>("GET", "/transfer")).body.secrets).toBe(0);
     expect((await bare.call("POST", "/transfer/export", { passphrase: "short" })).status).toBe(202);
     let made: TransferState | null = null;
     await eventually(() => {

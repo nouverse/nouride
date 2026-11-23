@@ -80,6 +80,17 @@ interface Running {
   caller: ToolCaller;
 }
 
+/**
+ * What a lent call made that a dashboard page follows: a page of its own (`ToolResult.page`), a change to what the
+ * person has open (`ToolResult.liveEdit`). A model of ours has them written on its call's `tool_done` by the executor;
+ * a CLI's steps are its own to say (`UpdateReader`), and its result went back over MCP with neither. Asked to change
+ * the automation open on a page, an agent on a coding CLI answered that it was drawn there, and nothing was drawn.
+ */
+export interface LentMade {
+  page?: string;
+  liveEdit?: string;
+}
+
 export class LentTools {
   private readonly tokens = new Map<string, Session>();
   private readonly byConversation = new Map<string, string>();
@@ -91,6 +102,8 @@ export class LentTools {
   private readonly running = new Map<string, Running>();
   /** What was lent the last turn, for a CLI that lists its tools between turns. */
   private readonly lastLent = new Map<string, ToolDefinition[]>();
+  /** What the running turn's lent calls made, by conversation, until the CLI's step that made it ends (`takeMade`). */
+  private readonly made = new Map<string, LentMade>();
   private calls = 0;
 
   /** The bearer a conversation's session carries to `/mcp/agent`: the same one for its every session. */
@@ -161,8 +174,22 @@ export class LentTools {
     this.running.set(conversation, running);
     this.lastLent.set(conversation, req.toolset.definitions.filter((definition) => lends(definition.name)));
     return () => {
-      if (this.running.get(conversation) === running) this.running.delete(conversation);
+      if (this.running.get(conversation) !== running) return;
+      this.running.delete(conversation);
+      // What no step of the turn took is not the next turn's.
+      this.made.delete(conversation);
     };
+  }
+
+  /**
+   * What this conversation's lent calls made since it was last asked, handed over once: the step the CLI says has
+   * ended is written with it, so the page under the chat follows a CLI's call as it does a model's.
+   */
+  takeMade(agentId: string, key: string): LentMade | null {
+    const conversation = `${agentId}|${key}`;
+    const made = this.made.get(conversation) ?? null;
+    this.made.delete(conversation);
+    return made;
   }
 
   definitions(session: Session): ToolDefinition[] {
@@ -176,6 +203,12 @@ export class LentTools {
     if (!running) return { content: `${name}: no turn of this conversation is running, and Nouride's tools answer inside one`, isError: true };
     if (!lends(name)) return { content: `${name} is not one of the tools Nouride lends. Use your own`, isError: true };
     this.calls += 1;
-    return await running.caller.run(running.req, { id: `lent_${this.calls}`, name, arguments: args }, MAX_TOOL_RESULT_TOKENS, undefined, { lent: true });
+    const conversation = `${session.agentId}|${session.key}`;
+    const result = await running.caller.run(running.req, { id: `lent_${this.calls}`, name, arguments: args }, MAX_TOOL_RESULT_TOKENS, undefined, { lent: true });
+    // Kept only while the turn that made it still runs: one that ended meanwhile has no step left to say it on.
+    if (!result.isError && (result.page || result.liveEdit) && this.running.get(conversation) === running) {
+      this.made.set(conversation, { ...this.made.get(conversation), ...(result.page ? { page: result.page } : {}), ...(result.liveEdit ? { liveEdit: result.liveEdit } : {}) });
+    }
+    return result;
   }
 }

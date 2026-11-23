@@ -41,8 +41,12 @@ export interface ValidationRules {
   timezone: string;
 }
 
-/** Everything refused before a job is written. Throws `CronValidationError` with the reason. */
-export function validateJob(input: JobInput, rules: ValidationRules): void {
+/**
+ * Everything refused before a job is written. Throws `CronValidationError` with the reason. `startAsWas`: how it
+ * starts is not what changed, so it is not held to the clock again, as a save of a job that exists does not hold it:
+ * a start that is a moment already past stays what it was.
+ */
+export function validateJob(input: JobInput, rules: ValidationRules, how: { startAsWas?: boolean } = {}): void {
   if (!input.name.trim()) throw new CronValidationError("a job needs a name.", "name");
   // Refused here rather than discovered at run time: a job with no agent was accepted, sat for
   // hours, and failed the moment it was due with "agent  is not loaded" (2026-10-06, an agent's
@@ -52,14 +56,14 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
     throw new CronValidationError("a job needs a target conversation: the gateway instance id and the chat id it is about.", "target");
   }
 
-  const { trigger } = input;
-  if (trigger.kind === "at") {
+  const trigger = how.startAsWas ? null : input.trigger;
+  if (trigger?.kind === "at") {
     if (!Number.isFinite(trigger.at)) throw new CronValidationError("`at` must be a timestamp.", "schedule");
     if (trigger.at <= rules.now) {
       throw new CronValidationError("that time has already passed.", "schedule");
     }
   }
-  if (trigger.kind === "every") {
+  if (trigger?.kind === "every") {
     if (!Number.isFinite(trigger.everyMs) || trigger.everyMs < rules.minIntervalMs) {
       throw new CronValidationError(
         `the shortest interval allowed is ${Math.round(rules.minIntervalMs / 1000)}s.`,
@@ -67,7 +71,7 @@ export function validateJob(input: JobInput, rules: ValidationRules): void {
       );
     }
   }
-  if (trigger.kind === "cron") {
+  if (trigger?.kind === "cron") {
     if (trigger.tz) assertTimezone(trigger.tz);
     // Throws with the field and the reason. Parsed here so the error reaches the caller rather
     // than the first tick after they have gone.
@@ -281,8 +285,10 @@ function approvalProblems(step: Extract<JobStep, { kind: "approval" }>, at: stri
   }
 }
 
-function missionProblems(payload: { goal: string; checks?: string[]; review?: string | false }, delivery: JobDelivery | undefined): void {
+function missionProblems(payload: { goal: string; checks?: string[]; review?: string | false; draft?: unknown }, delivery: JobDelivery | undefined): void {
   if (!payload.goal.trim()) throw new CronValidationError("a mission needs a goal: what should be true when a run is done.", "goal");
+  // Said or left out: a `draft` that is anything else would start a mission its writer meant to wait.
+  if (payload.draft !== undefined && payload.draft !== true) throw new CronValidationError("a mission's `draft` is true, to draft it for a person to start, or left out, to start it.", "goal");
   if (payload.goal.length > GOAL_MAX) throw new CronValidationError(`keep a mission's goal under ${GOAL_MAX} characters: write the detail to a file and name its absolute path in the goal.`, "goal");
   const checks = payload.checks ?? [];
   if (checks.length > CHECKS_MAX || checks.some((check) => typeof check !== "string" || !check.trim() || check.length > CHECK_MAX)) {

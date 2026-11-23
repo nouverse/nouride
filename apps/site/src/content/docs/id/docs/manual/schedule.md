@@ -63,7 +63,7 @@ Automation mengerjakan satu hal, atau beberapa hal dengan urutan yang tetap. Tia
 | **Kirim pesan** | mengirim teks apa adanya ke chat automation itu | tidak |
 | **Minta ke agent** | satu giliran agent pemilik automation, atau agent lain yang kamu pilih | ya, satu giliran |
 | **Jalankan skrip** (*Run a script*) | menjalankan program kecil di workspace agent: [skrip](#skrip) yang disimpan automation itu, atau satu baris | tidak |
-| **Mulai mission** | pekerjaan panjang yang dicek; automation menunggunya selesai | ya, seperti [mission](/id/docs/manual/missions/) |
+| **Mulai mission** | pekerjaan panjang yang dicek; automation menunggunya selesai, atau meninggalkannya sebagai draft untuk kamu mulai | ya, seperti [mission](/id/docs/manual/missions/) |
 | **Tunggu persetujuan** | bertanya ke orang, dan lanjut setelah dijawab ya | tidak |
 | **Beberapa sekaligus** | memulai dua sampai lima giliran agent atau skrip bersamaan, lalu menggabung apa yang dikatakan masing-masing | ya, satu giliran untuk tiap agent di dalamnya |
 
@@ -205,6 +205,18 @@ Mission boleh jadi langkah di posisi mana pun. Automation menunggunya selesai, s
 Nouride restart di tengah jalan, lalu meneruskan hasilnya ke langkah berikutnya. Mission yang gagal atau
 dihentikan dihitung sebagai langkah gagal, jadi automation bisa lanjut ke langkah yang mengabari kamu.
 
+**Mission yang ditinggal sebagai draft** (0.8.46). Di bawah tombol plus, pilih **Draft a mission**, yang ada di samping
+**Start a mission**; atau di langkah mission, atur **When the run gets here** ke **Leave it in the Backlog as a draft**.
+Jalan itu lalu gak memulai apa pun: mission-nya masuk ke Backlog kamu, chat automation itu
+mendapat draft-nya dengan **Start it** dan **Drop it**, dan jalan langsung lanjut ke langkah berikutnya, dibekali satu
+baris yang bilang sebuah mission sudah dibuat draft-nya. Mission-nya jalan waktu kamu memulainya, dari pesan itu atau
+dari halamannya, kapan pun. Ubah dulu goal, cek, atau batasnya di sana kalau mau, seperti
+[draft](/id/docs/manual/missions/#memulai) mana pun. Kotaknya di canvas bertuliskan **Draft a mission**.
+
+Satu draft dari sebuah automation menunggu dalam satu waktu. Jalan yang sampai di langkah itu ketika draft terakhirnya
+belum dimulai atau dibuang berhenti di situ, dan halamannya bilang draft mana yang ditunggu, jadi automation yang jalan
+tiap jam gak memenuhi Backlog kamu. Draft yang menunggu gak menahan langkah lain di automation itu.
+
 ### Langkah yang menunggu kamu
 
 Chat automation itu mendapat kartu berisi pertanyaannya, apa yang dikatakan langkah sebelumnya, dan dua
@@ -260,7 +272,7 @@ nouride cron add --name "morning-brief" \
 | `--run <program>` | …dijalankan dengan apa: `sh` kalau gak disebut, `python3`, `bun` |
 | `--secrets <nama,nama>` | …secret milik agent yang diberikan kepadanya, lewat namanya |
 | `--then agent` | …lalu bangunkan agent dengan apa yang dicetaknya, kalau ia mencetak sesuatu |
-| `--mission <goal>` | jalankan setiap kali sebagai mission. Dengan `--check <perintah>` untuk satu cek, `--no-review` tanpa reviewer; cek lebih banyak dari dashboard |
+| `--mission <goal>` | jalankan setiap kali sebagai mission. Dengan `--check <perintah>` untuk satu cek, `--no-review` tanpa reviewer, `--draft` supaya tiap kali cuma dibuat draft-nya untuk kamu mulai; cek lebih banyak dari dashboard |
 | `--steps <file.json>` | beberapa hal di atas dengan urutan tetap: daftarnya, dalam JSON (di bawah) |
 | `--session <fresh\|isolated\|chat>` | riwayat apa yang dilihat giliran itu |
 | `--once` | mengabari sekali, lalu mematikan dirinya ([Mengawasi sesuatu](#mengawasi-sesuatu)) |
@@ -291,7 +303,8 @@ nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
 
 Jenis lainnya adalah `systemEvent` (pesan, dengan `text`) dan `parallel` (beberapa sekaligus, 0.8.38): `steps`-nya
 berisi dua sampai lima `agentTurn` dan `command`, ditulis seperti langkah-langkah itu. `agentTurn` dan `mission`
-menerima `agentId` untuk agent lain, dan `approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak
+menerima `agentId` untuk agent lain, `mission` menerima `"draft": true` supaya misinya ditinggal sebagai draft, dan
+`approval` menerima `timeoutMs`. Nouride membaca file itu dan menolak
 langkah yang gak bisa dijalankannya, dengan menyebut langkahnya.
 
 Langkah `command` yang menyimpan skrip (0.8.44) hanya menyebut programnya di `argv` dan menaruh teksnya di sampingnya:
@@ -388,6 +401,20 @@ memakai id, riwayat run, dan URL webhook-nya. Di halaman automation itu, perubah
 `enable`, atau `webhook add` atau `rotate`, ditolak dan diarahkan ke `schedule`. Paling banyak sepuluh
 usulan dari satu agent yang boleh menunggu sekaligus, dihitung dari agent yang mengusulkannya.
 
+**Kalau automation-nya sedang terbuka di dashboard** (0.8.46), perubahan yang kamu minta lewat chat di atas
+halamannya dibuat pada isi halaman itu: automation seperti yang ada di situ, termasuk perubahanmu sendiri yang
+belum disimpan, atau automation baru yang belum kamu simpan. Agent membaca yang ada di halamanmu, bukan yang
+tersimpan, lalu menuliskannya kembali utuh. Halaman menggambar hasilnya di atas punyamu, tiap step yang ditambah,
+diubah, atau dihapus diberi tanda, di bawah bar yang bilang apa perubahannya: **As you have it** dan **With the
+change** menampilkan keduanya, dan **Apply** atau **Discard** menjawabnya. Perubahan yang membawa skrip bilang
+begitu, beserta step yang perlu dibaca dulu. Apply gak menyimpan apa pun: perubahannya masuk ke halaman, **Undo**
+menariknya lagi, dan tombol **Save** halaman itu tetap kamu yang menekan. Gak ada yang disimpan di tengah jalan dan
+gak ada yang dinyalakan. Step di chat yang membuat perubahan itu punya **Show the change on the page**, untuk
+menggambarnya lagi selama daemon masih memegangnya (sehari, atau sampai daemon restart). Ini cuma untuk chat di
+dashboard: kalau diminta dari Telegram, Discord, atau WhatsApp, perubahan tetap berupa usulan seperti di atas.
+Automation yang terlalu panjang untuk ditunjukkan utuh ke agent (48.000 karakter seperti yang dikirim halaman)
+diubah di halamannya langsung, dan agent bilang begitu.
+
 Yang menjawab usulan cuma orang, gak pernah agent. Ada yang cuma bisa dinyalakan admin, siapa pun yang meminta:
 perubahan pada job milik agent lain, perubahan pada job yang melapor ke chat lain, dan webhook, sama seperti
 membuatnya. Izin *allow always* milik job lama gak ikut ke bentuk barunya: ia bertanya lagi.
@@ -416,7 +443,7 @@ jalan pertama (yang jalan sendiri) mengabari sesuatu, automation itu mematikan d
 Nyalakan lagi kalau mau dikabari sekali lagi. Jalan yang kamu mulai sendiri tidak dihitung: itu kamu sedang mencoba.
 "Kabari aku kalau build-nya selesai" adalah tanda ini, pada pengecekan yang ditandai lanjut hanya kalau berubah. Kabar
 dari misi ke chat-nya ikut dihitung sebagai mengabari, jadi automation yang berisi misi mati setelah jalan pertama yang
-sampai ke misi itu.
+sampai ke misi itu. Begitu juga draft yang ditinggalkan sebuah langkah, yang ditunjukkan ke chat-nya.
 
 **Automation yang berhenti sendiri.** Pengawas untuk sesuatu yang gak pernah terjadi akan mengecek selamanya. **Stop by
 itself after** (0.8.44), di bagian tempat ia melapor, memberinya batas waktu: satu jam, enam jam, satu hari, satu

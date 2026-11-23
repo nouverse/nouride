@@ -6,7 +6,8 @@
 
 import { describe, expect, test } from "bun:test";
 import type { Job } from "@nouride/shared";
-import { startJobRun } from "@/modules/missions/job-runs.ts";
+import { busyLine, startJobRun } from "@/modules/missions/job-runs.ts";
+import { isDraft } from "@/modules/missions/drafts.ts";
 import { missionPage } from "@/modules/missions/page.ts";
 import { missionsHarness } from "./harness.ts";
 
@@ -147,5 +148,98 @@ describe("a job's run", () => {
     const { h, run } = await runOf({ ...JOB, payload: { kind: "systemEvent", text: "hi" } });
     expect(run).toEqual({ refused: "job cron_weekly does not run a mission" });
     expect(h.store.open()).toEqual([]);
+  });
+});
+
+/**
+ * A job's run that drafts (`JobStep`'s `draft`): the mission is put in its person's Backlog, with Start it and Drop it
+ * where the job reports, and nothing runs until they start it. A job could only start its mission.
+ */
+describe("a job's run that drafts", () => {
+  const DRAFTS: Job = { ...JOB, payload: { kind: "mission", goal: "Sum up this week's customer mail for the team.", checks: ["test -s SUMMARY.md"], review: false, draft: true } };
+  const begin = (h: Awaited<ReturnType<typeof missionsHarness>>, job: Job = DRAFTS, body?: string) => startJobRun({ missions: h.missions, store: h.store }, job, body);
+
+  test("makes a draft as whoever turned the job on, in the job's chat with Start it and Drop it, and starts nothing", async () => {
+    const h = await missionsHarness();
+    const run = begin(h);
+    await h.settle();
+    if (!("drafted" in run)) throw new Error(JSON.stringify(run));
+    const mission = h.store.get(run.drafted)!;
+    expect(isDraft(mission)).toBe(true);
+    expect(mission).toMatchObject({ agentId: "nova", startedBy: "8142", gatewayId: "telegram:nova", chatId: "-100team", jobId: "cron_weekly", title: "customer mail", status: "waiting", waitKind: "accept", startedAt: null });
+    expect(h.queued).toHaveLength(0);
+    // What the run says of it, to its record and to the step after it.
+    expect(run.said).toBe(`Drafted the mission "customer mail" (${mission.id.slice(0, 10)}). It waits in the Backlog and runs once it is started.`);
+    // Its notice is a draft's: what it will do, how it is judged done, and the two buttons.
+    const notice = h.told.at(-1)!;
+    expect(notice.text).toStartWith(`📝 Draft ${mission.id.slice(0, 10)} · nova: customer mail`);
+    expect(notice.text).toContain("1 check · signed off by: its checks");
+    expect(notice.buttons?.map((one) => one.label)).toEqual(["Start it", "Drop it"]);
+  });
+
+  test("started by its person, it runs as a run of the job does, and ends at its checks with nobody accepting it", async () => {
+    const h = await missionsHarness();
+    const run = begin(h, DRAFTS, "What the step before said.");
+    await h.settle();
+    if (!("drafted" in run)) throw new Error(JSON.stringify(run));
+    h.missions.accept(run.drafted, "Gading");
+    await h.settle();
+    const mission = h.store.get(run.drafted)!;
+    expect(mission).toMatchObject({ status: "running", jobId: "cron_weekly", request: "What the step before said." });
+    expect(isDraft(mission)).toBe(false);
+  });
+
+  test("one draft of a job waits at a time: a run due meanwhile is told which, in words that say what to do", async () => {
+    const h = await missionsHarness();
+    const first = begin(h);
+    await h.settle();
+    if (!("drafted" in first)) throw new Error(JSON.stringify(first));
+    const again = begin(h);
+    expect(again).toEqual({ busy: first.drafted, waits: true });
+    expect(busyLine(again as { busy: string; waits: true })).toBe(`the last run's draft, mission ${first.drafted}, still waits to be started: start it or drop it`);
+    expect(busyLine({ busy: "msn_x" })).toBe("the last run, mission msn_x, is still working");
+    // Dropped, the next run drafts again; started, too.
+    h.missions.stop(first.drafted, "tester");
+    const next = begin(h);
+    await h.settle();
+    if (!("drafted" in next)) throw new Error(JSON.stringify(next));
+    h.missions.accept(next.drafted, "Gading");
+    await h.settle();
+    expect(begin(h)).toHaveProperty("drafted");
+  });
+
+  test("a draft that waits is not a run: the job's missions that start are not held back by it, nor a draft by one at work", async () => {
+    const h = await missionsHarness({ settings: { perAgent: 5, maxRunning: 5 } });
+    const drafted = begin(h);
+    await h.settle();
+    if (!("drafted" in drafted)) throw new Error(JSON.stringify(drafted));
+    // The same job's step that starts: its mission begins, though the draft still waits.
+    const started = begin(h, JOB);
+    await h.settle();
+    if (!("started" in started)) throw new Error(JSON.stringify(started));
+    expect(h.store.get(started.started)!.status).toBe("running");
+    // And that one at work is what holds the next start back, not the draft made after it.
+    expect(begin(h, JOB)).toEqual({ busy: started.started });
+    // With a mission of the job at work and no draft waiting, a run that drafts still drafts.
+    h.missions.stop(drafted.drafted, "tester");
+    expect(begin(h)).toHaveProperty("drafted");
+  });
+
+  test("a chat that will not take the draft's notice ends nothing: the run has its answer and the draft is kept", async () => {
+    const h = await missionsHarness({ tellDraft: async () => Promise.reject(new Error("the chat is gone")) });
+    const run = begin(h);
+    if (!("drafted" in run)) throw new Error(JSON.stringify(run));
+    // What the run waits on settles, and does not reject: the run goes on.
+    expect(await run.announced).toBeUndefined();
+    await h.settle();
+    expect(isDraft(h.store.get(run.drafted)!)).toBe(true);
+  });
+
+  test("what the run waits on is the notice itself: settled, the draft is in its chat", async () => {
+    const h = await missionsHarness();
+    const run = begin(h);
+    if (!("drafted" in run)) throw new Error(JSON.stringify(run));
+    await run.announced;
+    expect(h.told.at(-1)?.text).toStartWith(`📝 Draft ${run.drafted.slice(0, 10)} · nova: customer mail`);
   });
 });

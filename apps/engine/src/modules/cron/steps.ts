@@ -18,6 +18,7 @@
 
 import { sha256Text } from "@nouride/runtime";
 import type { CommandRuns, HeldAction, Job, JobStep, RunWait, StepGo, StepOutcome, TogetherStep } from "@nouride/shared";
+import { busyLine, type JobRun as MissionBegun } from "@/modules/missions/job-runs.ts";
 import type { RunOutcome, RunState } from "./cron.store.ts";
 import { handedTo, stepTurnMessage, withTriggerBody, type StepBefore } from "./prompts.ts";
 import type { JobTurnResult, TriggerContext } from "./scheduler.ts";
@@ -52,8 +53,8 @@ export interface StepHands {
   turn(step: Step<"agentTurn">, message: string, outside: boolean): Promise<JobTurnResult>;
   /** Text to where the job reports, as the job's delivery says. */
   deliver(text: string): Promise<Sent>;
-  /** A mission started with `request` as what the run handed it. */
-  mission(step: Step<"mission">, request: string | undefined): { started: string } | { busy: string } | { refused: string };
+  /** A mission started with `request` as what the run handed it, or drafted where the step says `draft`. */
+  mission(step: Step<"mission">, request: string | undefined): MissionBegun;
   /**
    * A person asked, where the job reports: the card it was asked on, when it has one to rewrite later. `from`: the
    * question is kept for the end of the quiet hours and asked then, so its time to answer counts from then.
@@ -361,10 +362,18 @@ async function runStep(
       delete carry.body;
       const run = hands.mission(step, request);
       if ("busy" in run) {
-        mark("skipped", `mission ${run.busy} is still working`);
-        return { halt: { status: "skipped", result: `the last run, mission ${run.busy}, is still working` } };
+        mark("skipped", run.waits ? `its last draft, mission ${run.busy}, still waits to be started` : `mission ${run.busy} is still working`);
+        return { halt: { status: "skipped", result: busyLine(run) } };
       }
       if ("refused" in run) return failed(run.refused);
+      // A draft: nothing to wait for. The step is done, the run goes on, and the draft's own notice has told the chat.
+      if ("drafted" in run) {
+        // The draft's notice first: the step after it may speak of it.
+        await run.announced;
+        carry.told = true;
+        mark("done", run.said, { missionId: run.drafted, drafted: true });
+        return { exit: "done", before: { from: "The step that drafted a mission", said: run.said, told: true } };
+      }
       mark("waiting", `started mission ${run.started}`, { missionId: run.started });
       return { wait: { kind: "mission", step: step.id, missionId: run.started, since: hands.now() } };
     }

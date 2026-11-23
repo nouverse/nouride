@@ -184,7 +184,7 @@ describe("a refused token (G8)", () => {
     await gateway.start();
     await eventually(() => gateway.attempts >= 4);
     expect(gateway.attempts).toBeGreaterThanOrEqual(4);
-    expect(events.flatMap((event) => (event.type === "dead" ? [event.reason ?? "budget"] : []))).not.toContain("auth_failed");
+    expect(events.some((event) => event.type === "dead")).toBe(false);
     await gateway.stop();
   });
 

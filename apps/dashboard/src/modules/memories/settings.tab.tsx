@@ -17,6 +17,8 @@ import { api } from "@/commons/lib/api";
 import type { MemorySettings } from "@nouride/wire";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
+import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
+import { SEMANTIC_SEARCH_ASK } from "@/commons/components/agents/page-asks";
 import { useToast } from "@/commons/components/ui/toast";
 import { Details } from "@/commons/components/ui/Details";
 import { ModelField } from "./model-field";
@@ -206,7 +208,7 @@ export function SettingsTab({ editable, admin }: { editable: boolean; admin: boo
         </div>
       </Card>
 
-      <Card title="Semantic search">
+      <Card title="Semantic search" actions={<AskAgentButton {...SEMANTIC_SEARCH_ASK} variant="soft" whole />}>
         <div className="space-y-3">
           <ToggleRow
             label="Search by meaning"

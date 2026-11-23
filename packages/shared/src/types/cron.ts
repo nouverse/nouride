@@ -94,6 +94,8 @@ export type JobPayload =
       checks?: string[];
       /** The reviewer's criteria in words; `false` for no review; absent: the goal itself. */
       review?: string | false;
+      /** Each run drafts the mission and starts nothing (`JobStep`'s mission says what a draft is). */
+      draft?: true;
     }
   /**
    * Several of the above, in order (`JobStep`): each step is handed what the one before said, and the last one's words
@@ -133,6 +135,22 @@ export type CommandRuns = {
   cwd?: string;
   timeoutMs?: number;
 };
+
+/**
+ * An automation with an agent's change made to it, as the page that holds it open is handed it (`LiveEdit`, the
+ * engine's `cron/open-automation.ts`): what it is called, who runs it, what it does, where it reports. Checked as a
+ * save is and written nowhere. `starts` is left out where it starts as the page has it: a start that is a moment
+ * already past is not a change, and written again it would be refused.
+ */
+export interface AutomationChange {
+  name: string;
+  agentId: string;
+  starts?: { start: "scheduled" | "manual" | "webhook"; trigger: JobTrigger };
+  payload: JobPayload;
+  target: JobTarget;
+  delivery: JobDelivery;
+  session: JobSessionMode;
+}
 
 /**
  * Where a run goes from a step: the step after it, the end of the run, or a later step by its id. Never an earlier one,
@@ -191,8 +209,14 @@ export type JobStep = StepCommon &
     /**
      * A mission, started with what the step before said as its request. The run waits for it to end, however long that
      * is and across a restart, and hands its result on. One that failed or was stopped is a failed step.
+     *
+     * `draft`: the mission is drafted and not started. It waits in the Backlog of whoever turned the job on, with
+     * Start it and Drop it where the job reports, and runs once they start it, however much later. The step is done as
+     * soon as the draft is made and the run goes on, handed a line that says so. One draft of a job waits at a time:
+     * a run due while the last still waits stops at this step and says so, so a job that runs every hour does not
+     * fill a Backlog nobody is reading.
      */
-    | { kind: "mission"; goal: string; checks?: string[]; review?: string | false; agentId?: string }
+    | { kind: "mission"; goal: string; checks?: string[]; review?: string | false; agentId?: string; draft?: true }
     /**
      * A wait for a person: asked where the job reports and on the dashboard, with what the step before said. A yes hands
      * that on to the next step; a no, or no answer in `timeoutMs`, is the step's failed exit.
@@ -227,8 +251,10 @@ export interface StepOutcome {
   startedAt: number;
   /** How long it took, once it ended. */
   ms?: number;
-  /** The mission it started. */
+  /** The mission it started, or drafted. */
   missionId?: string;
+  /** With `missionId`: the step drafted that mission and started nothing. A field, so no reader matches the words in `said`. */
+  drafted?: true;
   /** Who answered it, for a step that waited for a person. */
   by?: string;
   /** How each of the steps a `parallel` step started went, in the order they are written. */

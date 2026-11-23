@@ -35,20 +35,20 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 566,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools, parts, versions, a turn's account and use, a followed session's leftovers; the logic in files beside",
+    lines: 569,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools and what they made, parts, versions, a turn's account and use, a followed session's leftovers",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
-    lines: 406,
-    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, who is told what its session started",
+    lines: 407,
+    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, what its lent calls made, the lookout for a turn held for helpers, the message kept as sent",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 495,
-    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves and a lasting job's end is written; rules are `validate.ts`, audit shapes `job-audit.ts`",
+    lines: 498,
+    why: "the job table, whose a job is, the daemon turning one off with why, where `next_run_at` moves and a lasting job's end is written, a job checked and not written (+3); rules are `validate.ts`",
   },
   "apps/engine/src/modules/cron/scheduler.ts": {
-    lines: 405,
-    why: "the ticker: claim, catch up, run now, each kind's dispatch, a step run's hands. Runs of steps are `step-runs.ts`, a job's end `ending.ts`, the quiet hours `quiet.ts`: what is left is one clock",
+    lines: 409,
+    why: "the ticker: claim, catch up, run now, each kind's dispatch (+4: a mission drafted, its notice waited for), a step run's hands. Step runs are `step-runs.ts`, a job's end `ending.ts`, quiet `quiet.ts`",
   },
   "packages/persona/src/config.ts": {
     lines: 492,
@@ -83,16 +83,16 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 599,
-    why: "the missions' one service (start, dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, slots, its jobs, what commands left); +3: an agent's open ones, for /mission",
+    lines: 602,
+    why: "the missions' one service (start, dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, slots, its jobs, what commands left); +3: a draft's own limits, in words",
   },
   "packages/gateways/src/channels/telegram/gateway.ts": {
     lines: 408,
     why: "one Telegram connection: the bot it starts and what it waits on, its poll and what a failed one becomes, sends in parts at Telegram's pace, files, edits, buttons, the menu; words in files beside",
   },
   "packages/gateways/src/commons/resilience.ts": {
-    lines: 409,
-    why: "what every gateway inherits: the connect loop with its teardown, backoff and retry budget, health checks, the bounded send buffer, refusals; a connect's wait is kept in a file beside (connect-wait.ts)",
+    lines: 443,
+    why: "what every gateway inherits: the connect loop with its teardown, backoff, a budget a held open hands back, the slow tries once spent, health checks, the send buffer and what a stop loses of it (+3)",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 438,
@@ -111,8 +111,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses and registry names it lets through; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 418,
-    why: "the WhatsApp adapter's one state machine (bridge reachable, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
+    lines: 422,
+    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
   },
 };
 

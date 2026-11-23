@@ -105,8 +105,10 @@ Beberapa hal terjadi entah ada yang menonton atau gak, dan ada baiknya tahu yang
   langsung jalan: job jam 3 pagi yang berhenti di prompt yang gak akan dilihat siapa pun sama saja
   dengan gak jalan. Apa pun yang menghapus, mematikan sesuatu, mengubah infrastruktur, atau menyentuh
   kredensial langsung ditolak, dan agent bilang apa yang gak bisa dikerjakannya.
-- **Reconnect.** Gateway yang putus akan mundur lalu mencoba lagi. Yang menyerah sepenuhnya memicu
-  alert, kalau kamu sudah menentukan ke mana alert dikirim.
+- **Reconnect.** Gateway yang putus akan mundur lalu mencoba lagi. Yang tetap tidak bisa dijangkau
+  terus mencoba tiap sepuluh menit selama apa pun, dan memicu alert saat itu mulai dan saat ia
+  tersambung lagi, kalau kamu sudah menentukan ke mana alert dikirim. Yang berhenti cuma gateway yang
+  kredensialnya ditolak.
 - **Menyusul setelah restart.** Pesan yang masuk selama daemon mati tetap dijawab kalau dikirim dalam
   15 menit terakhir, dan giliran yang terpotong restart bilang apa yang sudah dikerjakannya.
 - **Backup.** Snapshot database saat boot lalu harian, plus salinan bertanggal dari agent pack dan

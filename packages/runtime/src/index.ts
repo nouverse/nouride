@@ -25,6 +25,7 @@ export * from "./yaml.ts";
 export * from "./append-file.ts";
 export * from "./net.ts";
 export * from "./path.ts";
+export * from "./proxy.ts";
 export * from "./process.ts";
 export * from "./process-memory.ts";
 export * from "./process-activity.ts";

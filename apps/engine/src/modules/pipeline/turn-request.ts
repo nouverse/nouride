@@ -233,6 +233,8 @@ export function turnRequest(
       // The dashboard page the person had open as they wrote, where the message says one, and the dashboard's pages
       // where this conversation does not hold them yet (`pageNotes`).
       ...pageNotes(envelope.page, turn.history),
+      // And what that page holds open to be changed, in the words of the tool that changes it (`modules/live-edit`).
+      ...[ctx.deps.liveEdits?.note(envelope.page?.liveEdit, turn.history, { agentId: agent.config.id }) ?? null].filter((note): note is string => note !== null),
     ],
     workspaceDir: workspace.shared,
     privateDir: workspace.own,
@@ -313,6 +315,8 @@ export function turnRequest(
       ? { senderName: envelope.senderName }
       : {}),
     ...(envelope.senderVerified ? { senderVerified: true } : {}),
+    // What the page holds open, for the tool that changes it: only where the daemon knows that kind of thing.
+    ...(envelope.page?.liveEdit && ctx.deps.liveEdits?.knows(envelope.page.liveEdit.kind) ? { liveEdit: envelope.page.liveEdit } : {}),
     // The *matched* person goes everywhere, DMs included. That is the whole point — a household
     // talks to its agent in DMs, and this is the surface that told the agent nothing.
     ...(() => {

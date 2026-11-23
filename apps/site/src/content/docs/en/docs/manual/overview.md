@@ -101,8 +101,9 @@ Some things happen whether or not anyone is watching, and it is worth knowing wh
   ahead: a 3am job that stops at a prompt nobody will see has not run at all. Anything that deletes,
   takes something down, changes infrastructure or touches a credential is refused on the spot, and
   the agent says what it could not do.
-- **Reconnects.** A gateway that drops backs off and retries. One that gives up entirely raises an
-  alert, if you configured somewhere for alerts to go.
+- **Reconnects.** A gateway that drops backs off and retries. One that still cannot be reached goes on
+  trying every ten minutes for as long as it takes, and raises an alert when that begins and when it is
+  back, if you configured somewhere for alerts to go. Only one whose credentials are refused stops.
 - **Catching up after a restart.** Messages that arrived while the daemon was down are answered if
   they were sent in the last 15 minutes, and a turn the restart cut off says what it had done.
 - **Backups.** A snapshot of the database at boot and daily, and dated copies of the agent packs and

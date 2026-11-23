@@ -14,7 +14,7 @@ import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import { longTurnHelperNote } from "@/modules/llm/executor/nudges.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { SqliteApprovalGate } from "@/modules/tools/approvals.store.ts";
-import { createMissionTools } from "@/modules/tools/builtins/mission.ts";
+import { createMissionTools, OWN_LIMITS } from "@/modules/tools/builtins/mission.ts";
 import { createWorkTool } from "@/modules/tools/builtins/work.ts";
 import { missionsHarness, STARTERS_CTX } from "./harness.ts";
 
@@ -215,9 +215,122 @@ describe("D4 — a draft changed before it runs", () => {
     expect(h.store.get(mission!.id)).toMatchObject({ goal: "Revisi RFC sesuai jawaban pemilik", limits: { hours: 2 } });
   });
 
-  test("an agent does not raise its own limits: the tool has no field for them", () => {
-    const fields = Object.keys((createMissionTools({} as never).chat.definition.parameters as { properties: Record<string, unknown> }).properties);
-    expect(fields).not.toContain("limits");
+});
+
+/**
+ * One mission's own limits: the settings bound every mission the same, and work known to need more had the person
+ * raise them for all. An agent names them on its draft, the person reads them in its notice, and their start is the yes.
+ */
+describe("a draft's own limits", () => {
+  const usual = { hours: 8, turns: 50, tokens: 50_000_000 };
+
+  test("left out, a draft follows the settings, and its notice and the agent's answer say nothing of limits", async () => {
+    const { h, draft } = await setup();
+    const { answer, mission } = await draft();
+    expect(mission!.limits).toEqual(usual);
+    expect(h.told.at(-1)!.text).not.toContain("limits");
+    expect(answer.content).not.toContain("limits");
+  });
+
+  test("named, each is the mission's own, the rest follow the settings, and the notice shows them beside the usual ones", async () => {
+    const { h, draft } = await setup();
+    const { answer, mission } = await draft({ limit_hours: 24, limit_tokens: 400_000_000 });
+    expect(mission!.limits).toEqual({ hours: 24, turns: 50, tokens: 400_000_000 });
+    const line = "Its own limits before it asks you whether to go on: 24h of work (usually 8h) · 400M tokens (usually 50M)";
+    // Between what it will do and how to start it: read before the yes.
+    expect(h.told.at(-1)!.text).toContain(`brief: none\n\n${line}\n\nStart it: /mission accept`);
+    expect(answer.content).toContain(`${line}. The person sees this in its notice.`);
+    // The settings are as they were: one mission's limits are its own.
+    expect(h.settings).toMatchObject({ limitHours: 8, limitTurns: 50, limitTokens: 50_000_000 });
+  });
+
+  test("all three named, turns among them; a number written as text is the number", async () => {
+    const { h, draft } = await setup();
+    const { mission } = await draft({ limit_hours: "0.5", limit_turns: 1, limit_tokens: 100_000 });
+    expect(mission!.limits).toEqual({ hours: 0.5, turns: 1, tokens: 100_000 });
+    expect(h.told.at(-1)!.text).toContain("Its own limits before it asks you whether to go on: 30m of work (usually 8h) · 1 turn (usually 50) · 100k tokens (usually 50M)");
+  });
+
+  test("started, the mission stops at its own limit and not the settings'", async () => {
+    const { h, work, draft } = await setup();
+    const { mission } = await draft({ limit_turns: 2, accept: true, no_review: true });
+    await work.execute({ action: "start", id: mission!.id, text: "go, start it" }, person());
+    await h.settle();
+    const running = h.store.get(mission!.id)!;
+    expect(running).toMatchObject({ status: "running", limits: { hours: 8, turns: 2, tokens: 50_000_000 } });
+    h.turn(running);
+    expect(h.store.get(mission!.id)!.waitKind).toBeNull();
+    h.turn(h.store.get(mission!.id)!);
+    expect(h.store.get(mission!.id)).toMatchObject({ status: "waiting", waitKind: "limit" });
+    expect(h.told.at(-1)!.text).toContain("reached its turn limit (2 turns)");
+  });
+
+  test("held to the bounds the settings keep, in words that say how to write it; nothing is made", async () => {
+    const { h, draft } = await setup();
+    const refused = async (args: Record<string, unknown>) => {
+      const { answer, mission } = await draft(args);
+      expect(mission).toBeNull();
+      expect(answer.isError).toBe(true);
+      return answer.content;
+    };
+    expect(await refused({ limit_tokens: 250 })).toBe("`limit_tokens` must be a whole number from 100000 up, got 250. It is in tokens, written whole: 250 million is 250000000.");
+    expect(await refused({ limit_hours: 169 })).toBe("`limit_hours` must be a number from 0.25 to 168, got 169. It is in hours of work: 12, or 0.5 for half an hour.");
+    expect(await refused({ limit_hours: 0.1 })).toContain("`limit_hours` must be a number from 0.25 to 168, got 0.1.");
+    expect(await refused({ limit_turns: 1001 })).toBe("`limit_turns` must be a whole number from 1 to 1000, got 1001.");
+    expect(await refused({ limit_turns: 2.5 })).toContain("`limit_turns` must be a whole number from 1 to 1000, got 2.5.");
+    expect(await refused({ limit_turns: "many" })).toContain('`limit_turns` must be a whole number from 1 to 1000, got "many".');
+    expect(h.store.open()).toHaveLength(0);
+  });
+
+  test("the bounds are the settings' own, at both ends", async () => {
+    const { draft } = await setup();
+    expect((await draft({ limit_hours: 0.25, limit_turns: 1000 })).mission!.limits).toMatchObject({ hours: 0.25, turns: 1000 });
+    expect((await draft({ limit_hours: 168, limit_turns: 1, limit_tokens: 100_000 })).mission!.limits).toEqual({ hours: 168, turns: 1, tokens: 100_000 });
+  });
+
+  test("its agent changes them before it starts, and the notice is sent again with them", async () => {
+    const { h, tools, draft } = await setup();
+    const { mission } = await draft();
+    const edited = await tools.chat.execute({ action: "edit", id: mission!.id, limit_turns: 200 }, person());
+    expect(edited.content).toStartWith(`Draft ${mission!.id.slice(0, 10)} changed: its turns limit.`);
+    expect(h.store.get(mission!.id)!.limits).toEqual({ ...usual, turns: 200 });
+    expect(h.told.at(-1)!.text).toContain("Its own limits before it asks you whether to go on: 200 turns (usually 50)");
+    // Out of bounds, the draft stays as it was.
+    const refused = await tools.chat.execute({ action: "edit", id: mission!.id, limit_hours: 500 }, person());
+    expect(refused).toMatchObject({ isError: true, content: "Its hours limit must be a number from 0.25 to 168, got 500. It is in hours of work: 12, or 0.5 for half an hour." });
+    expect(h.store.get(mission!.id)!.limits).toEqual({ ...usual, turns: 200 });
+  });
+
+  test("a person's change on the dashboard keeps the same bounds: 1000 hours was taken, where the settings refuse past 168", async () => {
+    const { h, draft } = await setup();
+    const { mission } = await draft();
+    expect(await h.missions.edit(mission!.id, { limits: { hours: 1000 } }, {})).toEqual({ refused: "Its hours limit must be a number from 0.25 to 168, got 1000. It is in hours of work: 12, or 0.5 for half an hour." });
+    expect(await h.missions.edit(mission!.id, { limits: { tokens: 0.5 } }, {})).toMatchObject({ refused: expect.stringContaining("Its tokens limit must be a whole number from 100000 up") });
+    expect("refused" in (await h.missions.edit(mission!.id, { limits: { hours: 168, tokens: 900_000_000 } }, {}))).toBe(false);
+    expect(h.store.get(mission!.id)!.limits).toEqual({ hours: 168, turns: 50, tokens: 900_000_000 });
+  });
+
+  test("a piece handed out inside a mission starts with nobody's yes, so it keeps the settings: named limits are refused, not dropped", async () => {
+    const { h, tools } = await setup();
+    const parent = await h.start("the parent", { byAgent: "nova" });
+    const inside = { agentId: "nova", gatewayId: MISSION_GATEWAY_ID, chatId: parent.id, senderId: "8142" } as ToolContext;
+    const refused = await tools.inside.execute({ action: "start", title: "A piece", goal: "a piece of it", agent: "nox", limit_tokens: 900_000_000 }, inside);
+    expect(refused).toMatchObject({ isError: true, content: "`limit_tokens`: a mission's own limits are a draft's, which the person starts with them in front of them. This one starts without that, so it keeps the limits in the settings: call it again without them." });
+    expect(h.store.recent(5).some((one) => one.goal === "a piece of it")).toBe(false);
+    // And the tool does not offer them there.
+    const offered = (tool: "chat" | "inside") => Object.keys((createMissionTools({} as never)[tool].definition.parameters as { properties: Record<string, unknown> }).properties);
+    expect(offered("inside").filter((field) => field.startsWith("limit_"))).toEqual([]);
+    expect(offered("chat").filter((field) => field.startsWith("limit_"))).toEqual(["limit_hours", "limit_turns", "limit_tokens"]);
+  });
+
+  test("what the agent reads carries the rule: left out is usual, and the person sees what it names", () => {
+    const description = createMissionTools({} as never).chat.definition.description;
+    expect(description).toContain(OWN_LIMITS);
+    expect(OWN_LIMITS).toContain("Leave them out to follow the person's setting, right for most work");
+    expect(OWN_LIMITS).toContain("The draft's notice shows them to the person.");
+    const fields = (createMissionTools({} as never).chat.definition.parameters as { properties: Record<string, { description: string }> }).properties;
+    expect(fields.limit_tokens!.description).toContain("written whole: 250000000 is 250 million");
+    for (const field of ["limit_hours", "limit_turns", "limit_tokens"]) expect(fields[field]!.description).toContain("Left out: the setting.");
   });
 });
 

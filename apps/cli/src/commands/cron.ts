@@ -160,6 +160,7 @@ async function addJob(client: Client, args: string[]): Promise<void> {
         `  --mission <goal>                    long work: each run a mission, ended at the reviewer\n` +
         `  --check <command>                   …a command whose exit says a run is done\n` +
         `  --no-review                         …and no reviewer: the check is the whole answer\n` +
+        `  --draft                             …and each run drafts it for a person to start, and starts nothing\n` +
         `  --steps <file.json>                 several of these in a fixed order: the list, as JSON\n` +
         `  --manual                            no time: it runs when somebody starts it\n` +
         `  --session <fresh|isolated|chat>     history: none (default), private, or the chat's\n` +
@@ -178,7 +179,7 @@ async function addJob(client: Client, args: string[]): Promise<void> {
   const payload = steps
     ? { kind: "steps", steps: await stepsFromFile(steps) }
     : goal
-    ? { kind: "mission", goal, ...(flag("check") ? { checks: [flag("check")] } : {}), ...(has("no-review") ? { review: false } : {}) }
+    ? { kind: "mission", goal, ...(flag("check") ? { checks: [flag("check")] } : {}), ...(has("no-review") ? { review: false } : {}), ...(has("draft") ? { draft: true } : {}) }
     : script
     ? {
         kind: "command",

@@ -423,6 +423,7 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   let shown = "";
   let toast = "";
   let there: boolean[] = [];
+  let limits = { hours: "", turns: "", tokens: "" };
   await renderPage("/missions/msn_1", async (host) => {
     await eventually(() => buttons(host).includes("Change the draft"), 2_000, "the draft's card");
     // Nothing of a draft has run: no meters, no checklist, no turns, no box to tell it something, and no "Needs you".
@@ -438,6 +439,11 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
     type(checks, "test -s RFC.md\nbun run check-paths");
     const accept = [...host.querySelectorAll("label")].find((label) => label.textContent?.includes("I accept the result"))!.querySelector("input") as HTMLInputElement;
     accept.click();
+    // Its own limits, the three of them: tokens typed in millions, as the Limits card takes them.
+    const limit = (label: string) => [...host.querySelectorAll("label")].find((one) => one.querySelector("span")?.textContent === label)!.querySelector("input") as HTMLInputElement;
+    limits = { hours: limit("Hours").value, turns: limit("Turns").value, tokens: limit("Tokens").value };
+    type(limit("Tokens"), "400");
+    type(limit("Hours"), "24");
     await enabled(host, "Save the draft");
     const record = recordPosts({
       "/missions/msn_1/edit": {
@@ -461,7 +467,11 @@ test("a draft (0.8.11): its brief shown, and changed before it starts — only w
   expect(shown).not.toContain("started");
   expect(shown).toContain("What to read");
   expect(shown).toContain("The owner's answers, first.");
-  expect(sent).toEqual([{ path: "/missions/msn_1/edit", body: { checks: ["test -s RFC.md", "bun run check-paths"], accept: true } }]);
+  // The form opens on the draft's own limits, and sends the ones changed: tokens as tokens, turns left alone.
+  const kept = (WIRE["/missions/msn_1"] as { mission: { limits: { hours: number; turns: number; tokens: number } } }).mission.limits;
+  expect(limits).toEqual({ hours: String(kept.hours), turns: String(kept.turns), tokens: String(kept.tokens / 1_000_000) });
+  expect(shown).not.toContain("Where this mission stops to ask you");
+  expect(sent).toEqual([{ path: "/missions/msn_1/edit", body: { checks: ["test -s RFC.md", "bun run check-paths"], accept: true, limits: { hours: 24, tokens: 400_000_000 } } }]);
   // The page's words (0.8.23): neither the chat's list, a path in it, nor the server's error.
   expect(toast).toContain("Saved, but its brief could not be written, so it has none for now.");
   expect(toast).not.toContain("/srv/work/rfc");

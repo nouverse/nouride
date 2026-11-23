@@ -496,6 +496,151 @@ describe("the conversation in it", () => {
   });
 });
 
+describe("the model and effort its conversation is answered with", () => {
+  // Its bar had none: it sent a person to Chats to pick. The same picker, as its mark alone.
+  const CHOICES = { model: { own: "gemini-3.8-flash" }, effort: { own: "low" }, efforts: ["low", "medium", "high"] };
+  const PICKER = { ...AT_REST, "/chat/choices": { status: 200, body: CHOICES }, "/chat/models": { status: 200, body: { models: ["gemini-3.8-flash", "claude-sonnet-5-5"] } } };
+  const picker = (panel: () => HTMLElement | null = card) => panel()?.querySelector('header button[aria-label^="Model and effort for this conversation"]') as HTMLButtonElement | null;
+  const pickerPanel = () => dom.document.querySelector('[role="dialog"][aria-label="Model and effort for this conversation"]') as unknown as HTMLElement | null;
+  const level = (name: string) => [...(pickerPanel()?.querySelectorAll('[role="radio"]') ?? [])].find((one) => one.textContent?.trim() === name) as HTMLButtonElement | undefined;
+  const chosen = (posts: { path: string; body: unknown }[]) => posts.filter((post) => post.path === "/chat/choices").map((post) => post.body);
+
+  test("its bar has the picker Chats has, as a mark alone, and a pick is kept on the conversation it is on", async () => {
+    answer(PICKER);
+    const posted = recordPosts({ "/chat/choices": { status: 200, body: { ...CHOICES, effort: { own: "low", chosen: "high" } } } });
+    try {
+      await renderPage("/skills", async (host) => {
+        await open(host);
+        await eventually(() => picker() !== null, 3_000, "the picker in the bar");
+        // What the conversation is on is its name, read by a screen reader and shown on a hover; no words in the bar.
+        expect(picker()!.getAttribute("aria-label")).toBe("Model and effort for this conversation: gemini-3.8-flash · low");
+        expect(picker()!.getAttribute("title")).toBe("Model and effort: gemini-3.8-flash · low");
+        expect(picker()!.textContent?.trim()).toBe("");
+        expect(picker()!.hasAttribute("data-picked")).toBe(false);
+        // Between the agent and New chat: the bar's other buttons are where they were.
+        const bar = [...card()!.querySelectorAll("header > *")].map((one) => one.getAttribute("aria-label") ?? "");
+        expect(bar.map((label) => label.split(/[:.]| with /)[0])).toEqual(["Chatting", "Model and effort for this conversation", "Start a new conversation", "Open this conversation in Chats", "Minimize the chat"]);
+
+        picker()!.click();
+        await eventually(() => level("high") !== undefined, 3_000, "the panel's levels");
+        expect(pickerPanel()!.textContent).toContain("For this conversation only, from your next message.");
+        level("high")!.click();
+        await eventually(() => picker()?.hasAttribute("data-picked") === true, 3_000, "the pick, marked on the button");
+        expect(picker()!.getAttribute("aria-label")).toBe("Model and effort for this conversation: gemini-3.8-flash · high");
+        // The chat is still open under it.
+        expect(staying()).toBe(true);
+      });
+      // On the conversation the panel is on, by its id: the one Chats shows the same pick for.
+      expect(chosen(posted.posts)).toEqual([{ sessionId: "ses_1", effort: "high" }]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("a pick for a conversation not begun goes with its first message, and asks the daemon nothing before it", async () => {
+    answer(PICKER);
+    dom.localStorage.setItem(LAST_AGENT_KEY, JSON.stringify("nix"));
+    const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_nix", chatId: "web-2", messageId: "msg_1", agentId: "nix" } } });
+    try {
+      await renderPage("/skills", async (host) => {
+        await open(host);
+        await eventually(() => picker() !== null, 3_000, "the picker in the bar");
+        picker()!.click();
+        await eventually(() => level("medium") !== undefined, 3_000, "the panel's levels");
+        level("medium")!.click();
+        await eventually(() => picker()?.hasAttribute("data-picked") === true, 3_000, "the pick, marked on the button");
+        pressKey("Escape");
+        await eventually(() => pickerPanel() === null, 3_000, "the picker put away");
+        type(boxIn(card())!, "hello");
+        await eventually(() => sendIn(card())?.disabled === false, 2_000, "send enabled");
+        sendIn(card())!.click();
+        await eventually(() => sent(posted.posts).length === 1, 3_000, "the first message");
+      });
+      expect(chosen(posted.posts)).toEqual([]);
+      expect(sent(posted.posts)).toEqual([{ text: "hello", agent: "nix", effort: "medium", page: { path: "/dashboard/skills", title: "Skills Workshop" } }]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("a pick not sent is one conversation's: another agent picked in the bar starts from nothing picked", async () => {
+    // Neither agent has a conversation yet: a pick kept past its agent would be the next one's, and go with its first message.
+    answer({ ...PICKER, "/chat-list": { status: 200, body: { agents: [], gone: [], rooms: [], groups: [] } } });
+    dom.localStorage.setItem(LAST_AGENT_KEY, JSON.stringify("nix"));
+    const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_new", chatId: "web-3", messageId: "msg_1", agentId: "nouva" } } });
+    try {
+      await renderPage("/skills", async (host) => {
+        await open(host);
+        await eventually(() => picker() !== null, 3_000, "the picker in the bar");
+        picker()!.click();
+        await eventually(() => level("medium") !== undefined, 3_000, "the panel's levels");
+        level("medium")!.click();
+        await eventually(() => picker()?.hasAttribute("data-picked") === true, 3_000, "the pick, marked on the button");
+        pressKey("Escape");
+        await eventually(() => pickerPanel() === null, 3_000, "the picker put away");
+        (card()!.querySelector('button[aria-label^="Chatting with "]') as HTMLButtonElement).click();
+        await eventually(() => card()!.textContent?.includes("Chat with") === true, 2_000, "the list of agents");
+        ([...card()!.querySelectorAll("li button")].find((one) => one.textContent?.includes("Nouva")) as HTMLButtonElement).click();
+        await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nouva…", 3_000, "the other agent's new conversation");
+        await eventually(() => picker() !== null, 3_000, "its picker");
+        expect(picker()!.hasAttribute("data-picked")).toBe(false);
+        type(boxIn(card())!, "hello");
+        await eventually(() => sendIn(card())?.disabled === false, 2_000, "send enabled");
+        sendIn(card())!.click();
+        await eventually(() => sent(posted.posts).length === 1, 3_000, "the first message");
+      });
+      expect(sent(posted.posts)).toEqual([{ text: "hello", agent: "nouva", page: { path: "/dashboard/skills", title: "Skills Workshop" } }]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("Escape puts the picker away first and leaves the chat open; the next one closes the chat", async () => {
+    answer(PICKER);
+    await renderPage("/skills", async (host) => {
+      await open(host);
+      await eventually(() => picker() !== null, 3_000, "the picker in the bar");
+      picker()!.click();
+      await eventually(() => pickerPanel() !== null, 3_000, "the picker's panel");
+      pressKey("Escape");
+      await eventually(() => pickerPanel() === null, 3_000, "the picker put away");
+      await drawn();
+      expect(staying()).toBe(true);
+      // The focus is back on the picker's button, in the card: the next Escape is the chat's. Given back as the panel
+      // is taken off the page, a moment after it is gone from it: waited for, not read at once.
+      await eventually(() => focused() === picker(), 2_000, "the focus back on the picker's button");
+      pressKey("Escape");
+      await eventually(() => card() === null, 2_000, "the chat closed");
+    });
+  });
+
+  test("a daemon that answers nothing for the picker: no dead button, and the bar as it was", async () => {
+    answer({ ...AT_REST, "/chat/choices": { status: 404, body: { error: "not found" } } });
+    await renderPage("/skills", async (host) => {
+      await open(host);
+      await eventually(() => newChat() !== null, 3_000, "the bar");
+      expect(picker()).toBeNull();
+      expect([...card()!.querySelectorAll("header > *")]).toHaveLength(4);
+    });
+  });
+
+  test("on a phone the picker is a sheet over the chat's sheet, and putting it away leaves the chat up", async () => {
+    answer(PICKER);
+    phone();
+    await renderPage("/skills", async (host) => {
+      await open(host, sheet);
+      await eventually(() => picker(sheet) !== null, 3_000, "the picker in the sheet's bar");
+      picker(sheet)!.click();
+      const pickerSheet = () => dom.document.querySelector('[data-sheet][data-open][aria-label="Model and effort for this conversation"]') as unknown as HTMLElement | null;
+      await eventually(() => pickerSheet() !== null, 3_000, "the picker's sheet");
+      expect([...pickerSheet()!.querySelectorAll('[role="radio"]')].map((one) => one.textContent?.trim())).toContain("high");
+      (pickerSheet()!.querySelector('button[aria-label^="Close"]') as HTMLButtonElement).click();
+      await eventually(() => pickerSheet() === null, 3_000, "the picker's sheet put away");
+      expect(sheet()).not.toBeNull();
+    });
+  });
+});
+
 describe("where it is not", () => {
   const status = WIRE["/status"] as Record<string, unknown>;
   const me = WIRE["/auth/me"] as { user: Record<string, unknown> };

@@ -6,7 +6,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { ApprovalDecision, ApprovalRequest, ChatChoices, ChatListPayload, ChatTurn, LiveTurn, OpenPage, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
+import type { ApprovalDecision, ApprovalRequest, ChatChoices, ChatListPayload, ChatTurn, LiveEditOffer, LiveTurn, OpenPage, Room, RunningJob, SessionSummary, SlashCommand, Transcript, TurnAttachment, UploadedFile } from "@nouride/wire";
 
 export const chatApi = {
   /**
@@ -179,6 +179,9 @@ export const chatApi = {
 
   /** Pick for a conversation that has begun: a value, or null for the agent's own back. Answers as it now stands. */
   chooseInChat: (input: { sessionId: string; model?: string | null; effort?: string | null }) => post<ChatChoices>(`${control}/chat/choices`, input),
+
+  /** A change an agent wrote to what a page holds open, by the id its call's step carries. 404 once the daemon forgot it. */
+  liveEdit: (id: string) => request<{ offer: LiveEditOffer }>(`${control}/live-edits/${encodeURIComponent(id)}`),
 
   /** The models to suggest for an agent's conversations: its provider's own list, by name. */
   chatModels: (agent: string) => request<{ models: string[] }>(`${control}/chat/models?${new URLSearchParams({ agent })}`),

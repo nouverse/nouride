@@ -420,7 +420,7 @@ export function registerChatRoutes(control: ControlApp, deps: ControlDeps): void
       agent: agent.config.id,
       ...sender,
       ...(attachments.length > 0 ? { attachments } : {}),
-      ...pageOf(body.page),
+      ...pageOf(body.page, (kind) => deps.pipeline.liveEdits?.()?.knows(kind) === true),
     });
 
     deps.audit.record({

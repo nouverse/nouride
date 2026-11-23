@@ -25,6 +25,8 @@ describe("a step's words", () => {
     expect(stepTitle(turn, "Nix")).toBe("Nix works on it");
     expect(stepTitle(wait, "Nix")).toBe("Wait for your OK");
     expect(stepTitle(mission, "Nix")).toBe("Start a mission");
+    // One the run only drafts starts nothing, and its box does not say it does.
+    expect(stepTitle({ ...mission, draft: true }, "Nix")).toBe("Draft a mission");
     expect(stepTitle(say, "Nix")).toBe("Tell me");
     expect(stepTitle({ ...say, name: "  " }, "Nix")).toBe("Send a message");
   });

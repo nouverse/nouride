@@ -166,6 +166,9 @@ still in the box when you open it again.
   the one its row on Chats opens, and starts one when there is none. What you send in the panel is on Chats and the
   other way round, with the agent's steps, its files, the approvals it waits on and **Stop**, as on Chats. The arrows
   at the top of the panel open the same conversation on the Chats page. Rooms and groups stay on Chats.
+- **Its model and effort.** The sparkle at the top of the panel opens the same panel a conversation on Chats has
+  (0.8.46): pick a model and an effort for this conversation only, from your next message. The button is tinted
+  while the conversation is on a pick of its own.
 - **A new conversation.** The speech bubble with a plus, at the top of the panel, starts a new conversation with the
   agent the panel is on. Your first message begins it, and the panel stays on it. If you close the panel without
   writing anything, it opens on your newest conversation again.
@@ -178,6 +181,9 @@ still in the box when you open it again.
   from: what the page is called, its address, and what it is about where it is about one thing, such as a mission or
   an agent. So "what is this one waiting for?" asked on a mission's page is about that mission. A message written on
   the Chats page names no page.
+- **It can change the automation you have open** (0.8.46). On an automation's page the agent is also shown the
+  automation as the page holds it, unsaved changes and all, and a change you ask for is drawn over it for you to
+  apply or discard. [Automations](/en/docs/manual/schedule/) has how.
 - **It can take you to another page.** In a conversation from the panel the agent is also told the dashboard's pages,
   so "take me to the memory graph" is answered with a link. Press it and that page opens under the chat, which stays
   open; on a phone the chat is put away so you see the page. A link to anywhere else opens in a new tab, as before.
@@ -374,8 +380,10 @@ commands and decisions. On **Logs**, anyone else has the two other tabs: what ra
 still running in the background.
 
 **Export and import** (0.8.41, an admin's) takes everything this Nouride holds to another machine as one file, or
-brings such a file in. The page says what the file will hold before it is made; the secrets go in only locked with a
-password you type, and the agents' own folders only when ticked. A file brought in is shown beside what is here
+brings such a file in. The page says what the file will hold before it is made, and counts how large when you press
+**Count how large it will be** (0.8.46; before, it counted as the page opened, which on a large install slowed every
+page until it ended); the secrets go in only locked with a password you type, and the agents' own folders only when
+ticked. A file brought in is shown beside what is here
 before anything is replaced, asks for the word `replace` and ten seconds, and replaces everything: nothing is merged.
 Afterwards the page leads with what came and what did not, and the connections and automations wait for **Go live**.
 [Move Nouride to another machine](/en/docs/deployment/move-to-another-machine/) has the steps.

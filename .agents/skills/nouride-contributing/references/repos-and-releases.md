@@ -57,7 +57,9 @@ The order, since 0.8.36:
    `main` carries (it moves only forward). Then `git tag vX.Y.Z <merge commit>` and push the tag: `release.yml` builds,
    signs and publishes, and starts the public half (`public-release.yml`).
    `bun run scripts/release/publish.ts vX.Y.Z` runs steps 2 to 4 in this order, once its checks pass (`--dry-run`
-   says what it would run); a red check of the pull request stops it before the merge.
+   says what it would run); a red check of the pull request stops it before the merge. It reads the pull request's
+   checks only once its own (`pr`, `cla`) are listed beside the branch's. Run on `main` after a merge made before, it
+   does step 4 alone: the suite on `main`'s commit unless one asked for passed there, the private `main`, the tag.
 5. **After the tag:** a fresh install from the public address and the last release's own `nouride update` to the new
    one, then the installs the maintainers run.
 

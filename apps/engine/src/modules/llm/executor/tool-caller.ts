@@ -237,6 +237,7 @@ export class ToolCaller {
       gatewayId: req.gatewayId,
       senderId: req.senderId,
       ...(req.senderName ? { senderName: req.senderName } : {}),
+      ...(req.liveEdit ? { liveEdit: req.liveEdit } : {}),
       chatType: req.chatType,
       // The same two values the prompt was built from. See `workspaceView`.
       workspaceDir: workspaceView(req).dir,

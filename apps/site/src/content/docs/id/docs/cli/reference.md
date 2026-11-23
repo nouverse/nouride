@@ -429,6 +429,10 @@ nouride memory embed                           # vektor untuk pencarian semantik
 `pass_model` menerima `<provider>/<model>`, dan `-` mengembalikannya ke model milik tiap agent. Model itu
 juga meringkas percakapan panjang kecuali `[llm.context] summary_model` diisi; `nouride doctor` memberi tahu
 kalau ia gagal.
+
+`semantic` (0.8.46) menerima `<provider>/<model embedding>` dan menyalakan pencarian semantik dengan model
+itu, setelah modelnya menjawab satu embedding; `off` dan `on` cuma memutar saklarnya. `semantic_dimensions`
+untuk model yang bisa memendekkan vektornya.
 [Memori →](/id/docs/architecture/memory/)
 
 ## Budget

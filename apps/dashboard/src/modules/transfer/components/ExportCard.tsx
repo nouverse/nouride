@@ -1,7 +1,11 @@
 /**
- * Making the file: what it will hold and how large is said before it is made, with the two things a person decides
- * (the agents' own folders, which can be large, and the secrets, which travel only locked with a password typed here);
- * then how far it is while it is made; then the file to download, kept until it is removed or the next one is made.
+ * Making the file: what it will hold is said before it is made, with the two things a person decides (the agents' own
+ * folders, which can be large, and the secrets, which travel only locked with a password typed here); then how far it
+ * is while it is made; then the file to download, kept until it is removed or the next one is made.
+ *
+ * How many files and how large is counted when the person asks, by a button: the count reads every file of the
+ * install, and made as the page opened it was still running after a person had gone on to another page. One count
+ * says both sizes, with the agents' folders and without, so the tick asks for no second one.
  *
  * The password is asked twice and goes once to the daemon, which keeps none of it. Without one the file holds no
  * secret, and the card says so before the button is pressed.
@@ -9,7 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Download, FileArchive, Loader2, Trash2 } from "lucide-react";
+import { Calculator, Download, FileArchive, Loader2, Trash2 } from "lucide-react";
 import type { TransferState } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { formatBytes } from "@/commons/lib/format";
@@ -18,6 +22,9 @@ import { PasswordInput } from "@/commons/components/ui/PasswordInput";
 import { count, holdsLines, NEVER_IN_IT } from "@/commons/lib/transfer-words";
 
 const LEAST = 12;
+
+/** What a file holds, said before anything is counted: the same things the count lists with their sizes. */
+const HOLDS = "Everything this Nouride keeps: your chats, missions, automations and accounts, the settings and people, your agents with their skills, and what they remember, read and were sent.";
 
 /** The browser's own download of the file: nothing of it passes through the page's memory. */
 function save(href: string, name: string): void {
@@ -35,9 +42,13 @@ export function ExportCard({ state }: { state: TransferState }) {
   const [wanted, setSecrets] = useState(true);
   const [first, setFirst] = useState("");
   const [again, setAgain] = useState("");
-  const plan = useQuery({ queryKey: ["transfer", "plan", folders], queryFn: () => api.exportPlan(folders) });
+  // Asked for by the button below and by nothing else. What it found is kept a few minutes, so a look at another page
+  // and back does not lose it.
+  const plan = useQuery({ queryKey: ["transfer", "plan"], queryFn: api.exportPlan, enabled: false });
+  const counted = plan.data;
+  const size = counted ? { parts: folders ? { ...counted.parts, workspace: counted.folders } : counted.parts, bytes: counted.bytes + (folders ? counted.folders.bytes : 0) } : null;
   // With no secret kept here there is nothing to lock, and no password to ask for.
-  const none = plan.data?.secrets === 0;
+  const none = state.secrets === 0;
   const secrets = wanted && !none;
   const refresh = (next: TransferState) => queryClient.setQueryData(["transfer"], next);
   const make = useMutation({
@@ -61,16 +72,26 @@ export function ExportCard({ state }: { state: TransferState }) {
       <div className="space-y-4" data-export>
         <div className="space-y-2 text-sm">
           <p className="font-semibold text-base-content">The file will hold</p>
-          {plan.data ? (
+          {counted && size ? (
             <ul className="list-disc space-y-1 pl-5 text-base-content/80" data-export-holds>
-              {holdsLines(plan.data.parts, plan.data.database).map((line) => (
+              {holdsLines(size.parts, counted.database).map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-base-content/65">Counting…</p>
+            <p className="text-base-content/80" data-export-everything>
+              {HOLDS}
+            </p>
           )}
-          {plan.data ? <p className="text-xs text-base-content/65">About {formatBytes(plan.data.bytes)} before it is packed, usually less after.</p> : null}
+          {size ? <p className="text-xs text-base-content/65">About {formatBytes(size.bytes)} before it is packed, usually less after.</p> : null}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <button type="button" className="btn btn-sm gap-2 rounded-xl" disabled={plan.isFetching} onClick={() => void plan.refetch()} data-export-count>
+              {plan.isFetching ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : <Calculator size={14} aria-hidden="true" />}
+              {plan.isFetching ? "Counting…" : counted ? "Count again" : "Count how large it will be"}
+            </button>
+            {plan.isFetching ? <span className="text-xs text-base-content/65">With many files this takes a while. You can go on meanwhile.</span> : null}
+          </div>
+          <ErrorNote error={plan.error} />
           <p className="text-xs text-base-content/65">{NEVER_IN_IT}</p>
         </div>
 
@@ -79,7 +100,7 @@ export function ExportCard({ state }: { state: TransferState }) {
           <span>
             The agents' own folders
             <span className="block text-xs text-base-content/65">
-              {plan.data ? `${count(plan.data.folders.files, "file")}, ${formatBytes(plan.data.folders.bytes)}. ` : ""}What they work in. Files that hold a sign-in or a key are left out.
+              {counted ? `${count(counted.folders.files, "file")}, ${formatBytes(counted.folders.bytes)}. ` : ""}What they work in. Files that hold a sign-in or a key are left out.
             </span>
           </span>
         </label>
@@ -88,7 +109,7 @@ export function ExportCard({ state }: { state: TransferState }) {
           <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm">
             <input type="checkbox" className="checkbox checkbox-sm mt-0.5" checked={secrets} disabled={working} onChange={(event) => setSecrets(event.target.checked)} />
             <span>
-              The secrets{plan.data ? ` (${plan.data.secrets})` : ""}, locked with a password
+              The secrets ({state.secrets}), locked with a password
               <span className="block text-xs text-base-content/65">The other machine asks for this password. It is kept nowhere: without it the secrets in the file cannot be opened.</span>
             </span>
           </label>
@@ -118,9 +139,12 @@ export function ExportCard({ state }: { state: TransferState }) {
 
         {working ? (
           <div className="space-y-1.5" data-export-working>
-            <progress className="progress progress-primary w-full" value={done} max={100} aria-label="Making the file" />
+            {/* No size until what goes in has been counted: a bar that moves without a number, then the number. */}
+            {made.total === undefined ? <progress className="progress progress-primary w-full" aria-label="Making the file" /> : <progress className="progress progress-primary w-full" value={done} max={100} aria-label="Making the file" />}
             <p className="text-xs text-base-content/65">
-              Making the file: {count(made.done?.files ?? 0, "file")}, {formatBytes(made.done?.bytes ?? 0)} of about {formatBytes(made.total ?? 0)}.
+              {made.total === undefined
+                ? "Making the file: counting what goes in."
+                : `Making the file: ${count(made.done?.files ?? 0, "file")}, ${formatBytes(made.done?.bytes ?? 0)} of about ${formatBytes(made.total)}.`}
             </p>
           </div>
         ) : (

@@ -31,9 +31,11 @@ Link, folder CLI coding, file yang namanya menunjukkan isi sign-in atau kunci, d
 
 ## 1. Ekspor di mesin lama
 
-Dari dashboard, sebagai admin: **Settings**, lalu **Export and import**. Halamannya bilang apa isi file dan
-berapa besarnya sebelum kamu menekan **Make the file**. Ketik password untuk secret dua kali, minimal dua belas
-karakter, atau hilangkan centang secret. Centang folder milik agent kalau mau ikut. Setelah file jadi, tekan
+Dari dashboard, sebagai admin: **Settings**, lalu **Export and import**. Halamannya bilang apa isi file sebelum
+kamu menekan **Make the file**. Berapa banyak file dan berapa besarnya dihitung waktu kamu menekan **Count how
+large it will be** (0.8.46): hitungannya membaca tiap file, jadi di install dengan banyak file butuh waktu, dan
+gak ada yang dihitung sebelum kamu minta. Ketik password untuk secret dua kali, minimal dua belas karakter, atau
+hilangkan centang secret. Centang folder milik agent kalau mau ikut. Setelah file jadi, tekan
 **Download**.
 
 Dari terminal, di mesinnya langsung:

@@ -9,7 +9,7 @@
  * model is the thing that is broken.
  */
 
-import type { WorkingInBackground } from "./builtins/helpers.ts";
+import type { WorkingForAnother, WorkingInBackground } from "./builtins/helpers.ts";
 import type { MissionCommands } from "./builtins/mission.ts";
 import type { ScheduleCommands } from "./builtins/schedule.ts";
 import type { NotesPort } from "@/modules/notes/store.ts";
@@ -156,6 +156,8 @@ export interface HookDeps {
   missions?: MissionCommands;
   /** An agent's helpers and asks running in the background now, for `/helpers`. Absent where no background work is run. */
   workingInBackground?: (agentId: string) => WorkingInBackground[];
+  /** The asks of other agents this agent is at work on now, for `/helpers`: whom it is working for. Absent where none run. */
+  workingForOthers?: (agentId: string) => WorkingForAnother[];
   /** Proposed jobs, for `/schedule on|discard` (0.8.0). Absent where none are run. */
   proposals?: ScheduleCommands;
   /**

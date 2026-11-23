@@ -205,7 +205,8 @@ ${BOLD}Talking to a running daemon${RESET}
                                    prints nothing sends nothing); --script <file> --about <words> runs a
                                    script the job keeps (--run <program>: sh, python3, bun; --secrets
                                    <name,name> it is handed); --mission <goal>
-                                   runs each time as a mission (--check <command>, --no-review);
+                                   runs each time as a mission (--check <command>, --no-review; with
+                                   --draft each run drafts it for a person to start, and starts nothing);
                                    --steps <file.json> runs several of these in a fixed order.
                                    --once tells once, then turns it off; --for <6h> stops it by itself
                                    after that long.

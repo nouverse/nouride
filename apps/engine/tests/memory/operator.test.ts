@@ -100,6 +100,42 @@ describe("[memory] settings", () => {
     expect(await readTextFileIfExists(configPath)).toContain("[memory.semantic]");
   });
 
+  /**
+   * The switch was the dashboard's alone: an agent asked to set search by meaning up could add the provider with the
+   * CLI and then not finish. What the command sends is taken by the settings as the dashboard's own save is.
+   */
+  test("the CLI switches it on and off as the settings take it, and a model that does not embed is refused in its words", async () => {
+    const { settings, configPath } = deps();
+    await writeTextFile(configPath, BASE());
+    // The CLI's client as the route answers it: a refusal thrown with the settings' own reason.
+    const client = {
+      put: async (_path: string, body: Record<string, unknown>) => {
+        const result = await setMemorySettings(settings, { patch: body });
+        if (!result.ok) throw new Error(result.error);
+        return result;
+      },
+    } as never;
+    const quiet = console.log;
+    console.log = () => {};
+    try {
+      await expect(memoryCommand(client, ["set", "semantic", "ollama/bge-m4"])).rejects.toThrow('semantic search stays off for ollama/bge-m4, which did not embed: model "bge-m4" not found');
+      expect(h.config.memory.semantic.enabled).toBe(false);
+      await memoryCommand(client, ["set", "semantic", "ollama/bge-m3"]);
+      expect(h.config.memory.semantic).toMatchObject({ enabled: true, provider: "ollama", model: "bge-m3" });
+      await memoryCommand(client, ["set", "semantic_dimensions", "512"]);
+      expect(h.config.memory.semantic).toMatchObject({ enabled: true, model: "bge-m3", dimensions: 512 });
+      await memoryCommand(client, ["set", "semantic", "off"]);
+      expect(h.config.memory.semantic).toMatchObject({ enabled: false, provider: "ollama", model: "bge-m3" });
+      await memoryCommand(client, ["set", "semantic", "on"]);
+      expect(h.config.memory.semantic).toMatchObject({ enabled: true, provider: "ollama", model: "bge-m3" });
+    } finally {
+      console.log = quiet;
+    }
+    const file = (await readTextFileIfExists(configPath)) ?? "";
+    expect(file).toContain("[memory.semantic]");
+    expect(file).toContain('model = "bge-m3"');
+  });
+
   test("refused by the same rules as the loader, and nothing is written", async () => {
     const { settings, configPath } = deps();
     await writeTextFile(configPath, "");

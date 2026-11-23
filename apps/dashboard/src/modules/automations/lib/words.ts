@@ -4,10 +4,10 @@
  * the server: what happens, never how it is stored.
  */
 
-import { Bot, Clock, Hand, MessageSquare, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
+import { Bot, Clock, Hand, MessageSquare, NotebookPen, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
 import { pathsOf, type Choice, type PathExit, type Paths } from "./paths";
-import { canWatch, exitOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind } from "./steps";
+import { canWatch, exitOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind, type StepPick } from "./steps";
 
 export interface KindLook {
   icon: LucideIcon;
@@ -29,6 +29,15 @@ export const KIND: Record<StepKind, KindLook> = {
   parallel: { icon: Split, label: "Several at the same time", hint: "Agents and commands that start together. What each says is joined and handed on.", tile: "bg-primary/15 text-primary" },
 };
 
+/**
+ * How each thing "Add a step" offers looks: the kinds, and a mission that is drafted, in the mission's colour with a
+ * mark of its own. A box and its fields' head are drawn with it, so a step that only drafts never reads "Start".
+ */
+export const PICK: Record<StepPick, KindLook> = {
+  ...KIND,
+  missionDraft: { icon: NotebookPen, label: "Draft a mission", hint: "Long work, left in the Backlog for you to start. The run goes on.", tile: KIND.mission.tile },
+};
+
 export const START: Record<AutomationStart, { icon: LucideIcon; label: string; tile: string }> = {
   scheduled: { icon: Clock, label: "Scheduled", tile: "bg-secondary/10 text-secondary" },
   webhook: { icon: Zap, label: "Webhook", tile: "bg-primary/15 text-primary" },
@@ -47,7 +56,8 @@ export function stepTitle(step: Step, agent: string): string {
     case "systemEvent":
       return "Send a message";
     case "mission":
-      return "Start a mission";
+      // One the run only drafts starts nothing: its box must not say it does.
+      return step.draft ? "Draft a mission" : "Start a mission";
     case "approval":
       return "Wait for your OK";
     case "parallel":

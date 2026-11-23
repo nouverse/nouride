@@ -19,9 +19,9 @@ import { cn } from "@/commons/lib/utils";
 import type { Editor } from "../hooks/use-editor";
 import { chipExits, stopsAt, type Paths, type PathExit, type Rule } from "../lib/paths";
 import { exitTaken, outcomeWords, type Tone } from "../lib/runs";
-import { STEPS_MAX, type Step } from "../lib/steps";
+import { STEPS_MAX, pickOf, type Step } from "../lib/steps";
 import type { Mark } from "../lib/suggested";
-import { KIND, exitChip, partTitle, stepFacts, stepLine } from "../lib/words";
+import { PICK, exitChip, partTitle, stepFacts, stepLine } from "../lib/words";
 import { Branches, backKey, laneEndAnchor, stepAnchor } from "./Branches";
 import type { AgentChoice } from "./KindFields";
 import { FactStrip, LaneEnd, LaneLine, RuleStrip, StopStrip, laneBackChoices } from "./PathRules";
@@ -144,7 +144,7 @@ export const LANED_ROW = `${PLAIN_ROW} @[39.5rem]/flow:grid @[39.5rem]/flow:max-
 function Box({ index, place, side, grip, shared }: { index: number; place: number | null; side: boolean; grip?: Grip | undefined; shared: Shared }) {
   const { steps, paths, mode, titleOf, agentName, ownName } = shared;
   const step = steps[index]!;
-  const look = KIND[step.kind];
+  const look = PICK[pickOf(step)];
   const mark = shared.marks?.get(step.id);
   const marked = mark ? MARKS[mark] : null;
   const landed = shared.landsOn === stepAnchor(step.id);

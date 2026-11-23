@@ -1232,16 +1232,16 @@
   "/policy/missions": {
     "perAgent": 1,
     "maxRunning": 1,
-    "limitHours": 8,
-    "limitTurns": 100,
-    "limitTokens": 100000000,
+    "limitHours": 12,
+    "limitTurns": 250,
+    "limitTokens": 250000000,
     "auto": true,
     "defaults": {
       "perAgent": 1,
       "maxRunning": 1,
-      "limitHours": 8,
-      "limitTurns": 100,
-      "limitTokens": 100000000
+      "limitHours": 12,
+      "limitTurns": 250,
+      "limitTokens": 250000000
     },
     "bounds": {
       "perAgent": {
@@ -1444,7 +1444,7 @@
     "appliance": false,
     "uptime": 0,
     "version": "0.7.10",
-    "eventProtocol": "1.9",
+    "eventProtocol": "1.10",
     "agents": 1,
     "install": "install_1",
     "gateways": {

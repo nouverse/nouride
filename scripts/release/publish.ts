@@ -16,6 +16,10 @@
  * public half. A long-term patch has no pull request: its `lts/` branch's commit is tagged `[lts]`. A red check stops it
  * with nothing merged; a new commit on the branch and the same command again take the same pull request. `--dry-run`
  * stops after saying what it would run.
+ *
+ * Where the release's pull request is merged already (a release prepared up to the merge and left for its tag), the
+ * same command, run on `main`, goes on from there: the suite on `main`'s commit unless one asked for has passed on it,
+ * the submodules' `main`, the tag, the release runs.
  */
 
 import { spawnSync } from "node:child_process";
@@ -52,14 +56,27 @@ export interface PublishFacts {
   /** What the mirror's first page would say with the release on top: said, never a refusal. */
   stranded: string[];
   tagExists: boolean;
+  /**
+   * On `main`: the release's pull request, merged already, with its merge commit and whether the checkout holds it;
+   * null where none was merged. Left out on a release's own branch.
+   */
+  merged?: { pr: string; commit: string; held: boolean } | null;
+  /** On `main`: whether a run of `ci.yml` that was asked for, the whole suite, passed on `head`. */
+  suiteGreen?: boolean;
 }
+
+/** A release whose pull request is merged, published from `main`: the steps before the merge are behind it. */
+const fromMain = (f: Pick<PublishFacts, "mode" | "branch">) => f.mode !== "lts" && f.branch === "main";
 
 /** Every reason not to publish, at once: fixing one and running again to meet the next is how a release takes an hour. */
 export function refusals(f: PublishFacts): string[] {
   const out: string[] = [];
   const version = f.tag.replace(/^v/, "");
   const branch = f.mode === "lts" ? /^lts\/\d+\.\d+$/ : new RegExp(`^releases/${f.tag.replace(/\./g, "\\.")}$`);
-  if (!branch.test(f.branch)) out.push(`the checkout is on ${f.branch}, not ${f.mode === "lts" ? "a lts/<line> branch" : `releases/${f.tag}`}`);
+  if (fromMain(f)) {
+    if (!f.merged) out.push(`the checkout is on main, and no pull request from releases/${f.tag} was merged: check out releases/${f.tag}`);
+    else if (!f.merged.held) out.push(`main here does not hold #${f.merged.pr}'s merge commit ${f.merged.commit.slice(0, 8)}: git pull`);
+  } else if (!branch.test(f.branch)) out.push(`the checkout is on ${f.branch}, not ${f.mode === "lts" ? "a lts/<line> branch" : `releases/${f.tag}`}`);
   if (f.mode === "lts" && f.branch.startsWith("lts/") && !version.startsWith(`${f.branch.slice(4)}.`)) {
     out.push(`${f.tag} is not on the ${f.branch.slice(4)} line its branch is for`);
   }
@@ -73,7 +90,8 @@ export function refusals(f: PublishFacts): string[] {
     if (f.mode !== "lts" && !pin.mainFastForwards) out.push(`${pin.path}'s main cannot fast-forward to its pin ${pin.pin.slice(0, 8)}`);
   }
   if (f.mode !== "lts" && !f.mainFastForwards) out.push(`main cannot fast-forward to ${f.branch}: take what main has first (merge, never cherry-pick)`);
-  if (!f.ciGreen) out.push(`ci.yml has not passed on ${f.head.slice(0, 8)}: wait for it, or push and wait`);
+  // From `main` the suite is asked for by the command itself, on the commit it tags.
+  if (!f.ciGreen && !fromMain(f)) out.push(`ci.yml has not passed on ${f.head.slice(0, 8)}: wait for it, or push and wait`);
   if (f.tagExists) out.push(`${f.tag} already exists`);
   return out;
 }
@@ -82,16 +100,29 @@ export function refusals(f: PublishFacts): string[] {
  * What is said beside the plan and stops nothing: a floor whose stepping stone is leaving the mirror's first page
  * (`mirror-page.ts`). A release was held for one with everything else green.
  */
-export function notices(f: Pick<PublishFacts, "stranded">): string[] {
-  return f.stranded.map((problem) => `the mirror: ${problem}`);
+export function notices(f: Pick<PublishFacts, "stranded"> & Partial<Pick<PublishFacts, "mode" | "branch" | "head" | "merged">>): string[] {
+  const out = f.stranded.map((problem) => `the mirror: ${problem}`);
+  if (f.branch === "main" && f.mode !== "lts" && f.merged && f.head && f.merged.commit !== f.head) {
+    out.push(`main is past #${f.merged.pr}'s merge commit ${f.merged.commit.slice(0, 8)}: the tag goes on main's commit ${f.head.slice(0, 8)}`);
+  }
+  return out;
 }
 
 /** What it would run, in order, once nothing refuses: what `--dry-run` says. `<n>` and `<merge>` are read as it goes. */
-export function plan(f: Pick<PublishFacts, "tag" | "mode" | "branch" | "pins">): string[] {
+export function plan(f: Pick<PublishFacts, "tag" | "mode" | "branch" | "pins"> & Partial<Pick<PublishFacts, "head" | "merged" | "suiteGreen">>): string[] {
   if (f.mode === "lts") return [`git tag -a ${f.tag} -m "[lts]" ${f.branch}`, `git push origin ${f.tag}`];
+  if (fromMain(f) && f.merged && f.head) {
+    const at = f.head.slice(0, 8);
+    return [
+      f.suiteGreen ? `(the suite asked for has passed on ${at}: not asked again)` : `gh workflow run ci.yml --repo ${REPO} --ref main, until its run on ${at} has ended green`,
+      ...f.pins.map((pin) => `git -C ${pin.path} push origin ${pin.pin}:refs/heads/main`),
+      tagLine(f, f.head),
+      `git push origin ${f.tag}`,
+    ];
+  }
   return [
     `gh pr create --repo ${REPO} --base main --head ${f.branch} --title ${f.tag} --body-file docs/releases/${f.tag}.md (or the one open)`,
-    `gh pr checks <n> --repo ${REPO}, until every check has ended, all green`,
+    `gh pr checks <n> --repo ${REPO}, until the pull request's own checks (${PR_WORKFLOWS.join(", ")}) are listed and every check has ended, all green`,
     `gh pr merge <n> --repo ${REPO} --merge`,
     `git push origin --delete ${f.branch}`,
     `gh workflow run ci.yml --repo ${REPO} --ref main, until its run on <merge> has ended green`,
@@ -113,14 +144,39 @@ export interface PublishIo {
 }
 
 /**
- * The checks of a pull request as `gh pr checks` prints them, a line each (`name<TAB>state<TAB>…`): green once every
- * one has ended and none failed, red once one failed or was cancelled, null while any runs or none is listed yet (a
- * pull request just opened has none for a few seconds). Pure.
+ * The workflows whose checks are a pull request's own. A pull request just opened lists the checks of its branch's
+ * `ci` runs at once, green from the push, and these a few seconds later: read before they are listed, "every check
+ * has ended" was true of a pull request nothing had looked at, and 0.8.45's was merged six seconds after it was opened.
+ * `publish.test.ts` holds the names to the workflow files.
+ */
+export const PR_WORKFLOWS = ["pr", "cla"] as const;
+
+/** How `gh pr checks` is asked to print: a line a check, `workflow<TAB>name<TAB>state`. */
+const CHECK_LINES = ["--json", "workflow,name,bucket", "--jq", ".[] | [.workflow, .name, .bucket] | @tsv"];
+
+function checkRows(printed: string): { workflow: string; state: string }[] {
+  return printed
+    .split("\n")
+    .map((line) => line.split("\t"))
+    .filter((cells) => cells.length >= 3)
+    .map((cells) => ({ workflow: (cells[0] ?? "").trim(), state: (cells[2] ?? "").trim() }));
+}
+
+/** The pull request's own workflows with no check listed yet. Pure. */
+export function unlistedChecks(printed: string): string[] {
+  const listed = new Set(checkRows(printed).map((row) => row.workflow));
+  return PR_WORKFLOWS.filter((workflow) => !listed.has(workflow));
+}
+
+/**
+ * The checks of a pull request as `CHECK_LINES` prints them: red once one failed or was cancelled; green once a check
+ * of each of the pull request's own workflows is listed and every check has ended; null while any runs or one of its
+ * own is not listed yet. Pure.
  */
 export function settledChecks(printed: string): "pass" | "fail" | null {
-  const states = printed.split("\n").map((line) => line.split("\t")[1]?.trim() ?? "").filter(Boolean);
+  const states = checkRows(printed).map((row) => row.state);
   if (states.some((state) => state === "fail" || state === "cancel")) return "fail";
-  if (states.length === 0 || states.some((state) => state === "pending")) return null;
+  if (unlistedChecks(printed).length > 0 || states.some((state) => state === "pending")) return null;
   return "pass";
 }
 
@@ -143,6 +199,7 @@ export function publish(f: PublishFacts, io: PublishIo): string | null {
     if (!step("git", "tag", "-a", f.tag, "-m", "[lts]", f.branch).ok || !step("git", "push", "origin", f.tag).ok) return null;
     return f.head;
   }
+  if (fromMain(f)) return f.merged ? tagOn(f, io, step, f.head, f.suiteGreen === true) : null;
 
   const open = io.run("gh", ["pr", "list", "--repo", REPO, "--base", "main", "--head", f.branch, "--state", "open", "--json", "number", "--jq", ".[0].number // empty"]);
   let pr = open.ok ? open.out.trim() : "";
@@ -156,12 +213,16 @@ export function publish(f: PublishFacts, io: PublishIo): string | null {
 
   // Up to three hours: the whole suite runs on the pull request, behind whatever else the runners have.
   let checks: "pass" | "fail" | null = null;
+  let printed = "";
   for (let i = 0; i < 360 && checks === null; i++) {
     if (i > 0) io.sleep(30_000);
-    checks = settledChecks(io.run("gh", ["pr", "checks", pr, "--repo", REPO]).out);
+    printed = io.run("gh", ["pr", "checks", pr, "--repo", REPO, ...CHECK_LINES]).out;
+    checks = settledChecks(printed);
   }
   if (checks !== "pass") {
-    io.say(checks === "fail" ? `✗ a check of #${pr} failed: nothing is merged. Fix it with a new commit on ${f.branch}, then run this again.` : `✗ the checks of #${pr} never ended`);
+    const unlisted = unlistedChecks(printed);
+    const never = unlisted.length > 0 ? `✗ #${pr} never listed a check of its own (${unlisted.join(", ")}): nothing is merged` : `✗ the checks of #${pr} never ended`;
+    io.say(checks === "fail" ? `✗ a check of #${pr} failed: nothing is merged. Fix it with a new commit on ${f.branch}, then run this again.` : never);
     return null;
   }
 
@@ -174,20 +235,31 @@ export function publish(f: PublishFacts, io: PublishIo): string | null {
   // The repository does not delete a merged branch itself.
   if (!step("git", "push", "origin", "--delete", f.branch).ok) return null;
 
+  return tagOn(f, io, step, merge, false);
+}
+
+/**
+ * From a commit of `main` to its tag: the suite on it unless one asked for has passed there, the submodules' `main`
+ * moved to their pins, the tag pushed. The end of a release through its pull request, and the whole of one whose pull
+ * request was merged before.
+ */
+function tagOn(f: PublishFacts, io: PublishIo, step: (cmd: string, ...args: string[]) => { ok: boolean; out: string }, commit: string, suitePassed: boolean): string | null {
   // The merge commit is one no suite ran on: a tag pushed while that run works builds with its own and was red twice.
-  const since = isoNow();
-  if (!step("gh", "workflow", "run", "ci.yml", "--repo", REPO, "--ref", "main").ok) return null;
-  const suite = waitFor(io, REPO, "ci.yml", since, merge);
-  if (suite !== "success") {
-    io.say(`✗ ci.yml on the merge commit ${merge.slice(0, 8)}: ${suite}. Nothing is tagged.`);
-    return null;
+  if (!suitePassed) {
+    const since = isoNow();
+    if (!step("gh", "workflow", "run", "ci.yml", "--repo", REPO, "--ref", "main").ok) return null;
+    const suite = waitFor(io, REPO, "ci.yml", since, commit);
+    if (suite !== "success") {
+      io.say(`✗ ci.yml on main's commit ${commit.slice(0, 8)}: ${suite}. Nothing is tagged.`);
+      return null;
+    }
   }
 
   step("git", "fetch", "-q", "origin");
   for (const pin of f.pins) if (!step("git", "-C", pin.path, "push", "origin", `${pin.pin}:refs/heads/main`).ok) return null;
-  const tag = f.mode === "ordinary" ? ["tag", f.tag, merge] : ["tag", "-a", f.tag, "-m", `[${f.mode}]`, merge];
+  const tag = f.mode === "ordinary" ? ["tag", f.tag, commit] : ["tag", "-a", f.tag, "-m", `[${f.mode}]`, commit];
   if (!step("git", ...tag).ok || !step("git", "push", "origin", f.tag).ok) return null;
-  return merge;
+  return commit;
 }
 
 /** Now, as GitHub writes a run's `createdAt`. A function so a test can read the order of the calls rather than a time. */
@@ -239,7 +311,9 @@ function gather(tag: string, mode: Mode): PublishFacts {
   });
   // One still running is waited for, not refused: asked the moment a push's run was ending, the release was refused
   // for a run that was green seconds later, and the person told to wait and ask again.
-  const ciRuns = () => run("gh", ["api", `repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${head}&per_page=20`, "--jq", '[.workflow_runs[] | (.status + ":" + (.conclusion // ""))] | join(" ")']);
+  // On `main` only a run that was asked for counts: a push there runs the lint and the contract tests, not the suite.
+  const onMain = mode !== "lts" && branch === "main";
+  const ciRuns = () => run("gh", ["api", ciRunsOf(head, onMain), "--jq", '[.workflow_runs[] | (.status + ":" + (.conclusion // ""))] | join(" ")']);
   let runs = ciRuns();
   for (let waited = 0; ciOnHead(runs.ok ? runs.out : "") === "running" && waited < CI_WAIT_MS; waited += CI_LOOK_MS) {
     if (waited === 0) console.log(`ci.yml is still running on ${head.slice(0, 8)}: waiting for it`);
@@ -253,6 +327,7 @@ function gather(tag: string, mode: Mode): PublishFacts {
         .map((entry) => ({ tag: entry.tag_name, floor: floorOf(entry.tag_name), prerelease: entry.prerelease === true }))
     : [];
   if (!page.some((entry) => entry.tag === tag)) page.unshift({ tag, floor: floorOf(tag), prerelease: mode === "quiet" });
+  const green = runs.ok && ciOnHead(runs.out) === "green";
   return {
     tag,
     mode,
@@ -264,10 +339,31 @@ function gather(tag: string, mode: Mode): PublishFacts {
     pushedHead: remote.ok ? remote.out : null,
     pins,
     mainFastForwards: git(["merge-base", "--is-ancestor", "origin/main", head]).ok,
-    ciGreen: runs.ok && ciOnHead(runs.out) === "green",
+    ciGreen: green,
     stranded: listed.ok ? strandedFloors(page) : ["the mirror's page could not be read"],
     tagExists: git(["rev-parse", "--verify", "-q", `refs/tags/${tag}`]).ok || git(["ls-remote", "--exit-code", "origin", `refs/tags/${tag}`]).ok,
+    ...(onMain ? { merged: mergedPull(tag, (commit) => git(["merge-base", "--is-ancestor", commit, head]).ok), suiteGreen: green } : {}),
   };
+}
+
+/** The release's pull request, merged: its number, its merge commit, and whether the checkout holds that commit. */
+function mergedPull(tag: string, holds: (commit: string) => boolean): PublishFacts["merged"] {
+  const found = run("gh", ["pr", "list", "--repo", REPO, "--base", "main", "--head", `releases/${tag}`, "--state", "merged", "--json", "number,mergeCommit", "--jq", '.[0] | select(.) | "\(.number) \(.mergeCommit.oid)"']);
+  return found.ok ? readMerged(found.out, holds) : null;
+}
+
+/** `<number> <merge commit>` as `mergedPull` asks for it, read: null for anything else. Pure but for `holds`. */
+export function readMerged(printed: string, holds: (commit: string) => boolean): PublishFacts["merged"] {
+  const [pr = "", commit = ""] = printed.trim().split(/\s+/);
+  return /^\d+$/.test(pr) && /^[0-9a-f]{40}$/.test(commit) ? { pr, commit, held: holds(commit) } : null;
+}
+
+/**
+ * Where the runs of `ci.yml` on a commit are listed. `askedOnly` leaves the runs a push made out: on `main` those are
+ * the lint and the contract tests, and one of them green is not the suite having passed. Pure.
+ */
+export function ciRunsOf(head: string, askedOnly: boolean): string {
+  return `repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${head}${askedOnly ? "&event=workflow_dispatch" : ""}&per_page=20`;
 }
 
 /** How long a run of `ci.yml` still going on the release's commit is waited for, and how often it is asked. */

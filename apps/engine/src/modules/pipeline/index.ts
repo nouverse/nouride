@@ -485,6 +485,8 @@ export class Pipeline {
   backgroundHelpers() { return this.toolPorts.backgroundHelpers(); }
   waitedHelpers() { return this.toolPorts.waitedHelpers(); }
   peerTurnRunner() { return this.toolPorts.peerTurnRunner(); }
+  /** What pages hold open for an agent to change, and the changes held for them: the control API's to read. */
+  liveEdits() { return this.deps.liveEdits; }
   askRunner() { return this.toolPorts.askRunner(); }
   sessionStatus(...args: Parameters<ToolPorts["sessionStatus"]>) { return this.toolPorts.sessionStatus(...args); }
 }

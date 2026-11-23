@@ -310,10 +310,11 @@ async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, bu
   second.buttons = buttons;
   let refuse = false;
   let down = false;
-  // The refused request less its temperature. A provider that will not take a request refuses it again when it is
-  // asked once more without one (`TemperatureGuard`): refused once only, the second ask answered and nothing failed.
+  // The refused request less what a guard changes when it asks once more: its temperature (`TemperatureGuard`), and
+  // how it reasons (`EffortGuard`, which asks a request with tools again saying not to). A provider that will not take
+  // a request refuses it each of those times too: refused once only, the second ask answered and nothing failed.
   let again: string | undefined;
-  const lessTemperature = (init: RequestInit) => JSON.stringify({ ...(JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>), temperature: undefined });
+  const lessTemperature = (init: RequestInit) => JSON.stringify({ ...(JSON.parse(String(init.body ?? "{}")) as Record<string, unknown>), temperature: undefined, reasoning_effort: undefined });
   const bench = await pipelineBench({
     turns,
     maxAttempts: 1,
@@ -326,7 +327,8 @@ async function room(turns: Parameters<typeof scriptedOpenAI>[0], maxHops = 3, bu
         if (init?.method === "POST") {
           const asked = lessTemperature(init);
           const askedAgain = asked === again;
-          again = refuse ? asked : undefined;
+          // Kept while the same request is asked again: two guards may each ask it once more.
+          again = refuse || askedAgain ? asked : undefined;
           if (refuse || askedAgain) {
             refuse = false;
             return new Response(JSON.stringify({ error: { message: "this request is not allowed" } }), { status: 400, headers: { "content-type": "application/json" } });

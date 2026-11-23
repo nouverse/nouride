@@ -16,7 +16,10 @@ curl -fsS @@HEALTH_URL@@
 `status` is `degraded`, and the endpoint answers **503**, when a gateway is dead, when a provider has
 failed three times in a row, or when the SQLite WAL has grown past its threshold. It is
 `shutting_down`, also 503, while the daemon stops. `issues` lists what is wrong; a gateway that is
-only disconnected or reconnecting shows up there without failing the check.
+only disconnected or reconnecting shows up there without failing the check. A gateway is dead when
+its credentials are refused or its session is gone, which a person has to mend. One that cannot be
+reached is reconnecting for as long as that lasts (0.8.46), and its issue says when it tries next: it
+answered 503 before, once its tries ran out.
 `install` is a hash of the data directory, so a CLI can tell it is talking to the right daemon when two
 installs on one machine compete for the port.
 

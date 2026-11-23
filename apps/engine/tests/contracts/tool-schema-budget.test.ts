@@ -76,7 +76,15 @@ const size = (name: string) => JSON.stringify(tools.get(name)!.definition).lengt
 // 4,840 for a watch's script that ends well until its moment comes (~40, at 4,839): `test -f done && cat done` ends in
 // an error while the file is not there, and a watch written that way told its chat it had failed once a minute where
 // it should have said nothing (seen on the box's sandbox, in a release's live run).
-const PER_TOOL = 4_840;
+// 5,020 for a mission a job drafts (~175, at 5,013): `schedule`'s `draft`, for a job and for a step. A job could
+// only start its mission, so long work an automation prepared ran with nobody having read what it was about to do;
+// the field says what a draft does to the run (nothing starts, the run goes on), which is what a model must know to
+// put a step after it.
+// 5,040 for a step's `id` (~16, at 5,036): an agent that changes the automation a person has open writes it back whole,
+// and a step it keeps is written with the id it was shown under. Without the field a model that follows the schema
+// leaves it off, and the daemon cannot tell the step it changed from a new one: what the tool has no word for (a
+// turn's own model, where a command runs) was then dropped from every step.
+const PER_TOOL = 5_040;
 /** All of them together, which no single agent holds but the default-rich ones come close to. */
 // 32,500 since exec's `service`: a server started as an ordinary job ended the turn and never woke it,
 // and the parameter that fixes it has to say when to use it instead of `background`. 32,800 since
@@ -185,7 +193,13 @@ const PER_TOOL = 4_840;
 // asked to put something in the backlog, it wrote a note. Not in the harness: the words are read where the tool is.
 // 52,550 for `schedule`'s script and a watch's end (~1,420, measured at 52,543): the reason is at `PER_TOOL`.
 // 52,590 for a watch's script that ends well until its moment comes (~40, measured at 52,583): at `PER_TOOL` too.
-const TOTAL = 52_590;
+// 53,300 for a draft's own limits (~710, measured at 53,296): `mission`'s `limit_hours`, `limit_turns` and
+// `limit_tokens`, and one sentence of when to name them. The settings bounded every mission the same, so work known to
+// need more had its person raise them for all. The sentence says left out is usual: a model that fills every field it
+// is offered would give each draft numbers of its own. Tokens say "written whole", where 250 would be read as millions.
+// 53,480 for a mission a job drafts (~175, measured at 53,470): the reason is at `PER_TOOL`.
+// 53,500 for a step's `id` (~16, measured at 53,493): the reason is at `PER_TOOL`.
+const TOTAL = 53_500;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -195,9 +209,11 @@ const TOTAL = 52_590;
  * `schedule`'s `together` (measured at 45,896 against 50,727). 46,070 with `mission`'s `title` (measured at 46,068
  * against 50,899). 46,300 with the words a person has for a mission (measured at 46,290 against 51,121). 47,720 with
  * `schedule`'s script and a watch's end (measured at 47,712 against 52,543). 47,760 with a watch's script that ends
- * well until its moment comes (measured at 47,752 against 52,583).
+ * well until its moment comes (measured at 47,752 against 52,583). 48,470 with a draft's own limits (measured at 48,465
+ * against 53,296). 48,640 with a mission a job drafts (measured at 48,639 against 53,470). 48,670 with a step's `id`
+ * (measured at 48,662 against 53,493).
  */
-const SENT = 47_760;
+const SENT = 48_670;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

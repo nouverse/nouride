@@ -84,7 +84,7 @@ export async function exportInstall(args: string[]): Promise<void> {
   if (!statFile(dbPath)) fail(`No database at ${dbPath}.`, "Has Nouride ever started here?");
   const folders = hasFlag(args, "--folders");
 
-  const plan = exportPlan({ config, configPath, dbPath, folders, credential: leftOut });
+  const plan = await exportPlan({ config, configPath, dbPath, folders, credential: leftOut });
   say(`${BOLD}This file will hold${RESET} ${DIM}(about ${formatBytes(plan.bytes)} before it is compressed)${RESET}`);
   for (const line of holds(plan.parts, plan.database)) say(`  - ${line}`);
   if (!folders && plan.folders.files > 0) say(`${DIM}  Not the agents' own folders (${plan.folders.files} ${plural(plan.folders.files, "file")}, ${formatBytes(plan.folders.bytes)}): --folders puts them in.${RESET}`);

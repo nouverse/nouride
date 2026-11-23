@@ -75,7 +75,7 @@ describe("[missions] from the dashboard", () => {
 
   test("read back with the bounds the form keeps to: hours may be a fraction, the rest are whole", () => {
     const view = missionSettings({ config: structuredClone(DEFAULT_CONFIG) }, following(6), 3);
-    expect(view).toMatchObject({ perAgent: 1, maxRunning: 3, limitHours: 8, limitTurns: 100, limitTokens: 100_000_000 });
+    expect(view).toMatchObject({ perAgent: 1, maxRunning: 3, limitHours: 12, limitTurns: 250, limitTokens: 250_000_000 });
     expect(view.bounds.limitHours).toEqual({ min: 0.25, max: 168, integer: false });
     expect(view.bounds.perAgent).toEqual({ min: 1, max: 4, integer: true });
     expect(view.bounds.limitTokens).toEqual({ min: 100_000, integer: true });
@@ -90,7 +90,7 @@ describe("[missions] from the dashboard", () => {
     // A small machine runs one, whatever its agents; the most it may be set to is still theirs.
     expect(missionSettings({ config }, following(6), 1)).toMatchObject({ maxRunning: 1, auto: true, bounds: { maxRunning: { max: 6 } } });
     // Each default as the page offers it, the slots as many as the machine gives now.
-    expect(missionSettings({ config }, following(6), 3).defaults).toEqual({ perAgent: 1, maxRunning: 3, limitHours: 8, limitTurns: 100, limitTokens: 100_000_000 });
+    expect(missionSettings({ config }, following(6), 3).defaults).toEqual({ perAgent: 1, maxRunning: 3, limitHours: 12, limitTurns: 250, limitTokens: 250_000_000 });
     // A set value is kept on any machine: above what it would give, and below.
     config.missions.maxRunning = 5;
     config.missions.perAgent = 2;
@@ -111,8 +111,8 @@ describe("[missions] from the dashboard", () => {
 
   test("an empty value takes its key out of the file — back to the default, and the box's slots back to following the machine", async () => {
     const d = deps();
-    expect((await setMissionSettings(d, { patch: { maxRunning: 5, limitHours: 12, limitTurns: 80 }, agents: following(6) })).ok).toBe(true);
-    expect(d.config.missions).toMatchObject({ maxRunning: 5, limitHours: 12, limitTurns: 80 });
+    expect((await setMissionSettings(d, { patch: { maxRunning: 5, limitHours: 20, limitTurns: 80 }, agents: following(6) })).ok).toBe(true);
+    expect(d.config.missions).toMatchObject({ maxRunning: 5, limitHours: 20, limitTurns: 80 });
 
     expect(await setMissionSettings(d, { patch: { maxRunning: null, limitHours: null }, agents: following(6) })).toEqual({ ok: true, restartRequired: false });
     const file = readFileSync(d.configPath, "utf8");
@@ -120,6 +120,6 @@ describe("[missions] from the dashboard", () => {
     expect(file).not.toContain("limit_hours");
     expect(file).toContain("limit_turns = 80");
     expect(d.config.missions).toEqual({ ...DEFAULT_CONFIG.missions, limitTurns: 80 });
-    expect(missionSettings(d, following(6), 3)).toMatchObject({ maxRunning: 3, auto: true, limitHours: 8 });
+    expect(missionSettings(d, following(6), 3)).toMatchObject({ maxRunning: 3, auto: true, limitHours: 12 });
   });
 });

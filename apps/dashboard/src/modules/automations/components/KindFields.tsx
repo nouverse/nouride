@@ -60,6 +60,12 @@ const withAgent = <S extends Of<"agentTurn"> | Of<"mission"> | Extract<Part, { k
   return (agentId ? { ...rest, agentId } : rest) as S;
 };
 
+/** What a run does when it reaches a mission's step: starts it, or leaves it for a person to start. */
+const MISSION_BEGINS: { value: "start" | "draft"; label: string }[] = [
+  { value: "start", label: "Start the mission and wait for it" },
+  { value: "draft", label: "Leave it in the Backlog as a draft" },
+];
+
 function MissionStep({ step, own, agents, onChange }: { step: Of<"mission">; own: string; agents: readonly AgentChoice[]; onChange: (step: Step) => void }) {
   // What is typed is kept as typed: read back from the step, a checks box would lose the line being started.
   const [draft, setDraft] = useState<MissionDraft>(() => missionDraft({ ...step }));
@@ -74,11 +80,27 @@ function MissionStep({ step, own, agents, onChange }: { step: Of<"mission">; own
       ...(next.review === "off" ? { review: false as const } : next.review === "criteria" && next.criteria.trim() ? { review: next.criteria.trim() } : {}),
     });
   };
+  // Started, or left as a draft for a person to start: what the run does at this step, so it is asked first.
+  const leaves = step.draft === true;
+  const setLeaves = (on: boolean) => {
+    const { draft: _was, ...rest } = step;
+    onChange(on ? { ...rest, goal: draft.goal, draft: true } : { ...rest, goal: draft.goal });
+  };
   return (
     <>
+      {/* What each choice does to the run is said under it, where it is chosen. */}
+      <Field
+        label="When the run gets here"
+        hint={
+          leaves
+            ? "Nothing starts by itself. The mission waits in the Backlog until it is started there, or from the message where this automation reports, and the run goes on at once."
+            : "The run waits here until the mission ends, however long that is, and goes on with its result."
+        }
+      >
+        <SearchSelect label="When the run gets here" align="start" className="w-full" options={MISSION_BEGINS} value={leaves ? "draft" : "start"} onChange={(next) => setLeaves(next === "draft")} />
+      </Field>
       <MissionFields draft={draft} onChange={write} />
       <StepAgent value={step.agentId} own={own} agents={agents} onChange={(agentId) => onChange(withAgent({ ...step, goal: draft.goal }, agentId))} />
-      <p className="text-xs text-base-content/65">The run waits here until the mission ends, however long that is, and goes on with its result.</p>
     </>
   );
 }

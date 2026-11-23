@@ -23,7 +23,7 @@ nothing and always work. They are answered at once, even while a turn is running
 | `/sleep` | Put this agent to sleep: it takes no work until `/wake` |
 | `/wake` | Wake this agent (`/start` too) |
 | `/mission` | Start long work it carries on alone, or see what has not ended: what needs you, what is at work and the backlog. [Missions →](/en/docs/manual/missions/) |
-| `/helpers` | Who is working for this agent in the background now: its helpers and the agents it asked |
+| `/helpers` | Who works for this agent in the background now (its helpers, the agents it asked), and which agents it is working for |
 | `/backgrounds` | The commands this agent left running in the background, a server among them |
 | `/model` | Switch model for this chat |
 | `/effort` | How long the model thinks, for this chat; `/effort <level> lock` for every chat and mission |
@@ -67,7 +67,8 @@ button with the model's name opens a panel: pick a model from the list or type i
 same choice the commands make, for that conversation only and from your next message, and each reads what the other
 set. **Back to the agent's own** undoes it. A model picked before a conversation's first message goes with that
 message. An agent a coding CLI answers picks among the models its CLI offers, once the CLI has listed them. Rooms and
-chats on a chat app keep the commands.
+chats on a chat app keep the commands. The chat that floats over other pages has the same button in its bar
+(0.8.46), as its mark alone: point at it to read what the conversation is on.
 
 A chat's level is that chat's alone, and a mission runs in a conversation of its own. `/effort max lock` makes the
 level the agent's own instead: written in its config as the Model tab does, for every chat and every mission, and kept

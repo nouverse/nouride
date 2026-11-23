@@ -28,7 +28,7 @@ async function firstStep(host: HTMLElement, kind: string) {
   await eventually(() => host.textContent?.includes("Add the first step") === true, 3_000, "the empty flow");
   ([...host.querySelectorAll("button")].find((button) => button.textContent?.includes("Add the first step")) as HTMLElement).click();
   const kinds = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add a step"] button')];
-  await eventually(() => kinds().length === 6, 2_000, "the picker");
+  await eventually(() => kinds().length === 7, 2_000, "the picker");
   kinds().find((button) => button.querySelector("span span")?.textContent === kind)!.click();
   await flowDrawn(host, 1);
 }

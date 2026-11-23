@@ -21,7 +21,7 @@ import type {
   TokenUsage,
   UsagePurpose,
 } from "@nouride/shared";
-import type { ApprovalLevel } from "@nouride/shared";
+import type { ApprovalLevel, LiveEdit } from "@nouride/shared";
 import type { SharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { AgentToolset } from "@/modules/tools/registry.ts";
@@ -168,6 +168,8 @@ export interface TurnRequest {
   /** Another agent asked this one, inside its own turn (`ask_agent`): the chat is the asker's, not this agent's. */
   asked?: boolean;
   senderName?: string;
+  /** What the person had open on a dashboard page as they wrote, where an agent changes it in place (`ToolContext.liveEdit`). */
+  liveEdit?: LiveEdit;
   /** Whether this daemon authenticated the sender itself — see `MessageEnvelope.senderVerified`. */
   senderVerified?: boolean;
   /** The sender, matched against `[[people]]` by id. Carried separately from the display name. */

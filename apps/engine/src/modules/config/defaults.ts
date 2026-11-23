@@ -233,13 +233,14 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     // agents could run (`missions/slots.ts`). A person may set it as high as every agent at once.
     perAgent: 1,
     maxRunning: undefined,
-    // A working day, a hundred turns of up to `max_tool_iterations` steps each, and 100 million tokens — a million a turn,
-    // above nine in ten chat turns measured on a live box (807 turns over 14 days to 2026-10-24: ~190k at the median,
-    // ~880k at the 90th percentile). Raised from 50 and 50 million in 0.8.0: long work should not stop to
-    // ask at half a day's steps. Reaching one asks to go on; it never fails the mission.
-    limitHours: 8,
-    limitTurns: 100,
-    limitTokens: 100_000_000,
+    // Half a day of work, 250 turns of up to `max_tool_iterations` steps each, and 250 million tokens: a million a
+    // turn, above nine in ten chat turns measured on a live box (807 turns over 14 days to 2026-10-24: ~190k at the
+    // median, ~880k at the 90th percentile). A working day, a hundred turns and 100 million tokens stopped long work
+    // to ask too soon: a box doing real work ran with the hours and the tokens raised by hand. Reaching one asks to
+    // go on; it never fails the mission. One mission may be drafted with its own (`StartRequest.limits`).
+    limitHours: 12,
+    limitTurns: 250,
+    limitTokens: 250_000_000,
   },
   alerts: {
     // Empty by default: a fresh checkout has no bot and no chat id to send to, and inventing one

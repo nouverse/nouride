@@ -288,7 +288,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
 
   // Held from here, and let go once it ends. Free since the check above: nothing between them waits. In the background
   // too: it is still at work in this chat, so a person addressing it there is told so and a second ask is refused.
-  const release = ctx.holdPeer(peer.config.id, request.ctx.chatId, request.ctx.gatewayId) ?? (() => {});
+  const release = ctx.holdPeer(peer.config.id, request.ctx.chatId, request.ctx.gatewayId, { by: request.from, task: request.task, senderId: request.ctx.senderId || null }) ?? (() => {});
   /**
    * Run long, it is told to stop and report if stuck (`budget-nudges.ts`); once it is in the background the agent that
    * asked hears how long it has run. Waited on, that agent is in a turn of its own, on its own clock and nudges.

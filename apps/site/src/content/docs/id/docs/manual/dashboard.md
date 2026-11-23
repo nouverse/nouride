@@ -173,6 +173,9 @@ ada di kotaknya waktu kamu buka lagi.
   dengannya, yang dibuka barisnya di Chats, dan memulai yang baru kalau belum ada. Yang kamu kirim di panel ada di
   Chats, begitu juga sebaliknya, lengkap dengan langkah agent, file-nya, izin yang ia tunggu, dan **Stop**, seperti di
   Chats. Tombol panah di atas panel membuka percakapan yang sama di halaman Chats. Room dan grup tetap di Chats.
+- **Model dan effort-nya.** Ikon kilau di atas panel membuka panel yang sama dengan yang dimiliki percakapan di Chats
+  (0.8.46): pilih model dan effort hanya untuk percakapan ini, mulai pesan berikutnya. Tombolnya berwarna selama
+  percakapan itu memakai pilihannya sendiri.
 - **Percakapan baru.** Ikon balon chat dengan tanda plus, di atas panel, memulai percakapan baru dengan agent yang
   sedang dipilih di panel. Pesan pertamamu yang memulainya, dan panel tetap di percakapan itu. Kalau panel ditutup
   tanpa menulis apa-apa, ia terbuka lagi di percakapan terbarumu.
@@ -185,6 +188,10 @@ ada di kotaknya waktu kamu buka lagi.
   ditulis: nama halamannya, alamatnya, dan tentang apa halaman itu kalau memang tentang satu hal, misalnya sebuah misi
   atau sebuah agent. Jadi "yang ini lagi nunggu apa?" yang ditanyakan di halaman sebuah misi artinya misi itu. Pesan
   yang ditulis di halaman Chats tidak menyebut halaman apa pun.
+- **Agent bisa mengubah automation yang sedang kamu buka** (0.8.46). Di halaman sebuah automation, agent juga
+  diperlihatkan automation itu seperti yang dipegang halaman, lengkap dengan perubahan yang belum disimpan, dan
+  perubahan yang kamu minta digambar di atasnya untuk kamu terapkan atau buang. Caranya ada di
+  [Automations](/id/docs/manual/schedule/).
 - **Agent bisa membawamu ke halaman lain.** Di percakapan dari panel, agent juga diberi tahu daftar halaman dashboard,
   jadi "bawa aku ke memory graph" dijawab dengan sebuah link. Tekan, dan halaman itu terbuka di bawah chat, yang tetap
   terbuka; di HP chat-nya disembunyikan supaya halamannya terlihat. Link ke tempat lain terbuka di tab baru, seperti
@@ -388,8 +395,10 @@ orang. Di **Logs**, yang lain punya dua tab sisanya: apa yang jalan terjadwal, d
 latar belakang.
 
 **Export and import** (0.8.41, khusus admin) membawa semua isi Nouride ini ke mesin lain sebagai satu file, atau
-memasukkan file seperti itu ke sini. Halamannya bilang apa isi file sebelum dibuat; secret cuma ikut kalau dikunci
-dengan password yang kamu ketik, dan folder milik agent cuma kalau dicentang. File yang dimasukkan ditampilkan di
+memasukkan file seperti itu ke sini. Halamannya bilang apa isi file sebelum dibuat, dan menghitung besarnya waktu
+kamu menekan **Count how large it will be** (0.8.46; sebelumnya dihitung begitu halaman dibuka, yang di install
+besar bikin semua halaman lambat sampai selesai); secret cuma ikut kalau dikunci dengan password yang kamu ketik,
+dan folder milik agent cuma kalau dicentang. File yang dimasukkan ditampilkan di
 samping isi yang ada sebelum ada yang diganti, meminta kata `replace` dan sepuluh detik, lalu menggantikan semuanya:
 gak ada yang digabung. Setelah itu halamannya dibuka dengan apa yang ikut dan apa yang gak, dan koneksi serta
 automation menunggu **Go live**.

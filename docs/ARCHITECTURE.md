@@ -1063,7 +1063,8 @@ Two artefacts from one build script, `scripts/build-binary.ts` (the editions are
      edition named by `EDITION` (`basic`, `pro`).
   4. **runtime** — `oven/bun:${BUN_VERSION}-alpine@${BUN_DIGEST}` (`.bun-version`, and the image pinned by digest
      beside the tag; each stage refuses a Bun that is not that version) with `bash`, `openssh-client`, `util-linux`, `ripgrep`,
-     `su-exec`, `socat` and any `EXTRA_PACKAGES`; the bundle, the built dashboard, the built-in skills, and
+     `su-exec`, `socat`, what the built-in skills run on (`python3`, `git`, `ffmpeg`, `nodejs` with `npm`,
+     `poppler-utils`) and any `EXTRA_PACKAGES`; the bundle, the built dashboard, the built-in skills, and
      `nouride-pkg` with its container service. The entrypoint fixes ownership of `.nouride/` as root, starts the
      package service and installs again what agents installed (0.8.15), then runs the daemon as the `bun` user with
      `HOME=/app/.nouride/home`, restarting it if it exits.

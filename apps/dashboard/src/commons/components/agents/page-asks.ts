@@ -20,7 +20,8 @@ export const PAGE_ASKS = {
   automations: { task: "to make an automation", message: "Make an automation for me: when …, do … and send me the result here. Or change one I have: …" },
   missions: { task: "to draft a mission", message: "Draft a mission: … I will start it once it looks right." },
   work: { task: "to take on a task", message: "I have a task that will take a while: … Take it on and tell me how it goes." },
-  memory: { task: "to remember something", message: "Remember this for later: …" },
+  // About both, not "to remember something": the page is Knowledge & Memory, and remembering is one of the things asked of it.
+  memory: { task: "about knowledge and memory", message: "About what my agents know and remember: …" },
   people: { task: "to add someone", message: "Add someone to People, or update them: their name is …, and they reach us on …" },
   groups: { task: "about a group", message: "In the group …, I'd like my agents to …" },
   models: { task: "to add a model", message: "Add a model for my agents from … Ask me for the key when you need it." },
@@ -31,8 +32,19 @@ export const PAGE_ASKS = {
   logs: { task: "to read the logs", message: "Read the recent logs and tell me, in plain words, whether anything is wrong." },
   system: { task: "how this machine is doing", message: "How is this machine doing? Check its memory and its disk, and tell me in plain words." },
   files: { task: "what can be cleared", message: "Look at what takes the most room in my agents' workspaces, and tell me in plain words what is safe to delete. Do not delete anything yet." },
+  transfer: { task: "about export and import", message: "I want to take this Nouride to another machine, or bring one in here: … Tell me what goes with it and what does not, and walk me through it." },
   box: { task: "how the box is doing", message: "How is my box doing? Check its disk, its memory and its updates, and tell me in plain words." },
 } as const satisfies Record<string, PageAsk>;
+
+/**
+ * On the Semantic search card of Memory's settings: the form asks for a provider that embeds and a model's name, which
+ * a person who has neither cannot fill in. The agent can set one up, whichever of the three places it runs in.
+ */
+export const SEMANTIC_SEARCH_ASK: PageAsk = {
+  task: "to set up semantic search",
+  message:
+    "Set up search by meaning for my agents' memory. I'd like the embedding model to run … (on this machine, on another server of mine, or with a cloud service). Tell me what you suggest and what you need from me before you install anything.",
+};
 
 /** The same on one automation's page: the request names the automation, so the agent knows which one is meant. */
 export const automationAsk = (name: string): PageAsk => ({ task: "to change it", message: `Change my automation "${name}": …` });

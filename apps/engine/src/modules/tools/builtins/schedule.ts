@@ -6,10 +6,16 @@
  * Resolved by the daemon for a chat's turn, like `mission`: any agent may be asked for a reminder or a weekly report,
  * and a pack listing its tools would otherwise never learn it can propose one. It confers nothing: what it proposes
  * runs only once a person has read it and said yes.
+ *
+ * And one way that proposes nothing: a change to the automation the person has open on its page, written with
+ * `replaces: "open"` from the chat over that page. It is checked as a save is, held in memory and drawn by the page
+ * over what the person has there, for them to apply and save (`modules/live-edit`, `cron/open-automation.ts`). No job
+ * is made and no card posted: there is nothing to turn on.
  */
 
-import type { Job, JobPayload, JobTrigger, Tool, ToolContext } from "@nouride/shared";
+import type { AutomationChange, Job, JobPayload, JobTrigger, Tool, ToolContext, ToolResult } from "@nouride/shared";
 import { CronValidationError } from "@/modules/cron/validate.ts";
+import { carried, readOpen, sameStart, type OpenAutomation } from "@/modules/cron/open-automation.ts";
 import { parseDuration, parseScheduleInput } from "@/modules/cron/parse.ts";
 import { stepsFrom } from "@/modules/cron/step-input.ts";
 import type { CronPort, JobInput } from "@/modules/cron/cron.store.ts";
@@ -37,6 +43,11 @@ export interface ScheduleToolOptions {
   readBrief?: (path: string) => string | null;
   /** Whether a script it proposes could run on this machine, for the agent that will run it (`cron/scripts.ts`). */
   scripts?: ScriptFacts;
+  /**
+   * Holds a change to the automation a person has open, for its page to draw, and hands back its id (`LiveEdits`).
+   * Absent where no page can be handed one: a change to what is open is then refused, in words.
+   */
+  proposeLiveEdit?: (offer: { kind: string; target: string | null; value: AutomationChange; by: string; gatewayId: string; chatId: string; senderId: string }) => string;
   now?: () => number;
 }
 
@@ -131,6 +142,7 @@ function doesOf(args: Record<string, unknown>): OneKind | string {
         goal: value,
         ...(checks.length > 0 ? { checks } : {}),
         ...(args.no_review === true ? { review: false } : typeof args.review === "string" && args.review.trim() ? { review: args.review.trim() } : {}),
+        ...(args.draft === true ? { draft: true as const } : {}),
       };
     }
   }
@@ -164,8 +176,11 @@ const EXITS = [["then", "then"], ["if_failed", "whenFailed"], ["if_empty", "when
  * `mission` may name another agent, `ask` waits for a person, and each of a step's three exits is `next`, `end` or the
  * number of a later step. Given with `text`, `command`, `prompt` or `mission` beside it, the call is refused: a job is
  * one thing or a list, and guessing which was meant would propose the wrong one.
+ *
+ * `kept`: the ids of the steps of the automation a person has open. A step written with one of them is that step,
+ * changed or not, and keeps its id; an id nobody has, or one written twice, is a new step's and is named by its place.
  */
-function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string) => boolean): JobPayload | string {
+function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string) => boolean, kept?: ReadonlySet<string>): JobPayload | string {
   if (args.steps === undefined) {
     const one = doesOf(args);
     if (typeof one === "string" || args.only_changed !== true) return one;
@@ -192,7 +207,9 @@ function payloadOf(args: Record<string, unknown>, agentExists: (agentId: string)
     // A command's own `then` is what a job of one command does with its output: in a list that is the step after it.
     const one: Record<string, unknown> = asks ? { kind: "approval", ask: asks } : parts ? { kind: "parallel", steps: parts } : { ...does };
     delete one.then;
+    const id = typeof step.id === "string" && kept?.has(step.id) && !written.some((earlier) => earlier.id === step.id) ? step.id : "";
     written.push({
+      ...(id ? { id } : {}),
       ...one,
       ...(agent && !parts ? { agentId: agent } : {}),
       ...(typeof step.name === "string" ? { name: step.name } : {}),
@@ -270,6 +287,85 @@ function notAChat(ctx: ToolContext): string | null {
   return null;
 }
 
+const NOTHING_OPEN = 'Nothing is open on a page to change: `replaces: "open"` is for the automation a person has open in the dashboard, asked from the chat over that page. Name the job it changes, or leave `replaces` out.';
+
+/**
+ * The automation this call changes in place, where it changes the one the person has open: `replaces` says `open`, or
+ * names that very one. Null for every other call, which proposes as it always did; a refusal where `open` was said and
+ * nothing is open, which guessing a job for would be worse than saying.
+ */
+function openFor(ctx: ToolContext, replaces: string | undefined): OpenAutomation | null | { refused: string } {
+  const page = ctx.liveEdit?.kind === "automation" ? ctx.liveEdit : null;
+  const meant = replaces !== undefined && (replaces === "open" || (page !== null && replaces === page.id));
+  if (!meant) return null;
+  if (!page) return { refused: NOTHING_OPEN };
+  // Said to the turn already, with its message: one that tries all the same is told why here, and not "nothing is open".
+  if (page.tooLong !== undefined) return { refused: `The automation they have open is too long to change from this chat (${page.tooLong} characters). Say so: they change it on the page itself.` };
+  return readOpen(page.value) ?? { refused: NOTHING_OPEN };
+}
+
+/**
+ * A change to the automation a person has open, handed to its page. Written whole, as a proposal is; what `schedule`
+ * has no word for is carried from the step it changes (`carried`); and it is held to what a save holds it to. How it
+ * starts is held to the clock only where the change says another start: one that is a moment already past stays.
+ * Where it reports, what it keeps between runs and whether it stays listed are the page's, and kept as they are
+ * unless `to` says another chat.
+ */
+async function changeOpen(
+  options: ScheduleToolOptions,
+  given: { args: Record<string, unknown>; ctx: ToolContext; open: OpenAutomation; payload: JobPayload; name: string; agentId: string; now: number },
+): Promise<ToolResult> {
+  const { args, ctx, open, name, agentId } = given;
+  if (!options.proposeLiveEdit) return { content: "This chat cannot draw a change on a page. Propose it with `replaces` naming the job instead.", isError: true };
+  const tz = typeof args.tz === "string" && args.tz.trim() ? args.tz.trim() : open.tz;
+  const when = String(args.when ?? "");
+  const asWas = sameStart(when, open.when) && (tz ?? "") === (open.tz ?? "");
+  // Read from what the page holds where it starts as it did, so a start the agent only repeated is the page's own.
+  const trigger = triggerOf(asWas ? open.when! : when, tz, given.now, options.timezone());
+  // One that exists starts by its address or it does not: that is made, and changed, on its page with an admin's rights.
+  if (ctx.liveEdit!.id !== null && (trigger.kind === "webhook") !== (open.start === "webhook")) {
+    return { content: "Whether it starts when its address is called is changed on its page, not from here: keep `when` as it is.", isError: true };
+  }
+  const lasts = lastsOf(args, trigger, { delivery: open.delivery } as Job);
+  if (typeof lasts === "string") return { content: lasts, isError: true };
+  const target = open.target.gatewayId && open.target.chatId ? open.target : { gatewayId: ctx.gatewayId, chatId: ctx.chatId };
+  const to = typeof args.to === "string" ? args.to.trim() : "";
+  let elsewhere = open.delivery.gatewayId && open.delivery.chatId ? { gatewayId: open.delivery.gatewayId, chatId: open.delivery.chatId } : null;
+  if (to) {
+    const found = resolveSendTarget(to, options.chats(agentId), { gatewayId: ctx.gatewayId, chatId: "", gateway: ctx.gateway });
+    if (!found.ok) return { content: `\`to\` names no chat its results could go to. ${found.reason}`, isError: true };
+    elsewhere = found.chat.gatewayId === target.gatewayId && found.chat.chatId === target.chatId ? null : { gatewayId: found.chat.gatewayId, chatId: found.chat.chatId };
+  }
+  const payload = carried(given.payload, open);
+  await assertScriptsRun(agentId, payload, options.scripts);
+  const change: AutomationChange = {
+    name,
+    agentId,
+    ...(asWas ? {} : { starts: { start: trigger.kind === "webhook" ? ("webhook" as const) : trigger.kind === "manual" ? ("manual" as const) : ("scheduled" as const), trigger } }),
+    payload,
+    target,
+    // When it ends is the store's to write at a save, never a caller's; the marks `schedule` has no word for stay.
+    delivery: {
+      mode: open.delivery.mode,
+      ...(open.delivery.webhookUrl ? { webhookUrl: open.delivery.webhookUrl } : {}),
+      ...(open.delivery.atOnce ? { atOnce: true as const } : {}),
+      ...(args.once === true ? { once: true as const } : {}),
+      ...(lasts !== undefined ? { lasts } : {}),
+      ...elsewhere,
+    },
+    session: open.session === "chat" || open.session === "isolated" ? open.session : "fresh",
+  };
+  options.store.check({ ...change, trigger, createdBy: `agent:${ctx.agentId}`, ...(open.keepAfterRun ? { keepAfterRun: true } : {}) }, { startAsWas: asWas });
+  const offer = options.proposeLiveEdit({ kind: "automation", target: ctx.liveEdit!.id, value: change, by: ctx.agentId, gatewayId: ctx.gatewayId, chatId: ctx.chatId, senderId: ctx.senderId });
+  return {
+    content:
+      "Drawn on the page they have open, over what they have there. Nothing is saved and nothing is on: they apply it on the page, and save it when they are ready. " +
+      "Say what you changed in one line; do not ask them again.",
+    isError: false,
+    liveEdit: offer,
+  };
+}
+
 export function createScheduleTool(options: ScheduleToolOptions): Tool {
   const now = options.now ?? Date.now;
   return {
@@ -298,6 +394,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           checks: { type: "array", items: { type: "string" }, description: "Mission: commands that say a run is done." },
           review: { type: "string", description: "Mission: what the reviewer checks." },
           no_review: { type: "boolean", description: "Mission: no reviewer." },
+          draft: { type: "boolean", description: "Mission, or a step's: drafted for the person to start from their Backlog, not started; the run goes on." },
           steps: {
             type: "array",
             description:
@@ -305,6 +402,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
             items: {
               type: "object",
               properties: {
+                id: { type: "string" },
                 name: { type: "string" },
                 text: { type: "string" },
                 command: { type: "string" },
@@ -314,6 +412,7 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
                 secrets: { type: "array", items: { type: "string" } },
                 prompt: { type: "string" },
                 mission: { type: "string" },
+                draft: { type: "boolean" },
                 ask: { type: "string" },
                 // Each of them is written as a step is, so its fields are not spelled out a second time on every request.
                 together: { type: "array", items: { type: "object" } },
@@ -343,7 +442,11 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
       if (!name) return { content: "Give it a `name`.", isError: true };
       const agentId = typeof args.agent === "string" && args.agent.trim() ? args.agent.trim() : ctx.agentId;
       if (!options.agentExists(agentId)) return { content: `There is no agent called ${agentId}.`, isError: true };
-      const payload = payloadOf(args, options.agentExists);
+      const replaces = typeof args.replaces === "string" && args.replaces.trim() ? args.replaces.trim() : undefined;
+      // A change to what the person has open on its page is the page's to draw, and no proposal.
+      const open = openFor(ctx, replaces);
+      if (open && "refused" in open) return { content: open.refused, isError: true };
+      const payload = payloadOf(args, options.agentExists, open ? new Set(open.steps.map((step) => step.id).filter((id): id is string => typeof id === "string" && id !== "")) : undefined);
       if (typeof payload === "string") return { content: payload, isError: true };
       // Each run is started as the person who turned the job on, so a run's start does not read the brief its goal
       // points at, as an agent's own start does: it is read here, while the agent that wrote it is here to fix it.
@@ -355,12 +458,12 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
         }
       }
       try {
+        if (open) return await changeOpen(options, { args, ctx, open, payload, name, agentId, now: now() });
         const trigger = triggerOf(String(args.when ?? ""), typeof args.tz === "string" ? args.tz : undefined, now(), options.timezone());
         // A command a call from outside sets off, with no model between, is an admin's to make from the dashboard.
         if (trigger.kind === "webhook" && (payload.kind === "command" || (payload.kind === "steps" && payload.steps.some((step) => step.kind === "command" || (step.kind === "parallel" && step.steps.some((part) => part.kind === "command")))))) {
           return { content: "A webhook that runs a command or a script is made by an admin from the dashboard, not proposed.", isError: true };
         }
-        const replaces = typeof args.replaces === "string" && args.replaces.trim() ? args.replaces.trim() : undefined;
         const lasts = lastsOf(args, trigger, replaces ? options.store.get(replaces) : null);
         if (typeof lasts === "string") return { content: lasts, isError: true };
         const refused = proposalRefusal(options.store, ctx.agentId, { trigger }, replaces);
@@ -393,7 +496,8 @@ export function createScheduleTool(options: ScheduleToolOptions): Tool {
           page: pagePath({ kind: "schedule", job: job.id }),
         };
       } catch (err) {
-        if (err instanceof CronValidationError || (err as Error)?.name === "CronParseError") return { content: `Not proposed: ${(err as Error).message}`, isError: true };
+        // A change to what is open is drawn or it is not: nothing of it was ever going to be proposed.
+        if (err instanceof CronValidationError || (err as Error)?.name === "CronParseError") return { content: `${open ? "Not drawn on the page" : "Not proposed"}: ${(err as Error).message}`, isError: true };
         throw err;
       }
     },

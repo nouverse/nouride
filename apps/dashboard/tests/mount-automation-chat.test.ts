@@ -44,14 +44,17 @@ async function pageSentFrom(path: string, ready: (host: HTMLElement) => boolean)
 describe("the page a message from the floating chat is sent with", () => {
   test("one automation's page: in Automations, and about that automation by its name", async () => {
     const page = await pageSentFrom("/automations/cron_1", (host) => host.querySelector('main [aria-label="Who and where"]') !== null);
-    expect(page).toEqual({ path: "/dashboard/automations/cron_1", title: "Automations", subject: "Shop health check" });
+    // And what the page holds open to be changed: the automation itself, for an agent asked to change it (`mount-automation-live-edit.test.ts`).
+    expect(page).toMatchObject({ path: "/dashboard/automations/cron_1", title: "Automations", subject: "Shop health check", liveEdit: { kind: "automation", id: "cron_1" } });
+    expect(Object.keys(page as object).sort()).toEqual(["liveEdit", "path", "subject", "title"]);
   });
 
   test("the list is Automations, about no one of them; and the page that makes one is about none yet", async () => {
     const list = await pageSentFrom("/automations", (host) => host.querySelector("[data-automation]") !== null);
     expect(list).toEqual({ path: "/dashboard/automations", title: "Automations" });
     const fresh = await pageSentFrom("/automations/new", (host) => host.textContent?.includes("Add the first step") === true);
-    expect(fresh).toEqual({ path: "/dashboard/automations/new", title: "Automations" });
+    expect(fresh).toMatchObject({ path: "/dashboard/automations/new", title: "Automations", liveEdit: { kind: "automation", id: null } });
+    expect("subject" in (fresh as object)).toBe(false);
   });
 
   test("its place in the menu is read from the menu: an automation's page and the page that makes one are in Automations", () => {

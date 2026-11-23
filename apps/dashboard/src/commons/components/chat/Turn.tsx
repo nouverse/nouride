@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Pencil, Square } from "lucide-react";
+import { ArrowRight, Pencil, PencilLine, Square } from "lucide-react";
 import { Markdown } from "@/commons/components/ui/Markdown";
 import { HtmlBlocks, turnHtmlPreview } from "@/commons/lib/html-preview";
 import type { ChatTurn, LiveTurn, TurnAttachment, TurnCause, TurnStep } from "@nouride/wire";
@@ -22,6 +22,8 @@ import { PersonMessage } from "@/commons/components/chat/PersonMessage";
 import { AgentReply } from "@/commons/components/chat/AgentReply";
 import { sectionTitle } from "@/commons/components/floating-chat/page-open";
 import { TaggedText } from "@/commons/components/chat/AgentTag";
+import { useToast } from "@/commons/components/ui/toast";
+import { offerEdit } from "@/commons/hooks/use-page-follows";
 
 export function UserBubble({
   text,
@@ -262,6 +264,31 @@ export function TurnView({
 }
 
 /**
+ * A change the turn wrote to what the page holds open, drawn on that page again: it was drawn as it arrived, and a
+ * person who looked away, or discarded it too soon, has it back from here for as long as the daemon holds it.
+ */
+function ShowEdit({ id }: { id: string }) {
+  const toast = useToast();
+  const [asking, setAsking] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={asking}
+      className="btn btn-xs h-7 gap-1.5 rounded-full border-0 bg-secondary/10 text-secondary hover:bg-secondary/20"
+      onClick={async () => {
+        setAsking(true);
+        const there = await offerEdit(id);
+        setAsking(false);
+        if (!there) toast.show({ kind: "info", message: "That change is no longer here. Ask for it again." });
+      }}
+    >
+      <PencilLine size={12} aria-hidden="true" />
+      Show the change on the page
+    </button>
+  );
+}
+
+/**
  * What the turn made or changed that has a page of its own (`tool_done.page`: an automation proposed, a mission
  * started), one press away under the answer. The page is the daemon's word, not read out of the agent's: an agent
  * that forgot to say where it put something still leaves a way to it. In the chat that floats over a page the link
@@ -269,9 +296,12 @@ export function TurnView({
  */
 function MadePages({ steps }: { steps: TurnStep[] }) {
   const pages = [...new Set(steps.flatMap((step) => (step.kind === "tool_done" && step.page ? [step.page] : [])))];
-  if (pages.length === 0) return null;
+  // A change it wrote to what the page under the chat holds open: its last one, since each is written over the one before.
+  const edit = steps.flatMap((step) => (step.kind === "tool_done" && step.liveEdit ? [step.liveEdit] : [])).at(-1);
+  if (pages.length === 0 && !edit) return null;
   return (
     <div className="flex flex-wrap gap-2">
+      {edit ? <ShowEdit id={edit} /> : null}
       {pages.map((page) => (
         // A path the daemon handed over, which no route's type knows.
         <Link key={page} to={page as "/"} className="btn btn-xs h-7 gap-1.5 rounded-full border-0 bg-secondary/10 text-secondary hover:bg-secondary/20">

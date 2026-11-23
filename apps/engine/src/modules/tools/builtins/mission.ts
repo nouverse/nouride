@@ -15,7 +15,7 @@ import type { AuditPort } from "@/commons/audit.store.ts";
 import { isMissionChat } from "@/modules/missions/gateway.ts";
 import { isDraft, signedOffBy, type DraftChange } from "@/modules/missions/drafts.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
-import type { StartRequest } from "@/modules/missions/start.ts";
+import { LIMIT_FIELDS, LIMIT_KEYS, type StartRequest } from "@/modules/missions/start.ts";
 import type { Mission } from "@/modules/missions/types.ts";
 import { openQuestion, type AnswerReach } from "@/modules/missions/asking.ts";
 import { MAX_OPTIONS } from "@/modules/missions/options.ts";
@@ -98,9 +98,22 @@ const START_FIELDS = {
   branch: { type: "string", description: "Its worktree's new branch: code in a git `workdir` only. Default: mission/<id>." },
 } as const;
 
-/** A chat's own fields (0.8.11): a draft's brief, and `edit`'s id. */
+/**
+ * A draft's own limits, the words that carry the rule (asserted by a test): left out is the rule, so a model that fills
+ * every field it is offered does not give each draft numbers of its own; and the person sees them, so one that asks for
+ * more knows it is asking.
+ */
+export const OWN_LIMITS =
+  "A draft may carry its own limits (`limit_hours`, `limit_turns`, `limit_tokens`), where it stops to ask the person " +
+  "whether to go on. Leave them out to follow the person's setting, right for most work; name one when they asked, or " +
+  "the work is known to need more or less. The draft's notice shows them to the person.";
+
+/** A chat's own fields (0.8.11): a draft's brief, its own limits, and `edit`'s id. */
 const CHAT_FIELDS = {
   brief: { type: "string", description: "start, edit: the mission's brief, written to BRIEF.md in its folder (what the work is, why, what to read, what done means), in English. Each turn names it. Change it later with `edit` or your file tools." },
+  [LIMIT_FIELDS.hours]: { type: "number", description: "start, edit: its own limit in hours of work, 0.25 to 168. Left out: the setting." },
+  [LIMIT_FIELDS.turns]: { type: "number", description: "start, edit: its own limit in turns, 1 to 1000. Left out: the setting." },
+  [LIMIT_FIELDS.tokens]: { type: "number", description: "start, edit: its own limit in tokens, written whole: 250000000 is 250 million. Left out: the setting." },
   id: { type: "string", description: "edit: your draft's id." },
 } as const;
 
@@ -177,6 +190,17 @@ function askOptions(value: unknown): string[] | null {
   return value.length >= 2 && value.length <= MAX_OPTIONS && options.every(Boolean) ? options : null;
 }
 
+/**
+ * The limits a call names for its mission, by the settings' names — as written, for `limitsRefusal` to judge, but a
+ * number sent as text, which some models do with every number. None named: undefined, and the settings hold.
+ */
+function limitsOf(args: Record<string, unknown>): StartRequest["limits"] {
+  const named = LIMIT_KEYS.filter((key) => args[LIMIT_FIELDS[key]] !== undefined && args[LIMIT_FIELDS[key]] !== null);
+  if (named.length === 0) return undefined;
+  const number = (value: unknown): unknown => (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)) ? Number(value) : value);
+  return Object.fromEntries(named.map((key) => [key, number(args[LIMIT_FIELDS[key]])])) as StartRequest["limits"];
+}
+
 /** What `start` asks for, from the call — who it runs as is the caller's to add. */
 function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<StartRequest, "startedBy" | "gatewayId" | "chatId"> {
   const checks = strings(args.checks);
@@ -184,6 +208,7 @@ function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<Star
   const branch = text(args.branch);
   const review = args.no_review === true ? false : text(args.review) || undefined;
   const title = text(args.title);
+  const limits = limitsOf(args);
   return {
     agentId: text(args.agent) || ctx.agentId,
     ...(title ? { title } : {}),
@@ -193,6 +218,7 @@ function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<Star
     ...(args.accept === true ? { accept: true } : {}),
     ...(workdir ? { workdir } : {}),
     ...(branch ? { branch } : {}),
+    ...(limits ? { limits } : {}),
     byAgent: ctx.agentId,
     ...(ctx.untrustedRead && ctx.untrustedRead.length > 0 ? { untrusted: true } : {}),
   };
@@ -204,6 +230,7 @@ async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: T
   const mission = id ? missions.find(id) : null;
   if (!mission || (mission.byAgent ?? mission.agentId) !== ctx.agentId) return refused(id ? `No draft ${id} of yours.` : "Name your draft: `id`.");
   const checks = strings(args.checks);
+  const limits = limitsOf(args);
   const change: DraftChange = {
     ...(typeof args.title === "string" ? { title: args.title } : {}),
     ...(typeof args.goal === "string" ? { goal: args.goal } : {}),
@@ -213,6 +240,7 @@ async function editOwn(missions: Missions, args: Record<string, unknown>, ctx: T
     ...(typeof args.workdir === "string" ? { workdir: args.workdir } : {}),
     ...(typeof args.branch === "string" ? { branch: args.branch } : {}),
     ...(typeof args.brief === "string" ? { brief: args.brief.trim() } : {}),
+    ...(limits ? { limits } : {}),
   };
   const edited = await missions.edit(mission.id, change, { byAgent: ctx.agentId });
   if ("refused" in edited) return refused(edited.refused);
@@ -244,8 +272,11 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   if (isDraft(mission)) {
     const brief = missions.briefPath(mission);
     const briefLine = briefFailed ? `\nIts brief could not be written: ${briefFailed}. Write it again with \`edit\`.` : `\nIts brief: ${brief} (yours to change before it starts).`;
+    // What was taken of the limits it named, as the person reads them in the notice.
+    const own = missions.ownLimits(mission);
+    const limitsLine = own ? `\n${own}. The person sees this in its notice.` : "";
     return ok(
-      `Drafted mission ${id}, "${mission.title}": ${mission.goal}\nDone when ${doneWhen(mission)}; signed off by ${signedOffBy(mission)}.${briefLine}${pageLine}\n` +
+      `Drafted mission ${id}, "${mission.title}": ${mission.goal}\nDone when ${doneWhen(mission)}; signed off by ${signedOffBy(mission)}.${briefLine}${limitsLine}${pageLine}\n` +
         `Its notice is in this chat with Start it and Drop it. Nothing runs until the person starts it: their tap, /mission accept ${id}, the dashboard, ` +
         `or their "go" passed on with \`work\` action "start". Change it before then with \`mission\` action "edit". ` +
         `Tell the person what you drafted and how it will be judged done; do not do the work here as well.${reminder}`,
@@ -262,7 +293,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
     requiresApproval: false,
     definition: {
       name: "mission",
-      description: `${WHEN_TO_START} ${WHO_SIGNS} ${ONE_OWNER} Action "start" drafts one; "edit" changes your draft before it starts.`,
+      description: `${WHEN_TO_START} ${WHO_SIGNS} ${ONE_OWNER} ${OWN_LIMITS} Action "start" drafts one; "edit" changes your draft before it starts.`,
       parameters: {
         type: "object",
         properties: { action: { type: "string", enum: ["start", "edit"] }, ...START_FIELDS, ...CHAT_FIELDS },

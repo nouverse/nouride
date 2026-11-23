@@ -1086,6 +1086,10 @@ nouride memory set pass_model -                  # back to each agent's own
 nouride memory set prompt_recent 5               # conversation summaries in each prompt (3 by default)
 nouride memory set recall off                    # nothing remembered in prompts; the pass still learns, agents still search
 nouride memory set transcript_days 14            # 0 keeps them forever
+nouride memory set semantic ollama/bge-m3        # search by meaning on, with that provider's embedding model (0.8.46):
+                                                 # the model is asked first, and it stays off if that fails
+nouride memory set semantic off                  # words only again; `on` switches back to the model it had
+nouride memory set semantic_dimensions 512       # for a model that can shorten its vectors
 nouride memory episodes bali --person alex --since 2026-09-01
 nouride memory show 2026-09-25-1405-nouva        # one conversation, whole
 nouride memory pass                              # run the nightly pass now

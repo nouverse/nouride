@@ -70,7 +70,7 @@ type WireContentPart =
 interface WireMessage {
   role: string;
   content: string | WireContentPart[] | null;
-  tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[];
+  tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string }; extra_content?: unknown }[];
   tool_call_id?: string;
 }
 
@@ -124,6 +124,8 @@ interface WireStreamChunk {
         index: number;
         id?: string;
         function?: { name?: string; arguments?: string };
+        /** Gemini's thought signature rides here, on the first fragment of a call (`ToolCall.extraContent`). */
+        extra_content?: unknown;
       }[];
     };
     finish_reason?: string | null;
@@ -137,11 +139,14 @@ export class OpenAIProvider implements LLMProvider {
   readonly kind = "openai" as const;
   readonly baseUrl: string;
   readonly cacheLifetimeMs?: number;
-  private readonly effort = new EffortGuard();
+  private readonly effort = new EffortGuard({ none: true });
   private readonly temperature = new TemperatureGuard();
+  /** Google's own endpoint, which refuses a step whose first call comes back unsigned (`GEMINI_SKIP_SIGNATURE`). */
+  private readonly signsCalls: boolean;
 
   constructor(private readonly options: OpenAIProviderOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    this.signsCalls = isGeminiEndpoint(this.baseUrl);
     if (options.cacheMinutes !== undefined) this.cacheLifetimeMs = options.cacheMinutes * 60_000;
   }
 
@@ -230,7 +235,7 @@ export class OpenAIProvider implements LLMProvider {
     // OpenAI gives each parallel call its own index; Nougate gives them all `index: 0` and distinguishes
     // them by `id`. `slotByIndex` points at the call currently accumulating for each index, and a new
     // `id` rotates it.
-    const assembled: { index: number; id: string; name: string; args: string }[] = [];
+    const assembled: { index: number; id: string; name: string; args: string; extra?: Record<string, unknown> }[] = [];
     const slotByIndex = new Map<number, number>();
     let stopReason: StopReason = "stop";
     /** The finish reason as the record keeps it — absent until one arrives (`TokenUsage.stopReason`). */
@@ -298,17 +303,20 @@ export class OpenAIProvider implements LLMProvider {
           current === undefined || (Boolean(call.id) && Boolean(current.id) && call.id !== current.id);
 
         if (startsNewCall) {
+          const extra = extraContentOf(call.extra_content);
           assembled.push({
             index,
             id: call.id ?? "",
             name: call.function?.name ?? "",
             args: call.function?.arguments ?? "",
+            ...(extra ? { extra } : {}),
           });
           slotByIndex.set(index, assembled.length - 1);
         } else {
           current.id = current.id || (call.id ?? "");
           current.name = current.name || (call.function?.name ?? "");
           current.args += call.function?.arguments ?? "";
+          current.extra = current.extra ?? extraContentOf(call.extra_content);
           argumentBytes += byteLength(call.function?.arguments ?? "");
         }
       }
@@ -343,6 +351,7 @@ export class OpenAIProvider implements LLMProvider {
           id: call.id || `call_${index}`,
           name: call.name,
           ...toolArguments(call.args),
+          ...(call.extra ? { extraContent: call.extra } : {}),
         },
       };
     }
@@ -354,10 +363,10 @@ export class OpenAIProvider implements LLMProvider {
 
   /** Through the two guards: a model that refuses `temperature` or `effort` is asked again without it (`temperature.ts`, `effort.ts`). */
   private async post(params: ChatParams, stream: boolean): Promise<Response> {
-    return await this.temperature.post(params, (kept) => this.effort.post(kept, (asked) => this.send(asked, stream)));
+    return await this.temperature.post(params, (kept) => this.effort.post(kept, (asked, reasoning) => this.send(asked, stream, reasoning)));
   }
 
-  private async send(params: ChatParams, stream: boolean): Promise<Response> {
+  private async send(params: ChatParams, stream: boolean, reasoning?: "none"): Promise<Response> {
     const messages: WireMessage[] = [];
     // OpenAI caches matching prefixes automatically — there is no field for a breakpoint, so the
     // caller's cache hints are dropped and only their *order* matters. Joining the blocks keeps the
@@ -365,7 +374,7 @@ export class OpenAIProvider implements LLMProvider {
     // only thing an implicit cache can act on.
     const system = flattenSystem(params.system);
     if (system) messages.push({ role: "system", content: system });
-    messages.push(...params.messages.map(toWireMessage));
+    messages.push(...params.messages.map((message) => toWireMessage(message, this.signsCalls)));
     // Last, so the prefix an implicit cache matches ends where it began (`ChatParams.tail`).
     if (params.tail) messages.push({ role: "user", content: params.tail });
 
@@ -394,8 +403,9 @@ export class OpenAIProvider implements LLMProvider {
         // In the field the profile names: OpenAI's own API refuses `max_tokens` for its newer models, and a server
         // that only speaks the format may know nothing else. One field, never both: a strict server refuses a pair.
         ...(params.maxTokens !== undefined ? { [this.options.maxTokensField ?? "max_tokens"]: params.maxTokens } : {}),
-        // The level as the operator wrote it: an endpoint that does not know `xhigh` says so on the first call.
-        ...(params.effort ? { reasoning_effort: params.effort } : {}),
+        // The level as the operator wrote it: an endpoint that does not know `xhigh` says so on the first call. `none`
+        // is the guard's, for a model that takes no tools while it reasons (`EffortGuard`).
+        ...(reasoning ? { reasoning_effort: reasoning } : params.effort ? { reasoning_effort: params.effort } : {}),
         // `false` said outright: a proxy that defaults to streaming when the field is absent — 9Router does —
         // otherwise streams to a caller that turned streaming off.
         ...(stream ? { stream: true, stream_options: { include_usage: true } } : { stream: false }),
@@ -441,7 +451,7 @@ function toWireContent(content: MessageContent): string | WireContentPart[] {
   });
 }
 
-function toWireMessage(message: ChatMessage): WireMessage {
+function toWireMessage(message: ChatMessage, signsCalls: boolean): WireMessage {
   if (message.role === "tool") {
     return {
       role: "tool",
@@ -459,11 +469,15 @@ function toWireMessage(message: ChatMessage): WireMessage {
     content: typeof content === "string" ? content || (message.toolCalls?.length ? null : "") : content,
     ...(message.toolCalls?.length
       ? {
-          tool_calls: message.toolCalls.map((call) => ({
-            id: call.id,
-            type: "function" as const,
-            function: { name: call.name, arguments: JSON.stringify(call.arguments) },
-          })),
+          tool_calls: message.toolCalls.map((call, index) => {
+            const extra = call.extraContent ?? (signsCalls && index === 0 ? SKIP_SIGNATURE_CONTENT : undefined);
+            return {
+              id: call.id,
+              type: "function" as const,
+              function: { name: call.name, arguments: JSON.stringify(call.arguments) },
+              ...(extra ? { extra_content: extra } : {}),
+            };
+          }),
         }
       : {}),
   };
@@ -481,7 +495,33 @@ function toWireTool(tool: ToolDefinition) {
 }
 
 function fromWireToolCall(call: NonNullable<WireMessage["tool_calls"]>[number]): ToolCall {
-  return { id: call.id, name: call.function.name, ...toolArguments(call.function.arguments) };
+  const extra = extraContentOf(call.extra_content);
+  return { id: call.id, name: call.function.name, ...toolArguments(call.function.arguments), ...(extra ? { extraContent: extra } : {}) };
+}
+
+/**
+ * Google's documented stand-in for a thought signature, which tells Gemini to skip checking one. Nougate sends the same
+ * literal for the same calls (`providers/antigravity/utils/thought-signature.ts` there).
+ *
+ * Gemini refuses a step whose first call has no signature, and a call can lack one for reasons no answer can fix: it was
+ * made by another model before the agent moved to Gemini, or by Nouride itself. Only the first call of a step needs
+ * one, so only the first call gets it, and only on Google's endpoint: anywhere else it is an invented field.
+ */
+const GEMINI_SKIP_SIGNATURE = "context_engineering_is_the_way_to_go";
+const SKIP_SIGNATURE_CONTENT = { google: { thought_signature: GEMINI_SKIP_SIGNATURE } };
+
+/** Google's Gemini API, OpenAI-compatible path included (`https://generativelanguage.googleapis.com/v1beta/openai`). */
+function isGeminiEndpoint(baseUrl: string): boolean {
+  try {
+    return new URL(baseUrl).hostname === "generativelanguage.googleapis.com";
+  } catch {
+    return false;
+  }
+}
+
+/** A call's `extra_content` when it is an object, the only shape a provider sends back; anything else is dropped. */
+function extraContentOf(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
 /** The finish reason of a reply that stopped at `max_tokens`. */

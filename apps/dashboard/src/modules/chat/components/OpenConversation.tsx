@@ -13,7 +13,7 @@ import { canWrite, useMe } from "@/commons/lib/session";
 import type { ChatListData } from "../hooks/use-chat-list";
 import { useOpenChat } from "../hooks/use-open-chat";
 import { AgentHeader } from "./AgentHeader";
-import type { FirstChoice } from "./ChatChoice";
+import type { FirstChoice } from "@/commons/components/chat/ChatChoice";
 import { HistoryPanel } from "./HistoryPanel";
 import { NotesPanel } from "./NotesPanel";
 import { RoomHeader } from "./RoomHeader";

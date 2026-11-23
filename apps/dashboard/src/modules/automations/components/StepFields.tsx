@@ -19,8 +19,8 @@ import { ToggleRow } from "@/commons/components/ui/ToggleRow";
 import { Field } from "@/commons/components/ui/ui";
 import type { Then } from "../lib/draft";
 import { PATH_EXITS, chipExits, ruleOf, type Choice, type LaneEnds, type PathExit, type Paths, type Rule } from "../lib/paths";
-import { DEFAULT_EXIT, KINDS, STEPS_MAX, canWatch, exitFrom, exitOf, exitValue, exitsOf, watching, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
-import { KIND, endWords, exitAsks, exitChip, landingName, placeTitle, sameAgainWords } from "../lib/words";
+import { DEFAULT_EXIT, KINDS, STEPS_MAX, canWatch, exitFrom, exitOf, exitValue, exitsOf, pickOf, watching, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+import { KIND, PICK, endWords, exitAsks, exitChip, landingName, placeTitle, sameAgainWords } from "../lib/words";
 import { KindFields, type AgentChoice, type ScriptContext } from "./KindFields";
 import { FieldsFrame } from "./form-parts";
 import { PathChoices } from "./PathChoices";
@@ -176,7 +176,7 @@ export function StepFields({
       head={
         <>
           <p className="font-mono text-xs font-semibold tracking-wider text-base-content/65 uppercase">
-            {within ? `${exitChip(steps[within.owner]!, within.exit)} · ${KIND[step.kind].label}` : `Step ${(place ?? 0) + 1} · ${KIND[step.kind].label}`}
+            {within ? `${exitChip(steps[within.owner]!, within.exit)} · ${PICK[pickOf(step)].label}` : `Step ${(place ?? 0) + 1} · ${PICK[pickOf(step)].label}`}
           </p>
           <h2 className="mt-0.5 line-clamp-2 text-lg text-base-content [overflow-wrap:anywhere]">{titleOf(step)}</h2>
         </>

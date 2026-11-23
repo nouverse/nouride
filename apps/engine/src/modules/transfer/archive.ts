@@ -101,6 +101,14 @@ export function placesOf(config: GlobalConfig, configPath: string, folders: bool
 /** The credentials folder as the walk meets it: one whole path, whatever the config's spelling of it. */
 const credentialsOf = (config: GlobalConfig): string => resolve(keptFolders(config).credentials);
 
+/**
+ * How many entries a walk reads before it lets the daemon do something else. Read in one go, the count of a large
+ * install held every chat and the dashboard still until it ended: 26 seconds, measured, on a box whose agents' folders
+ * held 1.2 million files, at each look at the Export page. A starting bound, about 2 ms a slice there.
+ */
+const BREATHE_EVERY = 100;
+const breathe = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
 interface Found {
   entries: TarEntry[];
   files: number;
@@ -118,7 +126,7 @@ interface Found {
  * keeps it inside its agents' folder (`agents/shared/.credentials`, as the live box does) had its key files and tokens
  * in the export with the packs, readable by whoever held the file.
  */
-function gather(place: Place, leftOut: HoldsCredential, never: string): Found {
+async function gather(place: Place, leftOut: HoldsCredential, never: string): Promise<Found> {
   const found: Found = { entries: [], files: 0, bytes: 0, links: 0, credentials: 0 };
   const take = (abs: string, name: string): void => {
     const stat = statFile(abs);
@@ -132,32 +140,34 @@ function gather(place: Place, leftOut: HoldsCredential, never: string): Found {
     return found;
   }
   const agentsOwn = place.part === "workspace";
-  const walk = (dir: string, rel: string): void => {
+  let read = 0;
+  const walk = async (dir: string, rel: string): Promise<void> => {
     const entries = listDir(dir);
     // A folder with nothing in it is kept: an agent's empty folder is still its folder.
     if (entries.length === 0 && rel) found.entries.push({ name: `${place.name}/${rel}`, directory: true });
     for (const entry of entries) {
+      if (++read % BREATHE_EVERY === 0) await breathe();
       const path = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory) {
         if (INSTALLED.has(entry.name) || (agentsOwn && entry.name === ".cli")) continue;
         if (resolve(join(dir, entry.name)) === never) found.credentials += 1;
         else if (agentsOwn && leftOut(`${place.name}/${path}`)) found.credentials += 1;
-        else walk(join(dir, entry.name), path);
+        else await walk(join(dir, entry.name), path);
       } else if (!entry.isFile) found.links += 1;
       else if (entry.name.endsWith(".tmp") || /\.bak\.\d+$/.test(entry.name)) continue;
       else if (agentsOwn && leftOut(`${place.name}/${path}`)) found.credentials += 1;
       else take(join(dir, entry.name), `${place.name}/${path}`);
     }
   };
-  walk(place.path, "");
+  await walk(place.path, "");
   return found;
 }
 
-/** What an export would hold and how large, before it is made: the page's and the command's first words. */
-export function exportPlan(input: { config: GlobalConfig; configPath: string; dbPath: string; folders: boolean; credential: HoldsCredential }): { parts: ExportManifest["parts"]; database: number; folders: { files: number; bytes: number }; bytes: number } {
+/** What an export would hold and how large, before it is made: what the page's count and the command's first words say. */
+export async function exportPlan(input: { config: GlobalConfig; configPath: string; dbPath: string; folders: boolean; credential: HoldsCredential }): Promise<{ parts: ExportManifest["parts"]; database: number; folders: { files: number; bytes: number }; bytes: number }> {
   const parts: ExportManifest["parts"] = {};
   for (const place of placesOf(input.config, input.configPath, true)) {
-    const found = gather(place, input.credential, credentialsOf(input.config));
+    const found = await gather(place, input.credential, credentialsOf(input.config));
     const was = parts[place.part] ?? { files: 0, bytes: 0 };
     parts[place.part] = { files: was.files + found.files, bytes: was.bytes + found.bytes };
   }
@@ -186,6 +196,8 @@ export async function writeExport(input: {
   credential: HoldsCredential;
   secrets?: { passphrase: string; store: string; count: number } | undefined;
   now?: () => number;
+  /** Told once, when what goes in has been counted and before any of it is written: how large it is, unpacked. */
+  onCounted?: (bytes: number) => void;
   onProgress?: (done: { files: number; bytes: number }) => void;
 }): Promise<Exported> {
   const snapshot = join(input.work, "nouride.db");
@@ -213,7 +225,7 @@ export async function writeExport(input: {
     };
     const entries: TarEntry[] = [{ name: "data/nouride.db", from: snapshot, size, mode: 0o600 }];
     for (const place of placesOf(input.config, input.configPath, input.folders)) {
-      const found = gather(place, input.credential, credentialsOf(input.config));
+      const found = await gather(place, input.credential, credentialsOf(input.config));
       entries.push(...found.entries);
       const was = manifest.parts[place.part] ?? { files: 0, bytes: 0 };
       manifest.parts[place.part] = { files: was.files + found.files, bytes: was.bytes + found.bytes };
@@ -226,6 +238,7 @@ export async function writeExport(input: {
     // The manifest first, so the first thing a reader meets says what the rest is.
     entries.unshift({ name: "manifest.json", bytes: new TextEncoder().encode(`${JSON.stringify(manifest, null, 2)}\n`), mode: 0o644 });
 
+    input.onCounted?.(size + Object.values(manifest.parts).reduce((sum, part) => sum + (part?.bytes ?? 0), 0));
     const done = { files: 0, bytes: 0 };
     removePath(partial);
     await writeTarGz(partial, entries, (entry) => {

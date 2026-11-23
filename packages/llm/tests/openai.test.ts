@@ -146,6 +146,75 @@ describe("OpenAIProvider.chat", () => {
     expect(assistant.content).toBeNull();
     expect(assistant.tool_calls[0].function.arguments).toBe('{"path":"a.txt"}');
     expect(tool).toEqual({ role: "tool", content: "file body", tool_call_id: "c1" });
+    // A call the provider sent nothing beside gets nothing added: OpenAI's own wire is unchanged.
+    expect(assistant.tool_calls[0]).not.toHaveProperty("extra_content");
+  });
+
+  test("on Google's endpoint a step's first call with no signature goes with Google's stand-in, as Nougate sends", async () => {
+    // A call another model made before the agent moved to Gemini has no signature, and Gemini refuses the step without one.
+    const fetcher = fakeFetch(jsonResponse({ choices: [{ message: { content: "done" } }] }));
+    const gemini = new OpenAIProvider({ baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/", apiKey: "k", http: { fetchImpl: fetcher.fn, sleep: noSleep } });
+    const real = { google: { thought_signature: "c2lnLWE=" } };
+    await gemini.chat({
+      model: "gemini-3-flash",
+      messages: [
+        { role: "user", content: "go" },
+        { role: "assistant", content: "", toolCalls: [{ id: "a1", name: "read", arguments: {} }, { id: "a2", name: "read", arguments: {} }] },
+        { role: "tool", content: "A", toolCallId: "a1" },
+        { role: "tool", content: "B", toolCallId: "a2" },
+        { role: "assistant", content: "", toolCalls: [{ id: "b1", name: "read", arguments: {}, extraContent: real }] },
+        { role: "tool", content: "C", toolCallId: "b1" },
+      ],
+    });
+    const steps = fetcher.last().body.messages.filter((message: { role: string }) => message.role === "assistant");
+    expect(steps[0].tool_calls[0].extra_content).toEqual({ google: { thought_signature: "context_engineering_is_the_way_to_go" } });
+    expect(steps[0].tool_calls[1]).not.toHaveProperty("extra_content");
+    // A real signature is never replaced by the stand-in.
+    expect(steps[1].tool_calls[0].extra_content).toEqual(real);
+  });
+
+  test("Gemini's thought signature on a call comes back with it on the next request, unchanged", async () => {
+    // Gemini 3 refuses the next step of a turn with a 400 ("Function call ... is missing a thought_signature")
+    // when the first call of a step comes back without the signature it was sent with.
+    const signature = { google: { thought_signature: "c2lnLWE=" } };
+    const fetcher = fakeFetch((_req, attempt) =>
+      attempt === 0
+        ? jsonResponse({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    { id: "c1", type: "function", function: { name: "read", arguments: '{"path":"a.txt"}' }, extra_content: signature },
+                    { id: "c2", type: "function", function: { name: "read", arguments: '{"path":"b.txt"}' } },
+                  ],
+                },
+                finish_reason: "tool_calls",
+              },
+            ],
+          })
+        : jsonResponse({ choices: [{ message: { content: "done" } }] }),
+    );
+    const gemini = provider(fetcher.fn);
+    const first = await gemini.chat({ model: "gemini-3-flash", messages: [{ role: "user", content: "read both" }] });
+
+    expect(first.toolCalls).toEqual([
+      { id: "c1", name: "read", arguments: { path: "a.txt" }, extraContent: signature },
+      { id: "c2", name: "read", arguments: { path: "b.txt" } },
+    ]);
+
+    await gemini.chat({
+      model: "gemini-3-flash",
+      messages: [
+        { role: "user", content: "read both" },
+        { role: "assistant", content: "", toolCalls: first.toolCalls },
+        { role: "tool", content: "A", toolCallId: "c1" },
+        { role: "tool", content: "B", toolCallId: "c2" },
+      ],
+    });
+    const [, assistant] = fetcher.last().body.messages;
+    expect(assistant.tool_calls[0].extra_content).toEqual(signature);
+    expect(assistant.tool_calls[1]).not.toHaveProperty("extra_content");
   });
 
   test("asks for no stream outright — a proxy that defaults to streaming sees `false`, not nothing", async () => {
@@ -251,6 +320,26 @@ describe("OpenAIProvider.stream", () => {
       call: { id: "c1", name: "exec", arguments: { cmd: "ls" } },
     });
     expect(chunks.at(-1)).toEqual({ type: "done", stopReason: "tool_calls" });
+  });
+
+  test("a streamed call keeps the thought signature sent on its first fragment", async () => {
+    const fetcher = fakeFetch(
+      sseResponse([
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","function":{"name":"exec","arguments":""},"extra_content":{"google":{"thought_signature":"c2lnLWE="}}}]}}]}\n\n',
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"cmd\\":\\"ls\\"}"}}]}}]}\n\n',
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c2","function":{"name":"exec","arguments":"{\\"cmd\\":\\"pwd\\"}"}}]}}]}\n\n',
+        'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\n',
+        "data: [DONE]\n\n",
+      ]),
+    );
+
+    const chunks = await drain(provider(fetcher.fn).stream({ model: "gemini-3-flash", messages: [] }));
+    const calls = chunks.flatMap((chunk) => (chunk.type === "tool_call" ? [chunk.call] : []));
+
+    expect(calls).toEqual([
+      { id: "c1", name: "exec", arguments: { cmd: "ls" }, extraContent: { google: { thought_signature: "c2lnLWE=" } } },
+      { id: "c2", name: "exec", arguments: { cmd: "pwd" } },
+    ]);
   });
 
   test("keeps multiple parallel tool calls in index order", async () => {

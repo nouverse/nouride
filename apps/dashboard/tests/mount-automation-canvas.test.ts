@@ -187,7 +187,8 @@ describe("steps added on the canvas", () => {
       kinds = dialog()!.querySelectorAll("button").length;
     });
     // Under a button low in the window it was 300 px of a 500 px list, cut where it ended: its last kinds out of reach.
-    expect(kinds).toBe(6);
+    // Every kind of step, and a mission that is drafted, which is its own entry in the list.
+    expect(kinds).toBe(7);
     expect(classes).toContain("overflow-y-auto");
     expect(classes).not.toContain("overflow-hidden");
   });
@@ -249,6 +250,42 @@ describe("steps added on the canvas", () => {
     expect(seen.written).toBe("Shell");
     expect(seen.lacks).toEqual(["Step 5: Write the script, or ask an agent to write it.", "Step 5: Say what the script does, in one line."]);
     expect((sent[0]?.body as { payload: { steps: AutomationStep[] } }).payload.steps.at(-1)).toEqual({ id: "s5", kind: "command", argv: ["sh"], script: { text: "date", about: "Says what day it is." } });
+  });
+
+  /**
+   * "Draft a mission" is in the list of what a step can be, beside "Start a mission". As a field inside a mission's
+   * step alone it was not found: the list said an automation could only start one.
+   */
+  test("\"Draft a mission\" is its own entry under the plus: picked, the step drafts, its box and its head say so, and it is saved as that", async () => {
+    shown();
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { entries: [] as string[], hint: "", box: "", mark: "", head: "", choice: "" as string | null };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host);
+      labelled(host, "Add a step at the end").click();
+      const entries = () => [...host.ownerDocument.body.querySelectorAll<HTMLElement>('[role="dialog"][aria-label="Add a step"] button')];
+      await eventually(() => entries().length > 0, 2_000, "the picker");
+      seen.entries = entries().map((button) => button.querySelector("span span")?.textContent ?? "");
+      const draft = entries().find((button) => button.querySelector("span span")?.textContent === "Draft a mission")!;
+      seen.hint = draft.querySelectorAll("span span")[1]?.textContent ?? "";
+      draft.click();
+      await flowDrawn(host, 5);
+      await eventually(() => host.querySelector('[data-step-fields="s5"]') !== null, 2_000, "the new step open");
+      seen.box = stepCard(host, "s5").querySelector("button")?.textContent ?? "";
+      seen.mark = stepCard(host, "s5").querySelector("svg")?.getAttribute("class") ?? "";
+      seen.head = host.querySelector('[data-step-fields="s5"]')?.closest("section")?.querySelector("p")?.textContent ?? "";
+      seen.choice = dropdown(host, "When the run gets here").holds();
+      type(field(host, "Goal"), "Close what is still open.");
+      sent = await saved(host);
+    });
+    expect(seen.entries).toEqual(["Ask an agent", "Run a script", "Send a message", "Start a mission", "Draft a mission", "Wait for your OK", "Several at the same time"]);
+    expect(seen.hint).toBe("Long work, left in the Backlog for you to start. The run goes on.");
+    expect(seen.box).toStartWith("Draft a mission");
+    // Its own mark on the box, not the target of a mission that starts.
+    expect(seen.mark).toContain("notebook-pen");
+    expect(seen.head).toBe("Step 5 · Draft a mission");
+    expect(seen.choice).toBe("Leave it in the Backlog as a draft");
+    expect((sent[0]?.body as { payload: { steps: AutomationStep[] } }).payload.steps.at(-1)).toEqual({ id: "s5", kind: "mission", goal: "Close what is still open.", draft: true });
   });
 });
 

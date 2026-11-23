@@ -8,6 +8,7 @@ import {
   type Gateway,
   type GatewayInstanceConfig,
 } from "@nouride/shared";
+import { proxyWebSockets } from "@nouride/runtime";
 import { WhatsAppGateway, type BridgeChannelFactory } from "./channels/whatsapp/gateway.ts";
 
 export { UndeliverableError, type GatewayIdentity } from "./commons/resilience.ts";
@@ -112,6 +113,9 @@ async function createGateway(
 
   switch (instance.platform) {
     case "discord": {
+      // Before discord.js is first evaluated: its gateway keeps the global `WebSocket` it finds then, and Bun's own
+      // ignores `HTTPS_PROXY` — a pod that may only leave through its proxy never reached Discord.
+      proxyWebSockets();
       const { DiscordGateway } = await import("./channels/discord/gateway.ts");
       return new DiscordGateway({
         ...identity,

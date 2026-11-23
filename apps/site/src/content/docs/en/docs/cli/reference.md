@@ -418,6 +418,10 @@ nouride memory embed                           # vectors for semantic search
 
 `pass_model` takes `<provider>/<model>`, and `-` puts it back on each agent's own. It also summarizes long
 conversations unless `[llm.context] summary_model` is set; `nouride doctor` says when it failed.
+
+`semantic` (0.8.46) takes `<provider>/<embedding model>` and switches search by meaning on with it, once the
+model has answered one embedding; `off` and `on` turn the switch alone. `semantic_dimensions` is for a model
+that can shorten its vectors.
 [Memory →](/en/docs/architecture/memory/)
 
 ## Budgets

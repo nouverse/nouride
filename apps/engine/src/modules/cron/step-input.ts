@@ -85,6 +85,8 @@ function stepFrom(step: Record<string, unknown>, index: number, ids: readonly st
         ...(checks.length > 0 ? { checks } : {}),
         // `false` turns the reviewer off; criteria in words, or nothing for the goal itself.
         ...(step.review === false ? { review: false as const } : text(step.review).trim() ? { review: text(step.review).trim() } : {}),
+        // Kept as written where it is not a yes or a no, so the refusal names it (`validate.ts`); a no is leaving it out.
+        ...(step.draft === undefined || step.draft === false ? {} : { draft: step.draft as true }),
         ...agent,
       };
     }

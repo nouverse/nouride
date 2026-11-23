@@ -360,6 +360,10 @@
       "error": {
         "type": "boolean"
       },
+      "liveEdit": {
+        "optional": true,
+        "type": "string"
+      },
       "name": {
         "identity": true,
         "type": "string"
@@ -608,5 +612,5 @@
       }
     }
   },
-  "version": "1.9"
+  "version": "1.10"
 }

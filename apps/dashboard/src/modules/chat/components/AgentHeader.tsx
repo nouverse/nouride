@@ -18,7 +18,7 @@ import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { platformName } from "@/commons/lib/platform";
 import { cn } from "@/commons/lib/utils";
 import { DELETE_CONVERSATION } from "../lib/history";
-import { ChatChoice, type FirstChoice } from "./ChatChoice";
+import { ChatChoice, type FirstChoice } from "@/commons/components/chat/ChatChoice";
 
 /** A header's button: a word beside its icon from a phone's width up, the icon alone on a phone. */
 export const HEADER_BUTTON = "btn btn-ghost h-11 min-h-11 gap-1.5 rounded-[14px] px-3 text-[13px] font-semibold text-base-content/80 hover:bg-base-content/[0.06] max-sm:w-11 max-sm:px-0 sm:h-9 sm:min-h-9";

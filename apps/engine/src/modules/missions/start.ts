@@ -4,7 +4,7 @@
  */
 
 import { basename } from "@nouride/runtime";
-import { MISSION_TITLE_MAX, ownerIdentity, titleFromGoal, type MissionsSection } from "@nouride/shared";
+import { MISSION_TITLE_MAX, missionLimitRefusal, ownerIdentity, titleFromGoal, type MissionLimitKey, type MissionsSection } from "@nouride/shared";
 import { workTextIsEnglish, writeWorkInEnglish } from "@/modules/memory/index.ts";
 import { AGENT_MISSIONS_PER_DAY, CHECK_MAX, CHECKS_MAX, GOAL_MAX, REVIEW_MAX } from "./limits.ts";
 import type { MissionsPort } from "./missions.store.ts";
@@ -41,6 +41,12 @@ export interface StartRequest {
   request?: string;
   /** A draft's brief (0.8.11): written to `BRIEF.md` in its folder (`drafts.ts`). */
   brief?: string;
+  /**
+   * Its own limits, each where it stops to ask the person whether to go on; one left out follows the setting. A draft's
+   * only: the person's start is their yes to them, and they are said in its notice (`ownLimits`). Work that starts
+   * with nobody's yes keeps the settings, which are a person's.
+   */
+  limits?: Partial<Mission["limits"]>;
   /** The chat conversation the work came from, and the turn there that started it: its task moves into the mission (`carry.ts`). */
   from?: { agentId: string; gatewayId: string; chatId: string; turnId?: string };
 }
@@ -111,6 +117,28 @@ export function briefRefusal(text: string, byAgent: boolean): string | null {
   return null;
 }
 
+/** A mission's three limits, in the order they are said. */
+export const LIMIT_KEYS = ["hours", "turns", "tokens"] as const satisfies readonly MissionLimitKey[];
+
+/** What a caller names each with: the settings' own keys, so an agent that knows `[missions] limit_hours` knows these. */
+export const LIMIT_FIELDS = { hours: "limit_hours", turns: "limit_turns", tokens: "limit_tokens" } as const satisfies Record<MissionLimitKey, string>;
+
+/**
+ * Why a mission's own limits cannot be these, or null: each held to the bounds its setting keeps, and given only to a
+ * draft. A piece handed out inside a mission starts with nobody's yes, so an agent naming its limits there would be
+ * raising what bounds work nobody watches.
+ */
+function limitsRefusal(limits: StartRequest["limits"], draft: boolean): string | null {
+  const named = LIMIT_KEYS.filter((key) => limits?.[key] !== undefined);
+  if (named.length === 0) return null;
+  if (!draft) return `${named.map((key) => `\`${LIMIT_FIELDS[key]}\``).join(", ")}: a mission's own limits are a draft's, which the person starts with them in front of them. This one starts without that, so it keeps the limits in the settings: call it again without them.`;
+  for (const key of named) {
+    const why = missionLimitRefusal(key, limits![key], `\`${LIMIT_FIELDS[key]}\``);
+    if (why) return why;
+  }
+  return null;
+}
+
 /** Why this request cannot be a mission, in words the caller passes on — or null. */
 export function startRefusal(
   request: StartRequest,
@@ -146,6 +174,8 @@ export function startRefusal(
   }
   const brief = request.brief === undefined ? null : briefRefusal(request.brief, Boolean(request.byAgent));
   if (brief) return brief;
+  const limits = limitsRefusal(request.limits, request.proposed === true);
+  if (limits) return limits;
   if (request.workdir !== undefined && !request.workdir.startsWith("/")) return "`workdir` is an absolute path to a folder the agent can reach.";
   // A worktree is made only for a folder given in a repository: the mission's own folder is never one.
   if (request.branch !== undefined && request.workdir === undefined) return "`branch` names the worktree's branch, so it needs a `workdir` in a git repository.";
@@ -168,7 +198,10 @@ export function startRefusal(
   return null;
 }
 
-/** The row a request becomes: queued — or, proposed, waiting for the person's yes. Its limits are the settings now. */
+/**
+ * The row a request becomes: queued — or, proposed, waiting for the person's yes. Its limits are its own where the
+ * request names them, and the settings now for the rest.
+ */
 export function newMission(
   request: StartRequest,
   at: { id: string; settings: MissionsSection; privateDir: string; now: number },
@@ -208,7 +241,7 @@ export function newMission(
     jobId: request.jobId ?? null,
     request: request.request?.trim() ? request.request.slice(0, REQUEST_MAX) : null,
     reviewed: false,
-    limits: { hours: settings.limitHours, turns: settings.limitTurns, tokens: settings.limitTokens },
+    limits: { hours: request.limits?.hours ?? settings.limitHours, turns: request.limits?.turns ?? settings.limitTurns, tokens: request.limits?.tokens ?? settings.limitTokens },
     turnsUsed: 0,
     tokensUsed: 0,
     cliTurns: 0,

@@ -13,7 +13,7 @@ export interface SendsOut {
 
 import type { ApprovalLevel } from "./agent.ts";
 import type { ApprovalDecision } from "./config.ts";
-import type { ChatType, GatewayName } from "./envelope.ts";
+import type { ChatType, GatewayName, LiveEdit } from "./envelope.ts";
 import type { AudioRefPart, ImageRefPart, ToolDefinition } from "./llm.ts";
 
 export interface ToolContext {
@@ -43,6 +43,12 @@ export interface ToolContext {
   /** Connection instance, for anything that has to find the same session again. */
   gatewayId: string;
   senderId: string;
+  /**
+   * What the person had open on a dashboard page as they wrote the turn's message, where that is something an agent
+   * changes in place (`LiveEdit`): its kind, which one, and the thing itself. A tool that writes that kind hands its change to the page
+   * (`ToolResult.liveEdit`) where it would otherwise store one. Absent in every chat but the dashboard's own.
+   */
+  liveEdit?: LiveEdit;
   /**
    * The name the sender goes by in this chat, as the platform says it — for words a tool records as theirs (`work`'s
    * `tell`, 0.8.10) where People names nobody. Absent where the turn has none.
@@ -220,6 +226,11 @@ export interface ToolResult {
    * open it and refresh the page under it. A path and not an address: its reader is in the dashboard already.
    */
   page?: string;
+  /**
+   * A change to what the person has open on a page, held for that page to draw (`LiveEdits.propose`): its id. Written
+   * on the call's `tool_done`, so the chat in the dashboard hands it to the page under it. Nothing is stored.
+   */
+  liveEdit?: string;
   /**
    * The content came from outside — written by whoever wrote the page, the server, the file — and is marked
    * as data in `content`. The executor remembers it for the rest of the turn (`ToolContext.untrustedRead`).

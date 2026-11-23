@@ -37,10 +37,11 @@ Nouride ships no CLI. Each installs with npm, as its adapter, which carries the 
   than 22.
 - **macOS**: `npm i -g @agentclientprotocol/claude-agent-acp` as yourself, with Node from Homebrew. The daemon runs as
   you, with Homebrew first on its `PATH`.
-- **Docker**: the image has no Node; its `node` is Bun's stand-in. Install it with `docker exec nouride nouride pkg
-  install nodejs npm` (kept across a recreate, 0.8.15), or build the image with `--build-arg EXTRA_PACKAGES="nodejs npm"`
-  (the image's Alpine packages carry Node 24); then install the adapter into the volume, where it outlives a recreate:
+- **Docker**: Node.js and npm are in the image (0.8.46; Node 24, from the image's Alpine packages). Install the
+  adapter into the volume, where it outlives a recreate:
   `docker exec -u bun -e NPM_CONFIG_PREFIX=/app/.nouride nouride npm i -g @agentclientprotocol/claude-agent-acp`.
+  An image from before 0.8.46 has no Node: there, `docker exec nouride nouride pkg install nodejs npm` first (kept
+  across a recreate).
 
 Or ask the orchestrator in chat: it installs either for every agent, on an admin's yes (from 0.8.9, only an admin
 answers it, in a one-to-one chat too: the install runs as the daemon's user). The dashboard asks for you (0.8.19):

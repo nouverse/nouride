@@ -43,6 +43,11 @@ Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
   foldernya, begitu juga **Delete** di halamannya: draft langsung hilang, karena belum ada yang dijalankan.
 - **Siapa yang mengesahkan** tertulis di draft: kamu, setelah cek-nya lolos, kecuali agent memilih pemeriksa, seperti
   yang ia lakukan kalau kamu pergi ("kerjakan ya, aku mau tidur"). Itu bisa kamu ubah di draft.
+- **Batasnya sendiri** (0.8.46), kalau ada: satu baris di draft, `Its own limits before it asks you whether to go
+  on: 24h of work (usually 12h) · 400M tokens (usually 250M)`. Agent mengisinya kalau kamu minta ("kasih dua hari")
+  atau kalau kerjaannya memang butuh lebih banyak atau lebih sedikit; dengan memulainya, kamu setuju dengan batas itu.
+  Draft tanpa baris itu mengikuti [batas](#batas) setelanmu. Ubah dengan bilang ke agent, atau di form draft di
+  halamannya.
 - Draft yang tidak dimulai siapa pun tetap ada di Backlog papan, sampai ada yang memulai atau membuangnya, berapa pun
   lamanya: draft tidak pernah kedaluwarsa. Ia tidak dihitung sebagai yang butuh kamu, dan kamu tidak diingatkan soal itu.
 - **Notice sebuah draft itu satu pesan.** Kalau agent mengubah draft-nya, pesan itu ditulis ulang di tempatnya,
@@ -56,7 +61,8 @@ Catatan yang sudah ia tulis tentang tugas itu, dan rencananya, ikut pindah; chat
 kamu sapa membuat draft dari tujuan itu: ia membaca yang perlu, menulis brief dan cek-nya, atau bertanya dulu kalau
 tujuannya belum jelas. `/goal` adalah perintah yang sama. Misi yang kamu tulis di form dashboard, dan langkah misi di
 otomasi, tetap langsung jalan: yang pertama kamu sendiri yang menulis, dan yang kedua tidak ada orang yang bisa menekan
-Start.
+Start. Langkah otomasi bisa diatur supaya misinya ditinggal sebagai draft (0.8.46):
+[mission di tengah](/id/docs/manual/schedule/#mission-di-tengah).
 
 `/mission` tanpa kata lain menampilkan yang belum selesai, seperti di halaman Missions: **Needs you**, **Working**, dan
 **Backlog** (draft yang belum dimulai), masing-masing dengan jumlahnya. Misi yang sudah selesai, gagal, atau dihentikan
@@ -298,12 +304,22 @@ yang berakhir menarik apa yang ia parkir. Ia jalan di level approval kamu, atas 
 |---|---|---|
 | `per_agent` | 1 | misi yang bekerja bersamaan untuk satu agent; yang sedang dicek tidak dihitung, karena pemeriksanya bukan agent itu. Tiap agent bisa punya angkanya sendiri, 1 sampai 4 |
 | `max_running` | sesuai kemampuan mesin, 1 sampai 4 | misi yang jalan bersamaan di box |
-| `limit_hours` | 8 | jam kerja; waktu menunggu kamu gak dihitung |
-| `limit_turns` | 100 | giliran (tiap giliran sampai `max_tool_iterations` langkah), termasuk milik pemeriksa dan cek yang gagal |
-| `limit_tokens` | 100.000.000 | token input dan output, termasuk milik pemeriksa |
+| `limit_hours` | 12 | jam kerja; waktu menunggu kamu gak dihitung |
+| `limit_turns` | 250 | giliran (tiap giliran sampai `max_tool_iterations` langkah), termasuk milik pemeriksa dan cek yang gagal |
+| `limit_tokens` | 250.000.000 | token input dan output, termasuk milik pemeriksa |
 
-Semuanya ada di `[missions]` di `config.toml`, dan di **Limits** pada halaman Missions di dashboard, tanpa restart. Misi mengambil batasnya saat dimulai. Misi
-yang menunggu kamu gak memakai slot; yang berikutnya menunggu di antrean dan bilang sedang menunggu apa.
+Semuanya ada di `[missions]` di `config.toml`, dan di **Limits** pada halaman Missions di dashboard, tanpa restart. Misi mengambil batasnya saat dibuat: perubahan
+berlaku untuk misi yang dimulai atau dibuat draft-nya setelah itu. Misi yang menunggu kamu gak memakai slot; yang
+berikutnya menunggu di antrean dan bilang sedang menunggu apa. Sebelum 0.8.46 tiga batas itu 8 jam, 100 giliran dan
+100.000.000 token; nilai yang kamu isi sendiri tetap dipakai.
+
+**Batas milik satu misi** (0.8.46) gak mengubah setelan di atas. Agent mengisinya di draft (`limit_hours`,
+`limit_turns`, `limit_tokens`), masing-masing dalam rentang yang boleh untuk setelannya (seperempat jam sampai 168
+jam, 1 sampai 1.000 giliran, 100.000 token atau lebih), dan draft menunjukkannya ke kamu sebelum kamu mulai. Kamu
+mengubahnya di form draft: **Hours**, **Turns** dan **Tokens**, dalam juta. Bagian kerja yang diserahkan sebuah misi
+ke agent lain, dan langkah misi di sebuah automation, mulai tanpa ada yang bilang ya, jadi tetap memakai setelan. Misi
+yang ditinggal sebuah automation sebagai draft juga memakai setelan, dan kamu mengubahnya di form draft-nya sebelum
+memulainya.
 
 **Jumlah misi bersamaan untuk satu agent** diatur di halaman Settings agent itu, **Missions at once**, atau
 `[missions] per_agent` di `config.toml` miliknya sendiri: tiga untuk agent yang mengerjakan pekerjaan panjang, satu

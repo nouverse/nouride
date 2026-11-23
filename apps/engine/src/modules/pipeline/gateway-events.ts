@@ -57,12 +57,25 @@ export function onGatewayEvent(
     // whatever channel is still alive, which is why alerts are not routed per-gateway.
     void notifier?.alert(
       `gateway_dead:${event.gatewayId}`,
-      event.reason === "auth_failed"
-        ? `${event.gatewayId} refused its credentials, so it stopped trying: ${event.detail ?? "the token was rejected"}. ` +
-            `Messages there are not being delivered until it has one that works. Store it, then \`nouride gateway restart ${event.gatewayId}\``
-        : `${event.gatewayId} is disconnected and gave up reconnecting after ${event.attempts} attempts. ` +
-            `Messages there are not being delivered. \`nouride gateway restart ${event.gatewayId}\``,
+      `${event.gatewayId} refused its credentials, so it stopped trying: ${event.detail ?? "the token was rejected"}. ` +
+        `Messages there are not being delivered until it has one that works. Store it, then \`nouride gateway restart ${event.gatewayId}\``,
     );
+  }
+  // Out of its fast tries and still not reachable: silent as a dead one is, so said the same way. It is not dead, and
+  // the message says so: it comes back by itself, and nobody has to restart anything.
+  if (event.type === "unreachable") {
+    log.error("gateway cannot be reached: messages are not delivered until it is", { gateway: event.gatewayId, attempts: event.attempts });
+    const minutes = Math.max(1, Math.round(event.retryEveryMs / 60_000));
+    void notifier?.alert(
+      `gateway_unreachable:${event.gatewayId}`,
+      `${event.gatewayId} is disconnected and could not reconnect after ${event.attempts} attempts. ` +
+        `Messages there are not being delivered. It goes on trying by itself every ${minutes === 1 ? "minute" : `${minutes} minutes`}; ` +
+        `\`nouride gateway restart ${event.gatewayId}\` tries now.`,
+    );
+  }
+  if (event.type === "back") {
+    log.info("gateway is connected again", { gateway: event.gatewayId });
+    void notifier?.alert(`gateway_back:${event.gatewayId}`, `${event.gatewayId} is connected again.`);
   }
   if (event.type === "session_expired") {
     void notifier?.alert(

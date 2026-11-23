@@ -262,8 +262,8 @@ gateway = ""                        # e.g. "telegram:nouva"
 chat_id = ""
 ```
 
-Where the daemon reports on *itself*, a gateway that gave up reconnecting, a session that needs
-relinking. Boot, `nouride doctor` and `nouride config check` warn while it is empty.
+Where the daemon reports on *itself*, a gateway that cannot be reached or whose token is refused, a
+session that needs relinking. Boot, `nouride doctor` and `nouride config check` warn while it is empty.
 
 ## `[dashboard]`
 
@@ -449,12 +449,13 @@ in its `[jobs]`. [Scheduled work →](/en/docs/manual/schedule/)
 [missions]
 per_agent = 1                       # working at once for one agent; one being checked is not counted
 # max_running = 3                   # running at once on this box; unset: what the machine has room for, 1 to 4
-limit_hours = 8                     # hours of work; time waiting for you is not counted
-limit_turns = 100                   # each turn up to [llm.limits] max_tool_iterations steps
-limit_tokens = 100000000            # input and output, the reviewer's included
+limit_hours = 12                    # hours of work; time waiting for you is not counted
+limit_turns = 250                   # each turn up to [llm.limits] max_tool_iterations steps
+limit_tokens = 250000000            # input and output, the reviewer's included
 ```
 
-A mission takes its limits when it starts; reaching one asks you to continue or stop. A mission waiting for you holds
+A mission takes its limits when it is made; reaching one asks you to continue or stop. One mission may be drafted
+with limits of its own, which leave these as they are ([Missions →](/en/docs/manual/missions/#limits)). A mission waiting for you holds
 no slot. Left unset, `max_running` follows the machine (one for each core but one and one for each GiB of memory the
 agents' commands may use, whichever is lower, at least 1 and at most 4), and it can be set as high as every agent at once. Set from the dashboard's settings too. [Missions →](/en/docs/manual/missions/)
 

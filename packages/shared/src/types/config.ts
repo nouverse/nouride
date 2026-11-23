@@ -422,11 +422,11 @@ export interface MissionsSection {
    * at its own `per_agent` could run (`missions/slots.ts`).
    */
   maxRunning: number | undefined;
-  /** Hours a mission may work, waits on a person left out. 8. */
+  /** Hours a mission may work, waits on a person left out. 12. */
   limitHours: number;
-  /** Turns, the reviewer's and failed checks' included. 100. */
+  /** Turns, the reviewer's and failed checks' included. 250. */
   limitTurns: number;
-  /** Input and output tokens, its helpers and the reviewer included. 100 million, as measured. */
+  /** Input and output tokens, its helpers and the reviewer included. 250 million. */
   limitTokens: number;
 }
 

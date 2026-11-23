@@ -5,9 +5,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { AutomationSummary } from "@nouride/wire";
+import type { AutomationChange, AutomationSummary } from "@nouride/wire";
 import {
-  READS_OUTPUT, blankDraft, changed, createBody, deliveryOf, draftOf, draftProblems, listedSteps, patchBody, payloadOf, savesAsList, sessionOf, settled, stepsOf, turnsIntoList, withMark, type Draft,
+  READS_OUTPUT, blankDraft, changed, createBody, deliveryOf, draftAfter, draftOf, draftProblems, listedSteps, openValue, patchBody, payloadOf, savesAsList, sessionOf, settled, stepsOf, turnsIntoList, withMark, type Draft,
 } from "@/modules/automations/lib/draft";
 import type { Step } from "@/modules/automations/lib/steps";
 
@@ -30,6 +30,10 @@ describe("an automation as a draft", () => {
     expect(payloadOf({ steps: [{ id: "s1", kind: "command", argv: ["sh"], script }], then: "deliver", list: false })).toEqual({ kind: "command", argv: ["sh"], script, then: "deliver" });
     expect(stepsOf({ kind: "command", argv: ["sh", "-lc", "ls"], cwd: "/srv", timeoutMs: 5000, then: "agentTurn" })).toEqual([{ id: "s1", kind: "command", argv: ["sh", "-lc", "ls"], cwd: "/srv", timeoutMs: 5000 }]);
     expect(stepsOf({ kind: "mission", goal: "Do it", checks: ["true"], review: false })).toEqual([{ id: "s1", kind: "mission", goal: "Do it", checks: ["true"], review: false }]);
+    // A mission the run drafts: read as one, saved as one, and a no is nothing written.
+    expect(stepsOf({ kind: "mission", goal: "Do it", draft: true })).toEqual([{ id: "s1", kind: "mission", goal: "Do it", draft: true }]);
+    expect(payloadOf({ steps: [{ id: "s1", kind: "mission", goal: "Do it", draft: true }], then: "deliver", list: false })).toEqual({ kind: "mission", goal: "Do it", draft: true });
+    expect(payloadOf({ steps: [{ id: "s1", kind: "mission", goal: "Do it" }], then: "deliver", list: false })).toEqual({ kind: "mission", goal: "Do it" });
     expect(stepsOf({ kind: "steps", steps: [say("a"), say("b")] })).toEqual([say("a"), say("b")]);
   });
 
@@ -202,5 +206,87 @@ describe("what a save sends", () => {
     expect(draftProblems(loaded()).problems).toEqual([]);
     // A start by hand, or by its address, has no time to lack.
     expect(draftProblems({ ...bad, start: "manual", steps: [say("s1")] }).problems).toEqual([]);
+  });
+});
+
+describe("the draft as the page says it holds it, for an agent to change", () => {
+  test("is what a save would make of it, with how it starts and what it keeps between runs beside it", () => {
+    expect(openValue(loaded())).toEqual({
+      agentId: "nouva",
+      name: "Morning brief",
+      payload: { kind: "agentTurn", message: "Sum up the mail." },
+      target: { gatewayId: "telegram:nouva", chatId: "8142" },
+      delivery: { mode: "announce" },
+      every: "10m",
+      start: "scheduled",
+      session: "fresh",
+    });
+    // One started by hand, or by its address, has no time: how it starts is the only thing that says so.
+    expect(openValue(loaded({ start: "manual", trigger: { kind: "manual" } }))).toMatchObject({ start: "manual", manual: true });
+    const hook = openValue(loaded({ start: "webhook", trigger: { kind: "webhook" } }));
+    expect(hook.start).toBe("webhook");
+    expect("every" in hook || "cron" in hook || "at" in hook || "manual" in hook).toBe(false);
+  });
+
+  test("a draft that is half a thought is sent as it stands: no name, no steps, no start yet", () => {
+    const blank = openValue(blankDraft("nouva", "telegram:nouva", TZ));
+    expect(blank).toMatchObject({ name: "", payload: { kind: "steps", steps: [] }, target: { gatewayId: "telegram:nouva", chatId: "" }, start: "scheduled", session: "fresh" });
+  });
+});
+
+describe("the draft with an agent's change made", () => {
+  const change = (over: Partial<AutomationChange> = {}): AutomationChange => ({
+    name: "Morning brief",
+    agentId: "nouva",
+    payload: { kind: "steps", steps: [say("s1", "Good morning."), { id: "s2", kind: "agentTurn", message: "Sum up the mail." }] } as AutomationChange["payload"],
+    target: { gatewayId: "telegram:nouva", chatId: "8142" },
+    delivery: { mode: "announce" },
+    session: "fresh",
+    ...over,
+  });
+
+  test("takes what the change says of it, and keeps how it starts where the change left that alone", () => {
+    const was = loaded();
+    const now = draftAfter(was, change({ name: "Morning brief, with a hello" }), TZ);
+    expect(now.name).toBe("Morning brief, with a hello");
+    expect(now.steps).toEqual([say("s1", "Good morning."), { id: "s2", kind: "agentTurn", message: "Sum up the mail." }]);
+    expect(now.list).toBe(true);
+    // The very start the page had, not one read back from somewhere: a moment already past stays as it was typed.
+    expect(now.start).toBe(was.start);
+    expect(now.trigger).toBe(was.trigger);
+    expect(changed(was, now)).toBe(true);
+  });
+
+  test("a change that says another start is the draft's start now, in the fields the page shows", () => {
+    const now = draftAfter(loaded(), change({ starts: { start: "scheduled", trigger: { kind: "cron", expr: "0 7 * * 1-5", tz: "Asia/Tokyo" } } }), TZ);
+    expect(now.start).toBe("scheduled");
+    expect(createBody(now)).toMatchObject({ cron: "0 7 * * 1,2,3,4,5", tz: "Asia/Tokyo" });
+    expect(draftAfter(loaded(), change({ starts: { start: "manual", trigger: { kind: "manual" } } }), TZ).start).toBe("manual");
+  });
+
+  test("a job of one thing stays one thing, a lone command's hand-over to its agent with it", () => {
+    const one = draftAfter(loaded(), change({ payload: { kind: "command", argv: ["sh", "-lc", "df -h"], then: "agentTurn" } as AutomationChange["payload"] }), TZ);
+    expect(one.list).toBe(false);
+    expect(one.then).toBe("agentTurn");
+    expect(payloadOf(one)).toEqual({ kind: "command", argv: ["sh", "-lc", "df -h"], then: "agentTurn" });
+  });
+
+  test("where it reports and its marks are the change's; when a lasting one ends stays where how long it lasts did not change", () => {
+    const lasting = loaded({ delivery: { mode: "announce", lasts: 3_600_000, endsAt: 99 } });
+    expect(draftAfter(lasting, change({ delivery: { mode: "announce", lasts: 3_600_000 } }), TZ).delivery).toEqual({ mode: "announce", lasts: 3_600_000, endsAt: 99 });
+    // So a change that only touched a step is not also a change to where it reports.
+    const untouched = change({ payload: { kind: "agentTurn", message: "Sum up the mail." } as AutomationChange["payload"], delivery: { mode: "announce", lasts: 3_600_000 } });
+    expect(patchBody(lasting, draftAfter(lasting, untouched, TZ))).toEqual({});
+    expect(draftAfter(lasting, change({ delivery: { mode: "announce", lasts: 7_200_000 } }), TZ).delivery).toEqual({ mode: "announce", lasts: 7_200_000 });
+    const moved = draftAfter(loaded(), change({ target: { gatewayId: "whatsapp:nouva", chatId: "1203@g.us" }, delivery: { mode: "announce", once: true }, session: "isolated" }), TZ);
+    expect([moved.gatewayId, moved.chatId, moved.delivery, moved.session]).toEqual(["whatsapp:nouva", "1203@g.us", { mode: "announce", once: true }, "isolated"]);
+  });
+
+  test("applied and taken back, the draft is the very one it was: nothing is left to save", () => {
+    const was = loaded();
+    const now = draftAfter(was, change(), TZ);
+    expect(changed(was, now)).toBe(true);
+    // Undo puts the object back, and a draft that is what was loaded sends nothing.
+    expect(changed(was, was)).toBe(false);
   });
 });

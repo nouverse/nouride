@@ -49,7 +49,9 @@ function doesLine(agentId: string, payload: JobPayload | JobStep | TogetherStep)
     case "mission": {
       const checks = payload.checks?.length ? `, done when \`${payload.checks.join("`, `")}\` pass` : "";
       const review = payload.review === false ? ", no reviewer" : ", then a reviewer agrees";
-      return `a mission for ${("agentId" in payload && payload.agentId) || agentId}: "${payload.goal}"${checks}${review}`;
+      // A draft starts nothing: said first, since it is what the person turning this on would be surprised by.
+      const what = payload.draft ? "drafts a mission, which waits in the Backlog until a person starts it, for" : "a mission for";
+      return `${what} ${("agentId" in payload && payload.agentId) || agentId}: "${payload.goal}"${checks}${review}`;
     }
     case "approval":
       return `waits for a person's yes to: "${payload.ask}"`;

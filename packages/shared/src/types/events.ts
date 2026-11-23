@@ -39,7 +39,7 @@
  *   `replyChars` are the authority on what was sent.
  */
 
-export const EVENT_PROTOCOL_VERSION = "1.9";
+export const EVENT_PROTOCOL_VERSION = "1.10";
 
 type FieldType = "string" | "number" | "boolean" | "object" | "array";
 
@@ -105,6 +105,8 @@ export const EVENT_CONTRACT = {
      * `exit` is a command that ran and answered with a non-zero exit — `which` saying no — where `failed`, `timed_out`
      * and `killed` are the call not doing its job. `error` is true for all four. `page` (1.9) is the dashboard page
      * of what the call made or changed, a path under the dashboard: an automation proposed, a mission started.
+     * `liveEdit` (1.10) is a change to what the person has open on a page, held by the daemon for that page to draw:
+     * its id, which `GET /live-edits/<id>` answers with the change itself. The change is too large for a row.
      */
     tool_done: {
       step,
@@ -114,6 +116,7 @@ export const EVENT_CONTRACT = {
       error: { type: "boolean" },
       outcome: { type: "string", optional: true, values: ["ok", "exit", "failed", "timed_out", "killed"] },
       page: optionalString,
+      liveEdit: optionalString,
       ...delegated,
     },
     /**

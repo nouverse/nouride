@@ -14,6 +14,11 @@
  * A room sees what was started from that room. A direct chat sees what was started from it, and what the person
  * started elsewhere; an admin there sees all of the agent's. A brief or a command line can hold what another chat
  * said, so it is not shown to whoever happens to write to the agent.
+ *
+ * And the other way round: whom this agent is working for. An ask is a job of the agent that asked, so `/helpers` at
+ * Nouva listed Nix while Nix answered her, and the same command at Nix said no helper was working: true, and read as
+ * Nix doing nothing. `/helpers` now says which agents it is at work for and since when, and what each asked to
+ * whoever may read the chat the ask came from.
  */
 
 import { clipTrimmed, oneLine, plural } from "@nouride/shared";
@@ -40,6 +45,19 @@ export interface WorkingInBackground {
   lastWroteAt: number | null;
 }
 
+/** A turn this agent runs for another agent that asked it (`ask_agent`). Built by the pipeline from its peer turns. */
+export interface WorkingForAnother {
+  /** The agent that asked. */
+  by: string;
+  task: string;
+  /** The conversation the ask was made in, the asking agent's: where the peer turn runs pointed at. */
+  gatewayId: string;
+  chatId: string;
+  /** The person whose turn asked. */
+  senderId: string | null;
+  startedAt: number;
+}
+
 /** Which of the two lists: the turns in the background, or the commands. */
 type Which = "helpers" | "commands";
 
@@ -55,7 +73,7 @@ const brief = (text: string): string => clipTrimmed(oneLine(text), SHOWN);
 
 const isCommand = (one: WorkingInBackground): boolean => one.kind === "command";
 
-function seen(ctx: HookContext, one: WorkingInBackground): boolean {
+function seen(ctx: HookContext, one: Pick<WorkingInBackground, "gatewayId" | "chatId" | "senderId">): boolean {
   if (one.gatewayId === ctx.gatewayId && one.chatId === ctx.chatId) return true;
   if (ctx.envelope.chatType !== "dm") return false;
   return ctx.deps.isAdmin?.(ctx.envelope) === true || (one.gatewayId === ctx.gatewayId && one.senderId === ctx.senderId);
@@ -75,8 +93,23 @@ export function backgroundSaid(input: {
   here: (one: WorkingInBackground) => boolean;
   nameOf: (agentId: string) => string;
   now: number;
+  /** Whom the agent is at work for, for `/helpers`: each ask with its task, or null where this reader is not shown it. */
+  forOthers?: readonly { by: string; task: string | null; startedAt: number }[];
 }): string {
   const { which, agent, now } = input;
+  const ago = (at: number) => formatDuration(Math.max(0, Math.round((now - at) / 1000)));
+  const asks = which === "helpers" ? (input.forOthers ?? []) : [];
+  // Its own section, under the list: who works for the agent and whom the agent works for are two questions.
+  const forOthers =
+    asks.length === 0
+      ? []
+      : [
+          `**${agent} is working for** (${asks.length})`,
+          ...asks.map((ask, index) => {
+            const who = `**${index + 1}. ${input.nameOf(ask.by)}** · ${ago(ask.startedAt)}`;
+            return ask.task === null ? `${who} · asked from another chat` : `${who}\n${brief(ask.task)}`;
+          }),
+        ];
   const mine = input.working.filter((one) => isCommand(one) === (which === "commands")).sort((a, b) => a.startedAt - b.startedAt);
   const others = input.working.length - mine.length;
   // The other list has something: said, so "nothing here" is never read as nothing at all.
@@ -86,9 +119,8 @@ export function backgroundSaid(input: {
       : [which === "helpers" ? `${others} ${plural(others, "command")} ${others === 1 ? "runs" : "run"} in the background: /backgrounds` : `${others} ${plural(others, "helper")} at work: /helpers`];
   if (mine.length === 0) {
     const none = which === "helpers" ? `No helper is working for ${agent} now.` : `No command of ${agent}'s runs in the background now.`;
-    return [none, ...other].join("\n\n");
+    return [none, ...forOthers, ...other].join("\n\n");
   }
-  const ago = (at: number) => formatDuration(Math.max(0, Math.round((now - at) / 1000)));
   const entries = mine.map((one, index) => {
     const who = one.kind === "ask" && one.asked ? `**${index + 1}. ${input.nameOf(one.asked)}**, asked` : `**${index + 1}. ${isCommand(one) ? (one.service ? "A server" : "A command") : "A helper"}**`;
     // A command writes its log as it prints; a helper and an asked agent, a line at each step.
@@ -104,7 +136,7 @@ export function backgroundSaid(input: {
   // `/stop` ends the turns in the background and no command: each list says what ends its own.
   const ends = which === "helpers" ? (fromHere ? ["/stop ends the ones started from this chat."] : []) : [`${agent} stops one when you ask, by its job.`];
   const title = which === "helpers" ? `**Helpers working for ${agent}** (${mine.length})` : `**Running in the background for ${agent}** (${mine.length})`;
-  return [title, ...entries, ...ends, ...other].join("\n\n");
+  return [title, ...entries, ...ends, ...forOthers, ...other].join("\n\n");
 }
 
 function answer(which: Which) {
@@ -121,6 +153,8 @@ function answer(which: Which) {
         here: (one) => one.gatewayId === ctx.gatewayId && one.chatId === ctx.chatId,
         nameOf: (id) => ctx.deps.registry.get(id)?.config.displayName || id,
         now: Date.now(),
+        // What another agent asked can hold what its chat said: shown where that chat's own work would be.
+        ...(which === "helpers" ? { forOthers: (ctx.deps.workingForOthers?.(agentId) ?? []).map((ask) => ({ by: ask.by, task: seen(ctx, ask) ? ask.task : null, startedAt: ask.startedAt })) } : {}),
       }),
     };
   };
@@ -129,7 +163,7 @@ function answer(which: Which) {
 export const helperHooks: Hook[] = [
   {
     command: "/helpers",
-    description: "Who is working for this agent in the background now: its helpers and the agents it asked",
+    description: "Who works for this agent in the background now, and which agents it is working for",
     worksWhilePaused: true,
     handler: answer("helpers"),
   },

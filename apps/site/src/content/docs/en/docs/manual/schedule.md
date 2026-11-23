@@ -60,7 +60,7 @@ An automation does one thing, or several in a fixed order. Each one is a step:
 | **Send a message** | sends text as written to the automation's chat | no |
 | **Ask an agent** | one turn of the automation's agent, or of another agent you pick | yes, one turn |
 | **Run a script** | runs a small program in the agent's workspace: [a script](#a-script) the automation keeps, or one line | no |
-| **Start a mission** | long work that is checked; the run waits for it | yes, as a [mission](/en/docs/manual/missions/) does |
+| **Start a mission** | long work that is checked; the run waits for it, or leaves it as a draft for you to start | yes, as a [mission](/en/docs/manual/missions/) does |
 | **Wait for your OK** | asks a person, and goes on when they say so | no |
 | **Several at the same time** | starts two to five agents' turns or scripts together, and joins what each said | yes, one turn for each agent in it |
 
@@ -191,6 +191,18 @@ A mission can be any step. The run waits for it to end, however long that takes 
 hands its result to the next step. A mission that failed or was stopped is a failed step, so the automation can
 go on to a step that tells you about it.
 
+**A mission left as a draft** (0.8.46). Under the plus, pick **Draft a mission**, which stands beside **Start a
+mission**; or in a mission's step, set **When the run gets here** to **Leave it in the Backlog as a draft**. The run
+then starts nothing: the mission is put in your Backlog, the automation's chat gets the draft with
+**Start it** and **Drop it**, and the run goes on to the next step at once, handed one line that says a mission was
+drafted. The mission runs when you start it, from that message or from its page, however much later. Change its goal,
+its checks or its limits there first if you like, as with any [draft](/en/docs/manual/missions/#starting-one). Its box
+on the canvas reads **Draft a mission**.
+
+One draft of an automation waits at a time. A run that reaches the step while the last draft has not been started or
+dropped stops there, and its page says which draft it is waiting on, so an automation that runs every hour does not
+fill your Backlog. A draft that waits does not hold the automation's other steps back.
+
 ### A step that waits for you
 
 The automation's chat gets a card with the question, what the step before said, and two buttons, **Continue** and
@@ -244,7 +256,7 @@ nouride cron add --name "morning-brief" \
 | `--run <program>` | …what runs it: `sh` unless said, `python3`, `bun` |
 | `--secrets <name,name>` | …the agent's secrets it is handed, by name |
 | `--then agent` | …and wake the agent with what it printed, when it printed something |
-| `--mission <goal>` | run each time as a mission. With `--check <command>` for one check, `--no-review` for no reviewer; more checks from the dashboard |
+| `--mission <goal>` | run each time as a mission. With `--check <command>` for one check, `--no-review` for no reviewer, `--draft` to draft it each time for you to start; more checks from the dashboard |
 | `--steps <file.json>` | several of these in a fixed order: the list, as JSON (below) |
 | `--session <fresh\|isolated\|chat>` | what history the turn sees |
 | `--once` | tell once, then turn itself off ([Watching something](#watching-something)) |
@@ -275,7 +287,7 @@ nouride cron add --name "shop-check" --every 10m --steps shop-check.json \
 
 The other kinds are `systemEvent` (a message, with `text`) and `parallel` (several at the same time, 0.8.38): its
 `steps` are two to five of `agentTurn` and `command`, written as those steps are. `agentTurn` and `mission` take an
-`agentId` for another agent, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run,
+`agentId` for another agent, `mission` a `"draft": true` to leave the mission as a draft, and `approval` a `timeoutMs`. Nouride reads the file and refuses a step it cannot run,
 naming it.
 
 A `command` step that keeps a script (0.8.44) names the program alone in `argv` and holds the text beside it:
@@ -368,6 +380,18 @@ removes, and **Accept** and **Discard**. An agent that runs `nouride cron add`, 
 `rotate`, is refused and pointed back at `schedule`. At most ten proposals of one agent wait at once, counted by the
 agent that proposed them.
 
+**With the automation open in the dashboard** (0.8.46), a change you ask for in the chat over its page is made to
+what the page holds: the automation as you have it there, your own unsaved changes included, or a new one you have
+not saved yet. The agent reads what is on your page, not what was saved, and writes it back whole. The page draws
+that over yours, each step it adds, changes or removes marked, under a bar that says what the change does:
+**As you have it** and **With the change** show the two, and **Apply** or **Discard** answers it. A change that
+brings a script says so, with the step to read first. Applying saves nothing: the change goes into the page, **Undo**
+takes it back, and the page's own **Save** is still yours to press. Nothing is stored on the way and nothing is
+turned on. The step in the chat that made the change has **Show the change on the page**, to draw it again while
+the daemon still holds it (a day, or until it restarts). This is the dashboard's chat alone: asked in Telegram,
+Discord or WhatsApp, a change is a proposal as above. An automation too long to show the agent whole (48,000
+characters as the page sends it) is changed on the page itself, and the agent says so.
+
 Only a person answers a proposal, never an agent. Some are an admin's to turn on, whoever asked: a change to another
 agent's job, a change to a job that reports to another chat, and a webhook, as making one is. What the old job was
 allowed always does not carry over to its new shape: it asks again.
@@ -394,7 +418,8 @@ is back under: each time what the check printed changed.
 the first run on its own time that tells you something, the automation turns itself off, and its page says so. Turn it
 on again to be told once more. A run you start by hand does not count: you are trying it out. "Tell me when the build
 is done" is this mark, on a check marked to go on only when it changes. A mission's own word to its chat counts as
-telling, so an automation with a mission in it turns off after the first run that reaches the mission.
+telling, so an automation with a mission in it turns off after the first run that reaches the mission. So does the
+draft a step leaves, which its chat is shown.
 
 **An automation that stops by itself.** A watch for something that never happens would check for good. **Stop by
 itself after** (0.8.44), where it says where it reports, gives it a length of time: an hour, six hours, a day, a week

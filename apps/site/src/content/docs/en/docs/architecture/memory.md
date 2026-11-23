@@ -240,6 +240,13 @@ network (`bge-m3`), OpenAI (`text-embedding-3-small`) or Gemini (`gemini-embeddi
 kept in the index and searched by brute force, which is fine to tens of thousands of conversations on
 small hardware. A failed embed falls back to keywords, never to an error.
 
+You do not have to set it up by hand (0.8.46): on **Knowledge & Memory**, **Settings**, the Semantic search
+card has **Ask Nouva to set up semantic search**. It opens the chat with your orchestrator and a request
+already written, for the embedding model to run on this machine, on another server of yours, or with a
+cloud service. The agent asks before it installs anything, adds the provider, and switches search by
+meaning on with `nouride memory set semantic <provider>/<model>`, which works only once the model has
+answered.
+
 ## In the dashboard
 
 ### The Knowledge & Memory page

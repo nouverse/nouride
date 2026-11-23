@@ -5,22 +5,37 @@
  * is skipped rather than stacked behind it.
  */
 
-import { cutAtWord, MISSION_TITLE_MAX, oneLine, type Job } from "@nouride/shared";
+import { createLogger, cutAtWord, MISSION_TITLE_MAX, oneLine, type Job } from "@nouride/shared";
 import { deliveryTarget } from "@/modules/cron/addressing.ts";
 import type { Missions } from "./missions.ts";
 import type { MissionsPort } from "./missions.store.ts";
 import { isFinal } from "./types.ts";
 
-export type JobRun = { started: string } | { busy: string } | { refused: string };
+const log = createLogger("missions.job-runs");
+
+/**
+ * `drafted`: the run made a draft and started nothing (`JobStep`'s `draft`), with the line the run says of it.
+ * `announced` settles once the draft's notice is in its chat, or could not be put there: the run waits for it, so a
+ * step after it that says "the work is drafted" is read under the draft and not over it. It never rejects.
+ * `busy`: the job's last mission still works, or, `waits`, its last draft has not been started.
+ */
+export type JobRun = { started: string } | { drafted: string; said: string; announced: Promise<void> } | { busy: string; waits?: true } | { refused: string };
+
+/** What a run says of the draft it made, to its record and to the step after it. */
+function draftedLine(mission: { id: string; title: string }): string {
+  return `Drafted the mission "${mission.title}" (${mission.id.slice(0, 10)}). It waits in the Backlog and runs once it is started.`;
+}
 
 export function startJobRun(
-  deps: { missions: Pick<Missions, "start">; store: Pick<MissionsPort, "openForJob"> },
+  deps: { missions: Pick<Missions, "start">; store: Pick<MissionsPort, "openForJob" | "draftForJob"> },
   job: Job,
   body: string | undefined,
 ): JobRun {
   if (job.payload.kind !== "mission") return { refused: `job ${job.id} does not run a mission` };
-  const open = deps.store.openForJob(job.id);
-  if (open) return { busy: open.id };
+  const draft = job.payload.draft === true;
+  // A draft runs nothing, so the job's mission at work does not hold it back; its own last draft still waiting does.
+  const open = draft ? deps.store.draftForJob(job.id) : deps.store.openForJob(job.id);
+  if (open) return draft ? { busy: open.id, waits: true } : { busy: open.id };
   const reportTo = deliveryTarget(job);
   const started = deps.missions.start({
     agentId: job.agentId,
@@ -37,8 +52,23 @@ export function startJobRun(
     chatId: reportTo.chatId,
     jobId: job.id,
     ...(body?.trim() ? { request: body } : {}),
+    // Drafted: it waits for the start of the person it would run as, asked where the job reports.
+    ...(draft ? { proposed: true } : {}),
   });
-  return "refused" in started ? started : { started: started.mission.id };
+  if ("refused" in started) return started;
+  if (!draft) return { started: started.mission.id };
+  // Its folder and its notice are made after the draft is: a chat that would not take the notice is logged, and the
+  // draft is on the dashboard either way.
+  const announced = Promise.resolve("drafted" in started ? started.drafted : null).then(
+    () => undefined,
+    (err: unknown) => log.warn("a job's draft could not be said in its chat", { mission: started.mission.id, job: job.id, error: String(err) }),
+  );
+  return { drafted: started.mission.id, said: draftedLine(started.mission), announced };
+}
+
+/** Why a run stopped at a mission that could not begin: the job's last one still works, or its last draft still waits. */
+export function busyLine(run: { busy: string; waits?: true }): string {
+  return run.waits ? `the last run's draft, mission ${run.busy}, still waits to be started: start it or drop it` : `the last run, mission ${run.busy}, is still working`;
 }
 
 /** How a mission a job's step started stands: still at work, ended with what it has to say, or ended badly. */

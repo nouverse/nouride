@@ -82,9 +82,12 @@ A dropped connection is tried again ten times, the wait doubling from one second
 checked every thirty seconds while it is up. That pacing is the adapter's own; a `[resilience]` table
 under the gateway set it until 0.8.0, and one still in `config.toml` is named in a warning and ignored.
 
-A connection that exhausts its attempts is marked dead and raises an alert, if you configured
-somewhere for alerts to go. Otherwise it is a line in the log, and you find out when you notice the
-agent has gone quiet.
+A connection that exhausts its attempts is not given up on (0.8.46): it tries again by itself every
+ten minutes, its row says when, and it comes back when the network or the platform does. It raises
+an alert when that begins and another when it is back, if you configured somewhere for alerts to go.
+Otherwise it is a line in the log, and you find out when you notice the agent has gone quiet.
+`nouride gateway restart <id>` tries at once. A connection whose token is refused is marked dead and
+stays so until it has one that works.
 
 What was sent while the bot was offline is not thrown away: Telegram holds it, and the daemon answers
 what is recent once it reconnects. [When the daemon restarts →](/en/docs/gateways/overview/#when-the-daemon-restarts)
