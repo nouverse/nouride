@@ -12,7 +12,7 @@
  * A change sends what changed and nothing else: a start that is a moment already past, sent again, would be refused.
  */
 
-import type { AutomationStart, AutomationSummary, JobInput, JobPatch, JobPayloadInput, WebhookInput } from "@nouride/wire";
+import type { AutomationChange, AutomationStart, AutomationSummary, JobInput, JobPatch, JobPayloadInput, WebhookInput } from "@nouride/wire";
 import { draftFromTrigger, triggerBody, type TriggerDraft } from "./trigger";
 import { EXITS, newStepId, stepProblems, type Step, type StepProblem } from "./steps";
 import { drawnName } from "./words";
@@ -234,6 +234,39 @@ export function createBody(draft: Draft): JobInput | WebhookInput {
   };
   if (draft.start === "webhook") return body;
   return { ...body, ...startBody(draft), ...(draft.start === "scheduled" && draft.trigger.mode === "once" && draft.keepAfterRun ? { keepAfterRun: true } : {}) };
+}
+
+/**
+ * What the page says it holds open, for an agent to change in place (`commons/lib/live-edit.ts`): the draft as a save
+ * would make it, with how it starts and what it keeps between runs said beside it. A draft is half a thought, and it
+ * is sent as it stands: nothing here refuses one with no name or no steps yet.
+ */
+export function openValue(draft: Draft): Record<string, unknown> {
+  return { ...createBody(draft), start: draft.start, session: sessionOf(draft) };
+}
+
+/**
+ * The draft with an agent's change made to it (`AutomationChange`): what Apply puts on the page. The change is the
+ * automation whole, so every part of the draft it speaks of is the change's; how it starts stays the draft's own
+ * where the change left it as it was. When a lasting one ends is the server's to write, so it stays where the change
+ * left how long it lasts alone, and a change that only touched a step is not also a change to where it reports.
+ */
+export function draftAfter(draft: Draft, change: AutomationChange, timezone: string): Draft {
+  const payload = change.payload as AutomationSummary["payload"];
+  const lasting = draft.delivery.endsAt !== undefined && change.delivery.lasts === draft.delivery.lasts ? { endsAt: draft.delivery.endsAt } : {};
+  return settled({
+    ...draft,
+    name: change.name,
+    agentId: change.agentId,
+    ...(change.starts ? { start: change.starts.start, trigger: draftFromTrigger(change.starts.trigger as unknown as Record<string, unknown>, timezone) } : {}),
+    gatewayId: change.target.gatewayId,
+    chatId: change.target.chatId,
+    delivery: { ...change.delivery, ...lasting } as Delivery,
+    session: change.session,
+    steps: stepsOf(payload),
+    then: payload.kind === "command" && payload.then === "agentTurn" ? "agentTurn" : "deliver",
+    list: payload.kind === "steps",
+  });
 }
 
 const same = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);

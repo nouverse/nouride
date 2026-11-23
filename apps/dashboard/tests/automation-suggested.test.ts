@@ -7,7 +7,8 @@
 import { describe, expect, test } from "bun:test";
 import type { AutomationSummary } from "@nouride/wire";
 import type { Step } from "@/modules/automations/lib/steps";
-import { changeWords, stepMarks } from "@/modules/automations/lib/suggested";
+import { draftOf } from "@/modules/automations/lib/draft";
+import { changeWords, draftChangeWords, scriptsBrought, stepMarks } from "@/modules/automations/lib/suggested";
 
 const run = (id: string, line: string, more: Partial<Step> = {}): Step => ({ id, kind: "command", argv: ["sh", "-lc", line], ...more }) as Step;
 const say = (id: string, text: string, more: Partial<Step> = {}): Step => ({ id, kind: "systemEvent", text, ...more }) as Step;
@@ -86,5 +87,38 @@ describe("the banner's sentence", () => {
     expect(changeWords(automation(NOW, both), automation(NOW, both), "UTC")).toBe("It would run as it does now.");
     // A step marked to go on only when what it says changes is a change to that step.
     expect(changeWords(automation(NOW), automation([{ ...NOW[0]!, onlyChanged: true }, ...NOW.slice(1)]), "UTC")).toBe("Changes step 1.");
+  });
+
+  test("a change to the draft on the page says the same, and what only such a change can be: another agent, another end", () => {
+    const draft = (steps: Step[], over: Partial<AutomationSummary> = {}) => draftOf(automation(steps, over), "UTC");
+    const suggested = [NOW[0]!, say("tell", "It is down, and noted."), run("log", "date >> log")];
+    expect(draftChangeWords(draft(NOW), draft(suggested), "UTC")).toBe("Adds step 3. Changes step 2. Removes step 3 of the ones it runs now.");
+    expect(draftChangeWords(draft(NOW), draft(NOW, { agentId: "nox" }), "UTC")).toBe("Another agent would run it.");
+    const lasting = (lasts?: number) => draft(NOW, { delivery: { mode: "announce", ...(lasts === undefined ? {} : { lasts }) } });
+    expect(draftChangeWords(lasting(), lasting(3_600_000), "UTC")).toBe("How long it lasts would change.");
+    expect(draftChangeWords(lasting(3_600_000), lasting(7_200_000), "UTC")).toBe("How long it lasts would change.");
+    expect(draftChangeWords(lasting(3_600_000), lasting(), "UTC")).toBe("It would have no end.");
+    // A start by hand or by its address is said as that, not as a time.
+    expect(draftChangeWords(draft(NOW), draft(NOW, { start: "manual", trigger: { kind: "manual" } }), "UTC")).toBe("It would start when you press Run now.");
+    expect(draftChangeWords(draft(NOW), draft(NOW, { start: "webhook", trigger: { kind: "webhook" } }), "UTC")).toBe("It would start when its address is called.");
+    // Reporting elsewhere than it watches is another chat too.
+    expect(draftChangeWords(draft(NOW), draft(NOW, { delivery: { mode: "announce", gatewayId: "whatsapp:nouva", chatId: "9" } }), "UTC")).toBe("It would report to another chat.");
+    expect(draftChangeWords(draft(NOW), draft(NOW), "UTC")).toBe("It would run as it does now.");
+  });
+});
+
+describe("a script a change brings", () => {
+  const script = (id: string, text: string): Step => ({ id, kind: "command", argv: ["python3"], script: { text, about: "Counts" } }) as Step;
+  const draft = (steps: Step[]) => draftOf({ id: "cron_1", agentId: "nouva", name: "Count", enabled: true, trigger: { kind: "every", everyMs: 600_000 }, payload: { kind: "steps", steps }, delivery: { mode: "announce" }, target: { gatewayId: "telegram:nouva", chatId: "1" }, session: "fresh", createdBy: "gading", createdAt: 1, runCount: 0, failCount: 0, failStreak: 0, describes: "every 10m", start: "scheduled" }, "UTC");
+
+  test("is named by its step's place: a new one, and one whose text is not what the draft held", () => {
+    const now = draft([run("a", "ls"), script("b", "print(1)")]);
+    expect(scriptsBrought(now, draft([run("a", "ls"), script("b", "print(1)")]))).toEqual([]);
+    expect(scriptsBrought(now, draft([run("a", "ls"), script("b", "print(2)")]))).toEqual([2]);
+    expect(scriptsBrought(now, draft([script("new", "print(9)"), run("a", "ls"), script("b", "print(1)")]))).toEqual([1]);
+    // The same text under another id, or at another place, is a script the person has read already.
+    expect(scriptsBrought(now, draft([script("s1", "print(1)"), run("s2", "ls")]))).toEqual([]);
+    // A line of a shell is read on its card: only a script's text is behind a button.
+    expect(scriptsBrought(now, draft([run("a", "rm -rf build"), script("b", "print(1)")]))).toEqual([]);
   });
 });

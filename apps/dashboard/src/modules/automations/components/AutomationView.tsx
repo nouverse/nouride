@@ -10,6 +10,10 @@
  *
  * What is typed is a draft (`useEditor`): the page saves nothing until Save, and a run's polling never moves a draft.
  *
+ * The draft is also what an agent changes when asked from the chat over this page (`useLiveEdit`): the page says what
+ * it holds, the agent's change arrives drawn over it with what it adds, changes and removes marked, and Apply puts it
+ * into the draft, unsaved, with a way back. Nothing of that touches what is saved.
+ *
  * One the reader only reads (it reports to a chat of theirs, and is another person's) is drawn the same, with nothing
  * that changes it: its steps and its runs are read, and what a run waits for is its own person's to answer.
  */
@@ -31,6 +35,7 @@ import { useAgentChoices } from "../hooks/use-agent-choices";
 import { useDrawn, type AutomationDetail } from "../hooks/use-drawn";
 import { OPEN_OWNER, useEditor, type Editor } from "../hooks/use-editor";
 import { useGoToLack } from "../hooks/use-go-to-lack";
+import { useOpenChange } from "../hooks/use-open-change";
 import { useSave, type Saving } from "../hooks/use-save";
 import { draftOf, draftProblems, turnsIntoList, type Draft } from "../lib/draft";
 import { NEW, keptKey } from "../lib/kept-draft";
@@ -40,12 +45,12 @@ import type { Step, StepProblem } from "../lib/steps";
 import { stepTitle } from "../lib/words";
 import { AutomationCanvas } from "./AutomationCanvas";
 import { AutomationHeader } from "./AutomationHeader";
+import { ChangeFromChat } from "./ChangeFromChat";
 import type { AgentChoice } from "./KindFields";
 import { OpenFields, opensFields } from "./OpenFields";
 import { AtRest, OlderDraft, PanelCard, Whose } from "./Panel";
 import { SaveBar } from "./SaveBar";
 import type { FlowMode } from "./StepItem";
-import { SuggestedBanner } from "./SuggestedBanner";
 import { reportsWords } from "./WhoCard";
 
 /** What the step a run waits in was handed: the waiting list's own words, or what the step reached before it said. */
@@ -86,7 +91,10 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const keeping = useMemo(() => (who && writable && !automation?.proposal ? { key: keptKey(who), id: automation?.id ?? NEW } : null), [who, writable, automation?.id, automation?.proposal]);
   const editor = useEditor(loaded, fresh, keeping);
   const { draft, open } = editor;
-  const { runs, view, setView, runId, side, setSide, suggested, run, showsSuggested, shown, marks, showRun } = useDrawn(detail, loaded, draft, home);
+  // What the chat over this page tells an agent is open, and the change an agent wrote to it: only where the page can
+  // change it, since a change nobody here could apply would be drawn for nothing.
+  const change = useOpenChange({ id: automation?.id ?? null, draft, home, enabled: writable && !automation?.proposal, restore: editor.restore });
+  const { runs, view, setView, runId, side, setSide, suggested, run, showsSuggested, shown, marks, showRun } = useDrawn(detail, loaded, draft, home, change.offered);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["automations"] });
   const saving = useSave(automation?.id ?? null, loaded, draft, (id) => {
     // Saved: nothing of it is left to keep. One just made is another page's now, and this one's draft would open on the next "New automation".
@@ -174,20 +182,15 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
         />
       ) : null}
 
-      {suggested && automation && view === "steps" ? (
-        <SuggestedBanner
-          current={automation}
-          suggested={suggested}
+      {view === "steps" ? (
+        <ChangeFromChat
+          change={change}
+          draft={draft}
           home={home}
           side={side}
           onSide={setSide}
-          // A change proposed in a chat the reader cannot open is not theirs to answer: the server says so of it.
-          canAnswer={(suggested.start === "webhook" ? admin : writable) && suggested.changeable !== false}
-          held={editor.dirty ? "Save or discard your own changes first." : null}
-          onAnswered={() => {
-            setSide("current");
-            refresh();
-          }}
+          // A change proposed to the saved one waits its turn behind one from the chat: one question at a time.
+          proposed={suggested && automation ? { current: automation, suggested, admin, writable, dirty: editor.dirty, onAnswered: refresh } : null}
         />
       ) : null}
 

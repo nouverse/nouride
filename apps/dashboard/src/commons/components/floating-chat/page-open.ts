@@ -4,12 +4,16 @@
  *
  * What it is called is the page's own title where it has said one (`PageHeader` does, `use-page-subject.ts`), and else
  * the place the menu puts it in: a mission's page is in Missions, an agent's pages are in Agents.
+ *
+ * And what the page holds open to be changed, where it holds something an agent can change in place: an automation's
+ * draft, saved or not, as it stands when the message is sent (`lib/live-edit.ts`).
  */
 
 import type { OpenPage } from "@nouride/wire";
 import { DAILY, SETTINGS, SETTINGS_HOME, isCurrent } from "@/commons/components/layout/nav";
 import { sectionTabs } from "@/commons/components/layout/SectionTabs";
 import { pageSaid } from "@/commons/hooks/use-page-subject";
+import { liveEditHeld } from "@/commons/lib/live-edit";
 
 /** What the menu calls the place a page is in: the nearest of a section's tabs at or over it, else its menu item. */
 export function sectionTitle(pathname: string): string {
@@ -24,9 +28,11 @@ export function sectionTitle(pathname: string): string {
 
 export function pageOpen(at: { basepath: string; pathname: string; search: string }): OpenPage {
   const said = pageSaid();
+  const liveEdit = liveEditHeld();
   return {
     path: `${at.basepath.replace(/\/+$/, "")}${at.pathname}${at.search}`,
     title: said.title ?? sectionTitle(at.pathname),
     ...(said.subject ? { subject: said.subject } : {}),
+    ...(liveEdit ? { liveEdit } : {}),
   };
 }

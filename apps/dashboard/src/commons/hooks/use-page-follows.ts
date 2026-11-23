@@ -9,6 +9,9 @@
  *   when the agent did something.
  * - On a page that makes a new one (`/automations/new`), what the agent made there is opened in its place, unless the
  *   person has written in the form (`lib/unsaved.ts`): the agent's work is then one press away, under its answer.
+ * - When a call changed what the page holds open (`tool_done.liveEdit`: an automation's draft), the change is fetched
+ *   and offered to the page that holds it (`lib/live-edit.ts`), which draws it for the person to apply. Nothing is
+ *   read again for it: nothing was saved.
  *
  * A turn first seen with calls already done is not acted on for those: they happened before the chat was looking.
  */
@@ -17,10 +20,28 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { LiveTurn } from "@nouride/wire";
+import { api } from "@/commons/lib/api";
+import { offerLiveEdit } from "@/commons/lib/live-edit";
 import { holdsUnsaved } from "@/commons/lib/unsaved";
 
 /** The pages the calls of a turn made, in the order they were made. */
 export const pagesMade = (turn: Pick<LiveTurn, "steps">): string[] => turn.steps.flatMap((step) => (step.kind === "tool_done" && step.page ? [step.page] : []));
+
+/** The changes the calls of a turn wrote to what a page holds open, by their ids, in the order they were written. */
+const editsMade = (turn: Pick<LiveTurn, "steps">): string[] => turn.steps.flatMap((step) => (step.kind === "tool_done" && step.liveEdit ? [step.liveEdit] : []));
+
+/**
+ * A change fetched by its id and offered to the page that holds what it changes. One the daemon no longer has (a
+ * restart forgot it) is no change to draw: nothing is offered, and whoever asked is told so by what this resolves to.
+ */
+export async function offerEdit(id: string): Promise<boolean> {
+  try {
+    offerLiveEdit((await api.liveEdit(id)).offer);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** The page that makes a new one of what `page` is: `/automations/new` for `/automations/<id>`. */
 export const makerOf = (page: string): string => `${page.slice(0, page.lastIndexOf("/"))}/new`;
@@ -28,7 +49,7 @@ export const makerOf = (page: string): string => `${page.slice(0, page.lastIndex
 export function usePageFollows(turns: readonly LiveTurn[]): void {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const seen = useRef(new Map<string, { made: number; ended: boolean }>());
+  const seen = useRef(new Map<string, { made: number; edits: number; ended: boolean }>());
 
   useEffect(() => {
     let changed = false;
@@ -37,11 +58,14 @@ export function usePageFollows(turns: readonly LiveTurn[]): void {
     for (const turn of turns) {
       drawn.add(turn.id);
       const pages = pagesMade(turn);
+      const edits = editsMade(turn);
       const ended = turn.status !== "running";
       const was = seen.current.get(turn.id);
-      seen.current.set(turn.id, { made: pages.length, ended });
+      seen.current.set(turn.id, { made: pages.length, edits: edits.length, ended });
       // First seen: what it did before the chat was looking is not acted on, and it is followed from here.
       if (!was) continue;
+      // Its newest change to what the page holds: an earlier one of the same turn is one it wrote over.
+      if (edits.length > was.edits) void offerEdit(edits.at(-1)!);
       if (pages.length > was.made) {
         changed = true;
         made = pages.at(-1);

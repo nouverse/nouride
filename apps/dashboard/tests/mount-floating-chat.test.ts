@@ -606,8 +606,9 @@ describe("the model and effort its conversation is answered with", () => {
       await eventually(() => pickerPanel() === null, 3_000, "the picker put away");
       await drawn();
       expect(staying()).toBe(true);
-      // The focus is back on the picker's button, in the card: the next Escape is the chat's.
-      expect(focused()).toBe(picker());
+      // The focus is back on the picker's button, in the card: the next Escape is the chat's. Given back as the panel
+      // is taken off the page, a moment after it is gone from it: waited for, not read at once.
+      await eventually(() => focused() === picker(), 2_000, "the focus back on the picker's button");
       pressKey("Escape");
       await eventually(() => card() === null, 2_000, "the chat closed");
     });

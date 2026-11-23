@@ -10,6 +10,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type { AutomationSummary } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { CLEAR } from "@/commons/components/live-edit/LiveEditBar";
 import { useToast } from "@/commons/components/ui/toast";
 import { useAgentFace } from "@/commons/hooks/use-agent-face";
 import { api } from "@/commons/lib/api";
@@ -62,33 +63,36 @@ export function SuggestedBanner({
   const busy = accept.isPending || discard.isPending;
 
   return (
-    <section aria-label="Suggested change" className="space-y-3 rounded-[22px] border border-accent/25 bg-accent/[0.08] p-4 animate-fade sm:px-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        {face?.look ? <AgentAvatar look={face.look} name={name} size="sm" className="bg-base-100" /> : null}
-        <div className="min-w-0 flex-[1_1_16rem]">
-          <p className="font-bold text-accent">{name} suggests a change</p>
-          <p className="text-sm text-base-content/85 [overflow-wrap:anywhere]">{changeWords(current, suggested, home)} Nothing changes until you accept it.</p>
-        </div>
-        {canAnswer ? (
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn btn-primary btn-sm" disabled={busy || held !== null} title={held ?? undefined} onClick={() => accept.mutate()}>
-              Accept
-            </button>
-            <button type="button" className="btn btn-ghost btn-sm border border-accent/30 text-accent" disabled={busy || held !== null} title={held ?? undefined} onClick={() => discard.mutate()}>
-              Discard
-            </button>
+    <section aria-label="Suggested change" className="rounded-[22px] border border-accent/25 bg-accent/[0.08] p-4 animate-fade sm:px-5">
+      {/* Clear of the chat's card, which is over the page's right side while it is open: Accept was under it. */}
+      <div className={CLEAR}>
+        <div className="flex items-start gap-3">
+          {face?.look ? <AgentAvatar look={face.look} name={name} size="sm" className="shrink-0 bg-base-100" /> : null}
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-accent">{name} suggests a change</p>
+            <p className="text-sm text-base-content/85 [overflow-wrap:anywhere]">{changeWords(current, suggested, home)} Nothing changes until you accept it.</p>
           </div>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Segmented
-          options={[
-            { value: "current", label: "Current" },
-            { value: "suggested", label: "Suggested" },
-          ]}
-          value={side}
-          onChange={(next) => onSide(next as Side)}
-        />
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          {canAnswer ? (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn btn-primary btn-sm" disabled={busy || held !== null} title={held ?? undefined} onClick={() => accept.mutate()}>
+                Accept
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm border border-accent/30 text-accent" disabled={busy || held !== null} title={held ?? undefined} onClick={() => discard.mutate()}>
+                Discard
+              </button>
+            </div>
+          ) : null}
+          <Segmented
+            options={[
+              { value: "current", label: "Current" },
+              { value: "suggested", label: "Suggested" },
+            ]}
+            value={side}
+            onChange={(next) => onSide(next as Side)}
+          />
+        </div>
         {held ? <p className="text-xs text-base-content/70">{held}</p> : null}
       </div>
     </section>
