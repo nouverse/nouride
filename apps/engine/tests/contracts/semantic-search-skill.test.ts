@@ -32,6 +32,13 @@ describe("setting search by meaning up from a chat", () => {
     expect(guide).toContain("do not quote one from memory");
   });
 
+  test("where it was on before, switches back to the model it had, and warns that another spelling starts from none", () => {
+    expect(guide).toContain("`memory set semantic on` switches back to that same model, and what it had embedded is still there: offer that first.");
+    expect(guide).toContain("A model's name spelled another way (`bge-m3` where it was `bge-m3:latest`) is another model to the daemon, and its vectors start from none.");
+    // The size after the model's name was read as a fault by the agent that first ran this.
+    expect(guide).toContain("as in `ollama/bge-m3@512`: the size it asks for");
+  });
+
   test("installs only through the machine's own packages, asked first, and never pipes a script into a shell", () => {
     expect(guide).toContain("Say what you will install and wait for a yes");
     expect(guide).toContain('`["pkg", "check", "install", "ollama"]`');

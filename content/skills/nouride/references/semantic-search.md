@@ -15,6 +15,11 @@ provider and model. `provider list` prints the providers. If one of them already
 (an Ollama, an OpenAI or Gemini key, a gateway that says it embeds), the person may only need the
 switch: go to step 4 with it.
 
+If it is off and the line names the model it was set to, it has been on here before. `memory set
+semantic on` switches back to that same model, and what it had embedded is still there: offer that
+first. A model's name spelled another way (`bge-m3` where it was `bge-m3:latest`) is another model
+to the daemon, and its vectors start from none.
+
 ## 2. Ask where the model should run
 
 Three places. Say them in plain words, with what each means, and let the person choose:
@@ -99,5 +104,8 @@ remembered is sent there to be embedded.
   has as many, so nothing is lost meanwhile, but it is not a setting to change for no reason.
 - **`semantic_dimensions`** is for models that can make shorter vectors. Leave it alone unless the
   person asks; a model that cannot shorten its vectors keeps its own size.
+- **The daemon names the model with a size after it**, as in `ollama/bge-m3@512`: the size it asks
+  for. A model that cannot shorten its vectors answers at its own size and they are kept at that.
+  Nothing is wrong, and there is nothing to change.
 - **The model stops answering** (the other machine is off, the key ran out): search falls back to
   words, and nothing errors. `memory` says that the model is not responding.

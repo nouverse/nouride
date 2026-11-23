@@ -147,9 +147,17 @@ interface SemanticView {
   reachable: boolean | null;
 }
 
-/** The settings' last line: off, or the model with how far its vectors are, and that it is not answering where it is not. */
+/**
+ * The settings' last line: off, or the model with how far its vectors are, and that it is not answering where it is not.
+ * Off, it still names the model it was set to: `on` switches back to that one, whose vectors are kept, and a name
+ * spelled another way (`bge-m3` for `bge-m3:latest`) is another model, whose vectors start from none. An agent asked
+ * to set it up on a box that had it read "off", typed the name anew, and began from nothing.
+ */
 function saySemantic(set: MemorySettingsView["semantic"], stands: SemanticView | undefined): void {
-  if (!set.enabled) return say(`${BOLD}semantic search${RESET}  off`);
+  if (!set.enabled) {
+    const was = set.provider && set.model ? ` ${DIM}(set to ${set.provider}/${set.model}: nouride memory set semantic on switches it back on, with what it had embedded)${RESET}` : "";
+    return say(`${BOLD}semantic search${RESET}  off${was}`);
+  }
   const far = stands ? ` ${DIM}${stands.items.toLocaleString("en-US")} item(s) embedded${stands.running ? ", embedding now" : ""}${RESET}` : "";
   const silent = stands?.reachable === false ? ` ${YELLOW}the model is not responding: search falls back to words${RESET}` : "";
   say(`${BOLD}semantic search${RESET}  ${set.provider} · ${set.model}${far}${silent}`);

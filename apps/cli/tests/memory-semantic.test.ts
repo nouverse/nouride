@@ -86,4 +86,14 @@ describe("nouride memory, of search by meaning", () => {
     expect(await capture(() => memoryCommand(client, []))).toMatch(/semantic search  off$/m);
     expect(asked).toBe(0);
   });
+
+  /**
+   * Seen with a real model on the box's sandbox: asked to set it up where it had been on with `bge-m3:latest`, the
+   * agent read "off", typed `ollama/bge-m3`, and every item was to be embedded again. The model it was set to is said,
+   * with the word that switches back to it.
+   */
+  test("off still names the model it was set to, and how to switch back to it", async () => {
+    const client = { get: async () => ({ ...view, semantic: { enabled: false, provider: "ollama", model: "bge-m3:latest" } }), softGet: async () => ({}) } as never;
+    expect(await capture(() => memoryCommand(client, []))).toContain("semantic search  off (set to ollama/bge-m3:latest: nouride memory set semantic on switches it back on, with what it had embedded)");
+  });
 });
