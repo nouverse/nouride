@@ -11,13 +11,15 @@ import type { Missions } from "./missions.ts";
 import type { MissionsPort } from "./missions.store.ts";
 import { isFinal } from "./types.ts";
 
-/**
- * `drafted`: the run made a draft and started nothing (`JobStep`'s `draft`), with the line the run says of it.
- * `busy`: the job's last mission still works, or, `waits`, its last draft has not been started.
- */
 const log = createLogger("missions.job-runs");
 
-export type JobRun = { started: string } | { drafted: string; said: string } | { busy: string; waits?: true } | { refused: string };
+/**
+ * `drafted`: the run made a draft and started nothing (`JobStep`'s `draft`), with the line the run says of it.
+ * `announced` settles once the draft's notice is in its chat, or could not be put there: the run waits for it, so a
+ * step after it that says "the work is drafted" is read under the draft and not over it. It never rejects.
+ * `busy`: the job's last mission still works, or, `waits`, its last draft has not been started.
+ */
+export type JobRun = { started: string } | { drafted: string; said: string; announced: Promise<void> } | { busy: string; waits?: true } | { refused: string };
 
 /** What a run says of the draft it made, to its record and to the step after it. */
 function draftedLine(mission: { id: string; title: string }): string {
@@ -54,10 +56,14 @@ export function startJobRun(
     ...(draft ? { proposed: true } : {}),
   });
   if ("refused" in started) return started;
-  // Its folder and its notice are made after the run has its answer: a chat that would not take the notice is logged,
-  // and the draft is on the dashboard either way.
-  if ("drafted" in started) void started.drafted?.catch((err: unknown) => log.warn("a job's draft could not be said in its chat", { mission: started.mission.id, job: job.id, error: String(err) }));
-  return draft ? { drafted: started.mission.id, said: draftedLine(started.mission) } : { started: started.mission.id };
+  if (!draft) return { started: started.mission.id };
+  // Its folder and its notice are made after the draft is: a chat that would not take the notice is logged, and the
+  // draft is on the dashboard either way.
+  const announced = Promise.resolve("drafted" in started ? started.drafted : null).then(
+    () => undefined,
+    (err: unknown) => log.warn("a job's draft could not be said in its chat", { mission: started.mission.id, job: job.id, error: String(err) }),
+  );
+  return { drafted: started.mission.id, said: draftedLine(started.mission), announced };
 }
 
 /** Why a run stopped at a mission that could not begin: the job's last one still works, or its last draft still waits. */

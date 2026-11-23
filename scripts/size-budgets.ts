@@ -47,8 +47,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves and a lasting job's end is written; rules are `validate.ts`, audit shapes `job-audit.ts`",
   },
   "apps/engine/src/modules/cron/scheduler.ts": {
-    lines: 406,
-    why: "the ticker: claim, catch up, run now, each kind's dispatch (+1: a mission drafted), a step run's hands. Runs of steps are `step-runs.ts`, a job's end `ending.ts`, the quiet hours `quiet.ts`",
+    lines: 409,
+    why: "the ticker: claim, catch up, run now, each kind's dispatch (+4: a mission drafted, its notice waited for), a step run's hands. Step runs are `step-runs.ts`, a job's end `ending.ts`, quiet `quiet.ts`",
   },
   "packages/persona/src/config.ts": {
     lines: 492,

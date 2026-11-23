@@ -596,7 +596,10 @@ export class CronScheduler {
         if ("busy" in run) return { status: "skipped", result: busyLine(run) };
         if ("refused" in run) return { status: "error", result: run.refused };
         // Drafted: nothing runs until its person starts it, and its notice in the job's chat is what tells them.
-        if ("drafted" in run) return { status: "success", result: run.said, told: true };
+        if ("drafted" in run) {
+          await run.announced;
+          return { status: "success", result: run.said, told: true };
+        }
         return { status: "success", result: `started mission ${run.started}`, ...told };
       }
 

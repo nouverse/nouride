@@ -228,8 +228,18 @@ describe("a job's run that drafts", () => {
   test("a chat that will not take the draft's notice ends nothing: the run has its answer and the draft is kept", async () => {
     const h = await missionsHarness({ tellDraft: async () => Promise.reject(new Error("the chat is gone")) });
     const run = begin(h);
-    await h.settle();
     if (!("drafted" in run)) throw new Error(JSON.stringify(run));
+    // What the run waits on settles, and does not reject: the run goes on.
+    expect(await run.announced).toBeUndefined();
+    await h.settle();
     expect(isDraft(h.store.get(run.drafted)!)).toBe(true);
+  });
+
+  test("what the run waits on is the notice itself: settled, the draft is in its chat", async () => {
+    const h = await missionsHarness();
+    const run = begin(h);
+    if (!("drafted" in run)) throw new Error(JSON.stringify(run));
+    await run.announced;
+    expect(h.told.at(-1)?.text).toStartWith(`📝 Draft ${run.drafted.slice(0, 10)} · nova: customer mail`);
   });
 });

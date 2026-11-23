@@ -368,6 +368,8 @@ async function runStep(
       if ("refused" in run) return failed(run.refused);
       // A draft: nothing to wait for. The step is done, the run goes on, and the draft's own notice has told the chat.
       if ("drafted" in run) {
+        // The draft's notice first: the step after it may speak of it.
+        await run.announced;
         carry.told = true;
         mark("done", run.said, { missionId: run.drafted, drafted: true });
         return { exit: "done", before: { from: "The step that drafted a mission", said: run.said, told: true } };

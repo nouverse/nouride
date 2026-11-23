@@ -21,6 +21,7 @@ import { StepAsks, askCard } from "@/modules/cron/step-asks.ts";
 import type { MissionEnd } from "@/modules/missions/job-runs.ts";
 import { APPROVAL_WAIT_MS } from "@/modules/cron/steps.ts";
 import { eventually } from "../helpers.ts";
+import { sleep } from "../wait.ts";
 
 const CONFIG: CronSection = {
   enabled: true,
@@ -124,10 +125,10 @@ describe("a mission step that drafts", () => {
   const DRAFTED = 'Drafted the mission "weekly" (msn_draft1). It waits in the Backlog and runs once it is started.';
   const draft = (id: string, goal: string, exits: Exits = {}): JobStep => ({ id, kind: "mission", goal, draft: true, ...exits });
   /** The missions' answer for a step that drafts, and for one that starts. */
-  const drafting = (h: { started: { job: Job; body: string | undefined }[] }, busy?: string): Partial<CronExecutors> => ({
+  const drafting = (h: { started: { job: Job; body: string | undefined }[] }, busy?: string, announced: Promise<void> = Promise.resolve()): Partial<CronExecutors> => ({
     startMission: (one, body) => {
       h.started.push({ job: one, body });
-      if (one.payload.kind === "mission" && one.payload.draft) return busy ? { busy, waits: true } : { drafted: "msn_draft1", said: DRAFTED };
+      if (one.payload.kind === "mission" && one.payload.draft) return busy ? { busy, waits: true } : { drafted: "msn_draft1", said: DRAFTED, announced };
       return { started: `msn_${h.started.length}` };
     },
   });
@@ -152,6 +153,32 @@ describe("a mission step that drafts", () => {
     expect(h.turns[1]!.message).toContain("The step that drafted a mission ran before this step and said what is below.");
     expect(h.turns[1]!.message).toContain(DRAFTED);
     expect(store.get(made.id)!.runCount).toBe(1);
+  });
+
+  test("the draft's notice is in the chat before the run goes on: a step that speaks of the draft is read under it", async () => {
+    const made = job([draft("plan", "Fix them."), say("tell", "The work is drafted. Start it when you are ready.")]);
+    const record = { started: [] as { job: Job; body: string | undefined }[] };
+    let announce = (): void => {};
+    const h = hands(drafting(record, undefined, new Promise<void>((resolve) => (announce = resolve))));
+    const running = h.scheduler.runNow(made.id, "tester");
+    await eventually(() => record.started.length === 1, 2_000, "the draft made");
+    // The draft is made and its notice is on its way: nothing after it has been said, however long that takes.
+    await sleep(15);
+    expect(h.delivered).toEqual([]);
+    announce();
+    await running;
+    expect(h.delivered.map((one) => one.text)).toEqual(["The work is drafted. Start it when you are ready."]);
+    // A job that is one drafted mission waits for the notice the same way.
+    const one = store.create({ agentId: "nouva", name: "weekly", trigger: { kind: "manual" }, payload: { kind: "mission", goal: "Sum up the week.", draft: true }, target: { gatewayId: "telegram:main", chatId: "12345" }, createdBy: "8142" });
+    let said = (): void => {};
+    let ended = false;
+    const alone = hands(drafting(record, undefined, new Promise<void>((resolve) => (said = resolve)))).scheduler.runNow(one.id, "tester").then(() => (ended = true));
+    // Its run is not over while the notice is on its way.
+    await sleep(15);
+    expect(ended).toBe(false);
+    said();
+    await alone;
+    expect(ended).toBe(true);
   });
 
   test("as the last step: the run ends with the line, and it is not sent a second time beside the draft's own notice", async () => {
