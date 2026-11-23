@@ -673,8 +673,13 @@ the container answered.
 
 ### Tools in the image
 
-`bash`, `openssh-client`, `util-linux` (for `script(1)`), `ripgrep`, and `socat` for the package service. Nothing
-else — not `git`, not `python3`, not `kubectl`, not a cloud CLI.
+`bash`, `openssh-client`, `util-linux` (for `script(1)`), `ripgrep`, and `socat` for the package service. And what
+the built-in skills name in `requires` (0.8.46): `python3`, `git`, `ffmpeg`, `nodejs` with `npm` (so `npx`), and
+`poppler-utils` for `pdftotext`. A container that never runs as root, as a pod's does, cannot serve `nouride-pkg`, so
+nothing an agent asked for was installed there and three of the eighteen built-in skills could run; with these,
+fifteen can. Graphviz, pandoc, tectonic and yt-dlp stay out, to be asked for.
+`apps/engine/tests/contracts/image-programs.test.ts` holds the Dockerfile's line, the skills and the Docker page
+to each other. Not in the image: `kubectl`, a cloud CLI, a browser.
 
 The daemon runs as the unprivileged `bun` user and cannot `apk add`. **System packages go through `nouride-pkg`**
 (0.8.15), as on a host installed with `--allow-packages`: the entrypoint, root before it hands over, serves it
@@ -685,23 +690,19 @@ before the daemon starts in a recreated container, online or not. `NOURIDE_SYSTE
 bake a package into the image instead:
 
 ```
-docker build --build-arg EXTRA_PACKAGES="git python3 kubectl helm" -t nouride .
+docker build --build-arg EXTRA_PACKAGES="kubectl helm" -t nouride .
 ```
 
 What an agent installs itself — `npm i -g`, `bun add -g`, `pipx install`, `uv tool install`,
 `go install`, `cargo install` — lands in `.nouride/bin`, on the volume, and survives a recreate
-(Where the agents work). The installer has to be in the image for that: `npm` is not, `bun` is.
+(Where the agents work). The installer has to be in the image for that: `npm` and `bun` are.
 
 **External agents need Node and npm.** The two built-in coding CLIs install with npm —
 `npm i -g @agentclientprotocol/claude-agent-acp` and `… /codex-acp` — and Claude Code's adapter needs Node 22 or later.
-The image has neither: its `node` is a link to `bun`. An external agent in a container needs them installed —
-`nouride pkg install nodejs npm`, kept across a recreate — or an image built with them:
+The image holds both since 0.8.46 (before it, its `node` was a link to `bun`, and an external agent in a container
+needed `nouride pkg install nodejs npm` first, or an image built with `EXTRA_PACKAGES="nodejs npm"`).
 
-```
-docker build --build-arg EXTRA_PACKAGES="nodejs npm" -t nouride .
-```
-
-The image is built on Alpine 3.24, whose `nodejs` is Node 24 (checked 2026-10-27). The orchestrator then installs a
+The image is built on Alpine 3.24, whose `nodejs` is Node 24 (checked 2026-10-27). The orchestrator installs a
 CLI on your yes (`nouride tools run`), into `.nouride/bin` on the volume. In a container every agent runs as the
 daemon's user, so *Free in its folder* asks as *Ask when risky* does (§ Each agent its own user).
 

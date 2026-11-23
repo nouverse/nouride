@@ -40,6 +40,8 @@ memberi tahu.
 ```yaml
 services:
   nouride:
+    # Berisi Python 3, git, ffmpeg, Node.js dengan npx, dan pdftotext untuk skill bawaan.
+    # Yang lain diminta agent dengan namanya, dan kamu setujui: "Isi image" di bawah.
     image: @@DOCKER_IMAGE@@
     container_name: nouride
     restart: unless-stopped
@@ -194,7 +196,15 @@ kubectl create secret docker-registry ghcr \
 
 Bun, plus `bash`, `openssh-client`, `util-linux` (untuk `script(1)`, yang membuat sesi interaktif
 bekerja), `ripgrep`, `su-exec` untuk penurunan hak akses di entrypoint, dan `socat` untuk service
-paket. Gak lebih: gak ada `git`, gak ada `kubectl`, gak ada Python, gak ada CLI cloud.
+paket.
+
+Dan yang dipakai skill bawaan (0.8.46): Python 3, `git`, `ffmpeg`, Node.js dengan `npm` dan `npx`, dan
+`pdftotext`. Dengan itu lima belas dari delapan belas skill bawaan punya semua program yang mereka sebut. Tiga
+sisanya masing-masing butuh yang gak ada di sini: **diagrams** butuh Graphviz, **document-authoring** butuh pandoc
+dan tectonic, dan **nouclip** butuh yt-dlp dan nouclip sendiri. Agent memintanya saat pekerjaannya butuh, seperti di
+bawah.
+
+Gak ada di image: `kubectl`, CLI cloud, browser.
 
 Daemon berjalan sebagai uid 1000 (`bun`), jadi `apk add` bukan untuk agent. Paket sistem lewat
 `nouride-pkg` (0.8.15): entrypoint, yang root sebelum menyerahkan container, menjalankannya, agent
@@ -206,12 +216,12 @@ selengkapnya di [Paket sistem](/id/docs/deployment/system-packages/#di-docker). 
 langsung di image:
 
 ```bash
-docker build --build-arg EXTRA_PACKAGES="git kubectl helm" -t nouride .
+docker build --build-arg EXTRA_PACKAGES="kubectl helm" -t nouride .
 ```
 
 Yang dipasang agent untuk dirinya sendiri tetap jalan, dan mendarat di `.nouride/bin` di dalam volume,
-jadi bertahan saat container dibuat ulang: `bun add -g`, binary rilis yang dipasang dengan
-`install -m 755`, dan instalasi lewat `npm`, `pipx`, `go`, atau `cargo` begitu tool-tool itu ada di
+jadi bertahan saat container dibuat ulang: `bun add -g`, `npm i -g`, binary rilis yang dipasang dengan
+`install -m 755`, dan instalasi lewat `pipx`, `go`, atau `cargo` begitu tool-tool itu ada di
 image. Base image-nya mengarahkan `bun add -g` ke `/usr/local/bin`, yang gak bisa ditulis uid 1000;
 daemon mengganti setelan yang gak bisa ia tulis dengan miliknya sendiri.
 
@@ -228,9 +238,8 @@ Apa yang dibutuhkan sebuah server untuk jalan menentukan langkahmu, dan Explore 
 - **Server Python** (`uvx`) butuh uv, dan uv itu satu binary: agent bisa memasangnya sendiri ke volume, jadi bertahan
   saat container dibuat ulang: `wget -qO- https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=$NOURIDE_BIN UV_NO_MODIFY_PATH=1 sh`.
   Image-nya punya `wget`, bukan `curl`.
-- **Server npm** (`npx`) butuh Node.js, yang di sini adalah paket sistem: agent memasangnya lewat
-  `nouride pkg install nodejs npm` setelah kamu setujui, atau build image dengan `--build-arg EXTRA_PACKAGES="nodejs npm"`.
-  `node` yang sudah ada di image adalah pengganti dari Bun, tanpa `npx`.
+- **Server npm** (`npx`) butuh Node.js, yang sudah ada di image (0.8.46). Image sebelum itu cuma punya pengganti
+  `node` dari Bun, tanpa `npx`: di sana agent memasangnya lewat `nouride pkg install nodejs npm` setelah kamu setujui.
 - **Server yang jalan sebagai image** (`docker`) gak bisa dijalankan dari dalam container. Pakai bentuk npm atau
   Python-nya kalau ada.
 

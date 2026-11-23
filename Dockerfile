@@ -189,6 +189,14 @@ WORKDIR /app
 # serves nouride-pkg and installs again from the volume what agents installed — a recreate keeps them
 # (`packages/system-packages/root/container`). `EXTRA_PACKAGES` below still bakes one into the image.
 #
+# The second line is not a guess: it is what the built-in skills name in `requires`. Where a container
+# never runs as root (a pod whose security context forbids it) the entrypoint cannot serve nouride-pkg,
+# and nothing an agent asks for is installed: of the eighteen skills in the image, three could run. With
+# `python3`, `git`, `ffmpeg`, Node.js with `npx` and `pdftotext` (`poppler-utils`), fifteen can. The other
+# three want a program that is large or not packaged for Alpine (Graphviz, pandoc and tectonic, yt-dlp),
+# and those stay to be asked for. `apps/engine/tests/contracts/image-programs.test.ts` holds this line,
+# the skills' `requires` and the Docker page to each other.
+#
 # `openssh-client` because reaching other machines is a *documented* deployment shape — a container
 # that cannot do it is a broken promise rather than a missing convenience.
 #
@@ -209,9 +217,10 @@ WORKDIR /app
 # `su-exec` is included to allow entrypoint step-down from root to user `bun` after volume permission fixes.
 #
 # `socat` listens on nouride-pkg's socket, one request per connection, as systemd's socket does on a host.
-RUN apk add --no-cache bash openssh-client util-linux ripgrep su-exec socat
+RUN apk add --no-cache bash openssh-client util-linux ripgrep su-exec socat \
+    python3 git ffmpeg nodejs npm poppler-utils
 
-# Anything else this particular operator's work needs — `git`, `kubectl`, `helm`, a cloud CLI.
+# Anything else this particular operator's work needs — `kubectl`, `helm`, a cloud CLI.
 ARG EXTRA_PACKAGES=""
 RUN if [ -n "$EXTRA_PACKAGES" ]; then apk add --no-cache $EXTRA_PACKAGES; fi
 

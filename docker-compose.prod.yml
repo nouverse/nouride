@@ -24,6 +24,9 @@ services:
     # The latest release. An install still on 0.7.x runs `:0.8.0` once on this volume before any later release —
     # that tag, not `:0.8`, which moves to every 0.8.x — and one that missed the last 0.7.x runs `:0.7` once before
     # that (docs/DEPLOY.md § The upgrade floor).
+    #
+    # What the image holds for the built-in skills: Python 3, git, ffmpeg, Node.js with npm and npx, and pdftotext.
+    # Anything else an agent asks for by name (`nouride pkg install …`), you approve, and it is kept in the volume.
     image: ghcr.io/nouverse/nouride
     container_name: nouride
     restart: unless-stopped

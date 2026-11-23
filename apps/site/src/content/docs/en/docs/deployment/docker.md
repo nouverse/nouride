@@ -38,6 +38,8 @@ running when the container stops would be killed before it could finish its step
 ```yaml
 services:
   nouride:
+    # Holds Python 3, git, ffmpeg, Node.js with npx and pdftotext for the built-in skills.
+    # Anything else an agent asks for by name, and you approve: "What is in the image" below.
     image: @@DOCKER_IMAGE@@
     container_name: nouride
     restart: unless-stopped
@@ -191,7 +193,14 @@ kubectl create secret docker-registry ghcr \
 
 Bun, plus `bash`, `openssh-client`, `util-linux` (for `script(1)`, which is what makes interactive
 sessions work), `ripgrep`, `su-exec` for the entrypoint's privilege drop, and `socat` for the package
-service. Nothing else: not `git`, not `kubectl`, not Python, not a cloud CLI.
+service.
+
+And what the built-in skills run on (0.8.46): Python 3, `git`, `ffmpeg`, Node.js with `npm` and `npx`, and
+`pdftotext`. With them fifteen of the eighteen built-in skills have every program they name. The other three
+each want one that is not here: **diagrams** wants Graphviz, **document-authoring** wants pandoc and tectonic,
+and **nouclip** wants yt-dlp and nouclip itself. An agent asks for those when the work needs them, as below.
+
+Not in the image: `kubectl`, a cloud CLI, a browser.
 
 The daemon runs as uid 1000 (`bun`), so `apk add` is not the agent's. System packages go through
 `nouride-pkg` instead (0.8.15): the entrypoint, root before it hands over, serves it, the agent asks
@@ -202,11 +211,11 @@ the container is recreated, as every update does. `NOURIDE_SYSTEM_PACKAGES=off` 
 the image instead:
 
 ```bash
-docker build --build-arg EXTRA_PACKAGES="git kubectl helm" -t nouride .
+docker build --build-arg EXTRA_PACKAGES="kubectl helm" -t nouride .
 ```
 
 What an agent installs for itself does work, and it lands in `.nouride/bin` inside the volume, so it
-survives a recreate: `bun add -g`, a release binary put in place with `install -m 755`, and `npm`,
+survives a recreate: `bun add -g`, `npm i -g`, a release binary put in place with `install -m 755`, and
 `pipx`, `go` or `cargo` installs once those tools are in the image. The base image points
 `bun add -g` at `/usr/local/bin`, which uid 1000 cannot write; the daemon replaces a setting it cannot
 write with its own.
@@ -224,9 +233,8 @@ What a server needs to run decides what you do, and Explore says it on each card
 - **Python servers** (`uvx`) need uv, and uv is one binary: an agent can install it itself into the volume, where it
   outlives the container: `wget -qO- https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=$NOURIDE_BIN UV_NO_MODIFY_PATH=1 sh`.
   The image has `wget`, not `curl`.
-- **npm servers** (`npx`) need Node.js, which is a system package here: an agent installs it through
-  `nouride pkg install nodejs npm`, on your yes, or build the image with `--build-arg EXTRA_PACKAGES="nodejs npm"`.
-  The `node` already in the image is Bun's stand-in, and has no `npx`.
+- **npm servers** (`npx`) need Node.js, which is in the image (0.8.46). An image from before that has Bun's
+  stand-in for `node` and no `npx`: there an agent installs it through `nouride pkg install nodejs npm`, on your yes.
 - **Servers that run as an image** (`docker`) cannot be started from inside the container. Use the server's npm or
   Python form when it has one.
 
