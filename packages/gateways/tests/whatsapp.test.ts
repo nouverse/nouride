@@ -13,7 +13,7 @@ import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 import type { BridgeCommand, BridgeEvent, MessageEnvelope } from "@nouride/shared";
 import { BRIDGE_PROTOCOL_VERSION } from "@nouride/shared";
 import { maskedNumber, WhatsAppGateway, type BridgeChannel } from "../src/channels/whatsapp/gateway.ts";
-import { sleep } from "./wait.ts";
+import { eventually, sleep } from "./wait.ts";
 
 /** A bridge that records what it was told and lets a test push events back. */
 function fakeChannel() {
@@ -372,14 +372,117 @@ describe("reconnecting", () => {
   });
 });
 
+/**
+ * `connected` is WhatsApp's word, not the bridge's. A hosted pod that could not reach WhatsApp said `connected` 2 ms after
+ * every bridge restart and "connection held" a minute later, for hours, while not one try had opened: the bridge was up,
+ * WhatsApp never answered it, and the retry budget refilled each time, so the `dead` alert never came.
+ */
+describe("connected when WhatsApp opens, not when the bridge is up", () => {
+  const ready = { type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "me@s.whatsapp.net" } as const;
+
+  function buildFast(maxReconnectAttempts: number, connectionStableAfterMs = 1) {
+    const opened: ReturnType<typeof fakeChannel>[] = [];
+    const gateway = new WhatsAppGateway({
+      id: "whatsapp:main",
+      platform: "whatsapp",
+      sessionDir: "/tmp/wa-session",
+      encryptionKey: "a".repeat(64),
+      // A held connection is credited after 1 ms, so one that was credited wrongly would be by the next poll.
+      resilience: { maxReconnectAttempts, reconnectBackoffMs: 1, reconnectBackoffMaxMs: 2, connectionStableAfterMs },
+      openChannel: () => {
+        const fake = fakeChannel();
+        opened.push(fake);
+        return fake.channel;
+      },
+    });
+    built.push(gateway);
+    const statuses: string[] = [];
+    gateway.onEvent((event) => {
+      if (event.type === "status") statuses.push(event.status);
+    });
+    const attempts = () => (gateway as unknown as { reconnectAttempts: number }).reconnectAttempts;
+    return { gateway, opened, statuses, attempts };
+  }
+
+  test("connecting until the bridge says ready, with WhatsApp's reason while it is not", async () => {
+    const { gateway, opened, statuses } = buildFast(5);
+    await gateway.start();
+    expect(gateway.status).toBe("connecting");
+    opened[0]!.push({ type: "status", status: "connecting", reason: "Error: Connection Failure" });
+    await eventually(() => gateway.waiting?.reason === "Error: Connection Failure", 2_000, "the reason to show");
+    expect(statuses).not.toContain("connected");
+
+    opened[0]!.push(ready);
+    await eventually(() => gateway.status === "connected", 2_000, "ready to connect it");
+  });
+
+  test("a bridge that never opens is never connected, and its retry budget runs out", async () => {
+    const { gateway, opened, statuses } = buildFast(2);
+    await gateway.start();
+    for (let bridge = 0; gateway.status !== "dead"; bridge += 1) {
+      // Each bridge tries, fails, and gives up — what the pod's did, eight times over, every five minutes.
+      await eventually(() => opened.length === bridge + 1, 2_000, "the next bridge");
+      opened[bridge]!.push({ type: "status", status: "connecting", reason: "408" });
+      opened[bridge]!.push({ type: "status", status: "disconnected", reason: "gave up after 8 attempts" });
+      await eventually(() => opened.length === bridge + 2 || gateway.status === "dead", 2_000, "a reconnect or the end");
+    }
+    expect(opened).toHaveLength(3);
+    expect(statuses).not.toContain("connected");
+  });
+
+  test("a pairing code waits on a person: connecting, saying so, and the budget comes back while it is up", async () => {
+    const { gateway, opened, statuses, attempts } = buildFast(1);
+    await gateway.start();
+    opened[0]!.push({ type: "status", status: "disconnected", reason: "gave up after 8 attempts" });
+    await eventually(() => opened.length === 2, 2_000, "the second bridge");
+    expect(attempts()).toBe(1);
+
+    opened[1]!.push({ type: "qr", qr: "2@waiting" });
+    await eventually(() => gateway.waiting?.reason === "Waiting for the phone to scan the pairing code.", 2_000, "the wait to show");
+    await eventually(() => attempts() === 0, 2_000, "the budget to come back");
+    expect(gateway.status).toBe("connecting");
+
+    // The code ran out and the bridge gave up: with the budget back this is a retry, not the end.
+    opened[1]!.push({ type: "status", status: "disconnected", reason: "gave up after 8 attempts" });
+    await eventually(() => opened.length === 3, 2_000, "the third bridge");
+    expect(statuses).not.toContain("connected");
+    expect(statuses).not.toContain("dead");
+  });
+
+  test("a code renewed while it waits does not put the budget off: it comes back a hold after the first", async () => {
+    // WhatsApp renews the code every twenty seconds and the hold is a minute. A renewal that started the hold again
+    // would never let it end.
+    const { gateway, opened, attempts } = buildFast(5, 40);
+    await gateway.start();
+    opened[0]!.push({ type: "status", status: "disconnected", reason: "gave up after 8 attempts" });
+    await eventually(() => opened.length === 2, 2_000, "the second bridge");
+    let renewed = 0;
+    await eventually(
+      () => {
+        opened[1]!.push({ type: "qr", qr: `2@code-${(renewed += 1)}` });
+        return attempts() === 0;
+      },
+      2_000,
+      "the budget to come back while the code is renewed every poll",
+    );
+    expect(renewed).toBeGreaterThan(2);
+    expect(gateway.status).toBe("connecting");
+  });
+});
+
 describe("sending before the number is linked", () => {
   test("waits for the link instead of firing into an unsigned-in socket", async () => {
     const { gateway, fake } = build();
     await gateway.start();
     await settle();
+    fake.push({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "me@s.whatsapp.net" });
+    await settle();
 
-    // Connected as far as the base class knows — the bridge process is reachable — but WhatsApp has
-    // not accepted the login yet. This is the window right after a QR scan.
+    // Connected as far as the base class knows — WhatsApp opened once — but the bridge is signing in again: the
+    // reconnect WhatsApp forces right after a QR scan is this window.
+    fake.push({ type: "status", status: "connecting", reason: "restart required after pairing" });
+    await settle();
+    expect(gateway.status).toBe("connected");
     const sending = gateway.send({ gatewayId: "whatsapp:main", chatId: "628123@s.whatsapp.net", text: "halo" });
     await settle();
 
@@ -401,6 +504,10 @@ describe("sending before the number is linked", () => {
   test("a send waiting on a link that never comes is released when the bridge dies", async () => {
     const { gateway, fake } = build();
     await gateway.start();
+    await settle();
+    fake.push({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "me@s.whatsapp.net" });
+    await settle();
+    fake.push({ type: "status", status: "connecting", reason: "keep alive" });
     await settle();
 
     const sending = gateway.send({ gatewayId: "whatsapp:main", chatId: "628123@s.whatsapp.net", text: "halo" });

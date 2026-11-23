@@ -91,8 +91,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "one Telegram connection: the bot it starts and what it waits on, its poll and what a failed one becomes, sends in parts at Telegram's pace, files, edits, buttons, the menu; words in files beside",
   },
   "packages/gateways/src/commons/resilience.ts": {
-    lines: 409,
-    why: "what every gateway inherits: the connect loop with its teardown, backoff and retry budget, health checks, the bounded send buffer, refusals; a connect's wait is kept in a file beside (connect-wait.ts)",
+    lines: 425,
+    why: "what every gateway inherits: the connect loop with its teardown, backoff, a retry budget only a held open or a wait on a person hands back, health checks, the send buffer; waits in connect-wait.ts",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 438,
@@ -111,8 +111,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses and registry names it lets through; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 418,
-    why: "the WhatsApp adapter's one state machine (bridge reachable, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
+    lines: 422,
+    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
   },
 };
 

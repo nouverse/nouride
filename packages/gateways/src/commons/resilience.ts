@@ -201,6 +201,14 @@ export abstract class BaseGateway implements Gateway {
   private stableTimer?: ReturnType<typeof setTimeout>;
   private stopping = false;
 
+  /**
+   * Whether `connect()` resolving means the platform's connection is open. An adapter whose platform answers later says
+   * false, stays `connecting`, and calls `opened()` when it is. WhatsApp's bridge is up in a moment and WhatsApp may
+   * never answer it: a pod that could not reach WhatsApp said `connected` for hours, and "connection held" a minute
+   * after each restart, while not one attempt had opened.
+   */
+  protected readonly opensOnConnect: boolean = true;
+
   constructor(identity: GatewayIdentity, resilience: Partial<GatewayResilienceConfig> = {}) {
     this.id = identity.id;
     this.platform = identity.platform;
@@ -306,6 +314,7 @@ export abstract class BaseGateway implements Gateway {
     clearInterval(this.healthTimer);
     clearTimeout(this.reconnectTimer);
     clearTimeout(this.stableTimer);
+    this.stableTimer = undefined;
     this.wait.end();
     try {
       if (!(await this.teardown())) this.log.warn("disconnect did not finish during stop", { after_ms: this.teardownMs() });
@@ -444,6 +453,31 @@ export abstract class BaseGateway implements Gateway {
     this.wait.say(reason, untilMs);
   }
 
+  /**
+   * The platform's connection is open: `connected`, health checks, the buffer flushed, and the retry budget handed back
+   * once it has held. `attemptConnect` calls it when `connect()` resolves, unless the adapter says `opensOnConnect` is
+   * false and calls it itself. Once per connect: an adapter may hear "open" again on a connection already up.
+   */
+  protected async opened(): Promise<void> {
+    if (this.stopping || this._status === "connected") return;
+    this.healthFailures = 0;
+    this.handBackBudgetIfItHolds();
+    this.setStatus("connected");
+    this.startHealthChecks();
+    await this.flushBuffer();
+  }
+
+  /**
+   * The platform answered and the connection waits on a person — a pairing code to scan — while it is not open. Not
+   * `connected`, since nothing can be sent; but not failing, so a wait that holds hands the retry budget back as an open
+   * connection does, and a code left unscanned does not run the budget out.
+   */
+  protected waitingOnPerson(reason: string): void {
+    if (this.stopping || this._status !== "connecting") return;
+    this.waitingFor(reason);
+    this.handBackBudgetIfItHolds();
+  }
+
   /** Call when the platform reports credentials are no longer usable (WhatsApp QR). */
   protected handleSessionExpired(): void {
     this.setStatus("dead", "session expired");
@@ -500,34 +534,8 @@ export abstract class BaseGateway implements Gateway {
 
     try {
       await this.connect();
-      // Deliberately *not* `reconnectAttempts = 0` here. See `CONNECTION_STABLE_AFTER_MS`: a
-      // `connect()` that resolves is not yet a connection that works, and crediting it immediately is
-      // what turned a repeating failure into an unbounded fast retry loop.
-      this.healthFailures = 0;
-      clearTimeout(this.stableTimer);
-      const stableAfter = this.resilience.connectionStableAfterMs ?? CONNECTION_STABLE_AFTER_MS;
-      this.stableTimer = setTimeout(
-        contained(this.log, "could not hand back the retry budget", () => {
-          if (this._status === "connected" && this.reconnectAttempts > 0) {
-            this.log.info("connection held; retry budget reset", {
-              after_ms: stableAfter,
-              attempts_forgiven: this.reconnectAttempts,
-            });
-            this.reconnectAttempts = 0;
-            // The floor belongs to the failure that asked for it, not to the gateway. A connection that
-            // held for a minute has cleared whatever needed settling.
-            this.settleMs = 0;
-          }
-        }),
-        stableAfter,
-      );
-      // Nothing is waiting on this: it hands back a retry budget. Left referenced it keeps a process
-      // — or a test that never calls `stop()` — alive for a minute after everything else is done.
-      this.stableTimer.unref?.();
       this.authFailures = 0;
-      this.setStatus("connected");
-      this.startHealthChecks();
-      await this.flushBuffer();
+      if (this.opensOnConnect) await this.opened();
     } catch (err) {
       this.authFailures = err instanceof GatewayAuthError ? this.authFailures + 1 : 0;
       if (this.authFailures >= AUTH_FAILURES_TO_DIE) {
@@ -546,11 +554,42 @@ export abstract class BaseGateway implements Gateway {
     }
   }
 
+  /**
+   * Hand the retry budget back once this connection has held for `CONNECTION_STABLE_AFTER_MS` — open, or waiting on a
+   * person. Deliberately not at once: a `connect()` that resolves is not yet a connection that works, and crediting it
+   * immediately is what turned a repeating failure into an unbounded fast retry loop. One pending at a time, so a wait
+   * that says itself again (a pairing code renewed every twenty seconds) does not push it back for good.
+   */
+  private handBackBudgetIfItHolds(): void {
+    if (this.stableTimer) return;
+    const stableAfter = this.resilience.connectionStableAfterMs ?? CONNECTION_STABLE_AFTER_MS;
+    this.stableTimer = setTimeout(
+      contained(this.log, "could not hand back the retry budget", () => {
+        this.stableTimer = undefined;
+        if ((this._status === "connected" || this._status === "connecting") && this.reconnectAttempts > 0) {
+          this.log.info(this._status === "connected" ? "connection held; retry budget reset" : "waited on a person; retry budget reset", {
+            after_ms: stableAfter,
+            attempts_forgiven: this.reconnectAttempts,
+          });
+          this.reconnectAttempts = 0;
+          // The floor belongs to the failure that asked for it, not to the gateway. A connection that
+          // held for a minute has cleared whatever needed settling.
+          this.settleMs = 0;
+        }
+      }),
+      stableAfter,
+    );
+    // Nothing is waiting on this: it hands back a retry budget. Left referenced it keeps a process
+    // — or a test that never calls `stop()` — alive for a minute after everything else is done.
+    this.stableTimer.unref?.();
+  }
+
   private scheduleReconnect(): void {
     if (this.stopping) return;
     clearInterval(this.healthTimer);
     // The connection did not hold, so it does not get its retry budget back.
     clearTimeout(this.stableTimer);
+    this.stableTimer = undefined;
 
     if (this.reconnectAttempts >= this.resilience.maxReconnectAttempts) {
       this.setStatus("dead");
@@ -636,8 +675,8 @@ export abstract class BaseGateway implements Gateway {
   }
 
   /**
-   * Whether a message can go out now, for what `connected` does not say. True for most platforms; WhatsApp's bridge is
-   * reachable — `connected` — before its number is linked, and while it is not, nothing can be sent.
+   * Whether a message can go out now, for what `connected` does not say. True for most platforms; WhatsApp stays
+   * `connected` while its link drops and its bridge opens it again, and until it has, nothing can be sent.
    */
   protected deliverable(): boolean {
     return true;

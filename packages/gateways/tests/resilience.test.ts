@@ -152,6 +152,14 @@ class FakeGateway extends BaseGateway {
   }
 }
 
+/** An adapter whose platform answers after `connect()` returns, as WhatsApp's bridge does: it says when it is open. */
+class LateGateway extends FakeGateway {
+  protected override readonly opensOnConnect = false;
+  open(): Promise<void> {
+    return this.opened();
+  }
+}
+
 function outbound(text: string): OutboundMessage {
   return { gatewayId: "telegram:test", chatId: "chat-1", text };
 }
@@ -298,6 +306,37 @@ describe("connecting", () => {
     gateway.dropConnection("two");
     expect(statuses.filter((s) => s === "reconnecting")).toHaveLength(1);
     await gateway.stop();
+  });
+});
+
+describe("a platform that opens after connect() returns", () => {
+  test("is connecting until the adapter says it opened, and what waited goes then", async () => {
+    const gateway = new LateGateway();
+    const statuses = trackStatuses(gateway);
+    await gateway.start();
+    expect(gateway.status).toBe("connecting");
+    expect(await gateway.send(outbound("waited"))).toEqual([]);
+    expect(gateway.delivered).toHaveLength(0);
+
+    await gateway.open();
+    expect(gateway.status).toBe("connected");
+    expect(gateway.delivered.map((msg) => msg.text)).toEqual(["waited"]);
+    // A second "open" on a connection already up changes nothing.
+    await gateway.open();
+    expect(statuses.filter((status) => status === "connected")).toHaveLength(1);
+    await gateway.stop();
+  });
+
+  test("a connect that never opened is not credited, so it goes dead and says so", async () => {
+    const gateway = new LateGateway({ resilience: { maxReconnectAttempts: 2, connectionStableAfterMs: 1 } });
+    const statuses = trackStatuses(gateway);
+    await gateway.start();
+    for (let cycle = 0; gateway.status !== "dead"; cycle += 1) {
+      await eventually(() => gateway.connectCalls === cycle + 1 && gateway.status === "connecting", 2_000, "the next connect");
+      gateway.dropConnection("never answered");
+    }
+    expect(gateway.connectCalls).toBe(3);
+    expect(statuses).not.toContain("connected");
   });
 });
 

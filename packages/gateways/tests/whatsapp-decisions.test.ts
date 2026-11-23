@@ -140,7 +140,10 @@ describe("the connection", () => {
     // The gateway has seen the old bridge close before we do: its handler on `closed` was attached at the first connect.
     await channels[0]!.channel.closed;
     expect(channels).toHaveLength(2);
-    expect(gateway.status).toBe("connected");
+    // Up when the new bridge says WhatsApp is, and not torn down by the old one before that.
+    expect(gateway.status).toBe("connecting");
+    channels[1]!.push(READY);
+    await eventually(() => gateway.status === "connected", 2_000, "the new bridge to open");
     expect(statusErrors(events)).not.toContain("bridge exited");
   });
 
