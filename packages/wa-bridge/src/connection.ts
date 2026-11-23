@@ -8,6 +8,7 @@
  */
 
 import makeWASocket, {
+  DEFAULT_CONNECTION_CONFIG,
   DisconnectReason,
   downloadMediaMessage,
   fetchLatestBaileysVersion,
@@ -15,7 +16,7 @@ import makeWASocket, {
   type WASocket,
 } from "@whiskeysockets/baileys";
 import { proto } from "@whiskeysockets/baileys";
-import { ensureDir, join, writeBytesSync } from "@nouride/runtime";
+import { ensureDir, join, proxyAgentFor, writeBytesSync } from "@nouride/runtime";
 import { useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
 import { editEvent, extensionFor, incoming, incomingEdit, messageEvent, selfIdsOf } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION } from "./protocol.ts";
@@ -263,6 +264,13 @@ async function connect(): Promise<void> {
        * placeholder is enough for the handshake.
        */
       getMessage: async () => ({ conversation: "" }),
+      /**
+       * The proxy the environment names (`HTTPS_PROXY`, `NO_PROXY`), for the websocket: Bun's `ws` reads none of them
+       * and takes it off this agent. Without it a pod that may only leave through its egress proxy dialled WhatsApp
+       * directly, and every attempt closed with 408 after 20 s. Media and the version check go by `fetch`, which
+       * reads the environment itself.
+       */
+      agent: proxyAgentFor(String(DEFAULT_CONNECTION_CONFIG.waWebSocketUrl)),
     });
 
     socket.ev.on("creds.update", () => {
