@@ -43,8 +43,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, the lookout for a turn held for helpers, the message kept as sent, who is told what its session started",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
-    lines: 495,
-    why: "the job table, whose a job is, the daemon turning one off with why, the one place `next_run_at` moves and a lasting job's end is written; rules are `validate.ts`, audit shapes `job-audit.ts`",
+    lines: 498,
+    why: "the job table, whose a job is, the daemon turning one off with why, where `next_run_at` moves and a lasting job's end is written, a job checked and not written (+3); rules are `validate.ts`",
   },
   "apps/engine/src/modules/cron/scheduler.ts": {
     lines: 409,

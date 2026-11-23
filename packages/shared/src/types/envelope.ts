@@ -259,6 +259,25 @@ export interface OpenPage {
   title: string;
   /** The one thing the page is about, where it is about one: a mission's goal, an agent's name. */
   subject?: string;
+  /** What the page holds open to be changed, where it holds something an agent can change in place (`LiveEdit`). */
+  liveEdit?: LiveEdit;
+}
+
+/**
+ * What a dashboard page holds open while a person changes it, sent with each message written from that page: an
+ * automation's draft, saved or not. An agent asked to change it writes the change with the tool that kind names, and
+ * the page draws that change for the person to apply (the engine's `modules/live-edit`). Nothing of it is saved by
+ * being sent: it is the browser's own, as the page holds it.
+ */
+export interface LiveEdit {
+  /** What kind of thing it is: `automation`. A kind the daemon does not know is dropped with the rest of it. */
+  kind: string;
+  /** Which one, by its id; null for one being made, which has none yet. */
+  id: string | null;
+  /** The thing itself, in the shape its page saves it in. Read leniently: a draft is half a thought. */
+  value: unknown;
+  /** Set by the daemon in place of `value` where that was too long to say to a model: its length in characters. */
+  tooLong?: number;
 }
 
 /** What a thread was started from (`MessageEnvelope.threadOpener`). */

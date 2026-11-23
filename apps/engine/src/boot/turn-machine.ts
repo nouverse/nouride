@@ -58,6 +58,8 @@ import { adminChatsOf } from "./admin-chats.ts";
 import { wireJobs } from "./jobs.ts";
 import { buildMissions } from "./missions.ts";
 import { buildProposals, scriptFacts } from "./proposals.ts";
+import { automationKind } from "@/modules/cron/open-automation.ts";
+import { LiveEdits } from "@/modules/live-edit/index.ts";
 import { requestRestart } from "./restart.ts";
 import { secretKeepingFor } from "./secret-keeping.ts";
 import type { Stores } from "./stores.ts";
@@ -191,7 +193,9 @@ export function buildTurnParts(
     adminChats: adminChatsOf({ config: () => config, gateways, turns, isAdmin: (who) => input.pipeline().isAdmin(who) }),
   });
   // A proposed job's card, with Turn on and Discard, and the `schedule` tool that posts it (0.8.0).
-  const proposals = buildProposals({ cron, notifier, registry, timezone: () => config.daemon.timezone, people: () => config.people, pipeline: input.pipeline, linkFor, scripts: scriptFacts(registry, input.pipeline) });
+  // What a page holds open for an agent to change in place, and its changes held for the page: automations are the first kind.
+  const liveEdits = new LiveEdits({ automation: automationKind });
+  const proposals = buildProposals({ cron, notifier, registry, timezone: () => config.daemon.timezone, people: () => config.people, pipeline: input.pipeline, linkFor, scripts: scriptFacts(registry, input.pipeline), liveEdits });
   // Whether anyone could answer an approval now: a chat connected, or a client that just asked for them (`reachability.ts`).
   const reach = new ApprovalReach();
   const approvals = new SqliteApprovalGate({
@@ -237,7 +241,7 @@ export function buildTurnParts(
       input.pipeline().resumeAfterApproval(request, decision, by);
     },
   });
-  return { linkFor, missions, notifier, spendAlerts, reflection, prompts, proposals, reach, approvals };
+  return { linkFor, missions, notifier, spendAlerts, reflection, prompts, proposals, reach, approvals, liveEdits };
 }
 
 /** What the machine reads of the stores. */
@@ -347,6 +351,7 @@ export async function buildTurnMachine(
     missionCommands: missions.missions,
     commandLeft: missions.commandLeft,
     scheduleCommands: proposals.cards,
+    liveEdits: parts.liveEdits,
     missionTools: missions.tools,
     scheduleTool: proposals.tool,
     // An agent's change to its own persona goes to an admin, and through the Files tab's one write once approved (0.8.8).

@@ -18,7 +18,8 @@ afterEach(() => {
   for (const undo of cleanup.splice(0)) undo();
 });
 
-async function mount() {
+/** `knows`: the kinds of thing a page may hold open for an agent to change, on a daemon that has any. */
+async function mount(knows?: string[]) {
   const dataDir = tempDir("chat-page");
   cleanup.push(() => removePath(dataDir));
   const db = await openAndMigrate(join(dataDir, "test.db"));
@@ -29,7 +30,7 @@ async function mount() {
     sessions: new SessionStore(db),
     turns: turnStore(db),
     registry: { get: (id: string) => ({ config: { id, enabled: true, displayName: id } }), enabled: () => [{ config: { id: "ren", displayName: "Ren" } }], isPaused: () => false },
-    pipeline: { answersWhilePaused: () => false },
+    pipeline: { answersWhilePaused: () => false, ...(knows ? { liveEdits: () => ({ knows: (kind: string) => knows.includes(kind) }) } : {}) },
     audit: { record: () => undefined },
     ctx: { config: { daemon: { defaultAgent: "ren" } } },
   };
@@ -61,5 +62,34 @@ describe("the page a message was written from", () => {
       expect("page" in h.dispatched.at(-1)!).toBe(false);
     }
     expect(h.dispatched).toHaveLength(4);
+  });
+});
+
+describe("what the page holds open, beside it", () => {
+  const page = { path: "/dashboard/automations/cron_1", title: "Automations", subject: "Morning mail" };
+  const liveEdit = { kind: "automation", id: "cron_1", value: { name: "Morning mail", payload: { kind: "steps", steps: [] } } };
+
+  test("goes on with the message where the daemon knows that kind of thing", async () => {
+    const h = await mount(["automation"]);
+    expect(await h.send({ page: { ...page, liveEdit } })).toBe(200);
+    expect(h.dispatched.at(-1)?.page).toEqual({ ...page, liveEdit });
+  });
+
+  test("a kind nobody knows, a value that is no object, or a daemon with no such thing: the message goes with its page alone", async () => {
+    const known = await mount(["automation"]);
+    for (const sent of [{ ...liveEdit, kind: "spreadsheet" }, { ...liveEdit, value: "words" }, "open", null]) {
+      expect(await known.send({ page: { ...page, liveEdit: sent } })).toBe(200);
+      expect(known.dispatched.at(-1)?.page).toEqual(page);
+    }
+    const older = await mount();
+    expect(await older.send({ page: { ...page, liveEdit } })).toBe(200);
+    expect(older.dispatched.at(-1)?.page).toEqual(page);
+  });
+
+  test("one too long to say to a model goes on as its length alone, never cut", async () => {
+    const h = await mount(["automation"]);
+    const long = { ...liveEdit, value: { name: "x".repeat(60_000) } };
+    expect(await h.send({ page: { ...page, liveEdit: long } })).toBe(200);
+    expect(h.dispatched.at(-1)?.page).toEqual({ ...page, liveEdit: { kind: "automation", id: "cron_1", value: null, tooLong: JSON.stringify(long.value).length } });
   });
 });

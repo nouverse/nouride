@@ -11,6 +11,28 @@ import type { TurnEventData, TurnStepKind } from "@nouride/shared";
  */
 export type { OpenPage } from "@nouride/shared";
 
+/** What a page holds open for an agent to change in place, sent beside the page (`OpenPage.liveEdit`). */
+export type { LiveEdit } from "@nouride/shared";
+
+/**
+ * A change an agent wrote to what a page holds open, as `GET /live-edits/<id>` answers it: which thing, by whom, and
+ * the thing as it would be with the change made. Held in the daemon's memory: a restart forgets it, and the route
+ * then answers 404.
+ */
+export interface LiveEditOffer {
+  id: string;
+  kind: string;
+  /** Which one it changes; null for one being made. */
+  target: string | null;
+  value: unknown;
+  /** The agent that wrote it. */
+  by: string;
+  at: number;
+}
+
+/** An automation with an agent's change made, as its page is handed it: the `value` of an offer of kind `automation`. */
+export type { AutomationChange } from "@nouride/shared";
+
 export interface ChatMessageStep {
   name: string;
   text: string;
@@ -66,6 +88,8 @@ export interface TurnStep {
   outcome?: TurnEventData["tool_done"]["outcome"];
   /** The dashboard page of what a finished call made or changed, a path under the dashboard (stream 1.9). */
   page?: string;
+  /** A change the call wrote to what the person has open on a page: its id, for `GET /live-edits/<id>` (stream 1.10). */
+  liveEdit?: string;
   /** A `steer` that is a person's edit: the message it changes (stream 1.3). Absent from a daemon before it. */
   editOf?: string;
 }

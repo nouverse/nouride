@@ -9,6 +9,7 @@ import type { AgentRegistry } from "@nouride/persona";
 import type { Notifier } from "@/commons/notify.ts";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import { describeTrigger } from "@/modules/cron/parse.ts";
+import type { LiveEdits } from "@/modules/live-edit/index.ts";
 import { ProposalCards } from "@/modules/cron/proposal-cards.ts";
 import { scriptFactsOf, type ScriptFacts } from "@/modules/cron/scripts.ts";
 import type { CronExecutors } from "@/modules/cron/scheduler.ts";
@@ -40,6 +41,8 @@ export function buildProposals(params: {
   linkFor?: LinkFor;
   /** Whether a script an agent proposes could run here (`cron/scripts.ts`). */
   scripts?: ScriptFacts;
+  /** Where a change to the automation a person has open on its page is held for that page (`modules/live-edit`). */
+  liveEdits?: Pick<LiveEdits, "propose">;
   /** The pipeline's voice, admins and the chats an agent can reach — read when a card is posted or answered. */
   pipeline: () => { voiceGatewayId(agentId: string, gatewayId: string): string; isAdmin(who: { gatewayId: string; senderId: string }): boolean; messageSender(): Pick<SendMessageOptions, "targets"> };
 }): { cards: ProposalCards; tool: Tool } {
@@ -61,6 +64,7 @@ export function buildProposals(params: {
     chats,
     ...(params.linkFor ? { linkFor: params.linkFor } : {}),
     ...(params.scripts ? { scripts: params.scripts } : {}),
+    ...(params.liveEdits ? { proposeLiveEdit: (offer) => params.liveEdits!.propose(offer) } : {}),
     readBrief,
   });
   return { cards, tool };

@@ -50,4 +50,6 @@ export const LINKS_ADDED: Readonly<Record<string, string>> = {
   "transfer → missions": "an import pauses the missions that were at work, through the missions' own store",
   "transfer → people": "an export holds the people's files, and asks people where they are kept",
   "web → transfer": "the control routes of the Export and import page are the transfer service's",
+  "pipeline → live-edit": "a turn is told what its message's page holds open to be changed, in the words of the tool that changes it",
+  "web → live-edit": "a message's page says what it holds open, and the page fetches the change an agent wrote to it",
 };

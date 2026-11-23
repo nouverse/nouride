@@ -137,6 +137,22 @@ export type CommandRuns = {
 };
 
 /**
+ * An automation with an agent's change made to it, as the page that holds it open is handed it (`LiveEdit`, the
+ * engine's `cron/open-automation.ts`): what it is called, who runs it, what it does, where it reports. Checked as a
+ * save is and written nowhere. `starts` is left out where it starts as the page has it: a start that is a moment
+ * already past is not a change, and written again it would be refused.
+ */
+export interface AutomationChange {
+  name: string;
+  agentId: string;
+  starts?: { start: "scheduled" | "manual" | "webhook"; trigger: JobTrigger };
+  payload: JobPayload;
+  target: JobTarget;
+  delivery: JobDelivery;
+  session: JobSessionMode;
+}
+
+/**
  * Where a run goes from a step: the step after it, the end of the run, or a later step by its id. Never an earlier one,
  * so a run always ends.
  */

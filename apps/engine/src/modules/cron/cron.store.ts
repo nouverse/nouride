@@ -240,6 +240,14 @@ export class CronStore {
     this.db.prepare("UPDATE cron_jobs SET reach_test = ? WHERE id = ?").run(JSON.stringify(test), id);
   }
 
+  /**
+   * A job held to what a save holds it to, and written nowhere: an agent's change to an automation a person has open
+   * on its page, before that page draws it (`cron/open-automation.ts`). Throws `CronValidationError` as `create` does.
+   */
+  check(input: JobInput, how: { startAsWas: boolean }): void {
+    validateJob(input, this.rules, how);
+  }
+
   create(given: JobInput): Job {
     // Each script signed with who wrote it: whoever makes the job, or for a change proposed to a job, whoever wrote the
     // text that job already holds.

@@ -4,6 +4,13 @@ Every change to [events.lock.json](./events.lock.json) is a line here, under the
 in [../EVENTS.md](../EVENTS.md); `apps/engine/tests/contracts/events-contract.test.ts` refuses a version with no
 heading here.
 
+## 1.10 — Nouride 0.8.46
+
+- `tool_done` may carry `liveEdit`: the id of a change an agent wrote to what the person has open on a dashboard page
+  (an automation's draft, saved or not), held by the daemon in memory for that page to draw and the person to apply.
+  `GET /live-edits/<id>` answers with the change; a restart forgets it, and the route then answers 404. A reader that
+  knows no `liveEdit` reads the step as before.
+
 ## 1.9 — Nouride 0.8.34
 
 - `tool_done` may carry `page`: the dashboard page of what the call made or changed, as a path under the dashboard

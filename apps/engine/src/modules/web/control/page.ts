@@ -7,10 +7,14 @@
  */
 
 import type { OpenPage } from "@nouride/shared";
+import { liveEditOf } from "@/modules/live-edit/index.ts";
 
-/** The page a body names, to hand on with its message, and nothing where it names none. */
-export function pageOf(raw: unknown): { page?: OpenPage } {
+/**
+ * The page a body names, to hand on with its message, and nothing where it names none. `knows`: the kinds of thing a
+ * page may hold open for an agent to change in place; what a page sends of any other kind is left behind.
+ */
+export function pageOf(raw: unknown, knows: (kind: string) => boolean = () => false): { page?: OpenPage } {
   const page = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   if (typeof page.path !== "string" || !page.path.trim() || typeof page.title !== "string") return {};
-  return { page: { path: page.path, title: page.title, ...(typeof page.subject === "string" && page.subject.trim() ? { subject: page.subject } : {}) } };
+  return { page: { path: page.path, title: page.title, ...(typeof page.subject === "string" && page.subject.trim() ? { subject: page.subject } : {}), ...liveEditOf(page.liveEdit, knows) } };
 }

@@ -18,6 +18,7 @@ import type { ReflectionEngine } from "@/modules/reflection/index.ts";
 import type { GrantsPort } from "@/modules/tools/grants.store.ts";
 import type { ToolGrantsPort } from "@/modules/tools/tool-grants.store.ts";
 import type { JobsPort } from "@/modules/jobs/jobs.store.ts";
+import type { LiveEdits } from "@/modules/live-edit/index.ts";
 import type { McpManager } from "@/modules/tools/mcp.ts";
 import type { ApprovalGate } from "@/modules/tools/approval.ts";
 import type { ToolsetDeps } from "@/modules/tools/registry.ts";
@@ -248,6 +249,11 @@ export interface PipelineDeps {
    * Absent, nothing is said: a test names the machine it is about, and most are about none.
    */
   full?: () => string | null;
+  /**
+   * What a page holds open for an agent to change in place, said to the turn, and an agent's change held for its page
+   * (`modules/live-edit`). Absent, a page's open thing is not said and no change is drawn: a test that is not about it.
+   */
+  liveEdits?: LiveEdits;
   /** How often a helper waiting for room looks again (`room-wait.ts`, half a minute). Lowered in tests. */
   roomCheckMs?: number;
   /**
