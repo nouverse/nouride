@@ -124,7 +124,8 @@ mengakhiri automation dengan diam, jadi pengecekan yang gak menemukan apa-apa ga
 Automation hanya bisa maju, jadi ia pasti selesai. Automation yang ditulis dari command line atau oleh agent bisa
 punya jalur yang gak punya gambarnya di halaman ini, misalnya lompatan dari satu langkah ke langkah yang lebih bawah:
 jalur itu ditampilkan sebagai label kecil di bawah langkahnya dengan garis ke tempat ia mendarat, dan tetap seperti
-itu sampai kamu memilih jawaban lain.
+itu sampai kamu memilih jawaban lain. Ke mana sebuah langkah lanjut setelah selesai ada di **More about this step** pada langkah itu:
+**Go on to the next step** di sana berarti langkah yang digambar di bawahnya.
 
 Contoh, pengecekan toko:
 

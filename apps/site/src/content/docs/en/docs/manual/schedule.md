@@ -114,7 +114,8 @@ so a check that finds nothing wakes nobody. Under **More about this step** it ca
 
 A run only ever goes forward, so it always ends. An automation written at the command line or by an agent can hold a
 path the page has no drawing for, such as a jump from one step to a later one: it is shown as a small label under the
-step with a line to where it lands, and stays as it is until you pick another answer.
+step with a line to where it lands, and stays as it is until you pick another answer. Where a step goes once it is
+done is under **More about this step** on that step: **Go on to the next step** there means the step drawn below it.
 
 A shop check, for example:
 
