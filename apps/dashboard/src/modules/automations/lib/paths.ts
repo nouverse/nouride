@@ -395,6 +395,27 @@ export function copyOnLine(steps: readonly Step[], index: number): Step[] {
   return insertOnLine(steps, nextOnLine(paths, index), copy);
 }
 
+/**
+ * A step of the main line set to go on to the step drawn below it, which is what "Go on to the next step" means on
+ * the page. Said as "the next step" of the list it would go on into its own lane, where it has one: the lane's first
+ * step is the next of the list. Its lanes that went back where it went on go back where it goes on now.
+ *
+ * It is how a step an earlier move left jumping is put right: the label under it, then this choice in its fields.
+ */
+export function goOnDown(given: readonly Step[], at: number): Step[] {
+  const steps = lastUnsaid(given);
+  const paths = pathsOf(steps, false);
+  const place = paths.line.indexOf(at);
+  if (place < 0) return [...steps];
+  const below = paths.line[place + 1] ?? null;
+  const went = landsAt(steps, at, "then");
+  // It does already, or is the last of the line, which goes nowhere but its end: nothing to set.
+  if (below === null || went === below) return [...given];
+  const go: Step["then"] = { to: steps[below]!.id };
+  const back = new Set((paths.rules.get(at) ?? []).flatMap((rule) => (rule.kind === "lane" && rule.ends !== "stop" && rule.ends.back === went ? [rule.lane.at(-1)!] : [])));
+  return tidyAll(forward(steps.map((step, index) => (index === at || back.has(index) ? withThen(steps, index, go) : step))).steps);
+}
+
 /** A step and the steps of its rules: what moves and goes together. */
 export function groupOf(steps: readonly Step[], at: number, paths: Paths = pathsOf(steps, false)): number[] {
   return [at, ...[...paths.inside].filter(([, within]) => within.owner === at).map(([index]) => index)].sort((a, b) => a - b);

@@ -6,8 +6,8 @@
 
 import { describe, expect, test } from "bun:test";
 import type { AutomationStep } from "@nouride/wire";
-import { addToLane, chipExits, choiceOf, choicesFor, choosePath, groupOf, insertOnLine, laneBacks, moveOnLine, pathsOf, removeDrawn, ruleOf, setLaneEnd, stopsAt } from "@/modules/automations/lib/paths";
-import { forward, landsAt, type ExitName, type Step } from "@/modules/automations/lib/steps";
+import { addToLane, chipExits, choiceOf, choicesFor, choosePath, goOnDown, groupOf, insertOnLine, laneBacks, moveOnLine, pathsOf, removeDrawn, ruleOf, setLaneEnd, stopsAt } from "@/modules/automations/lib/paths";
+import { forward, landsAt, setExit, type ExitName, type Step } from "@/modules/automations/lib/steps";
 
 type Exits = Pick<AutomationStep, "then" | "whenFailed" | "whenEmpty">;
 const run = (id: string, exits: Exits = {}): Step => ({ id, kind: "command", argv: ["sh", "-lc", id], ...exits });
@@ -411,6 +411,28 @@ describe("what a live box showed, and what walking the page's operations then fo
       expect(walk(moved)).toEqual(line(moved));
       expect(walk(moved, { b: "failed" }).filter((id) => id !== laneStep)).toEqual(line(moved));
     }
+  });
+
+  test("an automation 0.8.44's move left jumping is put right from the step that jumps: it goes on to the step drawn below it, and its lane with it", () => {
+    // As the page saved it after the same drag, before the move was put right: "b" still goes on to "c", and so
+    // does its lane, past "a".
+    const broken = [run("b", { then: to("c"), whenFailed: to(laneStep) }), { ...DRAWN[2]!, then: to("c") } as Step, say("a"), say("c"), say("d")];
+    expect(walk(broken)).toEqual(["b", "c", "d"]);
+    expect(chipExits(broken, 0, pathsOf(broken))).toEqual(["then"]);
+    const mended = goOnDown(broken, 0);
+    sound(mended);
+    expect(walk(mended)).toEqual(["b", "a", "c", "d"]);
+    expect(walk(mended, { b: "failed" })).toEqual(["b", laneStep, "a", "c", "d"]);
+    expect(mended.flatMap((_step, at) => chipExits(mended, at, pathsOf(mended)))).toEqual([]);
+    // And it is what the same drag makes of the automation now.
+    expect(mended).toEqual(moveOnLine(DRAWN, 1, 0));
+    // "The next step" of the list would be the first step of its own lane: every run would take the lane.
+    expect(walk(setExit(broken, 0, "then", "next"))).toEqual(["b", laneStep, "c", "d"]);
+    // A plain step is as it was, a step of a lane is not the line's to set, and the last step ends the run.
+    expect(goOnDown(DRAWN, 0)).toEqual(DRAWN);
+    expect(goOnDown(DRAWN, 2)).toEqual(DRAWN);
+    const last = [say("a"), run("b", { then: "end", whenFailed: to("l") }), say("l")];
+    expect(goOnDown(last, 1)).toEqual(last);
   });
 
   test("a lane set to a step further down keeps naming it through a move while that step is still below, and else goes back where its step goes on", () => {

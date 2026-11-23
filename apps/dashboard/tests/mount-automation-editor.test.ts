@@ -640,6 +640,34 @@ describe("a lane, changed from the lane itself", () => {
     expect(steps(sent)).toEqual([{ ...FIND, then: { to: "check" }, whenFailed: { to: "look" } }, LOOK_PLAIN, CHECK, OK, TELL]);
   });
 
+  test("one that 0.8.44's move left jumping is put right from the step that jumps: \"Go on to the next step\" is the step drawn below, not the first of its own lane", async () => {
+    // Saved after the drag as it was then: find at the top, still going on to the wait, past the check under it.
+    const BROKEN: AutomationStep[] = [{ ...FIND, then: { to: "ok" }, whenFailed: { to: "look" } }, { ...LOOK, then: { to: "ok" } }, CHECK, OK, TELL];
+    shown(BROKEN);
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { label: "", offered: [] as string[], after: 0, lane: [] as string[], end: "" };
+    await renderPage(PAGE, async (host) => {
+      await flowDrawn(host, 5);
+      seen.label = host.querySelector("[data-branch]")?.textContent ?? "";
+      editStep(host, 1).click();
+      await eventually(() => dropdown(host, "When it is done").button() !== undefined, 2_000, "where it goes when done, said in its fields");
+      seen.offered = await dropdown(host, "When it is done").open();
+      await dropdown(host, "When it is done").pick("Go on to the next step");
+      await eventually(() => host.querySelectorAll("[data-branch]").length === 0, 2_000, "the jump gone");
+      seen.after = host.querySelectorAll("[data-branch]").length;
+      seen.lane = [...lane(host).querySelectorAll<HTMLElement>('[data-flow-anchor^="step:"]')].map((box) => box.dataset.flowAnchor!.slice(5));
+      seen.end = end(host).textContent ?? "";
+      sent = await saved(host);
+    });
+    expect(seen.label).toContain("Once done");
+    expect(seen.label).toContain("step 3, Wait for your OK");
+    expect(seen.offered[0]).toBe("Go on to the next step");
+    expect(seen.after).toBe(0);
+    expect(seen.lane).toEqual(["look"]);
+    expect(seen.end).toBe("Then back to step 2, “Run a script”");
+    expect(steps(sent)).toEqual([{ ...FIND, then: { to: "check" }, whenFailed: { to: "look" } }, LOOK_PLAIN, CHECK, OK, TELL]);
+  });
+
   test("one a reader may not change shows where its lane ends, named for its thread, with nothing to press", async () => {
     answer({ [PAGE]: detail(automation({ payload: { kind: "steps", steps: LANED } })), ...TWO_AGENTS, ...AS_VIEWER });
     let seen: unknown[] = [];

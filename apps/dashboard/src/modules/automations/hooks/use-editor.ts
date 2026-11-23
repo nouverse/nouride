@@ -19,7 +19,7 @@ import type { StepExit } from "@nouride/wire";
 import { useUnsaved } from "@/commons/lib/unsaved";
 import { changed, settled, type Draft } from "../lib/draft";
 import { baseOf, restored, type KeptDraft } from "../lib/kept-draft";
-import { addOnLine, addToLane, choosePath, copyOnLine, moveOnLine, pathsOf, removeDrawn, setLaneEnd, type Choice, type LaneEnds, type PathExit } from "../lib/paths";
+import { addOnLine, addToLane, choosePath, copyOnLine, goOnDown, moveOnLine, pathsOf, removeDrawn, setLaneEnd, type Choice, type LaneEnds, type PathExit } from "../lib/paths";
 import { asKind, replaceStep, resetsBetween, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
 import { keep, keptOf, type Keeping } from "./use-kept-drafts";
 
@@ -162,7 +162,8 @@ export function useEditor(loaded: Draft, fresh: boolean, keeping: Keeping | null
       setStep: (index, step) => steps((list) => replaceStep(list, index, step)),
       setKind: (index, kind) => steps((list) => (list[index] ? replaceStep(list, index, asKind(list[index], kind)) : [...list])),
       setExit: (index, exit, go) => {
-        steps((list) => setExit(list, index, exit, go));
+        // "Go on to the next step" is the step drawn below: the list's own next is the first step of a step's lane.
+        steps((list) => (exit === "then" && go === "next" ? told(list, goOnDown(list, index)) : setExit(list, index, exit, go)));
         const id = draft.steps[index]?.id;
         setState((was) => ({ ...was, resets: was.resets.filter((reset) => !(reset.id === id && reset.exit === exit)) }));
       },
