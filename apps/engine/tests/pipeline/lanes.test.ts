@@ -93,6 +93,25 @@ describe("a peer turn, at work in the chat it runs in", () => {
     expect(ctx.isBusy("nox", "c1", "telegram:main")).toBe(false);
   });
 
+  test("who asked and what are kept with it: the agent's own list of whom it is working for, the oldest first", () => {
+    const ctx = bare();
+    // Held second and begun first: the list is by when each began, not by the order they were held in.
+    const later = ctx.holdPeer("nox", "c2", "telegram:nexa", { by: "nexa", task: "read the logs", senderId: null })!;
+    ctx.holdPeer("nox", "c1", "telegram:nouva", { by: "nouva", task: "check the backups", senderId: "u1" });
+    ctx.turnIn("nox", "c2", "telegram:nexa")!.startedAt = 2_000;
+    ctx.turnIn("nox", "c1", "telegram:nouva")!.startedAt = 1_000;
+    ctx.holdPeer("nera", "c1", "telegram:nouva", { by: "nouva", task: "draw the chart", senderId: "u1" });
+    // One held with nobody named, as before this was kept, is no one's ask to list.
+    ctx.holdPeer("nox", "c3", "telegram:nouva");
+    expect(ctx.atWorkForOthers("nox").map((turn) => [turn.asked, turn.gatewayId, turn.chatId])).toEqual([
+      [{ by: "nouva", task: "check the backups", senderId: "u1" }, "telegram:nouva", "c1"],
+      [{ by: "nexa", task: "read the logs", senderId: null }, "telegram:nexa", "c2"],
+    ]);
+    expect(ctx.atWorkForOthers("nouva")).toEqual([]);
+    later();
+    expect(ctx.atWorkForOthers("nox").map((turn) => turn.asked?.by)).toEqual(["nouva"]);
+  });
+
   test("a person addressing it is told it is busy — quoting nothing the room never saw, offering nothing to steer", () => {
     const ctx = bare();
     ctx.holdPeer("nox", "c1", "telegram:main");

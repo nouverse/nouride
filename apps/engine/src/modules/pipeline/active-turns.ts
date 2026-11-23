@@ -71,6 +71,11 @@ export interface ActiveTurn {
   drawn?: Map<MessageEnvelope, number[]>;
   /** When it began — what "busy for how long" is measured from (`busyNotice`). */
   startedAt?: number;
+  /**
+   * On a peer turn: the agent that asked and what it asked, with the person whose turn asked. `/helpers` at the agent
+   * doing the work says it: its list read "no helper is working" while it was at work for another agent.
+   */
+  asked?: { by: string; task: string; senderId: string | null };
   /** The message it answers: who may steer it in a room, and what it is working on. */
   trigger?: MessageEnvelope;
   /** Who has been told it is busy, so each is told once (`whileBusy`). */
@@ -141,10 +146,10 @@ export class ActiveTurns {
    * a scheduled turn and a job's wake-up wait, and a second ask is refused. Null when the agent already is. Without
    * the request it answers, which the room never saw and a busy notice must not quote, and with nothing to steer.
    */
-  holdPeer(agentId: string, chatId: string, gatewayId: string): (() => void) | null {
+  holdPeer(agentId: string, chatId: string, gatewayId: string, asked?: ActiveTurn["asked"]): (() => void) | null {
     if (this.isBusy(agentId, chatId, gatewayId)) return null;
     const key = ActiveTurns.turnKey(agentId, chatId, gatewayId);
-    const turn: ActiveTurn = { controller: new AbortController(), agentId, chatId, gatewayId, startedAt: Date.now() };
+    const turn: ActiveTurn = { controller: new AbortController(), agentId, chatId, gatewayId, startedAt: Date.now(), ...(asked ? { asked } : {}) };
     this.peerTurns.set(key, turn);
     return () => {
       if (this.peerTurns.get(key) !== turn) return;
@@ -152,6 +157,11 @@ export class ActiveTurns {
       this.handBack(turn);
       this.wakeWaiters(key);
     };
+  }
+
+  /** The turns this agent runs for other agents now, the oldest first: whom it is working for (`/helpers`). */
+  atWorkForOthers(agentId: string): ActiveTurn[] {
+    return [...this.peerTurns.values()].filter((turn) => turn.agentId === agentId && turn.asked).sort((a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0));
   }
 
   /**

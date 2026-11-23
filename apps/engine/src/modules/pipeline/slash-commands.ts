@@ -69,6 +69,8 @@ export function slashCommands(parts: {
     cancelTurn: (agentId, chatId) => control.cancelTurnFor(agentId, chatId),
     stopBackground: (agentId, chatId) => control.stopBackgroundFor(agentId, chatId),
     ...(deps.jobs ? { workingInBackground: (agentId: string) => workingFor(deps.jobs!, agentId) } : {}),
+    workingForOthers: (agentId) =>
+      parts.turnContext.atWorkForOthers(agentId).map((turn) => ({ by: turn.asked!.by, task: turn.asked!.task, gatewayId: turn.gatewayId, chatId: turn.chatId, senderId: turn.asked!.senderId, startedAt: turn.startedAt ?? Date.now() })),
     agentStatus: (agentId) => control.agentStatus(agentId),
     ...(deps.externalAgents?.offeredEfforts ? { cliEfforts: (agentId: string) => deps.externalAgents!.offeredEfforts!(agentId) } : {}),
     ...(deps.externalAgents?.models ? { cliModels: (agentId: string) => deps.externalAgents!.models!.of(agentId) } : {}),

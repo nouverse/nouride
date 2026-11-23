@@ -23,7 +23,7 @@ nothing and always work. They are answered at once, even while a turn is running
 | `/sleep` | Put this agent to sleep: it takes no work until `/wake` |
 | `/wake` | Wake this agent (`/start` too) |
 | `/mission` | Start long work it carries on alone, or see what has not ended: what needs you, what is at work and the backlog. [Missions →](/en/docs/manual/missions/) |
-| `/helpers` | Who is working for this agent in the background now: its helpers and the agents it asked |
+| `/helpers` | Who works for this agent in the background now (its helpers, the agents it asked), and which agents it is working for |
 | `/backgrounds` | The commands this agent left running in the background, a server among them |
 | `/model` | Switch model for this chat |
 | `/effort` | How long the model thinks, for this chat; `/effort <level> lock` for every chat and mission |

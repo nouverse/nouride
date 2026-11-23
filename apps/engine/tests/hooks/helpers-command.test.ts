@@ -8,10 +8,13 @@
  *
  * For whoever may see it: a room sees what was started from that room; a direct chat its own, what the person
  * started elsewhere, and for an admin all of the agent's.
+ *
+ * And whom the agent itself is working for: an ask is a job of the agent that asked, so the agent doing the work said
+ * "no helper is working" and nothing more. Its `/helpers` names the agents it is at work for.
  */
 
 import { describe, expect, test } from "bun:test";
-import { backgroundSaid, helperHooks, type WorkingInBackground } from "@/modules/hooks/builtins/helpers.ts";
+import { backgroundSaid, helperHooks, type WorkingForAnother, type WorkingInBackground } from "@/modules/hooks/builtins/helpers.ts";
 import type { HookContext } from "@/modules/hooks/registry.ts";
 
 const NOW = 1_795_000_000_000;
@@ -85,6 +88,47 @@ describe("what /helpers says", () => {
   });
 });
 
+describe("whom the agent is working for", () => {
+  const forOthers = [
+    { by: "nouva", task: "Check last night's backups\nand say which failed", startedAt: NOW - 3 * MIN - 12_000 },
+    { by: "nexa", task: null, startedAt: NOW - 40_000 },
+  ];
+  const at = (which: "helpers" | "commands", working: WorkingInBackground[], asks = forOthers) =>
+    backgroundSaid({ which, agent: "Nix", working, here, nameOf: (id: string) => ({ nouva: "Nouva", nexa: "Nexa" })[id] ?? id, now: NOW, forOthers: asks });
+
+  test("with no helper of its own it still says whom it is at work for: who, since when, and what was asked", () => {
+    expect(at("helpers", []).split("\n")).toEqual([
+      "No helper is working for Nix now.",
+      "",
+      "**Nix is working for** (2)",
+      "",
+      "**1. Nouva** · 3m",
+      "Check last night's backups and say which failed",
+      "",
+      "**2. Nexa** · 40s · asked from another chat",
+    ]);
+  });
+
+  test("under its own helpers, before the line about commands, and never in /backgrounds", () => {
+    const lines = at("helpers", [one({}), command()]).split("\n");
+    expect(lines[0]).toBe("**Helpers working for Nix** (1)");
+    expect(lines.indexOf("**Nix is working for** (2)")).toBeGreaterThan(lines.indexOf("`job_aaaa`"));
+    expect(lines.at(-1)).toBe("1 command runs in the background: /backgrounds");
+    expect(lines.indexOf("**Nix is working for** (2)")).toBeLessThan(lines.length - 1);
+    expect(at("commands", [command()])).not.toContain("is working for");
+  });
+
+  test("at work for nobody, the list is as it was", () => {
+    expect(at("helpers", [], [])).toBe("No helper is working for Nix now.");
+    expect(backgroundSaid({ which: "helpers", agent: "Nix", working: [], here, nameOf: (id) => id, now: NOW })).toBe("No helper is working for Nix now.");
+  });
+
+  test("a long ask is cut to a line a phone shows", () => {
+    const said = at("helpers", [], [{ by: "nouva", task: "x".repeat(400), startedAt: NOW - MIN }]);
+    expect(said.split("\n").at(-1)!.length).toBeLessThanOrEqual(161);
+  });
+});
+
 describe("what /backgrounds says", () => {
   test("nothing running is said in one line", () => {
     expect(said("commands", [])).toBe("No command of Nouva's runs in the background now.");
@@ -130,7 +174,13 @@ describe("who sees what", () => {
     command({ id: "job_cmd_here" }),
     command({ id: "job_cmd_theirs", chatId: "888", senderId: "u2" }),
   ];
-  const ctx = (options: { chatType: "dm" | "group"; admin?: boolean; working?: WorkingInBackground[] | null }): HookContext =>
+  /** Asks made of Nouva by other agents, each from its own conversation: the asking agent's connection and chat. */
+  const asks: WorkingForAnother[] = [
+    { by: "nix", task: "the task asked from this chat", gatewayId: "telegram:nouva", chatId: "555", senderId: "u1", startedAt: NOW - 5 * MIN },
+    { by: "nexa", task: "the task this person asked elsewhere", gatewayId: "telegram:nouva", chatId: "777", senderId: "u1", startedAt: NOW - 4 * MIN },
+    { by: "nero", task: "the task of another person", gatewayId: "telegram:nero", chatId: "999", senderId: "u2", startedAt: NOW - 3 * MIN },
+  ];
+  const ctx = (options: { chatType: "dm" | "group"; admin?: boolean; working?: WorkingInBackground[] | null; asks?: WorkingForAnother[] }): HookContext =>
     ({
       agent: { config: { id: "nouva", displayName: "Nouva" } },
       gatewayId: "telegram:nouva",
@@ -142,6 +192,7 @@ describe("who sees what", () => {
         registry: { get: () => undefined },
         isAdmin: () => options.admin === true,
         ...(options.working === null ? {} : { workingInBackground: (agentId: string) => (agentId === "nouva" ? (options.working ?? all) : []) }),
+        ...(options.asks ? { workingForOthers: (agentId: string) => (agentId === "nouva" ? options.asks! : []) } : {}),
       },
     }) as unknown as HookContext;
   const ids = async (name: string, c: HookContext) => [...((await hook(name).handler(c)).reply ?? "").matchAll(/`(job_[a-z_]+)`/g)].map((match) => match[1]);
@@ -167,6 +218,20 @@ describe("who sees what", () => {
     // Another person's command is not counted for someone who would not be shown it.
     const reply = (await hook("/helpers").handler(ctx({ chatType: "dm" }))).reply ?? "";
     expect(reply.split("\n").at(-1)).toBe("1 command runs in the background: /backgrounds");
+  });
+
+  test("whom it works for is said to everyone, and what was asked only where that chat's own work would be shown", async () => {
+    const shown = async (c: HookContext) => ((await hook("/helpers").handler(c)).reply ?? "").split("\n").filter((line) => line.startsWith("the task") || line.includes("asked from another chat") || line.includes("is working for**")).map((line) => line.replace(/ · \S+ · asked/, " · asked"));
+    // (How long is the clock's, which the handler reads itself: the list's own test above holds it.)
+    // An admin in a direct chat: every task.
+    expect(await shown(ctx({ chatType: "dm", admin: true, working: [], asks }))).toEqual(["**Nouva is working for** (3)", "the task asked from this chat", "the task this person asked elsewhere", "the task of another person"]);
+    // The person in their own chat: what was asked from it and what they asked elsewhere on the connection, not another's.
+    expect(await shown(ctx({ chatType: "dm", working: [], asks }))).toEqual(["**Nouva is working for** (3)", "the task asked from this chat", "the task this person asked elsewhere", "**3. nero** · asked from another chat"]);
+    // A room: only what was asked from that room, an admin there too.
+    expect(await shown(ctx({ chatType: "group", admin: true, working: [], asks }))).toEqual(["**Nouva is working for** (3)", "the task asked from this chat", "**2. nexa** · asked from another chat", "**3. nero** · asked from another chat"]);
+    // /backgrounds says none of it, and an agent asked nothing by anyone has no such section.
+    expect((await hook("/backgrounds").handler(ctx({ chatType: "dm", admin: true, working: [], asks }))).reply).toBe("No command of Nouva's runs in the background now.");
+    expect((await hook("/helpers").handler(ctx({ chatType: "dm", admin: true, working: [], asks: [] }))).reply).toBe("No helper is working for Nouva now.");
   });
 
   test("both answer at once, asleep or not, and say so where no background work is run", async () => {

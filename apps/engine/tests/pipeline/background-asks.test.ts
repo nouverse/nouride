@@ -295,6 +295,48 @@ describe("an ask that runs long", () => {
     expect(own.turn.reply).toBe("Deployed v2 to staging; /health answers 200.");
   });
 
+  test("while it works, /helpers at the asked agent says whom it is working for and what was asked; once it has answered, nobody", async () => {
+    // The ask is a job of the agent that asked: at the agent doing the work the list said "no helper is working" and
+    // nothing else, which read as that agent doing nothing.
+    const noxFinishes = gate();
+    const d = await daemon({
+      answer: async (who, body) => {
+        if (who.kind === "agent" && who.id === "nox") {
+          await noxFinishes.opened;
+          return { text: "Deployed v2 to staging." };
+        }
+        const asked = lastUser(body);
+        if (!body.stream) return { text: "Nox is on it." };
+        if (asked.includes("[System event")) return { text: "Done: deployed." };
+        return askNox();
+      },
+    });
+    const helpersSaid = () => d.gateway.sent.map((message) => message.text).filter((text) => text.includes("No helper is working for") || text.includes("Helpers working for"));
+
+    say(d.gateway, "deploy v2 ke staging dong", "m1");
+    // Inside the wait, before it is anybody's job: the agent asked is already at work for the one that asked.
+    await eventually(() => d.asked.some((request) => request.who.kind === "agent" && request.who.id === "nox"), 4_000, "the asked agent's turn");
+    say(d.gateway, "/helpers", "m2", { mentions: ["nox"] });
+    await eventually(() => helpersSaid().length === 1, 4_000, "/helpers at the asked agent, inside the wait");
+    expect(helpersSaid()[0]).toMatch(/^No helper is working for nox now\.\n\n\*\*nox is working for\*\* \(1\)\n\n\*\*1\. nouva\*\* · \S+\nDeploy v2 to staging, then check it answers on \/health\./i);
+
+    // Past the wait, as a job of the asking agent's: still said at the agent doing the work, and listed at the other.
+    await eventually(() => replies(d.gateway).includes("Nox is on it."), 4_000, "the asking turn's reply");
+    say(d.gateway, "/helpers", "m3", { mentions: ["nox"] });
+    await eventually(() => helpersSaid().length === 2, 4_000, "/helpers at the asked agent, in the background");
+    expect(helpersSaid()[1]).toMatch(/\*\*nox is working for\*\* \(1\)\n\n\*\*1\. nouva\*\* · \S+\nDeploy v2 to staging/i);
+    say(d.gateway, "/helpers", "m4");
+    await eventually(() => helpersSaid().length === 3, 4_000, "/helpers at the asking agent");
+    expect(helpersSaid()[2]).toMatch(/^\*\*Helpers working for nouva\*\* \(1\)\n\n\*\*1\. nox\*\*, asked/i);
+    expect(helpersSaid()[2]).not.toContain("is working for**");
+
+    noxFinishes.open();
+    await eventually(() => replies(d.gateway).includes("Done: deployed."), 4_000, "the answer passed on");
+    say(d.gateway, "/helpers", "m5", { mentions: ["nox"] });
+    await eventually(() => helpersSaid().length === 4, 4_000, "/helpers at the asked agent, once it answered");
+    expect(helpersSaid()[3]).toMatch(/^No helper is working for nox now\.$/i);
+  });
+
   test("`background: true` returns at once, and the answer still comes back", async () => {
     const noxFinishes = gate();
     const d = await daemon({
