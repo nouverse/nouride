@@ -17,6 +17,9 @@ curl -fsS @@HEALTH_URL@@
 sebuah provider gagal tiga kali berturut-turut, atau ketika WAL SQLite melewati ambangnya. Nilainya
 `shutting_down`, juga 503, selama daemon sedang berhenti. `issues` memuat daftar apa yang salah;
 gateway yang cuma terputus atau sedang reconnect muncul di sana tanpa membuat pemeriksaan gagal.
+Gateway disebut mati kalau kredensialnya ditolak atau sesinya hilang, yang harus dibereskan orang.
+Yang tidak bisa dijangkau tetap reconnect selama itu berlangsung (0.8.46), dan baris issue-nya bilang
+kapan ia mencoba lagi: dulu ia menjawab 503 begitu jatah percobaannya habis.
 `install` adalah hash direktori data, sehingga CLI bisa tahu ia sedang bicara dengan daemon yang benar
 ketika dua instalasi di satu mesin berebut port.
 

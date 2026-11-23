@@ -135,8 +135,9 @@ export function startingHealth(dataDir: string, startedAt: number, phase: string
 
 /**
  * A gateway that is reconnecting is degraded, not down: messages are buffered and
- * the daemon is still serving. One that hit its retry ceiling, or lost its session,
- * needs a human — that is what warrants a failing probe.
+ * the daemon is still serving. That holds for one out of its fast tries too, which goes
+ * on trying by itself and says how often. One whose credentials are refused, or that
+ * lost its session, needs a human — that is what warrants a failing probe.
  */
 export function buildHealth(ctx: DaemonContext, readMemory: () => HealthPayload["memory"] = processMemory): HealthResult {
   // The app is in place a moment before boot calls itself ready, and nothing in that moment is ready to be read.
@@ -148,7 +149,8 @@ export function buildHealth(ctx: DaemonContext, readMemory: () => HealthPayload[
     if (gateway.internal) continue;
     gateways[name] = gateway.status;
     if (gateway.status === "dead") issues.push(`${name}: dead`);
-    else if (gateway.status === "reconnecting") issues.push(`${name}: reconnecting`);
+    // With what it waits on, where it said: one out of its fast tries says when it tries next.
+    else if (gateway.status === "reconnecting") issues.push(gateway.waiting ? `${name}: reconnecting. ${gateway.waiting.reason}` : `${name}: reconnecting`);
     else if (gateway.status === "disconnected") issues.push(`${name}: disconnected`);
     // Not up, and it said why: a connect that waits is something to look at, with the reason beside it.
     else if (gateway.waiting) issues.push(`${name}: ${gateway.status}, waiting. ${gateway.waiting.reason}`);

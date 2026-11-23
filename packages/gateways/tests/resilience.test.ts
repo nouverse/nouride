@@ -243,10 +243,13 @@ describe("connecting", () => {
    * long as it lasted: the backoff never left its first step, `maxReconnectAttempts` was unreachable,
    * and the `dead` event that would have alerted the operator never fired.
    *
-   * So: a connection that dies before it has held must not be credited, and the gateway must
-   * eventually give up and say so.
+   * So: a connection that dies before it has held must not be credited, and the fast loop must end and say so. It
+   * ends in a slow one (`SLOW_RETRY_MS`), not in `dead`: a network that is down comes back, and nobody should have to
+   * restart anything when it does.
    */
-  test("a connection that dies immediately does not refill the budget, so the loop terminates", async () => {
+  const unreachable = (events: GatewayEvent[]) => events.filter((event) => event.type === "unreachable");
+
+  test("a connection that dies immediately does not refill the budget, so the fast loop ends", async () => {
     const gateway = new FakeGateway({
       // Every `connect()` succeeds — the failure is always *after* it, exactly as a 409 on the first
       // poll behaves. Nothing here would ever stop if the counter reset on connect.
@@ -257,42 +260,87 @@ describe("connecting", () => {
 
     await gateway.start();
     await eventually(() => gateway.status === "connected", 4_000, "first connect");
-    for (let cycle = 0; cycle < 4; cycle += 1) {
+    for (let cycle = 0; cycle < 4 && unreachable(events).length === 0; cycle += 1) {
       gateway.dropConnection("409 conflict");
-      if (gateway.status === "dead") break;
-      await eventually(
-        () => gateway.status === "connected" || gateway.status === "dead",
-        4_000,
-        "cycle to settle",
-      );
+      await eventually(() => gateway.status === "connected" || unreachable(events).length > 0, 4_000, "cycle to settle");
     }
 
-    expect(gateway.status).toBe("dead");
-    expect(events.at(-1)).toEqual({ type: "dead", gatewayId: "telegram:test", attempts: 2 });
+    // Said once, with how often it tries from here: ten minutes, unless a gateway says otherwise.
+    expect(unreachable(events)).toEqual([{ type: "unreachable", gatewayId: "telegram:test", attempts: 2, retryEveryMs: 600_000 }]);
+    // Not dead: it waits for its next try, and says so where a person reads why it is not up.
+    expect(gateway.status).toBe("reconnecting");
+    expect(events.some((event) => event.type === "dead")).toBe(false);
+    expect(gateway.waiting?.reason).toBe("It could not connect after 2 tries. It tries again by itself every 10 minutes.");
+    expect(gateway.waiting!.until! - Date.now()).toBeGreaterThan(9 * 60_000);
 
-    // And it really stopped, rather than going quiet for one tick.
+    // And the fast loop really ended, rather than going quiet for one tick.
     const settled = gateway.connectCalls;
     await sleep(20);
     expect(gateway.connectCalls).toBe(settled);
+    await gateway.stop();
   });
 
-  test("past max attempts it goes dead and stops trying", async () => {
+  test("past its fast tries it goes on by itself, slowly: said once however long it lasts, and said again when it is back", async () => {
     const gateway = new FakeGateway({
-      connectResults: [false, false, false, false, false, false],
-      resilience: { maxReconnectAttempts: 2 },
+      // The first connect and two fast tries fail, then three slow ones; the seventh connect answers. After it, a
+      // second outage: every connect fails again.
+      connectResults: [false, false, false, false, false, false, true, false, false, false, false, false, false],
+      resilience: { maxReconnectAttempts: 2, slowRetryMs: 15, connectionStableAfterMs: 10 },
     });
     const events: GatewayEvent[] = [];
     gateway.onEvent((event) => events.push(event));
 
     await gateway.start();
-    await eventually(() => gateway.status === "dead", 4_000, "gateway to give up");
+    await eventually(() => unreachable(events).length === 1, 4_000, "the fast tries to run out");
+    const spent = gateway.connectCalls;
+    // Said in the words a person reads on its row, at the pace this gateway was given.
+    expect(gateway.waiting?.reason).toBe("It could not connect after 2 tries. It tries again by itself every second.");
 
-    expect(events.at(-1)).toEqual({ type: "dead", gatewayId: "telegram:test", attempts: 2 });
+    // It tries again with nobody asking, and a slow try that fails is not said a second time.
+    await eventually(() => gateway.connectCalls > spent + 1, 4_000, "slow tries");
+    expect(unreachable(events)).toHaveLength(1);
+    expect(events.some((event) => event.type === "dead")).toBe(false);
 
-    // Nothing is scheduled any more: the call count must not move after the verdict.
+    await eventually(() => gateway.status === "connected", 4_000, "the connect that answers");
+    // Back, once it has held, and not at the first open.
+    await eventually(() => events.some((event) => event.type === "back"), 2_000, "back said");
+    expect(events.filter((event) => event.type === "back")).toEqual([{ type: "back", gatewayId: "telegram:test" }]);
+
+    // Its budget is its own again, and so is its word: a second outage runs two fast tries before it is said, and it
+    // is said, where a flag left set would have kept it quiet for good.
+    const before = gateway.connectCalls;
+    gateway.dropConnection("a second outage");
+    await eventually(() => unreachable(events).length === 2, 4_000, "the second outage said");
+    expect(gateway.connectCalls).toBe(before + 2);
+    expect(events.filter((event) => event.type === "back")).toHaveLength(1);
+    await gateway.stop();
+  });
+
+  test("a drop that its fast tries mend says neither: nobody was told it was down", async () => {
+    const gateway = new FakeGateway({ connectResults: [true, false, true], resilience: { maxReconnectAttempts: 3, connectionStableAfterMs: 5 } });
+    const events: GatewayEvent[] = [];
+    gateway.onEvent((event) => events.push(event));
+    await gateway.start();
+    gateway.dropConnection("blip");
+    await eventually(() => gateway.status === "connected" && gateway.connectCalls === 3, 4_000, "the reconnect");
+    // Past the time a held connection is credited in: nothing said by then is nothing said.
+    await sleep(25);
+    expect(events.filter((event) => event.type === "unreachable" || event.type === "back")).toEqual([]);
+    await gateway.stop();
+  });
+
+  test("stopped while it waits for its next slow try: nothing is tried again", async () => {
+    const gateway = new FakeGateway({ connectResults: [false, false, false, false, false, false], resilience: { maxReconnectAttempts: 2, slowRetryMs: 15 } });
+    const events: GatewayEvent[] = [];
+    gateway.onEvent((event) => events.push(event));
+    await gateway.start();
+    await eventually(() => unreachable(events).length === 1, 4_000, "the fast tries to run out");
+    await gateway.stop();
     const settled = gateway.connectCalls;
-    await sleep(20);
+    // Past two of its slow tries: none came.
+    await sleep(40);
     expect(gateway.connectCalls).toBe(settled);
+    expect(gateway.status).toBe("disconnected");
   });
 
   test("a duplicate status is not re-emitted", async () => {
@@ -327,16 +375,20 @@ describe("a platform that opens after connect() returns", () => {
     await gateway.stop();
   });
 
-  test("a connect that never opened is not credited, so it goes dead and says so", async () => {
+  test("a connect that never opened is not credited, so its fast tries run out and it says it cannot be reached", async () => {
     const gateway = new LateGateway({ resilience: { maxReconnectAttempts: 2, connectionStableAfterMs: 1 } });
     const statuses = trackStatuses(gateway);
+    const events: GatewayEvent[] = [];
+    gateway.onEvent((event) => events.push(event));
     await gateway.start();
-    for (let cycle = 0; gateway.status !== "dead"; cycle += 1) {
+    for (let cycle = 0; !events.some((event) => event.type === "unreachable"); cycle += 1) {
       await eventually(() => gateway.connectCalls === cycle + 1 && gateway.status === "connecting", 2_000, "the next connect");
       gateway.dropConnection("never answered");
     }
     expect(gateway.connectCalls).toBe(3);
     expect(statuses).not.toContain("connected");
+    expect(statuses).not.toContain("dead");
+    await gateway.stop();
   });
 });
 
@@ -611,13 +663,16 @@ describe("health checks", () => {
     // They run on an interval the reconnect path clears; leaving it armed would ping a socket that
     // no longer exists for as long as the outage lasts.
     const gateway = new FakeGateway({ connectResults: [true, false, false, false, false, false] });
+    const events: GatewayEvent[] = [];
+    gateway.onEvent((event) => events.push(event));
     await gateway.start();
     gateway.pingResult = false;
-    await eventually(() => gateway.status === "dead", 4_000, "the gateway to die");
+    await eventually(() => events.some((event) => event.type === "unreachable"), 4_000, "its fast tries to run out");
 
     const settled = gateway.connectCalls;
     await sleep(20);
     expect(gateway.connectCalls).toBe(settled);
+    await gateway.stop();
   });
 });
 

@@ -74,8 +74,17 @@ describe("/health and a connection that waits", () => {
     expect(buildHealth(withGateways({ "telegram:nouva": { status: "connecting", waiting: null }, "discord:nouva": { status: "connecting" } })).payload.issues ?? []).toEqual([]);
   });
 
-  test("one that is reconnecting is said as that, once, whatever it waits on", () => {
-    expect(buildHealth(withGateways({ "telegram:nouva": { status: "reconnecting", waiting: { reason: "x", since: 1 } } })).payload.issues).toEqual(["telegram:nouva: reconnecting"]);
+  test("one that is reconnecting is said once, with what it waits on where it said: out of its fast tries, when it tries next", () => {
+    const slow = "It could not connect after 10 tries. It tries again by itself every 10 minutes.";
+    const waiting = buildHealth(withGateways({ "telegram:nouva": { status: "reconnecting", waiting: { reason: slow, since: 1 } } }));
+    expect(waiting.payload.issues).toEqual([`telegram:nouva: reconnecting. ${slow}`]);
+    expect(buildHealth(withGateways({ "telegram:nouva": { status: "reconnecting", waiting: null } })).payload.issues).toEqual(["telegram:nouva: reconnecting"]);
+    // It comes back by itself, so it is no reason to fail a probe: a hosted install's probes restart what answers 503.
+    expect(waiting).toMatchObject({ httpStatus: 200, payload: { status: "ok" } });
+  });
+
+  test("one whose credentials are refused or whose session is gone needs a person, and that is what fails the probe", () => {
+    expect(buildHealth(withGateways({ "telegram:nouva": { status: "dead" } }))).toMatchObject({ httpStatus: 503, payload: { status: "degraded", issues: ["telegram:nouva: dead"] } });
   });
 });
 

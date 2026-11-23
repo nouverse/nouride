@@ -380,7 +380,7 @@ describe("reconnecting", () => {
 describe("connected when WhatsApp opens, not when the bridge is up", () => {
   const ready = { type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "me@s.whatsapp.net" } as const;
 
-  function buildFast(maxReconnectAttempts: number, connectionStableAfterMs = 1) {
+  function buildFast(maxReconnectAttempts: number, connectionStableAfterMs = 1, slowRetryMs?: number) {
     const opened: ReturnType<typeof fakeChannel>[] = [];
     const gateway = new WhatsAppGateway({
       id: "whatsapp:main",
@@ -388,7 +388,7 @@ describe("connected when WhatsApp opens, not when the bridge is up", () => {
       sessionDir: "/tmp/wa-session",
       encryptionKey: "a".repeat(64),
       // A held connection is credited after 1 ms, so one that was credited wrongly would be by the next poll.
-      resilience: { maxReconnectAttempts, reconnectBackoffMs: 1, reconnectBackoffMaxMs: 2, connectionStableAfterMs },
+      resilience: { maxReconnectAttempts, reconnectBackoffMs: 1, reconnectBackoffMaxMs: 2, connectionStableAfterMs, ...(slowRetryMs === undefined ? {} : { slowRetryMs }) },
       openChannel: () => {
         const fake = fakeChannel();
         opened.push(fake);
@@ -397,11 +397,13 @@ describe("connected when WhatsApp opens, not when the bridge is up", () => {
     });
     built.push(gateway);
     const statuses: string[] = [];
+    const said: string[] = [];
     gateway.onEvent((event) => {
       if (event.type === "status") statuses.push(event.status);
+      else said.push(event.type);
     });
     const attempts = () => (gateway as unknown as { reconnectAttempts: number }).reconnectAttempts;
-    return { gateway, opened, statuses, attempts };
+    return { gateway, opened, statuses, attempts, said };
   }
 
   test("connecting until the bridge says ready, with WhatsApp's reason while it is not", async () => {
@@ -416,18 +418,36 @@ describe("connected when WhatsApp opens, not when the bridge is up", () => {
     await eventually(() => gateway.status === "connected", 2_000, "ready to connect it");
   });
 
-  test("a bridge that never opens is never connected, and its retry budget runs out", async () => {
-    const { gateway, opened, statuses } = buildFast(2);
+  test("a bridge that never opens is never connected: its retry budget runs out, it says so once, and goes on slowly", async () => {
+    const { gateway, opened, statuses, said } = buildFast(2, 1, 20);
     await gateway.start();
-    for (let bridge = 0; gateway.status !== "dead"; bridge += 1) {
+    const gaveUp = (bridge: number) => {
       // Each bridge tries, fails, and gives up — what the pod's did, eight times over, every five minutes.
-      await eventually(() => opened.length === bridge + 1, 2_000, "the next bridge");
       opened[bridge]!.push({ type: "status", status: "connecting", reason: "408" });
       opened[bridge]!.push({ type: "status", status: "disconnected", reason: "gave up after 8 attempts" });
-      await eventually(() => opened.length === bridge + 2 || gateway.status === "dead", 2_000, "a reconnect or the end");
+    };
+    for (let bridge = 0; !said.includes("unreachable"); bridge += 1) {
+      await eventually(() => opened.length === bridge + 1, 2_000, "the next bridge");
+      gaveUp(bridge);
+      await eventually(() => opened.length === bridge + 2 || said.includes("unreachable"), 2_000, "a reconnect or the end of the fast tries");
     }
+    // Three bridges in the fast tries: the first, and one for each of the two retries.
     expect(opened).toHaveLength(3);
+    expect(gateway.status).toBe("reconnecting");
+    expect(gateway.waiting?.reason).toStartWith("It could not connect after 2 tries. It tries again by itself");
+
+    // Not for good: a fourth bridge is opened with nobody asking, and its giving up is not said a second time.
+    await eventually(() => opened.length === 4, 2_000, "the slow try");
+    gaveUp(3);
+    await eventually(() => opened.length === 5, 2_000, "the next slow try");
+    expect(said.filter((one) => one === "unreachable")).toHaveLength(1);
     expect(statuses).not.toContain("connected");
+    expect(statuses).not.toContain("dead");
+
+    // WhatsApp answers at last: connected, and said to be back once it has held.
+    opened[4]!.push(ready);
+    await eventually(() => gateway.status === "connected", 2_000, "ready to connect it");
+    await eventually(() => said.includes("back"), 2_000, "back said");
   });
 
   test("a pairing code waits on a person: connecting, saying so, and the budget comes back while it is up", async () => {

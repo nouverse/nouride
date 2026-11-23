@@ -56,6 +56,28 @@ const AUTH_FAILURES_TO_DIE = 2;
  */
 const CONNECTION_STABLE_AFTER_MS = 60_000;
 
+/** An interval as a person reads it: "every 10 minutes", "every 45 seconds". */
+function everyWords(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  if (ms >= 60_000) return `every ${minutes === 1 ? "minute" : `${minutes} minutes`}`;
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  return `every ${seconds === 1 ? "second" : `${seconds} seconds`}`;
+}
+
+/**
+ * How often a connection that has spent its retry budget tries again by itself.
+ *
+ * It used to stop there for good, `dead`, until a person restarted it. That is right for credentials the platform
+ * refuses, which answer the same however often they are asked, and wrong for a network that is down: a box at home
+ * whose internet was out for half an hour kept its chat apps dead until somebody noticed, and `/health` answered 503
+ * from then on, which a hosted install's probes read as a reason to restart the whole daemon. A connection that
+ * cannot be reached is not one that needs a person.
+ *
+ * Ten minutes: the end of an outage is found within ten minutes of it, at the cost of one connect a try. A starting
+ * value, to be moved by what installs show.
+ */
+const SLOW_RETRY_MS = 10 * 60_000;
+
 /**
  * How long the teardown before a connect may take. discord.js waits for the old socket's `close` with no limit of its
  * own, and on the live box one never came: a login timed out, the retry's `destroy()` of that client never returned,
@@ -200,6 +222,8 @@ export abstract class BaseGateway implements Gateway {
   /** Pending "this connection has held long enough" reset — see `CONNECTION_STABLE_AFTER_MS`. */
   private stableTimer?: ReturnType<typeof setTimeout>;
   private stopping = false;
+  /** Out of fast tries and trying slowly (`SLOW_RETRY_MS`): said once when it begins, and once when the connection is back. */
+  private slow = false;
 
   /**
    * Whether `connect()` resolving means the platform's connection is open. An adapter whose platform answers later says
@@ -571,6 +595,10 @@ export abstract class BaseGateway implements Gateway {
             after_ms: stableAfter,
             attempts_forgiven: this.reconnectAttempts,
           });
+          // Back, once it has held: said to whoever was told it could not be reached, and not at the first open of a
+          // connection that may drop again a second later.
+          if (this.slow && this._status === "connected") this.emitEvent({ type: "back", gatewayId: this.id });
+          this.slow = false;
           this.reconnectAttempts = 0;
           // The floor belongs to the failure that asked for it, not to the gateway. A connection that
           // held for a minute has cleared whatever needed settling.
@@ -592,11 +620,19 @@ export abstract class BaseGateway implements Gateway {
     this.stableTimer = undefined;
 
     if (this.reconnectAttempts >= this.resilience.maxReconnectAttempts) {
-      this.setStatus("dead");
-      this.log.error("gateway dead: max reconnect attempts exceeded", {
-        attempts: this.reconnectAttempts,
-      });
-      this.emitEvent({ type: "dead", gatewayId: this.id, attempts: this.reconnectAttempts });
+      // The budget is spent: from here it tries slowly, for as long as it takes (`SLOW_RETRY_MS`).
+      const every = this.resilience.slowRetryMs ?? SLOW_RETRY_MS;
+      if (!this.slow) {
+        this.slow = true;
+        this.log.error("could not reconnect; it goes on trying by itself, slowly", { attempts: this.reconnectAttempts, every_ms: every });
+        this.emitEvent({ type: "unreachable", gatewayId: this.id, attempts: this.reconnectAttempts, retryEveryMs: every });
+      }
+      this.setStatus("reconnecting");
+      this.waitingFor(`It could not connect after ${this.reconnectAttempts} ${this.reconnectAttempts === 1 ? "try" : "tries"}. It tries again by itself ${everyWords(every)}.`, Date.now() + every);
+      this.reconnectTimer = setTimeout(contained(this.log, "a reconnect attempt threw", () => this.attemptConnect()), every);
+      // A daemon is kept alive by what it serves. Left referenced, ten minutes of this would hold a process that has
+      // nothing else to do, a test's among them.
+      this.reconnectTimer.unref?.();
       return;
     }
 

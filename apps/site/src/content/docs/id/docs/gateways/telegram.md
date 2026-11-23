@@ -82,9 +82,12 @@ selama tersambung dicek tiap tiga puluh detik. Ritme itu milik adapter-nya sendi
 tabel `[resilience]` di bawah gateway, dan tabel yang masih ada di `config.toml` disebut di peringatan
 lalu diabaikan.
 
-Koneksi yang menghabiskan jatah percobaannya ditandai mati dan memicu alert, kalau kamu sudah
-menentukan ke mana alert dikirim. Kalau belum, ia cuma satu baris di log, dan kamu baru tahu ketika
-sadar agent-nya sudah lama diam.
+Koneksi yang menghabiskan jatah percobaannya tidak ditinggalkan (0.8.46): ia mencoba lagi sendiri
+tiap sepuluh menit, barisnya bilang kapan, dan ia tersambung lagi begitu jaringan atau platformnya
+kembali. Ia memicu alert saat itu mulai dan sekali lagi saat tersambung, kalau kamu sudah menentukan
+ke mana alert dikirim. Kalau belum, ia cuma satu baris di log, dan kamu baru tahu ketika sadar
+agent-nya sudah lama diam. `nouride gateway restart <id>` mencoba saat itu juga. Koneksi yang
+tokennya ditolak ditandai mati dan tetap begitu sampai ia punya token yang benar.
 
 Pesan yang dikirim saat bot offline gak dibuang: Telegram menyimpannya, dan daemon menjawab yang masih
 baru begitu tersambung lagi. [Saat daemon restart →](/id/docs/gateways/overview/#saat-daemon-restart)

@@ -262,8 +262,8 @@ gateway = ""                        # e.g. "telegram:nouva"
 chat_id = ""
 ```
 
-Where the daemon reports on *itself*, a gateway that gave up reconnecting, a session that needs
-relinking. Boot, `nouride doctor` and `nouride config check` warn while it is empty.
+Where the daemon reports on *itself*, a gateway that cannot be reached or whose token is refused, a
+session that needs relinking. Boot, `nouride doctor` and `nouride config check` warn while it is empty.
 
 ## `[dashboard]`
 

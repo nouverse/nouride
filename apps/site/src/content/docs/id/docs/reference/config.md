@@ -270,8 +270,8 @@ gateway = ""                        # mis. "telegram:nouva"
 chat_id = ""
 ```
 
-Tempat daemon melaporkan tentang *dirinya sendiri*, gateway yang menyerah reconnect, sesi yang perlu
-ditautkan ulang. Boot, `nouride doctor` dan `nouride config check` memperingatkan selama ini kosong.
+Tempat daemon melaporkan tentang *dirinya sendiri*, gateway yang tidak bisa dijangkau atau yang
+tokennya ditolak, sesi yang perlu ditautkan ulang. Boot, `nouride doctor` dan `nouride config check` memperingatkan selama ini kosong.
 
 ## `[dashboard]`
 

@@ -91,8 +91,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "one Telegram connection: the bot it starts and what it waits on, its poll and what a failed one becomes, sends in parts at Telegram's pace, files, edits, buttons, the menu; words in files beside",
   },
   "packages/gateways/src/commons/resilience.ts": {
-    lines: 425,
-    why: "what every gateway inherits: the connect loop with its teardown, backoff, a retry budget only a held open or a wait on a person hands back, health checks, the send buffer; waits in connect-wait.ts",
+    lines: 440,
+    why: "what every gateway inherits: the connect loop with its teardown, backoff, a budget only a held open hands back, the slow tries once it is spent (+15), health checks, the send buffer; waits beside it",
   },
   "packages/gateways/src/channels/discord/gateway.ts": {
     lines: 438,
