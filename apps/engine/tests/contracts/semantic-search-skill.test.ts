@@ -18,8 +18,8 @@ const guide = readFileSync(join(SKILL_DIR, "references/semantic-search.md"), "ut
 describe("setting search by meaning up from a chat", () => {
   test("the nouride skill is chosen for it, and points to its guide", () => {
     const description = skill.match(/^description: (.*)$/m)![1]!;
-    expect(description).toContain("set up memory's search by meaning with an embedding model");
-    expect(description).toContain("to set up semantic search or an embedding model");
+    expect(description).toContain("end to end, set up semantic search, and");
+    expect(description).toContain("to set up semantic search or embeddings");
     expect(skill).toContain("`references/semantic-search.md`");
   });
 

@@ -36,8 +36,9 @@ import { pipelineBench } from "../pipeline-bench.ts";
 /** The harness of an agent with every built-in tool, one-to-one. 35,369 measured when this was written. */
 const HARNESS = 35_700;
 /**
- * The eighteen built-in skills' descriptions together, which every agent's list carries. 7,979 measured: 7,500 for
- * seventeen, and 479 for `carousel`, which is what a carousel costs every request of every agent.
+ * The eighteen built-in skills' descriptions together, which every agent's list carries. 7,996 measured: 65 of them
+ * are what `nouride` says of setting up semantic search, and 479 are `carousel`'s, which is what a carousel costs
+ * every request of every agent.
  */
 const SKILL_DESCRIPTIONS = 8_000;
 

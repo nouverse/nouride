@@ -1,6 +1,6 @@
 ---
 name: nouride
-description: "Operate the Nouride daemon you are running inside: upgrade it, restart it without losing the conversation, add a connection, a provider or a new agent (internal, or a coding CLI like Claude Code) end to end, set up memory's search by meaning with an embedding model, and work out why one is down. Use when asked to update, restart, reconfigure or diagnose this daemon, to add or create an agent, to set up semantic search or an embedding model, or when you need a command and are not sure the one you have in mind exists."
+description: "Operate the Nouride daemon you are running inside: upgrade it, restart it without losing the conversation, add a connection, a provider or a new agent (internal, or a coding CLI like Claude Code) end to end, set up semantic search, and work out why one is down. Use when asked to update, restart, reconfigure or diagnose this daemon, to add or create an agent, to set up semantic search or embeddings, or when you need a command and are not sure the one you have in mind exists."
 needs_tools: nouride
 author: Nouride
 ---
