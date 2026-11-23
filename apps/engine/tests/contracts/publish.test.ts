@@ -348,10 +348,23 @@ describe("a release whose pull request is merged already, published from main", 
     expect(ci).toMatch(/^ {2}verify:\n(?: {4}.*\n)*? {4}if: \$\{\{ github\.event_name == 'workflow_dispatch'/m);
   });
 
-  test("the merged pull request is read as a number and a commit, and anything else is none", () => {
-    expect(readMerged(`41 ${MERGE}\n`, () => true)).toEqual({ pr: "41", commit: MERGE, held: true });
-    expect(readMerged(`41 ${MERGE}`, () => false)).toEqual({ pr: "41", commit: MERGE, held: false });
-    expect(readMerged("", () => true)).toBeNull();
-    expect(readMerged("41 null", () => true)).toBeNull();
+  test("the merged pull request is read from what gh prints, and anything else is none", () => {
+    // gh's own answer to `pr list --state merged --json number,mergeCommit`, copied from a real one.
+    const printed = `[{"mergeCommit":{"oid":"${MERGE}"},"number":41}]\n`;
+    expect(readMerged(printed, () => true)).toEqual({ pr: "41", commit: MERGE, held: true });
+    expect(readMerged(printed, () => false)).toEqual({ pr: "41", commit: MERGE, held: false });
+    // The newest comes first: a release merged twice (a fix after its first merge) is tagged from the later one.
+    expect(readMerged(`[{"mergeCommit":{"oid":"${"f".repeat(40)}"},"number":42},{"mergeCommit":{"oid":"${MERGE}"},"number":41}]`, () => true)?.pr).toBe("42");
+    for (const none of ["[]", "", "not json", `[{"number":41,"mergeCommit":null}]`, `[{"number":41,"mergeCommit":{"oid":"abc"}}]`, `{"number":41}`, `41 ${MERGE}`, `[{"mergeCommit":{"oid":"${MERGE}"}}]`, `[{"number":"41","mergeCommit":{"oid":"${MERGE}"}}]`]) expect(readMerged(none, () => true)).toBeNull();
+  });
+
+  test("gh is asked for the merged pull request in a form no shell or string escape can change", () => {
+    // A dry run on main, the release's pull request merged, said none was: the question was a jq program written
+    // "\(.number)" in a JavaScript string, which drops the backslash, and gh printed the program's text. The reader's
+    // test fed it the right text by hand. gh is asked for JSON alone now, and the reader reads that.
+    const source = readFileSync(join(import.meta.dir, "../../../..", "scripts/release/publish.ts"), "utf8");
+    const asked = source.split("\n").find((line) => line.includes('"--state", "merged"')) ?? "";
+    expect(asked).toContain('"--json", "number,mergeCommit"]');
+    expect(asked).not.toContain("--jq");
   });
 });

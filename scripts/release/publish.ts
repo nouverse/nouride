@@ -348,14 +348,26 @@ function gather(tag: string, mode: Mode): PublishFacts {
 
 /** The release's pull request, merged: its number, its merge commit, and whether the checkout holds that commit. */
 function mergedPull(tag: string, holds: (commit: string) => boolean): PublishFacts["merged"] {
-  const found = run("gh", ["pr", "list", "--repo", REPO, "--base", "main", "--head", `releases/${tag}`, "--state", "merged", "--json", "number,mergeCommit", "--jq", '.[0] | select(.) | "\(.number) \(.mergeCommit.oid)"']);
+  const found = run("gh", ["pr", "list", "--repo", REPO, "--base", "main", "--head", `releases/${tag}`, "--state", "merged", "--json", "number,mergeCommit"]);
   return found.ok ? readMerged(found.out, holds) : null;
 }
 
-/** `<number> <merge commit>` as `mergedPull` asks for it, read: null for anything else. Pure but for `holds`. */
+/**
+ * What `gh pr list --json number,mergeCommit` prints, read: the first pull request listed, the newest, with its merge
+ * commit; null for anything else. gh's JSON is read here, with no jq program: one written with `\(.number)` in a
+ * string lost its backslash, gh printed the program's text, and a release merged was said not to be. Pure but for
+ * `holds`.
+ */
 export function readMerged(printed: string, holds: (commit: string) => boolean): PublishFacts["merged"] {
-  const [pr = "", commit = ""] = printed.trim().split(/\s+/);
-  return /^\d+$/.test(pr) && /^[0-9a-f]{40}$/.test(commit) ? { pr, commit, held: holds(commit) } : null;
+  let rows: unknown;
+  try {
+    rows = JSON.parse(printed);
+  } catch {
+    return null;
+  }
+  const first = (Array.isArray(rows) ? rows[0] : undefined) as { number?: unknown; mergeCommit?: { oid?: unknown } | null } | undefined;
+  const commit = first?.mergeCommit?.oid;
+  return typeof first?.number === "number" && typeof commit === "string" && /^[0-9a-f]{40}$/.test(commit) ? { pr: String(first.number), commit, held: holds(commit) } : null;
 }
 
 /**
