@@ -108,9 +108,21 @@ export function parted(step: Together, parts: readonly Part[] = step.steps): Tog
 /** A step under another id, the steps it starts at the same time named after it. */
 export const withId = (step: Step, id: string): Step => (step.kind === "parallel" ? parted({ ...step, id }) : { ...step, id });
 
+/**
+ * What "Add a step" offers: each kind, and a mission that is drafted, which is the mission kind with `draft`. Its own
+ * entry, since that list is where a person looks for what a step can do: with the draft only a field inside "Start a
+ * mission", the list said an automation could do nothing but start one.
+ */
+export type StepPick = StepKind | "missionDraft";
+export const PICKS: readonly StepPick[] = ["agentTurn", "command", "systemEvent", "mission", "missionDraft", "approval", "parallel"];
+/** Which of them a step is. */
+export const pickOf = (step: Pick<Step, "kind"> & { draft?: boolean }): StepPick => (step.kind === "mission" && step.draft ? "missionDraft" : step.kind);
+
 /** A new step of a kind, with nothing written in it yet. */
-export function blankStep(kind: StepKind, steps: readonly Step[]): Step {
+export function blankStep(pick: StepPick, steps: readonly Step[]): Step {
   const id = newStepId(steps);
+  if (pick === "missionDraft") return { id, kind: "mission", goal: "", draft: true };
+  const kind: StepKind = pick;
   switch (kind) {
     case "parallel":
       return parted({ id, kind, steps: [blankPart("agentTurn"), blankPart("agentTurn")] });

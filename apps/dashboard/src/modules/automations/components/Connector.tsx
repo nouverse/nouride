@@ -11,8 +11,8 @@
 
 import { Plus } from "lucide-react";
 import { cn } from "@/commons/lib/utils";
-import { KIND } from "../lib/words";
-import { KINDS, type StepKind } from "../lib/steps";
+import { PICK } from "../lib/words";
+import { PICKS, type StepPick } from "../lib/steps";
 
 export function Connector({
   onAdd,
@@ -46,13 +46,13 @@ export function Connector({
 }
 
 /** The kinds a step can be, each with what it does: what the "+" offers. */
-export function StepPicker({ onPick }: { onPick: (kind: StepKind) => void }) {
+export function StepPicker({ onPick }: { onPick: (kind: StepPick) => void }) {
   return (
     <div className="p-2">
       <p className="px-3 pt-2 pb-1.5 font-display text-base font-medium text-base-content max-md:hidden">Add a step</p>
       <ul className="list-none space-y-0.5">
-        {KINDS.map((kind) => {
-          const { icon: Icon, label, hint, tile } = KIND[kind];
+        {PICKS.map((kind) => {
+          const { icon: Icon, label, hint, tile } = PICK[kind];
           return (
             <li key={kind}>
               <button type="button" className="flex w-full items-start gap-3 rounded-[14px] p-2.5 text-left transition-colors hover:bg-base-content/[0.05] focus-visible:bg-base-content/[0.05] focus-visible:outline-none" onClick={() => onPick(kind)}>

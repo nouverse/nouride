@@ -20,7 +20,7 @@ import { useUnsaved } from "@/commons/lib/unsaved";
 import { changed, settled, type Draft } from "../lib/draft";
 import { baseOf, restored, type KeptDraft } from "../lib/kept-draft";
 import { addOnLine, addToLane, choosePath, copyOnLine, goOnDown, moveOnLine, pathsOf, removeDrawn, setLaneEnd, type Choice, type LaneEnds, type PathExit } from "../lib/paths";
-import { asKind, replaceStep, resetsBetween, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind } from "../lib/steps";
+import { asKind, replaceStep, resetsBetween, setExit, type Changed, type ExitName, type ExitReset, type Step, type StepKind, type StepPick } from "../lib/steps";
 import { keep, keptOf, type Keeping } from "./use-kept-drafts";
 
 /** The step a change made, by its id: what is opened to be written. */
@@ -68,7 +68,7 @@ export interface Editor {
   setKind: (index: number, kind: StepKind) => void;
   setExit: (index: number, exit: ExitName, go: StepExit) => void;
   /** A new step on the main line, before the step at that place in the list or at the line's end, opened to be written. */
-  add: (before: number | null, kind: StepKind) => void;
+  add: (before: number | null, kind: StepPick) => void;
   duplicate: (index: number) => void;
   /** A step of the main line to another place on it, both counted as the line is drawn. What hangs on it goes along. */
   move: (from: number, to: number) => void;
@@ -79,7 +79,7 @@ export interface Editor {
   /** Where a lane ends: back into the main line at a step, or a stop. */
   laneEnd: (index: number, exit: PathExit, ends: LaneEnds) => void;
   /** A step added at a lane's end, opened to be written. */
-  addToLane: (index: number, exit: PathExit, kind: StepKind) => void;
+  addToLane: (index: number, exit: PathExit, kind: StepPick) => void;
   /** Puts a draft back whole: what an undo does. */
   restore: (draft: Draft) => void;
   /** Forgets a path's "put back to its default" note. */

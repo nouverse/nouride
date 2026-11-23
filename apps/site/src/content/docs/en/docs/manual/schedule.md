@@ -191,8 +191,9 @@ A mission can be any step. The run waits for it to end, however long that takes 
 hands its result to the next step. A mission that failed or was stopped is a failed step, so the automation can
 go on to a step that tells you about it.
 
-**A mission left as a draft** (0.8.46). In the step, set **When the run gets here** to **Leave it in the Backlog as a
-draft**. The run then starts nothing: the mission is put in your Backlog, the automation's chat gets the draft with
+**A mission left as a draft** (0.8.46). Under the plus, pick **Draft a mission**, which stands beside **Start a
+mission**; or in a mission's step, set **When the run gets here** to **Leave it in the Backlog as a draft**. The run
+then starts nothing: the mission is put in your Backlog, the automation's chat gets the draft with
 **Start it** and **Drop it**, and the run goes on to the next step at once, handed one line that says a mission was
 drafted. The mission runs when you start it, from that message or from its page, however much later. Change its goal,
 its checks or its limits there first if you like, as with any [draft](/en/docs/manual/missions/#starting-one). Its box

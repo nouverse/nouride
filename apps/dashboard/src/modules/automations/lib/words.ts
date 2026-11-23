@@ -4,10 +4,10 @@
  * the server: what happens, never how it is stored.
  */
 
-import { Bot, Clock, Hand, MessageSquare, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
+import { Bot, Clock, Hand, MessageSquare, NotebookPen, Play, Split, Target, Terminal, Zap, type LucideIcon } from "lucide-react";
 import type { AutomationStart } from "@nouride/wire";
 import { pathsOf, type Choice, type PathExit, type Paths } from "./paths";
-import { canWatch, exitOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind } from "./steps";
+import { canWatch, exitOf, landsAt, mainText, shellLine, type ExitName, type Part, type Step, type StepKind, type StepPick } from "./steps";
 
 export interface KindLook {
   icon: LucideIcon;
@@ -24,9 +24,18 @@ export const KIND: Record<StepKind, KindLook> = {
   agentTurn: { icon: Bot, label: "Ask an agent", hint: "An agent works on it with its tools, and hands on what it found.", tile: "bg-primary/15 text-primary" },
   command: { icon: Terminal, label: "Run a script", hint: "A small program on this server, with no AI. What it prints goes to the next step.", tile: "bg-base-content/[0.07] text-base-content/80" },
   systemEvent: { icon: MessageSquare, label: "Send a message", hint: "Your words, sent as written to where it reports. No AI.", tile: "bg-info/15 text-info" },
-  mission: { icon: Target, label: "Start a mission", hint: "Long work, checked. The run waits until it ends, or leaves it as a draft for you to start.", tile: "bg-secondary/10 text-secondary" },
+  mission: { icon: Target, label: "Start a mission", hint: "Long work, checked. The run waits until the mission ends.", tile: "bg-secondary/10 text-secondary" },
   approval: { icon: Hand, label: "Wait for your OK", hint: "The run stops and asks you. It goes on when you say yes.", tile: "bg-accent/15 text-accent" },
   parallel: { icon: Split, label: "Several at the same time", hint: "Agents and commands that start together. What each says is joined and handed on.", tile: "bg-primary/15 text-primary" },
+};
+
+/**
+ * How each thing "Add a step" offers looks: the kinds, and a mission that is drafted, in the mission's colour with a
+ * mark of its own. A box and its fields' head are drawn with it, so a step that only drafts never reads "Start".
+ */
+export const PICK: Record<StepPick, KindLook> = {
+  ...KIND,
+  missionDraft: { icon: NotebookPen, label: "Draft a mission", hint: "Long work, left in the Backlog for you to start. The run goes on.", tile: KIND.mission.tile },
 };
 
 export const START: Record<AutomationStart, { icon: LucideIcon; label: string; tile: string }> = {

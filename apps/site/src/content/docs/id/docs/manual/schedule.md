@@ -205,8 +205,9 @@ Mission boleh jadi langkah di posisi mana pun. Automation menunggunya selesai, s
 Nouride restart di tengah jalan, lalu meneruskan hasilnya ke langkah berikutnya. Mission yang gagal atau
 dihentikan dihitung sebagai langkah gagal, jadi automation bisa lanjut ke langkah yang mengabari kamu.
 
-**Mission yang ditinggal sebagai draft** (0.8.46). Di langkahnya, atur **When the run gets here** ke **Leave it in the
-Backlog as a draft**. Jalan itu lalu gak memulai apa pun: mission-nya masuk ke Backlog kamu, chat automation itu
+**Mission yang ditinggal sebagai draft** (0.8.46). Di bawah tombol plus, pilih **Draft a mission**, yang ada di samping
+**Start a mission**; atau di langkah mission, atur **When the run gets here** ke **Leave it in the Backlog as a draft**.
+Jalan itu lalu gak memulai apa pun: mission-nya masuk ke Backlog kamu, chat automation itu
 mendapat draft-nya dengan **Start it** dan **Drop it**, dan jalan langsung lanjut ke langkah berikutnya, dibekali satu
 baris yang bilang sebuah mission sudah dibuat draft-nya. Mission-nya jalan waktu kamu memulainya, dari pesan itu atau
 dari halamannya, kapan pun. Ubah dulu goal, cek, atau batasnya di sana kalau mau, seperti

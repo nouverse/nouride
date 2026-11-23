@@ -25,7 +25,7 @@
  * followed: exits only point forward, so this is the one shape in which the main line never falls into a side step.
  */
 
-import { DEFAULT_EXIT, STEPS_MAX, blankStep, exitsOf, forward, landsAt, newStepId, withId, type ExitName, type Step, type StepKind } from "./steps";
+import { DEFAULT_EXIT, STEPS_MAX, blankStep, exitsOf, forward, landsAt, newStepId, withId, type ExitName, type Step, type StepKind, type StepPick } from "./steps";
 
 /** A path that can leave the main line: on a failure (a no, for a wait), or with nothing to say. */
 export type PathExit = "whenFailed" | "whenEmpty";
@@ -338,7 +338,7 @@ export function setLaneEnd(steps: readonly Step[], owner: number, exit: PathExit
 }
 
 /** A step added at a lane's end: it takes the lane's ending, and the step before it goes on to it. */
-export function addToLane(given: readonly Step[], owner: number, exit: PathExit, kind: StepKind): Chosen {
+export function addToLane(given: readonly Step[], owner: number, exit: PathExit, kind: StepPick): Chosen {
   const steps = lastUnsaid(given);
   const rule = ruleOf(pathsOf(steps, false), owner, exit);
   if (rule?.kind !== "lane" || steps.length >= STEPS_MAX) return { steps: [...steps], removed: 0 };
@@ -378,7 +378,7 @@ export function insertOnLine(given: readonly Step[], before: number | null, step
 }
 
 /** A new step of a kind on the main line, before the step at `before` or at the line's end. Nothing past the most a job runs. */
-export function addOnLine(steps: readonly Step[], before: number | null, kind: StepKind): Step[] {
+export function addOnLine(steps: readonly Step[], before: number | null, kind: StepPick): Step[] {
   return steps.length >= STEPS_MAX ? [...steps] : insertOnLine(steps, before, blankStep(kind, steps));
 }
 
