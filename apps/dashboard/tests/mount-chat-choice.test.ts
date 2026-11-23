@@ -73,6 +73,9 @@ describe("a conversation not begun", () => {
       await renderPage(NEW_CHAT, async (host) => {
         await eventually(() => says(host) !== null, 4_000, "the picker's button");
         expect(says(host)).toBe("gemini-3.8-flash · low");
+        // In words on the button too, in this bar: the floating chat's has the mark alone.
+        expect(button(host)!.textContent?.trim()).toBe("gemini-3.8-flash · low");
+        expect(button(host)!.hasAttribute("title")).toBe(false);
         expect(seen.asked).toEqual(["GET /chat/choices?agent=nouva"]);
         button(host)!.click();
         await eventually(() => seen.asked.includes("GET /chat/models?agent=nouva"), 3_000, "the list asked for");

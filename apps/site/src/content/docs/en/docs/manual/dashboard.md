@@ -166,6 +166,9 @@ still in the box when you open it again.
   the one its row on Chats opens, and starts one when there is none. What you send in the panel is on Chats and the
   other way round, with the agent's steps, its files, the approvals it waits on and **Stop**, as on Chats. The arrows
   at the top of the panel open the same conversation on the Chats page. Rooms and groups stay on Chats.
+- **Its model and effort.** The sparkle at the top of the panel opens the same panel a conversation on Chats has
+  (0.8.46): pick a model and an effort for this conversation only, from your next message. The button is tinted
+  while the conversation is on a pick of its own.
 - **A new conversation.** The speech bubble with a plus, at the top of the panel, starts a new conversation with the
   agent the panel is on. Your first message begins it, and the panel stays on it. If you close the panel without
   writing anything, it opens on your newest conversation again.

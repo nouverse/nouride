@@ -67,7 +67,8 @@ button with the model's name opens a panel: pick a model from the list or type i
 same choice the commands make, for that conversation only and from your next message, and each reads what the other
 set. **Back to the agent's own** undoes it. A model picked before a conversation's first message goes with that
 message. An agent a coding CLI answers picks among the models its CLI offers, once the CLI has listed them. Rooms and
-chats on a chat app keep the commands.
+chats on a chat app keep the commands. The chat that floats over other pages has the same button in its bar
+(0.8.46), as its mark alone: point at it to read what the conversation is on.
 
 A chat's level is that chat's alone, and a mission runs in a conversation of its own. `/effort max lock` makes the
 level the agent's own instead: written in its config as the Model tab does, for every chat and every mission, and kept

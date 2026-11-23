@@ -173,6 +173,9 @@ ada di kotaknya waktu kamu buka lagi.
   dengannya, yang dibuka barisnya di Chats, dan memulai yang baru kalau belum ada. Yang kamu kirim di panel ada di
   Chats, begitu juga sebaliknya, lengkap dengan langkah agent, file-nya, izin yang ia tunggu, dan **Stop**, seperti di
   Chats. Tombol panah di atas panel membuka percakapan yang sama di halaman Chats. Room dan grup tetap di Chats.
+- **Model dan effort-nya.** Ikon kilau di atas panel membuka panel yang sama dengan yang dimiliki percakapan di Chats
+  (0.8.46): pilih model dan effort hanya untuk percakapan ini, mulai pesan berikutnya. Tombolnya berwarna selama
+  percakapan itu memakai pilihannya sendiri.
 - **Percakapan baru.** Ikon balon chat dengan tanda plus, di atas panel, memulai percakapan baru dengan agent yang
   sedang dipilih di panel. Pesan pertamamu yang memulainya, dan panel tetap di percakapan itu. Kalau panel ditutup
   tanpa menulis apa-apa, ia terbuka lagi di percakapan terbarumu.

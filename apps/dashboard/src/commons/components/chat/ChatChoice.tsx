@@ -11,6 +11,10 @@
  *
  * The model field is the agent's Model tab's: it suggests, and takes any name typed. An agent a coding CLI answers
  * picks among the models its CLI offers; before the CLI has listed any, the panel says where its model is set.
+ *
+ * In two bars: a conversation's on the Chats page, and the floating chat's, which had none: its bar sent a person to
+ * Chats to pick. There the button is its mark alone (`iconOnly`), in a bar a phone's width at any window's, and what
+ * the conversation is on is in its name and its tint.
  */
 
 import { useRef, useState } from "react";
@@ -61,6 +65,7 @@ export function ChatChoice({
   first,
   onFirst,
   buttonClassName,
+  iconOnly = false,
 }: {
   agentId: string;
   name: string;
@@ -68,6 +73,8 @@ export function ChatChoice({
   first: FirstChoice;
   onFirst: (next: FirstChoice) => void;
   buttonClassName: string;
+  /** The mark alone, with no words beside it at any width: the floating chat's bar. */
+  iconOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const anchor = useRef<HTMLButtonElement>(null);
@@ -130,11 +137,12 @@ export function ChatChoice({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Model and effort for this conversation: ${label}`}
+        title={iconOnly ? `Model and effort: ${label}` : undefined}
         data-picked={now.picked ? "" : undefined}
         onClick={() => setOpen((was) => !was)}
       >
         <Sparkles size={17} aria-hidden="true" />
-        <span className="max-w-44 truncate font-mono text-xs font-medium max-lg:hidden">{label}</span>
+        {iconOnly ? null : <span className="max-w-44 truncate font-mono text-xs font-medium max-lg:hidden">{label}</span>}
       </button>
 
       <PopoverSheet open={open} onClose={() => { setOpen(false); setTyped(null); }} anchor={anchor} label="Model and effort for this conversation" title="Model and effort" width={360}>

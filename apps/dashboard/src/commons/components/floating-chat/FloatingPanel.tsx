@@ -1,6 +1,7 @@
 /**
- * What is inside the floating chat: its bar (the agent it is on, picked there; a new conversation with it; a way to the
- * same conversation on the Chats page; the line that minimizes it) over that agent's conversation: the person's newest one with it, the
+ * What is inside the floating chat: its bar (the agent it is on, picked there; the model and effort the conversation is
+ * answered with; a new conversation with it; a way to the same conversation on the Chats page; the line that minimizes
+ * it) over that agent's conversation: the person's newest one with it, the
  * one its row on Chats opens (`/chat-list`), or a new one where there is none or the person asked for one.
  *
  * The conversation is the Chats page's own (`commons/components/chat/Conversation.tsx`): the same transcript, live
@@ -16,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronDown, Maximize2, MessageSquarePlus, Minus } from "lucide-react";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { ChatChoice, type FirstChoice } from "@/commons/components/chat/ChatChoice";
 import { ChatLoading } from "@/commons/components/chat/ChatLoading";
 import { Conversation, STATUS_TONES, type ConversationNow } from "@/commons/components/chat/Conversation";
 import { RowTag } from "@/commons/components/chat/ConversationRow";
@@ -97,6 +99,12 @@ export function FloatingPanel({
    * already has with the agent, and their message would start a second one beside it.
    */
   const ready = list.data !== undefined;
+  /**
+   * The model and effort picked for a conversation not begun, which go with its first message (`ChatChoice`). Another
+   * agent, or a conversation that has begun, starts from nothing picked: a pick is one conversation's.
+   */
+  const [first, setFirst] = useState<FirstChoice>({});
+  useEffect(() => setFirst({}), [agentId, sessionId]);
 
   useEffect(() => {
     if (!ready || !focusBox || picking) return;
@@ -129,6 +137,8 @@ export function FloatingPanel({
           {now?.status.words ? <span className={cn("block truncate text-xs font-semibold", STATUS_TONES[now.status.tone])}>{now.status.words}</span> : null}
         </span>
       </button>
+      {/* Once the list is read: before it, the panel does not know which conversation a pick would be for. */}
+      {ready ? <ChatChoice agentId={agentId} name={name} sessionId={sessionId} first={first} onFirst={setFirst} buttonClassName={ICON_BUTTON} iconOnly /> : null}
       {/* Only where there is a conversation to leave: with none yet, the panel is on a new one already. */}
       <button
         type="button"
@@ -178,6 +188,7 @@ export function FloatingPanel({
             setFresh(null);
           }}
           draft={{ text: draft ?? undefined, onTaken: takeFloatingDraft }}
+          firstChoice={() => first}
           page={() => pageOpen({ basepath: router.basepath, pathname: router.state.location.pathname, search: router.state.location.searchStr })}
           header={bar}
         />

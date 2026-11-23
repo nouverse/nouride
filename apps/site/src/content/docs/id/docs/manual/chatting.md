@@ -67,7 +67,9 @@ memasangnya di sesi mereka sendiri: [Agent eksternal →](/id/docs/manual/extern
 bertuliskan nama model membuka panel: pilih model dari daftar atau ketik namanya, dan pilih effort. Ini pilihan yang
 sama dengan yang dibuat perintahnya, hanya untuk percakapan itu dan mulai pesan berikutnya, dan masing-masing membaca
 apa yang dipasang yang lain. **Back to the agent's own** membatalkannya. Model yang dipilih sebelum pesan pertama
-sebuah percakapan ikut terkirim bersama pesan itu. Agent yang dijawab coding CLI memilih di antara model yang
+sebuah percakapan ikut terkirim bersama pesan itu. Chat yang mengambang di atas halaman lain punya tombol yang sama
+di bar-nya (0.8.46), berupa ikonnya saja: arahkan pointer ke sana untuk membaca model dan effort percakapan itu.
+Agent yang dijawab coding CLI memilih di antara model yang
 ditawarkan CLI-nya, setelah CLI itu menyebutkannya. Room dan chat di aplikasi chat tetap memakai perintahnya.
 
 Level sebuah chat hanya berlaku di chat itu, dan misi berjalan di percakapannya sendiri. `/effort max lock` menjadikan

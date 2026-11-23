@@ -33,7 +33,7 @@ const MODEL_FIELDS = [
   "modules/models/components/ModelTiers.tsx",
   "modules/memories/model-field.tsx",
   "modules/setup/index.page.tsx",
-  "modules/chat/components/ChatChoice.tsx",
+  "commons/components/chat/ChatChoice.tsx",
 ];
 
 describe("a field that suggests", () => {
