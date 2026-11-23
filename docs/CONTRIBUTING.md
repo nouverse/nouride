@@ -249,7 +249,8 @@ squash: every commit a note cites stays in `main`), the branch is deleted, the w
 and the tag goes on it. `bun run scripts/release/publish.ts vX.Y.Z` runs that order from the release branch (`--dry-run`
 says what it would run): it opens the pull request or takes the one open, waits for its checks, merges, deletes the
 branch, asks for `ci.yml` on the merge and waits for it to end green, then moves the refs below and pushes the tag. A
-red check stops it with nothing merged: a new commit on the branch and the same command again. After the merge, two
+red check stops it with nothing merged: a new commit on the branch and the same command again. A release whose pull
+request was merged before, and left for its tag, is the same command run on `main`: it goes on from the suite. After the merge, two
 refs move, each only forward, and these are the lines to finish by hand when it stopped there:
 
 ```bash
