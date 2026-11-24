@@ -249,3 +249,15 @@ describe("tool schema budget", () => {
     expect(total).toBeLessThanOrEqual(SENT);
   });
 });
+
+describe("what no tool takes", () => {
+  test("who an agent's connections let in, or what strangers may cost it: opening an agent is not a tool's to ask", () => {
+    // An agent is opened to everyone by an admin, signed in, with its two limits (`setup/open-agent.ts`). A chat's
+    // sender is not a signed-in person, so a tool that grew one of these fields would be a way round that.
+    const fields = /"(access|open|max_daily_tokens|max_daily_messages_per_person|maxDailyTokens|maxDailyMessagesPerPerson)":/;
+    const taking = [...tools.values()].filter((tool) => fields.test(JSON.stringify(tool.definition.parameters))).map((tool) => tool.definition.name);
+    expect(taking).toEqual([]);
+    // The pattern finds a field where there is one.
+    expect(fields.test(JSON.stringify({ type: "object", properties: { access: { type: "string" } } }))).toBe(true);
+  });
+});
