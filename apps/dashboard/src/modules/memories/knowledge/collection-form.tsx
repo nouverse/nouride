@@ -64,14 +64,17 @@ type InGroups = "" | "on" | "off";
 const inGroupsOf = (value: boolean | undefined): InGroups => (value === undefined ? "" : value ? "on" : "off");
 const inGroupsSent = (choice: InGroups): boolean | null => (choice === "" ? null : choice === "on");
 
-/** Whether a collection kept to people goes with them into a group: its own answer, or the memory setting's. */
+/**
+ * Whether a collection kept to people goes with them into a group: its own answer, or the memory setting's. Each choice
+ * is short enough to be read whole in the box on a phone, where a longer one is cut off at its end.
+ */
 function InGroupsChoice({ value, onChange }: { value: InGroups; onChange: (next: InGroups) => void }) {
   return (
     <Field label="In a group" hint="Used there only on the messages one of its own people sends, never on anyone else's.">
       <select className="select select-sm w-full rounded-xl" aria-label="In a group" value={value} onChange={(event) => onChange(event.target.value as InGroups)}>
-        <option value="">As Knowledge & Memory's settings say</option>
+        <option value="">As the Settings tab says</option>
         <option value="on">Yes, on their own messages</option>
-        <option value="off">No, only in a chat with just them</option>
+        <option value="off">No, never in a group</option>
       </select>
     </Field>
   );

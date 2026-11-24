@@ -159,7 +159,7 @@ describe("the Knowledge tab", () => {
       await shows("Who may be answered from it");
       // Kept to its maker: the choice is there, following the memory setting until one is made.
       const select = () => body().querySelector('select[aria-label="In a group"]') as HTMLSelectElement | null;
-      expect([...select()!.options].map((option) => option.textContent)).toEqual(["As Knowledge & Memory's settings say", "Yes, on their own messages", "No, only in a chat with just them"]);
+      expect([...select()!.options].map((option) => option.textContent)).toEqual(["As the Settings tab says", "Yes, on their own messages", "No, never in a group"]);
       expect(select()!.value).toBe("");
       expect(text()).toContain("Used there only on the messages one of its own people sends, never on anyone else's.");
       // Open to everyone, a group reads it whoever is asking: nothing to choose.
