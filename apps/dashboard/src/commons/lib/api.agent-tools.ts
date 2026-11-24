@@ -13,6 +13,10 @@ export const agentToolsApi = {
   setAgentTools: (id: string, tools: string[]) => post<{ ok: true }>(`${control}/agents/${id}/tools`, { tools }),
   /** Admin only: whether this agent's connections take new senders, or follow the daemon. */
   setAgentAccess: (id: string, access: "follow" | "pair" | "allowlist") => post<{ ok: true }>(`${control}/agents/${id}/access`, { access }),
+  /** Admin only: open an agent to everyone, with the two limits on what strangers may cost it; `knowsItsNotes` where it has notes. */
+  openAgent: (id: string, body: { maxDailyTokens: number; maxDailyMessagesPerPerson: number; closedReply?: string; knowsItsNotes?: boolean }) => post<{ ok: true }>(`${control}/agents/${id}/open`, body),
+  /** Operator and up: close an agent that is open to everyone. Its limits are kept for the next time. */
+  closeAgent: (id: string) => post<{ ok: true }>(`${control}/agents/${id}/close`, {}),
   /** Admin: the agent that answers when nobody is named, and the front desk of rooms. */
   setOrchestrator: (id: string) => post<{ ok: true }>(`${control}/agents/${id}/orchestrator`, {}),
   /** Admin: what deleting this agent would take, counted for the question that asks. Refused for the orchestrator. */

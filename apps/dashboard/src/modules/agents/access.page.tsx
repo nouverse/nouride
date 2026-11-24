@@ -12,6 +12,7 @@ import { api } from "@/commons/lib/api";
 import { AccessSummary } from "./components/AccessSummary";
 import { AgentAccessMode } from "./components/AgentAccessMode";
 import { ApprovalLevel } from "./components/ApprovalLevel";
+import { OpenToEveryone } from "./components/OpenToEveryone";
 import { SecondLook } from "./components/SecondLook";
 
 export default function AgentAccessPage({ agentId }: { agentId: string }) {
@@ -21,6 +22,8 @@ export default function AgentAccessPage({ agentId }: { agentId: string }) {
   return (
     <div className="space-y-6">
       {agent ? <AgentAccessMode agent={agent} /> : null}
+      {/* The widest answer to "who gets in", and the one with a cost: its own card, with what it means said first. */}
+      {agent ? <OpenToEveryone agent={agent} /> : null}
       {/* Beside the switch: both are "who gets in", and what waits there should not be below the fold. */}
       <AccessSummary agentId={agentId} />
       {agent ? <ApprovalLevel agent={agent} /> : null}

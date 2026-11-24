@@ -118,6 +118,12 @@ describe("opening an agent", () => {
     expect({ file: configOf("nora"), access: agents.get("nora")?.config.access }).toEqual({ file: NORA, access: undefined });
     expect(await setup.openAgent({ agentId: "nora", limits: LIMITS, knowsItsNotes: true, actor: "admin" })).toEqual({ ok: true });
     expect(agents.get("nora")?.config.access).toBe("open");
+    // Open already, new limits are only saved: the question was answered when it was opened.
+    expect(await setup.openAgent({ agentId: "nora", limits: { maxDailyTokens: 9, maxDailyMessagesPerPerson: 9 }, actor: "admin" })).toEqual({ ok: true });
+    expect(agents.get("nora")?.config.open).toEqual({ maxDailyTokens: 9, maxDailyMessagesPerPerson: 9 });
+    // Closed and opened again, it is asked again.
+    await setup.closeAgent({ agentId: "nora", actor: "admin" });
+    expect(await setup.openAgent({ agentId: "nora", limits: LIMITS, actor: "admin" })).toEqual({ ok: false, notes: true, error: NOTES_FIRST });
   });
 
   test("notes are what an agent wrote down: headings, comments and blank lines are none", () => {

@@ -41,7 +41,8 @@ export async function openAgent(
   // Said before anything is written. The reload a save ends in refuses both too (the loader, and boot's `refuse`).
   if (deps.config.daemon.orchestrator === input.agentId) return { ok: false, error: openOrchestratorRefusal(input.agentId) };
   if (agent.config.external) return { ok: false, error: openOnCliRefusal(input.agentId) };
-  if (hasNotes(agent.persona.memory) && input.knowsItsNotes !== true) return { ok: false, notes: true, error: notesFirst(input.agentId) };
+  // Asked when it is opened: saving new limits for an agent that is open already opens nothing more.
+  if (agent.config.access !== "open" && hasNotes(agent.persona.memory) && input.knowsItsNotes !== true) return { ok: false, notes: true, error: notesFirst(input.agentId) };
   const { maxDailyTokens, maxDailyMessagesPerPerson } = input.limits;
   const closedReply = input.limits.closedReply?.trim();
   const saved = await editPackFile({

@@ -51,7 +51,7 @@ export function AgentAccessMode({ agent }: { agent: AgentSummary }) {
           </label>
         ))}
       </div>
-      {current === "open" ? <p className="text-base-content/65 mt-3 text-xs">This agent is open to everyone: anyone who finds it can write to it, with no code. Choosing one of these closes it.</p> : null}
+      {current === "open" ? <p className="text-base-content/65 mt-3 text-xs">This agent is open to everyone, so none of these applies: anyone who finds it can write to it. Choosing one closes it.</p> : null}
       {!admin ? <p className="text-base-content/65 mt-3 text-xs">Only an admin can change who may reach an agent.</p> : null}
       <ErrorNote error={save.error} />
     </Card>
