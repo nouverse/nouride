@@ -2,8 +2,8 @@
  * The words in a knowledge document, by its kind (0.8.20).
  *
  * Text, Markdown, tables and web pages are read here; PDF and Office files by `doc.py` (`office.ts`). A kind Nouride does
- * not read (a picture, a video) is listed and not searched, and says so in a sentence a person reads; the folder keeps
- * the file as it was.
+ * not read (a picture, a video) is kept as it was, and says why its words are not read in a sentence a person reads;
+ * the sync gives it what it is found by, its title and what is written about it (`sync.ts`).
  */
 
 import { basename, extname, readTextFile } from "@nouride/runtime";
@@ -18,7 +18,7 @@ const SECTIONS_MAX = 2_000;
 
 export type Extracted =
   | { kind: "read"; title: string; sections: Section[]; note?: string; tags?: string[] }
-  /** Kept and shown, not searched, and why, for a person; `needs`, the program that would read it, when one is missing. */
+  /** Kept and shown, its words not read, and why, for a person; `needs`, the program that would read it, when one is missing. */
   | { kind: "listed" | "unreadable"; title: string; reason: string; needs?: string };
 
 const name = (path: string) => basename(path, extname(path));
@@ -46,7 +46,7 @@ export function htmlText(html: string): string {
 function capped(title: string, sections: Section[]): Extracted {
   // A scanned PDF reads without an error and without a word: it was "indexed" with nothing in it, and the agent that kept
   // it was told it could be searched now. It is said instead, as any file that is kept and not searched is.
-  if (sections.length === 0) return { kind: "unreadable", title, reason: "It has no text to search, as a scanned page has none, so it is kept here but not searched." };
+  if (sections.length === 0) return { kind: "unreadable", title, reason: "It has no text to read, as a scanned page has none." };
   if (sections.length <= SECTIONS_MAX) return { kind: "read", title, sections };
   return { kind: "read", title, sections: sections.slice(0, SECTIONS_MAX), note: `Only its first ${SECTIONS_MAX.toLocaleString("en")} sections are searched.` };
 }
@@ -63,7 +63,7 @@ function tagged(read: Extracted, raw: readonly string[]): Extracted {
 /** What a file says, by its kind. `size` is its size in bytes, as stat saw it; `office`, where `doc.py` is. */
 export async function extract(path: string, size: number, office?: OfficeReader): Promise<Extracted> {
   const title = name(path);
-  if (size > FILE_MAX_BYTES) return { kind: "unreadable", title, reason: "It is larger than 50 MB, so it is kept here but not searched." };
+  if (size > FILE_MAX_BYTES) return { kind: "unreadable", title, reason: "It is larger than 50 MB, so its words are not read." };
   const kind = extname(path).toLowerCase();
   const byDocPy = officeKind(kind);
   if (byDocPy && office) {
@@ -91,6 +91,6 @@ export async function extract(path: string, size: number, office?: OfficeReader)
       return capped(named, sectionsOfText(text, named));
     }
     default:
-      return { kind: "listed", title, reason: "Nouride does not read this kind of file, so it is kept here but not searched." };
+      return { kind: "listed", title, reason: "Nouride does not read the words of this kind of file." };
   }
 }

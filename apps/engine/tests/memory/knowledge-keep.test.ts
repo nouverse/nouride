@@ -69,23 +69,25 @@ describe("keeping a document from a chat", () => {
     expect(outside).toMatchObject({ isError: true, content: 'No file "/etc/hosts" that you may read here: an attachment of this chat, or one in your workspace.' });
   });
 
-  test("a file with no text in it is kept, and the agent is told it is not searched and why, never that it can be", async () => {
+  test("a file with no text in it is kept, and the agent is told why its words are not read and what it is found by, never that they can be searched", async () => {
     const { h, workspace, keep } = await home();
     writeFileSync(join(workspace, "blank.txt"), "\n\n");
     expect(await keep({ collection: "Legal", title: "A blank page", file: "blank.txt" })).toMatchObject({
       isError: false,
-      content: 'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It is kept but not searched: It has no text to search, as a scanned page has none, so it is kept here but not searched.',
+      content:
+        'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It has no text to read, as a scanned page has none. It is kept as it is, and found by its title. ' +
+        'Say what it shows in `content`, kept with the same `file`, and it is found by that too. `send_file` with document="knowledge:legal/blank.txt#0" sends the file itself, here or in any chat that may read this collection.',
     });
     expect(existsSync(join(h.knowledgeRoot, "legal", "blank.txt"))).toBe(true);
   });
 
   // Nestor, asked to put a person's legal PDFs in the knowledge base, said it did not know whether a PDF's text could be
   // read, and planned to take the text out first (2026-11-07): the words said "a file to keep as it is", and no more.
-  test("agents are told a PDF or an Office file is read for its text, to give the file itself, and when one is not searched", async () => {
+  test("agents are told a PDF or an Office file is read for its text, to give the file itself, and what to give with a file whose words are not read", async () => {
     const { h } = await home();
     const tool = createMemoryWriteTool(h.memory);
     expect(tool.definition.description).toContain(
-      "A PDF, Word, Excel or PowerPoint file is read for its text, so give the file itself, not text taken out of it; a scan, with no text, is kept but not searched.",
+      "A PDF, Word, Excel or PowerPoint file is read for its text, so give the file itself, not text taken out of it. A picture, a video, a scan or any file whose words are not read is kept as it is: give `content` with it, saying what it shows, which search finds it by. A link is kept as `content` saying what it is and `source`.",
     );
     expect(JSON.stringify(tool.definition.parameters)).not.toContain("as it is");
   });
@@ -229,7 +231,7 @@ describe("keeping a document from a chat", () => {
   test("agents are told where things go, and to ask once when it is not clear", () => {
     const lines = renderMemory({ ctx: { harness: {}, tools: [{ name: "memory_search" }] }, toolNames: [], gated: [], free: [] } as never);
     expect(lines).toContain(
-      '- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: "person"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: "knowledge"`; how you work is your MEMORY.md. Never turn one into another: what one person asks you to do for them each time is theirs (`about: "person"`), and MEMORY.md is read on everyone\'s turn. When it is not clear that something is to be kept as a document, ask once.',
+      '- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: "person"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: "knowledge"`, never into a folder of your own, where no search finds it; how you work is your MEMORY.md. Never turn one into another: what one person asks you to do for them each time is theirs (`about: "person"`), and MEMORY.md is read on everyone\'s turn. When it is not clear that something is to be kept as a document, ask once.',
     );
   });
 });

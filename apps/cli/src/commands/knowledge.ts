@@ -150,7 +150,7 @@ export async function knowledge(client: Client, args: string[]): Promise<void> {
     const only = args[1] && !args[1].startsWith("-") ? await collectionId(client, args[1]) : undefined;
     const report = await client.post<{ indexed: number; unchanged: number; dropped: number; notSearched: number }>("/knowledge/sync", only ? { collection: only } : {});
     emit(report);
-    return say(`✓ ${report.indexed} read again, ${report.unchanged} unchanged, ${report.dropped} gone, ${report.notSearched} kept but not searched`);
+    return say(`✓ ${report.indexed} read again, ${report.unchanged} unchanged, ${report.dropped} gone, ${report.notSearched} kept as they are, found by title`);
   }
 
   if (action === "archive" || action === "unarchive") {

@@ -60,7 +60,7 @@ describe("a document, said", () => {
   test("ready, could not be read, or on its way in", () => {
     expect(statusOf({ status: "indexed" })).toEqual({ label: "Ready", tone: "ready" });
     expect(statusOf({ status: "unreadable" })).toEqual({ label: "Could not be read", tone: "not-read" });
-    expect(statusOf({ status: "listed" })).toEqual({ label: "Kept, not searched", tone: "not-read" });
+    expect(statusOf({ status: "listed" })).toEqual({ label: "Kept as it is", tone: "not-read" });
     expect(statusOf({ status: "reading" as never })).toEqual({ label: "Being read", tone: "reading" });
   });
 

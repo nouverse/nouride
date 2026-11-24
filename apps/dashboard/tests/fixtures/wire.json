@@ -2082,7 +2082,7 @@
     "semantic": {
       "enabled": true,
       "model": "ollama/bge-m3@4",
-      "items": 52,
+      "items": 53,
       "running": false,
       "reachable": true
     },
@@ -2740,7 +2740,7 @@
         "about": [],
         "archived": false,
         "documents": 3,
-        "sections": 3
+        "sections": 4
       },
       {
         "id": "old",
@@ -2766,8 +2766,8 @@
         "mtime": 1760000000000,
         "title": "porch",
         "status": "listed",
-        "reason": "Nouride does not read this kind of file, so it is kept here but not searched.",
-        "sections": 0,
+        "reason": "Nouride does not read the words of this kind of file. It is kept as it is, and found by its title.",
+        "sections": 1,
         "indexedAt": 1760000000000
       },
       {
@@ -2926,7 +2926,7 @@
         "trail": "Router › Wifi",
         "text": "The password is in [[Wifi]].",
         "collectionName": "House",
-        "score": 0.040215163934426236
+        "score": 0.03997477931904162
       },
       {
         "item": "knowledge:house/router.md#0",
@@ -2936,7 +2936,7 @@
         "trail": "Router",
         "text": "The router is in the hall. Its admin page is at 192.168.0.1.",
         "collectionName": "House",
-        "score": 0.03584439240176945
+        "score": 0.035596376528753575
       },
       {
         "item": "knowledge:old/router-2019.md#0",
@@ -2946,7 +2946,7 @@
         "trail": "The old router",
         "text": "Replaced in 2024.",
         "collectionName": "Old notes",
-        "score": 0.03537890806531737
+        "score": 0.03515276604813058
       },
       {
         "item": "knowledge:family/recipes.md#0",
@@ -2969,6 +2969,16 @@
         "score": 0.016129032258064516
       },
       {
+        "item": "knowledge:house/porch.jpg#0",
+        "collection": "house",
+        "path": "porch.jpg",
+        "n": 0,
+        "trail": "porch",
+        "text": "porch",
+        "collectionName": "House",
+        "score": 0.015873015873015872
+      },
+      {
         "item": "knowledge:house/wifi.md#0",
         "collection": "house",
         "path": "wifi.md",
@@ -2976,7 +2986,7 @@
         "trail": "Wifi",
         "text": "The guest network is called Rumah-Tamu.",
         "collectionName": "House",
-        "score": 0.015384615384615385
+        "score": 0.015151515151515152
       }
     ]
   }

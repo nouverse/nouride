@@ -114,7 +114,7 @@ describe("read by doc.py", () => {
     mkdirSync(join(dir, "a"), { recursive: true });
     const none = standIn(join(dir, "a"), "no-python");
     await syncKnowledge({ root, store, now: () => 1, office: { script: none.script, cacheDir: join(dir, "cache") } });
-    expect(store.document("finance", "policy.pdf")).toMatchObject({ status: "unreadable", needs: "python3", reason: "Reading this kind of file needs Python, which this box does not have yet." });
+    expect(store.document("finance", "policy.pdf")).toMatchObject({ status: "unreadable", needs: "python3", reason: "Reading this kind of file needs Python, which this box does not have yet. It is kept as it is, and found by its title." });
     mkdirSync(join(dir, "b"), { recursive: true });
     const now = standIn(join(dir, "b"), "ok");
     expect((await syncKnowledge({ root, store, now: () => 2, office: { script: now.script, cacheDir: join(dir, "cache") } })).indexed).toBe(1);
@@ -124,7 +124,7 @@ describe("read by doc.py", () => {
   // A scanned PDF reads without an error and without a word: the real doc.py notes "almost no text came out" and exits 0.
   // It was indexed with nothing in it, and the agent that kept it was told it could be searched now (2026-11-07, while
   // Nestor planned a person's legal documents into the knowledge base).
-  test("a scan, with no text in it: kept, not searched, says why, and not read again while it is the same", async () => {
+  test("a scan, with no text in it: kept, found by its title, says why its words are not read, and not read again while it is the same", async () => {
     const dir = tempDir("knowledge-office");
     const root = join(dir, "knowledge");
     mkdirSync(join(root, "legal"), { recursive: true });
@@ -136,8 +136,8 @@ describe("read by doc.py", () => {
     expect(await syncKnowledge({ root, store, now: () => 1, office })).toMatchObject({ indexed: 0, notSearched: 1 });
     expect(store.document("legal", "deed.pdf")).toMatchObject({
       status: "unreadable",
-      sections: 0,
-      reason: "It has no text to search, as a scanned page has none, so it is kept here but not searched.",
+      sections: 1,
+      reason: "It has no text to read, as a scanned page has none. It is kept as it is, and found by its title.",
     });
     expect(store.document("legal", "deed.pdf")!.needs).toBeUndefined();
     const calls = scan.calls();
@@ -146,7 +146,7 @@ describe("read by doc.py", () => {
     expect(scan.calls()).toBe(calls);
   });
 
-  test("a program missing: not searched, says which, and read at the next sync once it is there", async () => {
+  test("a program missing: its words not read, says which, and read at the next sync once it is there", async () => {
     const dir = tempDir("knowledge-office");
     const root = join(dir, "knowledge");
     mkdirSync(join(root, "finance"), { recursive: true });
@@ -159,7 +159,7 @@ describe("read by doc.py", () => {
     expect(store.document("finance", "policy.pdf")).toMatchObject({
       status: "unreadable",
       needs: "poppler-utils",
-      reason: "Reading this kind of file needs a program this box does not have yet, so it is kept here but not searched for now.",
+      reason: "Reading this kind of file needs a program this box does not have yet. It is kept as it is, and found by its title.",
     });
     expect(missing.calls()).toBeGreaterThan(0);
     // The program installed: the same file, unchanged, is read at the next sync.

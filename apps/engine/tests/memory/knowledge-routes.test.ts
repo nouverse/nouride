@@ -101,7 +101,7 @@ describe("documents", () => {
     const uploaded = await read(await hono.request("/knowledge/ops/documents", { method: "POST", body: form }));
     expect(uploaded.saved).toEqual([
       { path: "prices.csv", status: "indexed" },
-      { path: "photo.jpg", status: "listed", reason: "Nouride does not read this kind of file, so it is kept here but not searched." },
+      { path: "photo.jpg", status: "listed", reason: "Nouride does not read the words of this kind of file. It is kept as it is, and found by its title." },
     ]);
     const bytes = await read(await hono.request("/knowledge/ops/documents", json("POST", { name: "notes.txt", base64: btoa("Plain notes about the NAS.") })));
     expect(bytes.saved).toEqual([{ path: "notes.txt", status: "indexed" }]);

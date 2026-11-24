@@ -50,7 +50,7 @@ function memoryPath(ctx: ToolContext): string {
  * What the tools need from `modules/memory`. Absent in a harness with no memory, and then
  * `memory_read` and `memory_write` reach the agent's own `MEMORY.md` only.
  */
-export type MemoryToolsDeps = Pick<Memory, "noteAboutSpeaker" | "search" | "analyze" | "read" | "nearby" | "readKnowledge"> & { knowledge?: Pick<Memory["knowledge"], "keep"> };
+export type MemoryToolsDeps = Pick<Memory, "noteAboutSpeaker" | "search" | "analyze" | "read" | "nearby" | "readKnowledge"> & { knowledge?: Pick<Memory["knowledge"], "keep"> & Partial<Pick<Memory["knowledge"], "enabled" | "fileOf">> };
 
 /**
  * The agents a call is bounded to, when it names any. `memory_search` offers it to the model; the MCP surface sets
@@ -278,8 +278,9 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
             "The rest is filed for you each night. about=knowledge keeps a document someone hands you to keep for " +
             "reference (an SOP, a manual, a file, a page): `collection` names where (a new name makes one for the people " +
             "here), an English `title`, and the text as `content` or a `file`; `source` is a page's address. A PDF, Word, Excel or " +
-            "PowerPoint file is read for its text, so give the file itself, not text taken out of it; a scan, with no " +
-            "text, is kept but not searched. "
+            "PowerPoint file is read for its text, so give the file itself, not text taken out of it. A picture, a video, a " +
+            "scan or any file whose words are not read is kept as it is: give `content` with it, saying what it shows, " +
+            "which search finds it by. A link is kept as `content` saying what it is and `source`. "
           : "Update your MEMORY.md. ") +
         "For MEMORY.md, a subject that already has a heading gets `replace_section` on it, sent whole: " +
         "what you leave out of the section is deleted. full_replace is refused.",

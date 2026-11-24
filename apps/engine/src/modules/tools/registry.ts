@@ -57,6 +57,7 @@ import type { PeopleWriteDeps } from "@/modules/config/settings/people.ts";
 import {
   createMemoryReadTool,
   createMemoryWriteTool,
+  speakerOf,
   type EarlierTurns,
   type MemoryToolsDeps,
 } from "@/modules/tools/builtins/memory.ts";
@@ -248,7 +249,10 @@ export function createBuiltinTools(options: ToolRegistryOptions): Map<string, To
 
   if (options.memory) tools.push(createMemorySearchTool(options.memory), createMemoryAnalyzeTool(options.memory));
   if (options.notes) tools.push(createNotesTool(options.notes));
-  if (options.sendFile) tools.push(createSendFileTool(options.sendFile));
+  // A file kept in the knowledge base is sent by the id search gave it, where there is one: memory says which collections
+  // the chat it is asked from may be answered from, so the tool never reads the knowledge folder by a path.
+  const fileOf = options.memory?.knowledge?.enabled?.() ? options.memory.knowledge.fileOf : undefined;
+  if (options.sendFile) tools.push(createSendFileTool({ ...options.sendFile, ...(fileOf ? { documentFile: (ctx, item) => fileOf(speakerOf(ctx), item) } : {}) }));
   if (options.sendMessage) tools.push(createSendMessageTool(options.sendMessage));
   if (options.attachmentRead) tools.push(createAttachmentReadTool(options.attachmentRead));
   /**

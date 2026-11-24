@@ -81,10 +81,13 @@ export async function keepDocument(knowledge: Pick<Memory["knowledge"], "keep">,
   }
   const { saved } = result;
   const made = result.made ? ", a collection made now for the people in this chat" : "";
+  // Where a file's own words are not read, what it is found by is said, and what to give for it to be found by more.
+  const found = saved.noted ? "" : " Say what it shows in `content`, kept with the same `file`, and it is found by that too.";
   const read = saved.archived
     ? "The collection is archived, so it is kept but not searched until someone brings it back."
     : saved.status === "indexed"
       ? "It can be searched now."
-      : `It is kept but not searched: ${saved.reason ?? "it could not be read"}`;
-  return { content: `Kept in "${saved.collection}" as ${saved.path}${made}. ${read}`, isError: false, metadata: { about: "knowledge" } };
+      : `${saved.reason ?? "Its words could not be read: it is kept as it is, and found by its title."}${found}`;
+  const back = file ? ` \`send_file\` with document="${saved.item}" sends the file itself, here or in any chat that may read this collection.` : "";
+  return { content: `Kept in "${saved.collection}" as ${saved.path}${made}. ${read}${back}`, isError: false, metadata: { about: "knowledge" } };
 }

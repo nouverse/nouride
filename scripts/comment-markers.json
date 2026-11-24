@@ -529,7 +529,7 @@
   "apps/engine/src/modules/memory/knowledge/office.ts": { "version": 2 },
   "apps/engine/src/modules/memory/knowledge/related.ts": { "version": 1 },
   "apps/engine/src/modules/memory/knowledge/sections.ts": { "version": 2 },
-  "apps/engine/src/modules/memory/knowledge/surface.ts": { "version": 5 },
+  "apps/engine/src/modules/memory/knowledge/surface.ts": { "version": 3 },
   "apps/engine/src/modules/memory/knowledge/sync.ts": { "version": 2 },
   "apps/engine/src/modules/memory/manage.ts": { "version": 1 },
   "apps/engine/src/modules/memory/memory-analytics.store.ts": { "version": 1 },

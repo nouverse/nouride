@@ -103,7 +103,7 @@ describe("the Knowledge tab", () => {
       expect(body().querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("Knowledge");
       expect(card("House").textContent).toContain("Your agents may answer anyone from it.");
       expect(card("House").textContent).toContain("Every agent looks in it.");
-      expect(card("House").textContent).toContain("3 documents · 3 sections");
+      expect(card("House").textContent).toContain("3 documents · 4 sections");
       expect(card("Kak Sam's check-ups").textContent).toContain("Your agents may answer only you and Kak Sam from it, each in a chat with just them.");
       expect(card("Kak Sam's check-ups").textContent).toContain("Only Nouva looks in it.");
       expect(card("Kak Sam's check-ups").textContent).toContain("About Kak Sam.");
@@ -195,7 +195,7 @@ describe("documents", () => {
   });
 
   test("a document that could not be read says why; where a program is missing, the orchestrator is asked to install it", async () => {
-    const pdf = { ...HOUSE.documents[1], path: "lab.pdf", title: "lab", status: "unreadable", reason: "A program that reads PDF files is not installed, so it is kept here but not searched.", needs: "poppler-utils", sections: 0 };
+    const pdf = { ...HOUSE.documents[1], path: "lab.pdf", title: "lab", status: "unreadable", reason: "A program that reads PDF files is not installed. It is kept as it is, and found by its title.", needs: "poppler-utils", sections: 0 };
     answer({ "/status": ok({ ...STATUS, orchestrator: "nouva" }), "/knowledge/house/documents": ok({ documents: [...HOUSE.documents, pdf] }) });
     await renderPage("/memories", async (_host, app) => {
       await open("House");
@@ -210,8 +210,8 @@ describe("documents", () => {
       expect(details.textContent).toContain("It needs the poppler-utils package.");
       // Kept, not read: a photo says why, and asks nothing.
       const porch = row("porch");
-      expect(porch.textContent).toContain("Kept, not searched");
-      expect(porch.textContent).toContain("Nouride does not read this kind of file, so it is kept here but not searched.");
+      expect(porch.textContent).toContain("Kept as it is");
+      expect(porch.textContent).toContain("Nouride does not read the words of this kind of file. It is kept as it is, and found by its title.");
       const asksIn = (one: Element) => [...one.querySelectorAll("button")].filter((button) => button.textContent?.trim().startsWith("Ask "));
       expect(asksIn(porch)).toEqual([]);
       // The Ask button opens the chat over the page with Nouva, the request in the box for the person to send.
@@ -322,7 +322,7 @@ describe("searching the collections", () => {
       await eventually(() => button("Search")?.disabled === false, 2_000, "Search enabled");
       expect(sent.filter((request) => request.path === "/knowledge/search")).toEqual([]);
       click("Search");
-      await shows("6 sections found, best first: what your agents would find.");
+      await shows("7 sections found, best first: what your agents would find.");
       expect(sent.filter((request) => request.path === "/knowledge/search").map((request) => request.query)).toEqual(["?q=router"]);
       expect(text()).toContain("House · Router › Wifi");
       ([...body().querySelectorAll('section[aria-label="What search found"] button')][0] as HTMLButtonElement).click();

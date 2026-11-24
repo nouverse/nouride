@@ -160,7 +160,7 @@ describe("the index, in line with the folders", () => {
       ["photo.jpg", "listed"],
       ["runbook.md", "indexed"],
     ]);
-    expect(b.store.document("homelab", "photo.jpg")!.reason).toBe("Nouride does not read this kind of file, so it is kept here but not searched.");
+    expect(b.store.document("homelab", "photo.jpg")!.reason).toBe("Nouride does not read the words of this kind of file. It is kept as it is, and found by its title.");
     // By its words, and by a heading above it alone.
     expect(b.store.rank(ftsQuery("vzdump")!, ["homelab"], 10)).toEqual(["knowledge:homelab/runbook.md#0"]);
     expect(b.store.rank(ftsQuery("proxmox backups")!, ["homelab"], 10)).toContain("knowledge:homelab/runbook.md#0");

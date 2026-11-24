@@ -65,8 +65,8 @@ export function countsLine(documents: number, sections: number): string {
 export function statusOf(document: Pick<KnowledgeDocument, "status">): { label: string; tone: "ready" | "reading" | "not-read" } {
   if (document.status === "indexed") return { label: "Ready", tone: "ready" };
   if (document.status === "unreadable") return { label: "Could not be read", tone: "not-read" };
-  // A picture or a video: nothing went wrong, it is a kind kept without being searched.
-  if (document.status === "listed") return { label: "Kept, not searched", tone: "not-read" };
+  // A picture or a video: nothing went wrong, it is a kind kept as it is and found by its title and what is written about it.
+  if (document.status === "listed") return { label: "Kept as it is", tone: "not-read" };
   // A state this page does not know yet is the document on its way in.
   return { label: "Being read", tone: "reading" };
 }

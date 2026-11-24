@@ -203,7 +203,11 @@ const PER_TOOL = 5_040;
 // person asks for each time is a fact of theirs. A person's own facts are read wherever they speak, a group included,
 // so the one way to hold a fact back is said where the fact is written; unsaid, a standing request went into MEMORY.md,
 // which is read on everyone's turn.
-const TOTAL = 53_810;
+// 53,975 for a file whose words are not read (~165, measured at 53,971): `memory_write` says a picture, a video or a
+// scan is kept as it is with `content` saying what it shows, which search finds it by, and that a link is its words and
+// its `source`. It said such a file "is kept but not searched", so an agent handed a photo to keep put it in a folder of
+// its own, where no other chat found it.
+const TOTAL = 53_975;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -215,9 +219,10 @@ const TOTAL = 53_810;
  * `schedule`'s script and a watch's end (measured at 47,712 against 52,543). 47,760 with a watch's script that ends
  * well until its moment comes (measured at 47,752 against 52,583). 48,470 with a draft's own limits (measured at 48,465
  * against 53,296). 48,640 with a mission a job drafts (measured at 48,639 against 53,470). 48,670 with a step's `id`
- * (measured at 48,662 against 53,493). 48,980 with a fact kept to direct chats (measured at 48,974 against 53,805).
+ * (measured at 48,662 against 53,493). 48,980 with a fact kept to direct chats (measured at 48,974 against 53,805). 49,145 with a file whose words are not read
+ * (measured at 49,140 against 53,971).
  */
-const SENT = 48_980;
+const SENT = 49_145;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

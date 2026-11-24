@@ -383,6 +383,8 @@ export function createMemory(deps: MemoryDeps) {
     knowledge: {
       ...knowledge.surface,
       usable: (speaker: Speaker): Collection[] => knowledge.usable(who(speaker)),
+      /** A kept document's own file, for `send_file` to send where it is asked from: only what this chat may read. */
+      fileOf: (speaker: Speaker, item: string) => knowledge.fileOf(who(speaker), item),
       /** A document kept from this chat (`memory_write` about knowledge): saved, or waiting for an admin's yes. */
       keep: (speaker: Speaker, request: Omit<KeepRequest, "from"> & { name?: string; where: string }): Promise<KeepResult> => {
         // Who, as People knows them: in a one-to-one chat a platform's display name is not given to a turn (it is not

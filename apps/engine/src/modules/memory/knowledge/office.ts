@@ -111,11 +111,11 @@ function reasonFrom(code: number | null, stderr: string): { reason: string; need
   if (code === 127) return { ...NO_PYTHON };
   if (code === 3) {
     const needs = neededFrom(stderr);
-    return { reason: "Reading this kind of file needs a program this box does not have yet, so it is kept here but not searched for now.", ...(needs ? { needs } : {}) };
+    return { reason: "Reading this kind of file needs a program this box does not have yet.", ...(needs ? { needs } : {}) };
   }
-  if (/password/i.test(stderr)) return { reason: "It is protected by a password, so it is kept here but not searched." };
-  if (code === 2) return { reason: "It looks empty or damaged, so it is kept here but not searched." };
-  return { reason: "It could not be read, so it is kept here but not searched." };
+  if (/password/i.test(stderr)) return { reason: "It is protected by a password, so its words are not read." };
+  if (code === 2) return { reason: "It looks empty or damaged, so its words are not read." };
+  return { reason: "Its words could not be read." };
 }
 
 async function run(reader: OfficeReader, args: string[], env: Record<string, string>) {

@@ -7,7 +7,7 @@
  */
 
 import { dirExists, ensureDir, join, listDir, readTextFileSync, removePath, renamePath, statFile, writeFileAtomic, writeTextFileAtomic } from "@nouride/runtime";
-import { isCollectionId, readCollection, renderSettings, SETTINGS_FILE, type Collection, type CollectionSettings } from "./collections.ts";
+import { NOTE_MAX, isCollectionId, readCollection, renderSettings, SETTINGS_FILE, type Collection, type CollectionSettings } from "./collections.ts";
 
 /**
  * Why a change to the knowledge folder was refused (0.8.20). `refused` is said to an agent and the command line; the
@@ -88,6 +88,21 @@ export async function writeTitle(root: string, id: string, path: string, title: 
   if (title === null) delete titles[path];
   else titles[path] = title;
   return await writeSettings(root, id, { ...settings, titles });
+}
+
+/**
+ * What a file is, written beside its name in the collection's `knowledge.toml`, or taken off with null: a line search
+ * finds the file by when its own words are not read. Kept as `writeTitle` keeps a title, and for the same file.
+ */
+export async function writeNote(root: string, id: string, path: string, note: string | null): Promise<Collection | KnowledgeRefusal> {
+  if (!isCollectionId(id) || !dirExists(join(root, id))) return { refused: `There is no collection called "${id}".`, why: "missing" };
+  if (path.split("/").some((part) => !part || part === "." || part === ".." || part.startsWith("."))) return { refused: `"${path}" is not a document's path.`, why: "name" };
+  if (note !== null && !statFile(join(root, id, path))) return { refused: `There is no document "${path}" in "${id}".`, why: "missing" };
+  const { settings } = readCollection(root, id);
+  const notes = { ...settings.notes };
+  if (note === null) delete notes[path];
+  else notes[path] = note.trim().slice(0, NOTE_MAX);
+  return await writeSettings(root, id, { ...settings, notes });
 }
 
 /** A document's file, by its path in the collection; false when there was none. A path out of the collection is never one. */

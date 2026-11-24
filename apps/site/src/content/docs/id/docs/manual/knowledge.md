@@ -48,8 +48,13 @@ pribadi.
 Nouride membaca Markdown, teks, CSV, halaman web, PDF, Word, Excel, PowerPoint dan versi OpenDocument-nya, sampai 50 MB
 per file. File PDF dan Office dibaca dengan Python, yang tidak ada di image Docker; PDF juga butuh `pdftotext` (atau pypdf
 di Python), dan file lama `.doc`, `.xls` dan `.ppt` butuh LibreOffice. Kalau belum ada, dokumennya memberi tahu dan
-halaman menawarkan untuk memasangnya; setelah terpasang, dokumen terbaca dalam lima menit. Gambar dan video disimpan dan
-didaftar, tidak dicari, begitu juga PDF hasil scan, yang tidak berisi teks untuk dibaca.
+halaman menawarkan untuk memasangnya; setelah terpasang, dokumen terbaca dalam lima menit.
+
+**File jenis apa pun bisa disimpan.** Gambar, video, atau PDF hasil scan yang tidak berisi teks disimpan apa adanya.
+Nouride tidak membaca kata-katanya, jadi file itu ditemukan lewat judulnya dan lewat satu kalimat tentang isinya: agent
+yang menyimpan foto kiriman Anda menulis kalimat itu dari yang dilihatnya ("kode QR yang dipindai petugas SPBU, mobil BG
+1234 XY"). File yang ditaruh langsung di folder ditemukan lewat namanya, dan Anda bisa menulis kalimatnya di bawah
+`[notes]` di `knowledge.toml` milik koleksinya.
 
 Di dashboard, dokumen sebuah koleksi diurutkan dari yang terbaru, masing-masing dengan kapan ditambahkan.
 
@@ -72,6 +77,9 @@ Inggris, agent menemukannya dari bahasa apa pun. Tanpa judul, judul dokumen adal
 - Dokumen selalu bisa ditemukan lewat kata-katanya, dan lewat makna kalau pencarian makna sudah diatur: model yang sama
   dengan memory, diatur sekali di Knowledge & Memory.
 - Dokumen tetap dalam bahasa aslinya, dan judul berbahasa Inggrisnya membuatnya ketemu lewat bahasa Inggris.
+- **Agent mengirim balik file yang disimpan, apa adanya**, saat Anda memintanya: fotonya, PDF-nya, spreadsheet-nya,
+  sebagai lampiran di chat. Hanya dari koleksi yang boleh dipakai untuk menjawab di chat itu.
+- Link disimpan sebagai keterangannya dan alamatnya, dan agent menjawab dengan alamat itu.
 
 ## Memory atau knowledge base
 

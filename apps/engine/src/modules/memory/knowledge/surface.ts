@@ -10,8 +10,9 @@ import { buildKnowledgeLayer, type KnowledgeLayer } from "../graph-view.ts";
 import type { CatchUpReport, Semantic } from "../semantic.ts";
 import { fuse, rankByMeaning, rankingModel, rankingVectors } from "../semantic.ts";
 import { ftsQuery } from "../terms.ts";
-import { mayUse, readCollection, readCollections, readersOfConversation, widens, type Collection, type CollectionSettings } from "./collections.ts";
-import { addDocument, addPending, approvePending, collectionIdOf, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeSettings, writeTitle, type KnowledgeRefusal, type PendingChat, type PendingDocument } from "./files.ts";
+import { mayUse, readCollection, readCollections, type Collection, type CollectionSettings } from "./collections.ts";
+import { addDocument, approvePending, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeNote, writeSettings, writeTitle, type KnowledgeRefusal, type PendingDocument } from "./files.ts";
+import { keepFromChat, keptFile, type Keeping, type KeepRequest, type KeepResult } from "./kept.ts";
 import { parseItem, type IndexedSection, type KnowledgeDocument, type KnowledgePort } from "./knowledge.store.ts";
 import type { OfficeReader } from "./office.ts";
 import { documentIndex, linksIn, resolveLink } from "./links.ts";
@@ -50,42 +51,11 @@ export interface RelatedDocument {
 }
 
 /** Who is asking: the agent, and what its conversation may see. */
+export type { KeepRequest, KeepResult } from "./kept.ts";
+
 export interface Asker {
   agentId: string;
   audience: Audience;
-}
-
-/** A document an agent keeps from a chat (`memory_write` about knowledge). */
-export interface KeepRequest {
-  /** The collection, by its name or id: a new name makes one, for the people in this chat. */
-  collection: string;
-  /** What the document is: a page's heading, and a file's title kept beside its name (0.8.23). */
-  title?: string;
-  /** Markdown, written by the agent or read from a page. */
-  text?: string;
-  /** A file kept as it is: an attachment of the chat, or one in the agent's workspace. */
-  file?: { name: string; bytes: Uint8Array };
-  /** The web address a page came from. */
-  source?: string;
-  /** Who and where, in words, for the admin a wider collection asks: "Sam, in a one-to-one chat with nouva". */
-  from: string;
-  /** The day it is saved, for its frontmatter. */
-  day: string;
-  /** The chat it was kept from: told the admin's answer when it waits for one (0.8.23). */
-  chat?: PendingChat;
-}
-
-export type KeepResult =
-  | { saved: { collection: string; path: string; status: string; reason?: string; archived?: true }; made: boolean }
-  | { waiting: { collection: string; path: string } }
-  | { refused: string };
-
-/** A document written from words: its title as a heading unless it has one, its source and day in its frontmatter. */
-function asMarkdown(request: Pick<KeepRequest, "title" | "text" | "source" | "day">): string {
-  const front = request.source ? `---\nsource: ${request.source}\nsaved: ${request.day}\n---\n` : "";
-  const text = (request.text ?? "").trim();
-  const heading = /^#\s/.test(text) || !request.title ? "" : `# ${request.title}\n\n`;
-  return `${front}${heading}${text}\n`;
 }
 
 export function createKnowledge(input: {
@@ -153,54 +123,10 @@ export function createKnowledge(input: {
     return { collection: collection.settings.name, about: collection.settings.about, title: document.title, path: document.path, sections };
   }
 
-  /**
-   * Keep a document from a chat. Into a new collection, made for the people in this chat, or one whose readers are no
-   * wider than them: saved at once. Into one wider than that: it waits for an admin's yes. An agent never widens who may
-   * be answered from a collection.
-   */
-  async function keep(asker: Asker, request: KeepRequest): Promise<KeepResult> {
-    const knowledge = deps.knowledge;
-    if (!knowledge) return { refused: "This Nouride keeps no knowledge base." };
-    const name = request.collection.trim();
-    if (!name) return { refused: "Name the collection to keep it in." };
-    const id = collectionIdOf(name);
-    const known = readCollections(knowledge.root).find((collection) => collection.id === id || collection.settings.name.toLowerCase() === name.toLowerCase());
-    const file = request.file ?? (request.text?.trim() ? { name: `${(request.title ?? "Note").replace(/[\\/]/g, "-")}.md`, bytes: new TextEncoder().encode(asMarkdown(request)) } : null);
-    if (!file) return { refused: "Give the document's text, or a file." };
-    const forChat = readersOfConversation(asker.audience);
-    let made = false;
-    let target = known;
-    if (!target) {
-      const created = await createCollection(knowledge.root, id, { name, description: "", agents: null, readers: forChat, about: [], archived: false });
-      if ("refused" in created) return created;
-      target = created;
-      made = true;
-    } else if (widens(target.settings.readers, forChat, knowledge.admins())) {
-      const waiting = await addPending(knowledge.root, target.id, file.name, file.bytes, {
-        title: request.title ?? file.name,
-        savedAt: now(),
-        agent: asker.agentId,
-        from: request.from,
-        ...(request.source ? { source: request.source } : {}),
-        ...(request.chat ? { chat: request.chat } : {}),
-      });
-      return "refused" in waiting ? waiting : { waiting: { collection: target.settings.name, path: waiting.path } };
-    }
-    const added = await addDocument(knowledge.root, target.id, file.name, file.bytes);
-    if ("refused" in added) return added;
-    // A file keeps its name, and its title beside it: what search finds it by. A page has its title as its heading,
-    // unless its text came with a heading of its own: then the title goes beside it too.
-    if (request.title && (request.file || /^#\s/.test((request.text ?? "").trim()))) {
-      const titled = await writeTitle(knowledge.root, target.id, added.path, request.title);
-      if ("refused" in titled) return titled;
-    }
-    await syncKnowledgeNow(target.id);
-    const document = knowledge.store.document(target.id, added.path);
-    return {
-      saved: { collection: target.settings.name, path: added.path, status: document?.status ?? "indexed", ...(document?.reason ? { reason: document.reason } : {}), ...(target.settings.archived ? { archived: true } : {}) },
-      made,
-    };
-  }
+  /** A document kept from a chat, and a kept file handed back to one: `kept.ts`. */
+  const keeping = (knowledge: KnowledgeDeps): Keeping => ({ knowledge, usable: usableCollections, sync: syncKnowledgeNow, now });
+  const keep = async (asker: Asker, request: KeepRequest): Promise<KeepResult> => (deps.knowledge ? await keepFromChat(keeping(deps.knowledge), asker, request) : { refused: "This Nouride keeps no knowledge base." });
+  const fileOf = (asker: Asker, item: string) => (deps.knowledge ? keptFile(keeping(deps.knowledge), asker, item) : { refused: `no document "${item}" that this chat may read` });
 
   /**
    * The memory graph's knowledge layer as last built, and what it was built from: built again only when a document was
@@ -277,8 +203,12 @@ export function createKnowledge(input: {
           .filter((candidate) => !candidate.settings.archived || candidate.id === collection)
           .map((candidate) => [candidate.id, candidate.settings.name]),
       );
-      const means = documentVectors(knowledge.store.itemsOf([...names.keys()]), rankingVectors(semantic));
-      const related = nearest(documentKey(collection, path), means).flatMap(({ key, score }) => {
+      // Among the documents that were read, and the one asked about: a file found by its title alone has too little to
+      // be near by, and stood in the place of a document that was.
+      const own = documentKey(collection, path);
+      const wasRead = new Set(knowledge.store.documents().filter((document) => document.status === "indexed").map((document) => documentKey(document.collection, document.path)));
+      const means = new Map([...documentVectors(knowledge.store.itemsOf([...names.keys()]), rankingVectors(semantic))].filter(([key]) => key === own || wasRead.has(key)));
+      const related = nearest(own, means).flatMap(({ key, score }) => {
         const at = documentOf(key);
         const document = knowledge.store.document(at.collection, at.path);
         return document ? [{ collection: at.collection, collectionName: names.get(at.collection) ?? at.collection, path: at.path, title: document.title, score }] : [];
@@ -347,6 +277,7 @@ export function createKnowledge(input: {
     async remove(id: string, path: string): Promise<boolean> {
       if (!deps.knowledge || !removeDocument(deps.knowledge.root, id, path)) return false;
       if (readCollection(deps.knowledge.root, id).settings.titles?.[path] !== undefined) await writeTitle(deps.knowledge.root, id, path, null);
+      if (readCollection(deps.knowledge.root, id).settings.notes?.[path] !== undefined) await writeNote(deps.knowledge.root, id, path, null);
       await syncKnowledgeNow(id);
       return true;
     },
@@ -372,5 +303,5 @@ export function createKnowledge(input: {
     },
   };
 
-  return { usable: usableCollections, read, keep, surface };
+  return { usable: usableCollections, read, keep, fileOf, surface };
 }

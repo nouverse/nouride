@@ -13,7 +13,7 @@ import { readCollections, SETTINGS_FILE, type Collection } from "./collections.t
 import { extract, type Extracted } from "./extract.ts";
 import type { KnowledgeDocument, KnowledgePort } from "./knowledge.store.ts";
 import type { OfficeReader } from "./office.ts";
-import { TRAIL_MARK } from "./sections.ts";
+import { TRAIL_MARK, type Section } from "./sections.ts";
 
 const log = createLogger("memory.knowledge");
 
@@ -24,7 +24,7 @@ export interface KnowledgeSyncReport {
   indexed: number;
   unchanged: number;
   dropped: number;
-  /** Kept and listed, not searched: a kind not read, or one that could not be. */
+  /** Kept as they are, their own words not read: a kind not read, or one that could not be. Found by title and note. */
   notSearched: number;
 }
 
@@ -60,7 +60,21 @@ function titled(read: Extracted, title: string | undefined): Extracted {
   return { ...read, title, sections: read.sections.map((section) => ({ ...section, trail: `${title}${TRAIL_MARK}${section.trail}` })) };
 }
 
-function documentFrom(collection: string, file: { path: string; size: number; mtime: number }, read: Extracted, now: number): KnowledgeDocument {
+/**
+ * What a file whose own words are not read is found by: its title, and what is written about it beside its name
+ * (`[notes]`), as the one section the index holds of it. A picture of a car's fuel code was kept and never found: it was
+ * listed with nothing to search, so an agent asked for it later could not know it was there.
+ */
+export function foundBy(title: string, note: string | undefined): Section[] {
+  return [{ n: 0, trail: title, text: note ? `${title}\n\n${note}` : title }];
+}
+
+/** Why a file's own words are not read, and what it is found by instead: said where the document is shown. */
+function notRead(why: string, note: string | undefined): string {
+  return `${why} It is kept as it is, and found by its title${note ? " and what is written about it" : ""}.`;
+}
+
+function documentFrom(collection: string, file: { path: string; size: number; mtime: number }, read: Extracted, sections: readonly Section[], note: string | undefined, now: number): KnowledgeDocument {
   return {
     collection,
     path: file.path,
@@ -68,8 +82,8 @@ function documentFrom(collection: string, file: { path: string; size: number; mt
     mtime: file.mtime,
     title: read.title,
     status: read.kind === "read" ? "indexed" : read.kind,
-    ...(read.kind === "read" ? (read.note ? { reason: read.note } : {}) : { reason: read.reason, ...(read.needs ? { needs: read.needs } : {}) }),
-    sections: read.kind === "read" ? read.sections.length : 0,
+    ...(read.kind === "read" ? (read.note ? { reason: read.note } : {}) : { reason: notRead(read.reason, note), ...(read.needs ? { needs: read.needs } : {}) }),
+    sections: sections.length,
     indexedAt: now,
     ...(read.kind === "read" && read.tags?.length ? { tags: read.tags } : {}),
   };
@@ -87,9 +101,12 @@ export async function syncKnowledge(deps: { root: string; store: KnowledgePort; 
       const before = known.get(file.path);
       known.delete(file.path);
       const title = collection.settings.titles?.[file.path];
+      const note = collection.settings.notes?.[file.path];
       // One that waited on a program is tried again each time: the program may be installed now. One given a title since
-      // it was read is read again with it, as when `knowledge.toml` is written by hand.
-      if (before && before.size === file.size && before.mtime === file.mtime && !before.needs && (title === undefined || before.title === title)) {
+      // it was read is read again with it, as when `knowledge.toml` is written by hand; and one whose words are not read
+      // when what it is found by changed, or was never indexed (an install from before it was).
+      const same = before && before.size === file.size && before.mtime === file.mtime && !before.needs && (title === undefined || before.title === title);
+      if (same && (before.status === "indexed" || deps.store.sectionsOf(collection.id, file.path)[0]?.text === foundBy(before.title, note)[0]!.text)) {
         report.unchanged += 1;
         continue;
       }
@@ -99,10 +116,11 @@ export async function syncKnowledge(deps: { root: string; store: KnowledgePort; 
       } catch (err) {
         // Said where the document is shown, and here once: a file that cannot be read is no reason to stop the rest.
         log.warn("a knowledge document could not be read", { collection: collection.id, path: file.path, error: err instanceof Error ? err.message : String(err) });
-        read = { kind: "unreadable", title: file.path, reason: "It could not be read, so it is kept here but not searched." };
+        read = { kind: "unreadable", title: file.path, reason: "Its words could not be read." };
       }
       read = titled(read, title);
-      deps.store.replace(documentFrom(collection.id, file, read, deps.now()), read.kind === "read" ? read.sections : []);
+      const sections = read.kind === "read" ? read.sections : foundBy(read.title, note);
+      deps.store.replace(documentFrom(collection.id, file, read, sections, note, deps.now()), sections);
       if (read.kind === "read") report.indexed += 1;
       else report.notSearched += 1;
     }

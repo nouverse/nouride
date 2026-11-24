@@ -41,10 +41,17 @@ export interface CollectionSettings {
    * is its first heading or its file's name.
    */
   titles?: Readonly<Record<string, string>>;
+  /**
+   * What a file is, in a line or two, by its path: what search finds a file by when its own words are not read (a
+   * picture, a video, a scan). An agent writes one as it keeps a file it was shown; a person writes one in the file.
+   */
+  notes?: Readonly<Record<string, string>>;
 }
 
 /** A title's length at most: a line naming a document, not its summary. */
 export const TITLE_MAX = 200;
+/** A note's length at most: what a file is and what is in it, not its text. */
+export const NOTE_MAX = 600;
 
 export interface Collection {
   /** The folder's name: the collection's id in every item and route. */
@@ -102,8 +109,10 @@ export function parseSettings(id: string, source: string | null): { settings: Co
   if (raw.agents !== undefined && !agents) problems.push("agents is not a list of agent ids");
   const about = raw.about === undefined ? [] : strings(raw.about);
   if (raw.about !== undefined && !about) problems.push("about is not a list of people's keys");
-  const titles = raw.titles === undefined ? {} : titlesFrom(raw.titles);
+  const titles = raw.titles === undefined ? {} : linesFrom(raw.titles, TITLE_MAX);
   if (!titles) problems.push("titles is not a table of file names and their titles");
+  const notes = raw.notes === undefined ? {} : linesFrom(raw.notes, NOTE_MAX);
+  if (!notes) problems.push("notes is not a table of file names and what each file is");
   const settings: CollectionSettings = {
     name: typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : id,
     description: typeof raw.description === "string" ? raw.description.trim() : "",
@@ -112,18 +121,19 @@ export function parseSettings(id: string, source: string | null): { settings: Co
     about: about ?? [],
     archived: raw.archived === true,
     titles: titles ?? {},
+    notes: notes ?? {},
   };
   return problems.length ? { settings, problem: problems.join("; ") } : { settings };
 }
 
-/** `[titles]` as written: each a file's path and a line naming it. One that is not is dropped, and the rest kept. */
-function titlesFrom(value: unknown): Record<string, string> | null {
+/** `[titles]` or `[notes]` as written: each a file's path and a line about it. One that is not is dropped, and the rest kept. */
+function linesFrom(value: unknown, max: number): Record<string, string> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const titles: Record<string, string> = {};
-  for (const [path, title] of Object.entries(value)) {
-    if (typeof title === "string" && title.trim() && path.trim()) titles[path] = title.trim().slice(0, TITLE_MAX);
+  const lines: Record<string, string> = {};
+  for (const [path, line] of Object.entries(value)) {
+    if (typeof line === "string" && line.trim() && path.trim()) lines[path] = line.trim().slice(0, max);
   }
-  return titles;
+  return lines;
 }
 
 /** `knowledge.toml` as the dashboard writes it: every key that says something, the default ones left out. */
@@ -137,6 +147,8 @@ export function renderSettings(settings: CollectionSettings): string {
   // A table comes after the keys in TOML: the titles last, by path, so the file reads the same each time it is written.
   const titles = Object.entries(settings.titles ?? {}).sort(([a], [b]) => a.localeCompare(b));
   if (titles.length) lines.push("", "[titles]", ...titles.map(([path, title]) => `${JSON.stringify(path)} = ${JSON.stringify(title)}`));
+  const notes = Object.entries(settings.notes ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  if (notes.length) lines.push("", "[notes]", ...notes.map(([path, note]) => `${JSON.stringify(path)} = ${JSON.stringify(note)}`));
   return `${lines.join("\n")}\n`;
 }
 
