@@ -174,7 +174,7 @@ export interface AgentSummary {
   /** What the pack says. `per-person` means each person's own setting decides. */
   approvals: "per-person" | "careful" | "balanced" | "trusted";
   /** Whether its connections take new senders; `follow` defers to the daemon. Absent from an older daemon. */
-  access?: "follow" | "pair" | "allowlist";
+  access?: "follow" | "pair" | "allowlist" | "open";
   /** Whether, as the orchestrator, it installs the programs every agent runs (0.8.0). Absent before. */
   sharedTools?: boolean;
   /** Its second look (0.8.0): the pack's own `model_guard` or null, and the daemon's. Absent before. */

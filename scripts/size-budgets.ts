@@ -63,8 +63,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches: learning, a coding CLI's leftovers, its report and brief sent as files",
   },
   "apps/engine/src/modules/tools/registry.ts": {
-    lines: 455,
-    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, what its prompt is told; two lines give send_file memory's lookup of a kept file",
+    lines: 457,
+    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, what its prompt is told; two lines hand an open agent the daemon's list instead",
   },
   "apps/engine/src/modules/tools/builtins/exec.ts": {
     lines: 429,

@@ -268,6 +268,7 @@ export async function runDaemon(): Promise<void> {
     knowledge: { admins: () => adminKeys(config.people, (id) => knowledgeAt.roleOf?.(id)), room: knowledgeAt.room },
     ...(builtinSkillsDir ? { builtinSkillsDir } : {}),
     audit,
+    publicAgent: (agentId) => registry.get(agentId)?.config.access === "open",
   });
 
   // Starting the timers, the snapshots first (`boot/timers.ts`): the first copy of a run is of what the boot found.

@@ -73,6 +73,7 @@ import { createSendFileTool, type SendFileOptions } from "@/modules/tools/builti
 import { createSendMessageTool, type SendMessageOptions } from "@/modules/tools/builtins/send-message.ts";
 import { withSecretMask } from "@/modules/tools/secret-mask.ts";
 import { audited } from "@/modules/tools/audited.ts";
+import { isOpenAgent, openToolset } from "@/modules/tools/open-agent.ts";
 import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
 import type { MachineFacts } from "@/commons/machine.ts";
 import {
@@ -536,6 +537,8 @@ export function resolveToolset(
   security: SecuritySection,
   deps?: ToolsetDeps,
 ): AgentToolset {
+  // An agent open to everyone holds the daemon's list, whatever its pack names: nothing below is asked of it.
+  if (isOpenAgent(agent)) return openToolset(registry);
   const { enabled, approvalRequired, blocked } = agent.config.tools;
 
   const resolved = new Map<string, Tool>();

@@ -13,18 +13,20 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 
 type Access = NonNullable<AgentSummary["access"]>;
+/** What this card sets. Open to everyone is no answer to "may a stranger ask to be let in": it has a switch of its own. */
+type Asks = Exclude<Access, "open">;
 
 export function AgentAccessMode({ agent }: { agent: AgentSummary }) {
   const me = useMe();
   const global = useQuery({ queryKey: ["access"], queryFn: () => api.access(), retry: false });
   const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: (access: Access) => api.setAgentAccess(agent.id, access),
+    mutationFn: (access: Asks) => api.setAgentAccess(agent.id, access),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["status"] }),
   });
   const current: Access = agent.access ?? "follow";
   const globalOn = global.data ? global.data.mode !== "allowlist" : null;
-  const options: { value: Access; label: string; detail: string }[] = [
+  const options: { value: Asks; label: string; detail: string }[] = [
     { value: "follow", label: `Follow the default${globalOn === null ? "" : ` (${globalOn ? "on" : "off"})`}`, detail: "Whatever Agents → Settings says for every agent." },
     { value: "pair", label: "On", detail: "A stranger gets a pairing code and waits for your approval on the Access page." },
     { value: "allowlist", label: "Off", detail: "Only senders you already approved; anyone else is ignored." },
@@ -49,6 +51,7 @@ export function AgentAccessMode({ agent }: { agent: AgentSummary }) {
           </label>
         ))}
       </div>
+      {current === "open" ? <p className="text-base-content/65 mt-3 text-xs">This agent is open to everyone: anyone who finds it can write to it, with no code. Choosing one of these closes it.</p> : null}
       {!admin ? <p className="text-base-content/65 mt-3 text-xs">Only an admin can change who may reach an agent.</p> : null}
       <ErrorNote error={save.error} />
     </Card>

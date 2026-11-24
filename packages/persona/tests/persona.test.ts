@@ -512,14 +512,15 @@ describe("workspace roots", () => {
 });
 
 describe("[agent] access", () => {
-  test("absent stays absent; follow, pair and allowlist are read as written", () => {
+  test("absent stays absent; follow, pair, allowlist and open are read as written", () => {
     expect(parseAgentConfig("solo", {}, { defaults: DEFAULTS }).access).toBeUndefined();
-    for (const access of ["follow", "pair", "allowlist"] as const) expect(parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS }).access).toBe(access);
+    // `open` is one agent's: the daemon then hands it a fixed list of tools, whatever its pack lists.
+    for (const access of ["follow", "pair", "allowlist", "open"] as const) expect(parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS }).access).toBe(access);
   });
 
-  test("anything else — open included, which the daemon refuses for an agent with exec — fails at load", () => {
-    for (const access of ["open", "paired", 1]) {
-      expect(() => parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS })).toThrow(/\[agent\] access must be one of follow, pair, allowlist/);
+  test("anything else fails at load, with the four it may be", () => {
+    for (const access of ["public", "paired", 1]) {
+      expect(() => parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS })).toThrow(/\[agent\] access must be one of follow, pair, allowlist, open/);
     }
   });
 });
