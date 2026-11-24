@@ -99,6 +99,11 @@ says so and offers the button.
 That is `pair` mode, the default. `nouride access approve <code>`, or the dashboard's Access page. Switch to
 `allowlist` once the people you want are in: `nouride access mode allowlist`.
 
+**Can a bot answer anyone, with no code?**
+One agent can, since 0.8.48: open it to everyone on its Access page, with two daily limits. It then answers from the
+documents you opened to everyone, with none of its own tools, and knows nothing about you.
+[An agent open to everyone →](/en/docs/manual/access/#an-agent-open-to-everyone)
+
 **Why does it keep asking about `terraform destroy`?**
 Tearing infrastructure down is on the fixed list: under `careful` it asks every time and can never become a
 standing grant. Creating and changing (`terraform apply`) ask once, as any new command does, and the read halves,

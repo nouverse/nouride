@@ -343,7 +343,7 @@ nouride access allow --from <file|-> --gateway <connection> [--dry-run]   # a wh
 nouride access approved --find <id or name>      # one among many: the list holds the newest 500
 nouride access deny|block <gateway:sender>       # no for a day · no until unblocked
 nouride access revoke|reset|unblock <gateway:sender>
-nouride access mode [open|allowlist|pair]      # show or switch, no restart
+nouride access mode [allowlist|pair]           # show or switch, no restart
 
 nouride people
 nouride people set <key|platform:account> --name <name> [--note <note>]

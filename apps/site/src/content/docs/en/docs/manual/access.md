@@ -6,7 +6,7 @@ description: Pairing, allowlists, and giving the agents names for the people the
 Your bots are on public networks. Anyone who finds the username can send them a message, so who is
 allowed to reach an agent is a real setting rather than an afterthought.
 
-## The three postures
+## The two postures
 
 `[security.access] mode`, daemon-wide:
 
@@ -14,13 +14,14 @@ allowed to reach an agent is a real setting rather than an afterthought.
 |---|---|
 | **`pair`** (default) | An unknown sender is told a short code and dropped. You approve the code and they are remembered, on disk, permanently. |
 | **`allowlist`** | Only listed or already approved ids get through. Everyone else is dropped in **silence**: no reply, no error. |
-| **`open`** | Anyone. Only sane for a daemon with no chat gateway at all. |
 
 The usual path is to set up with `pair`, then switch to `allowlist` once the people you want are in.
 Senders already approved keep talking; everyone else is dropped at the gate.
 
-`open` is not offered as a choice in the dashboard. It is a posture the daemon warns about, so it is
-surfaced as a warning when in force rather than presented as an option.
+No install lets everyone in. One agent can: a front desk that answers anybody who finds it, with a few
+tools of Nouride's own and none of yours. That is [an agent open to everyone](#an-agent-open-to-everyone),
+below. Before 0.8.48 there was a third posture, `open`, for the whole install;
+[what an upgrade does with it](#an-install-that-was-open) is below too.
 
 ## Approving someone
 
@@ -116,15 +117,114 @@ page. It is the **default**: `[security.access] mode`, which every agent follows
 
 An agent can decide for itself on its own **Access** page: *Follow the default*, *On* (a stranger gets
 a pairing code) or *Off* (only senders already approved). It is `[agent] access = "follow" | "pair" |
-"allowlist"` in its `config.toml`, and it covers every connection that agent owns. `open` is not an
-option there: a per-agent way round the daemon's own guard, which refuses to start with `open` and an
-empty sender allowlist while any agent can run commands, would be a hole in it.
+"allowlist"` in its `config.toml`, and it covers every connection that agent owns. Letting everyone in
+is not one of the three: it has a card of its own on the same page, described next.
 
 ![An agent's Access tab: whether new senders may ask to be let in, and its senders at a glance](/media/dashboard-agent-access.png)
 
 Below them, the tab counts this agent's senders, waiting, approved, and denied or blocked, each a link
 to **Access** filtered to it. Both switches are live: the next message is judged by the new setting,
 no restart.
+
+## An agent open to everyone
+
+Since 0.8.48 one agent can answer anybody who finds it, with no code: a shop's front desk, a help line,
+a bot for an event. It is the agent that is open, never the install. Your other agents go on asking
+strangers to pair.
+
+On the agent's **Access** page, **Open to everyone** says what it means before you take it, then asks
+for two numbers:
+
+- **Most tokens it may use in a day.** Everything it spends counts, whoever it answered. When the day's
+  tokens are used it tells people it is closed until tomorrow, in a sentence you may write yourself, and
+  you are told once.
+- **Most messages one person may send it in a day.** Past it, that person is told once and left
+  unanswered until the next day.
+
+Neither has a starting value: it answers on your account, and an agent is not opened without numbers
+you chose. A day is your own, by the server's time zone, and a restart resets neither count. People you
+let in by name are held to neither. Only an admin opens an agent; an operator may close it.
+
+### What it can do, and what it knows
+
+While it is open, an agent has four tools and nothing else, whatever its Tools list says:
+
+| | |
+|---|---|
+| Search and read | the documents you opened to everyone under **Knowledge** (a collection whose readers are *Everyone*) |
+| Read a file | that the person sent in the chat |
+| Send a file | kept in one of those collections, into the chat it is answering |
+
+No commands, no files of the server, no web, no other agents, no reminders, no memory of its own. Its
+Tools tab shows them switched off while it is open, and keeps what was picked for when you close it. It
+is told nothing about you, the people you let in, your other agents or the server, and it is told the
+same when *you* write to it: a bot that knew more for some senders could be talked into saying it to
+others. Nothing a chat tells it is kept, and its conversations are never filed into memory.
+
+What it does know is what you wrote for it: its persona files and its notes. Read them as a stranger
+would before you open it. An agent with notes of its own is opened only after you tick that you have,
+and an agent made new for the public is the safer choice.
+
+Two agents are never opened, and the card says why: the **main agent**, which looks after the server,
+and an agent that works through a **coding CLI**, which brings tools of its own that Nouride cannot
+take away. The other way round holds too: an open agent cannot be made the main agent or handed to a
+coding CLI until you close it.
+
+### In the chat
+
+Somebody who was let in only because the agent is open has three commands: `/start`, which a chat app
+sends when a bot's chat is opened and which the agent answers with a greeting of its own; `/new`; and
+`/help`. Any other command answers one sentence and does nothing, so nobody can put your bot to sleep
+or change its model. People you let in by name keep the commands they have everywhere.
+
+Naming another agent does not reach it: a stranger's message on an open agent's bot is that agent's
+alone. And what an open agent says wakes no other agent, whatever it tags.
+
+In a group it answers only when it is tagged, named or replied to, whatever the group's own setting.
+Anyone may add a bot to a group of their own, and one that answered every message would spend its day
+on talk nobody addressed to it.
+
+### Who wrote
+
+The people who write to an open agent are in none of the Access page's lists: nobody was asked for a
+code. They are on the agent's own **Access** tab, under **People who wrote**: who, on which app, what
+they first asked and when. **Read** opens the conversation; **Block** keeps that sender out from their
+next message. The card above it says what was used of the day.
+
+Those conversations are kept out of your own list of chats, and go when conversations of their age do
+(`retention.session_days`), files included.
+
+From a terminal, `nouride config check` and `nouride doctor` say which agents are open, on which
+connections and within which numbers.
+
+### In the file
+
+```toml
+# .nouride/agents/nora/config.toml
+[agent]
+access = "open"
+
+[open]
+max_daily_tokens = 200000
+max_daily_messages_per_person = 30
+closed_reply = "We are closed for today. Please write again tomorrow."   # optional
+```
+
+`access = "open"` without both numbers does not load, and names what is missing. Closing an agent sets
+`access = "follow"` and leaves `[open]` for the next time.
+
+### An install that was open
+
+Before 0.8.48, `[security.access] mode = "open"` let everyone in on every connection, and the daemon
+refused to start with it beside any agent that could run commands. It is gone. The first start of
+0.8.48 on such an install:
+
+1. lets in by name everyone an agent there had already answered, on the connection they wrote on;
+2. writes `mode = "pair"` into `config.toml`.
+
+So everybody who talks to it goes on talking, and a new sender is given a pairing code. Nobody is
+opened by the upgrade: if you want a bot anyone can write to, open that agent as above.
+`nouride config check` says so before you upgrade.
 
 ## Pre-approving people
 
@@ -208,8 +308,9 @@ Once thousands are approved, the Approved tab lists the newest 500 and says how 
 reach one beyond them, type their id or name in the filter and press **Search everyone**; from a
 terminal, `nouride access approved --find <id or name>`.
 
-This is how to answer the replies of a contact list without `open`, which the daemon refuses while
-any agent can run commands. Note that WhatsApp here is not the official Business API: it links a
+This is how to answer the replies of a contact list without opening an agent to everyone: the people
+you wrote to are let in by name, with every tool your agent has, and anybody else still meets a code.
+Note that WhatsApp here is not the official Business API: it links a
 number as WhatsApp Web does, and WhatsApp can restrict or ban a number that sends in bulk to people
 who have not written to it first.
 

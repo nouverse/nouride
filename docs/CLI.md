@@ -1022,7 +1022,7 @@ blocked, revoked, reset, unblocked, expired.
 | Code | 6 characters, no `O`/`0`/`I`/`1`/`U`, expires in 15 minutes, single use |
 | Repeat messages | one code, not one pending request per message; the "I don't know you" reply is rate limited |
 | Denied sender | dropped in silence for `deny_cooldown_ms` (a day), then their next message is a new request with a new code. `reset` ends the wait. Telling them invites retrying and confirms the bot is live |
-| Blocked sender | dropped in silence until `unblock`, which lets them ask again — it admits nobody. A block beats `allowlist` and `open` too |
+| Blocked sender | dropped in silence until `unblock`, which lets them ask again — it admits nobody. A block beats `allowlist` too, and keeps a sender out of an agent open to everyone |
 | `allow` | an admin's: approved without a code, before they have written. Not past a block. What `allowlist` was the only way to do, now revocable from the Access page |
 | `revoke` vs `deny` vs `block` | revoke takes an approval back; deny is no for now; block is no until unblocked. Each also drops their own approval level |
 | A stale answer | each answer touches only its own state — `deny` a pending request, `revoke` an approval, `reset` a denial, `unblock` a block — so `revoke` or `deny` on a blocked sender is refused rather than lifting or softening the block |
@@ -1030,7 +1030,7 @@ blocked, revoked, reset, unblocked, expired.
 
 ```toml
 [security.access]
-mode = "pair"                 # "pair" | "allowlist" | "open"
+mode = "pair"                 # "pair" | "allowlist"
 allowlist = []                # honoured in every mode: "123456789" or "telegram:nouva:123456789"
 code_ttl_ms = 900000
 notify_cooldown_ms = 300000
@@ -1048,9 +1048,11 @@ every unknown sender is dropped at the gate: no code, no reply, nothing queued, 
 the anti-spam posture, and it takes effect on the next message, with no restart, because an operator
 switching it off is usually reacting to a flood right now. Switching back to `pair` re-opens the door.
 
-Going the other way, to `open`, is refused from the dashboard and the CLI whenever boot itself would
-refuse it — a chat gateway enabled plus an agent holding `exec` plus no allowlist is a remote shell,
-and saving that config would leave a daemon that cannot be started again.
+There is no `open` for the install (0.8.48): `nouride access mode open` is refused, saying where one
+agent is opened to everyone instead, on its own Access page in the dashboard. A config file that
+still says `mode = "open"` is read as `pair`, and the next start writes that after letting in by name
+everyone an agent had already answered. `nouride config check` and `nouride doctor` say which agents
+are open, on which connections and within which daily limits.
 
 The dashboard's own chat and `nouride chat` (the `web` gateway) are exempt: they are behind a login or
 a token already, and making you pair with your own daemon would be theatre.

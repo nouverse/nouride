@@ -176,15 +176,15 @@ besar 2147483647 (sekitar 24 hari).
 ## `[security.access]`
 
 ```toml
-mode = "pair"                       # pair | allowlist | open
+mode = "pair"                       # pair | allowlist
 allowlist = []
 ```
 
-:::caution
-Daemon **menolak start** ketika sebuah gateway chat aktif, seorang agent memegang `exec` dan `mode`-nya
-`"open"`, apa pun isi `allowlist`, karena `open` meloloskan semua orang sebelum daftar itu dibaca.
-Kombinasi itu adalah remote shell bagi siapa pun yang menemukan bot-nya. `pair`, default-nya, sudah cukup
-untuk menghindarinya.
+:::note
+Gak ada instalasi yang terbuka untuk semua orang. Sampai 0.8.48 `mode` juga menerima `"open"`; file yang
+masih menulisnya dibaca sebagai `"pair"`, dan start berikutnya menulis itu setelah memasukkan setiap
+orang yang sudah pernah dijawab sebuah agent. Sebagai gantinya satu agent bisa dibuka, di `config.toml`
+miliknya: [agent yang terbuka untuk semua orang](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang).
 :::
 
 `[security] sender_allowlist`, nama lama allowlist ini, ditolak sejak 0.8.0 sambil menyebut `allowlist`.

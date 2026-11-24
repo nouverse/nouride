@@ -147,11 +147,13 @@ gate.
 
 [The full permission model →](/en/docs/manual/approvals/)
 
-## The daemon refuses to start in one configuration
+## A stranger never reaches a shell
 
-**A gateway enabled, an agent holding `exec`, `[security.access] mode = "open"`, and the sender
-allowlist empty.** That combination is a remote shell for anyone who finds the bot, so it is a boot failure
-rather than a warning in a log nobody reads.
+A chat gateway, an agent holding `exec`, and nothing between it and whoever finds the bot is a remote
+shell. Until 0.8.48 that was a configuration the daemon refused to start in. It cannot be written now:
+no install lets everyone in, and the one agent that may be
+[open to everyone](/en/docs/manual/access/#an-agent-open-to-everyone) holds four tools of Nouride's own
+and none of its pack's, `exec` among them.
 
 ## Limits on one call
 

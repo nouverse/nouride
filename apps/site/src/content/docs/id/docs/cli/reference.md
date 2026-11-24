@@ -352,7 +352,7 @@ nouride access allow --from <file|-> --gateway <koneksi> [--dry-run]   # satu da
 nouride access approved --find <id atau nama>    # satu di antara banyak: daftarnya memuat 500 terbaru
 nouride access deny|block <gateway:sender>       # tidak selama sehari · tidak sampai di-unblock
 nouride access revoke|reset|unblock <gateway:sender>
-nouride access mode [open|allowlist|pair]      # lihat atau ganti, tanpa restart
+nouride access mode [allowlist|pair]           # lihat atau ganti, tanpa restart
 
 nouride people
 nouride people set <key|platform:akun> --name <nama> [--note <catatan>]

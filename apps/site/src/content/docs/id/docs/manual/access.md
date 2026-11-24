@@ -6,7 +6,7 @@ description: Pairing, allowlist, dan memberi agent nama untuk orang-orang yang d
 Bot kamu berada di jaringan publik. Siapa pun yang menemukan username-nya bisa mengirim pesan, jadi
 siapa yang boleh mencapai sebuah agent adalah pengaturan sungguhan, bukan renungan belakangan.
 
-## Tiga sikap
+## Dua sikap
 
 `[security.access] mode`, berlaku untuk seluruh daemon:
 
@@ -14,13 +14,15 @@ siapa yang boleh mencapai sebuah agent adalah pengaturan sungguhan, bukan renung
 |---|---|
 | **`pair`** (default) | Pengirim asing diberi kode pendek lalu pesannya dibuang. Kamu menyetujui kodenya dan mereka diingat, di disk, permanen. |
 | **`allowlist`** | Hanya id yang terdaftar atau sudah disetujui yang lewat. Sisanya dibuang **dalam diam**: tanpa balasan, tanpa error. |
-| **`open`** | Siapa saja. Cuma masuk akal untuk daemon tanpa gateway chat sama sekali. |
 
 Jalur biasanya: pasang dengan `pair`, lalu pindah ke `allowlist` setelah orang-orang yang kamu inginkan
 masuk. Pengirim yang sudah disetujui tetap bisa bicara; sisanya dihentikan di gerbang.
 
-`open` gak ditawarkan sebagai pilihan di dashboard. Ia sikap yang diperingatkan daemon, jadi
-ditampilkan sebagai peringatan ketika sedang berlaku, bukan disajikan sebagai opsi.
+Gak ada instalasi yang membolehkan semua orang masuk. Satu agent bisa: meja depan yang menjawab siapa
+pun yang menemukannya, dengan beberapa tool milik Nouride sendiri dan tanpa satu pun tool kamu. Itu
+[agent yang terbuka untuk semua orang](#agent-yang-terbuka-untuk-semua-orang), di bawah. Sebelum 0.8.48
+ada sikap ketiga, `open`, untuk seluruh instalasi;
+[apa yang dilakukan upgrade padanya](#instalasi-yang-dulu-open) juga ada di bawah.
 
 ## Menyetujui seseorang
 
@@ -125,15 +127,121 @@ Itu **default**-nya: `[security.access] mode`, yang diikuti setiap agent.
 Sebuah agent bisa memutuskan sendiri di halaman **Access**-nya: *Follow the default*, *On* (orang asing
 mendapat kode pairing) atau *Off* (hanya pengirim yang sudah disetujui). Itu
 `[agent] access = "follow" | "pair" | "allowlist"` di `config.toml`-nya, dan berlaku untuk setiap
-koneksi milik agent itu. `open` bukan pilihan di sana: daemon sendiri menolak start dengan `open` dan
-sender allowlist kosong selama ada agent yang bisa menjalankan perintah, dan jalan pintas per agent
-akan membolongi penjaga itu.
+koneksi milik agent itu. Membolehkan semua orang masuk bukan salah satu dari tiga itu: ia punya kartu
+sendiri di halaman yang sama, dijelaskan berikutnya.
 
 ![Tab Access sebuah agent: apakah pengirim baru boleh minta masuk, dan ringkasan pengirimnya](/media/dashboard-agent-access.png)
 
 Di bawahnya, tab itu menghitung pengirim agent ini, yang menunggu, yang disetujui, dan yang di-deny
 atau di-block, masing-masing tautan ke **Access** yang sudah tersaring untuk agent itu. Kedua sakelar
 langsung berlaku: pesan berikutnya dinilai dengan pengaturan baru, tanpa restart.
+
+## Agent yang terbuka untuk semua orang
+
+Sejak 0.8.48 satu agent bisa menjawab siapa pun yang menemukannya, tanpa kode: meja depan toko, layanan
+bantuan, bot untuk sebuah acara. Yang terbuka itu agent-nya, bukan instalasinya. Agent kamu yang lain
+tetap meminta orang asing untuk pairing.
+
+Di halaman **Access** agent itu, **Open to everyone** menjelaskan artinya sebelum kamu ambil, lalu
+meminta dua angka:
+
+- **Token terbanyak yang boleh dipakainya dalam sehari.** Semua yang ia habiskan dihitung, siapa pun
+  yang dijawabnya. Begitu jatah hari itu habis, ia memberi tahu orang bahwa ia tutup sampai besok,
+  dengan kalimat yang boleh kamu tulis sendiri, dan kamu diberi tahu sekali.
+- **Pesan terbanyak yang boleh dikirim satu orang dalam sehari.** Lewat dari itu, orang tersebut
+  diberi tahu sekali lalu gak dijawab sampai hari berikutnya.
+
+Dua-duanya gak punya nilai awal: ia menjawab pakai akun kamu, dan sebuah agent gak dibuka tanpa angka
+yang kamu pilih. Satu hari itu harinya kamu, menurut zona waktu server, dan restart gak mengulang
+hitungan mana pun. Orang yang kamu masukkan atas namanya gak kena dua batas itu. Hanya admin yang
+membuka agent; operator boleh menutupnya.
+
+### Apa yang bisa ia lakukan, dan apa yang ia tahu
+
+Selama terbuka, sebuah agent punya empat tool dan gak ada yang lain, apa pun isi daftar Tools-nya:
+
+| | |
+|---|---|
+| Mencari dan membaca | dokumen yang kamu buka untuk semua orang di **Knowledge** (koleksi yang pembacanya *Everyone*) |
+| Membaca file | yang dikirim orang itu di chat |
+| Mengirim file | yang disimpan di salah satu koleksi itu, ke chat yang sedang dijawabnya |
+
+Tanpa perintah, tanpa file server, tanpa web, tanpa agent lain, tanpa pengingat, tanpa memori sendiri.
+Tab Tools-nya menampilkan semuanya dalam keadaan mati selama ia terbuka, dan menyimpan pilihanmu untuk
+saat ia ditutup. Ia gak diberi tahu apa pun tentang kamu, orang-orang yang kamu masukkan, agent kamu
+yang lain, atau server-nya, dan ia diberi tahu hal yang sama ketika *kamu* yang menulis kepadanya: bot
+yang tahu lebih banyak untuk sebagian pengirim bisa dibujuk untuk mengatakannya ke yang lain. Gak ada
+yang dikatakan sebuah chat kepadanya yang disimpan, dan percakapannya gak pernah masuk ke memori.
+
+Yang ia tahu adalah apa yang kamu tulis untuknya: file persona dan catatannya. Baca dulu seperti orang
+asing membacanya sebelum kamu membukanya. Agent yang punya catatan sendiri baru dibuka setelah kamu
+centang bahwa kamu sudah membacanya, dan agent yang dibuat baru untuk publik adalah pilihan yang lebih
+aman.
+
+Dua agent gak pernah dibuka, dan kartunya menjelaskan kenapa: **agent utama**, yang mengurus server,
+dan agent yang bekerja lewat **coding CLI**, yang membawa tool-nya sendiri yang gak bisa dicabut
+Nouride. Sebaliknya juga berlaku: agent yang terbuka gak bisa dijadikan agent utama atau diserahkan ke
+coding CLI sampai kamu menutupnya.
+
+### Di chat
+
+Orang yang masuk hanya karena agent-nya terbuka punya tiga perintah: `/start`, yang dikirim aplikasi
+chat saat chat sebuah bot dibuka dan dijawab agent dengan sapaannya sendiri; `/new`; dan `/help`.
+Perintah lain dijawab satu kalimat dan gak melakukan apa-apa, jadi gak ada yang bisa menidurkan bot
+kamu atau mengganti modelnya. Orang yang kamu masukkan atas namanya tetap punya perintah yang mereka
+punya di mana pun.
+
+Menyebut agent lain gak sampai ke agent itu: pesan orang asing di bot agent yang terbuka adalah milik
+agent itu saja. Dan apa yang dikatakan agent yang terbuka gak membangunkan agent lain, apa pun yang ia
+tag.
+
+Di grup ia menjawab hanya saat di-tag, disebut namanya, atau dibalas, apa pun pengaturan grup itu.
+Siapa pun boleh memasukkan sebuah bot ke grupnya sendiri, dan bot yang menjawab setiap pesan akan
+menghabiskan harinya untuk obrolan yang gak ditujukan kepadanya.
+
+### Siapa yang menulis
+
+Orang yang menulis ke agent yang terbuka gak ada di daftar mana pun di halaman Access: gak ada yang
+diminta kode. Mereka ada di tab **Access** agent itu sendiri, di bawah **People who wrote**: siapa, di
+aplikasi apa, apa yang pertama mereka tanyakan, dan kapan. **Read** membuka percakapannya; **Block**
+menahan pengirim itu mulai pesan berikutnya. Kartu di atasnya menyebut berapa yang sudah terpakai hari
+itu.
+
+Percakapan itu gak masuk ke daftar chat kamu sendiri, dan hilang saat percakapan seumurnya hilang
+(`retention.session_days`), termasuk file-nya.
+
+Dari terminal, `nouride config check` dan `nouride doctor` menyebut agent mana yang terbuka, di koneksi
+mana dan dalam batas berapa.
+
+### Di file
+
+```toml
+# .nouride/agents/nora/config.toml
+[agent]
+access = "open"
+
+[open]
+max_daily_tokens = 200000
+max_daily_messages_per_person = 30
+closed_reply = "Kami tutup dulu hari ini. Silakan tulis lagi besok."   # opsional
+```
+
+`access = "open"` tanpa kedua angka itu gak dimuat, dan menyebut apa yang kurang. Menutup sebuah agent
+menulis `access = "follow"` dan membiarkan `[open]` untuk lain kali.
+
+### Instalasi yang dulu open
+
+Sebelum 0.8.48, `[security.access] mode = "open"` membolehkan semua orang masuk di setiap koneksi, dan
+daemon menolak start dengannya selama ada agent yang bisa menjalankan perintah. Itu sudah gak ada.
+Start pertama 0.8.48 di instalasi seperti itu:
+
+1. memasukkan atas namanya setiap orang yang sudah pernah dijawab sebuah agent di sana, di koneksi
+   tempat mereka menulis;
+2. menulis `mode = "pair"` ke `config.toml`.
+
+Jadi semua yang sudah bicara dengannya tetap bisa bicara, dan pengirim baru diberi kode pairing. Gak ada
+yang dibuka oleh upgrade ini: kalau kamu mau bot yang bisa ditulis siapa saja, buka agent itu seperti di
+atas. `nouride config check` mengatakannya sebelum kamu upgrade.
 
 ## Menyetujui orang lebih awal
 
@@ -219,8 +327,9 @@ Begitu ribuan orang di-approve, tab Approved menampilkan 500 yang terbaru dan bi
 Untuk menjangkau yang di luar itu, ketik id atau namanya di filter lalu tekan **Search everyone**; dari
 terminal, `nouride access approved --find <id atau nama>`.
 
-Ini cara menjawab balasan dari satu daftar kontak tanpa `open`, yang ditolak daemon selama ada agent
-yang bisa menjalankan perintah. Catatan: WhatsApp di sini bukan Business API resmi: ia menautkan nomor
+Ini cara menjawab balasan dari satu daftar kontak tanpa membuka sebuah agent untuk semua orang: orang
+yang kamu kirimi masuk atas namanya, dengan semua tool yang dimiliki agent kamu, dan orang lain tetap
+bertemu kode. Catatan: WhatsApp di sini bukan Business API resmi: ia menautkan nomor
 seperti WhatsApp Web, dan WhatsApp bisa membatasi atau memblokir nomor yang mengirim massal ke orang
 yang belum pernah menulis ke nomor itu.
 
