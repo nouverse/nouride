@@ -22,18 +22,22 @@ A draft runs nothing until you start it:
 
 Revise the RFC to the owner's answers of today, section by section, and say what changed in each.
 
-5 checks · signed off by: you · brief: on the mission's page
+5 checks · signed off by: you · brief: BRIEF.md, the file below
 
 Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 [Start it] [Drop it]
+📎 BRIEF.md
 ```
 
 - **Its name** is the few words after the agent's (0.8.39), and the goal is whole under it. A mission is called by
   its name from then on: in its notices, in the list, on the cards of what waits for you. An agent names every mission
   it drafts or starts. One you start yourself takes the **Name** you give it on the dashboard's form, or is named from
   the first sentence of its goal. The missions made before 0.8.39 were named that way when it was installed.
-- **Its brief** is `BRIEF.md` in the mission's folder: what the work is, why, what to read, what done means. It is on
-  the mission's page, and each turn of the mission starts from it.
+- **Its brief** is `BRIEF.md` in the mission's folder: what the work is, why, what to read, what done means. Each turn
+  of the mission starts from it. You are sent it as a file under the draft (0.8.47), and again when the agent changes
+  it, so you read what will be done where you are asked to start it; it is on the mission's page too. An agent writes
+  the brief with the draft, and no longer ends the goal with the path of a file of its own. A chat that cannot take
+  the file is told so.
 - **Change it first** if it is not right: tell the agent ("the checks only grep, add one that runs the tests") and it
   sends the draft again with the change named; or change it on the mission's page in the dashboard. Once it runs, its
   goal and checks stay as they are.
@@ -77,7 +81,9 @@ To start one yourself:
 ```
 
 or **Missions → New mission** in the dashboard, where **Save to backlog** keeps it as a draft until you start it and
-**Start now** starts it at once. The agent you address runs it, as you, and it reports to the chat you started it in.
+**Start now** starts it at once. The form takes its **Brief** and its own **Hours**, **Turns** and **Tokens** (in
+millions) as you make it (0.8.47); a limit left empty is the one every mission starts with, shown in grey. The agent
+you address runs it, as you, and it reports to the chat you started it in.
 
 `/goal`, as other tools name it, starts one too. A mission is a goal someone else signs off: it ends when its checks
 pass and a reviewer agrees, not when the agent says it is done.
@@ -296,8 +302,9 @@ The three limits were 8 hours, 100 turns and 100,000,000 tokens before 0.8.46; a
 
 **One mission's own limits** (0.8.46) leave these as they are. An agent names them on its draft (`limit_hours`,
 `limit_turns`, `limit_tokens`), each within what the setting itself may be (a quarter of an hour to 168 hours, 1 to
-1,000 turns, 100,000 tokens or more), and the draft shows them to you before you start it. You change them in the
-draft's form: **Hours**, **Turns** and **Tokens**, in millions. A piece of work a mission hands to another agent, and
+1,000 turns, 100,000 tokens or more), and the draft shows them to you before you start it. You give them to a mission
+you make yourself on the New mission form (0.8.47), whether you save it to the backlog or start it at once, and change
+them in a draft's form: **Hours**, **Turns** and **Tokens**, in millions. A piece of work a mission hands to another agent, and
 an automation's mission step, start with nobody there to say yes, so they keep the settings. A mission an automation
 leaves as a draft takes the settings too, and you change them in its form before you start it.
 
