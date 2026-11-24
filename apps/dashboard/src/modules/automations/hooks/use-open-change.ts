@@ -22,6 +22,11 @@ export interface OpenChange {
   undo: () => void;
   /** The applied change's bar put away: the change stays in the draft. */
   settle: () => void;
+  /**
+   * The draft this page held is over: an automation being made was saved as its own, or cancelled. A change still
+   * waiting for it goes with it, or it would be drawn over the next one the person begins.
+   */
+  over: () => void;
 }
 
 /**
@@ -49,5 +54,9 @@ export function useOpenChange(page: { id: string | null; draft: Draft; home: str
       setApplied(null);
     },
     settle: () => setApplied(null),
+    over: () => {
+      setApplied(null);
+      live.over();
+    },
   };
 }

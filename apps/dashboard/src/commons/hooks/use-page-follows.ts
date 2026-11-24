@@ -21,7 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import type { LiveTurn } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
-import { offerLiveEdit } from "@/commons/lib/live-edit";
+import { holdsOpen, offerLiveEdit } from "@/commons/lib/live-edit";
 import { holdsUnsaved } from "@/commons/lib/unsaved";
 
 /** The pages the calls of a turn made, in the order they were made. */
@@ -31,15 +31,31 @@ export const pagesMade = (turn: Pick<LiveTurn, "steps">): string[] => turn.steps
 const editsMade = (turn: Pick<LiveTurn, "steps">): string[] => turn.steps.flatMap((step) => (step.kind === "tool_done" && step.liveEdit ? [step.liveEdit] : []));
 
 /**
- * A change fetched by its id and offered to the page that holds what it changes. One the daemon no longer has (a
- * restart forgot it) is no change to draw: nothing is offered, and whoever asked is told so by what this resolves to.
+ * A change as the agent's turn wrote it, fetched by its id and offered to the page that holds what it changes; it
+ * waits for that page where another is on screen. One the person answered already is not taken again
+ * (`offerLiveEdit`), and one the daemon no longer has (a restart forgot it) is no change to draw.
  */
-export async function offerEdit(id: string): Promise<boolean> {
+async function offerEdit(id: string): Promise<void> {
   try {
     offerLiveEdit((await api.liveEdit(id)).offer);
-    return true;
   } catch {
-    return false;
+    // Nothing to draw.
+  }
+}
+
+/**
+ * The same change asked for again from the chat, by a person: drawn where the page on screen holds what it changes,
+ * applied or discarded before or not. Elsewhere it is not left waiting: one written for something being made names
+ * nothing, and would be drawn over whatever is made next. `gone`: the daemon no longer has it.
+ */
+export async function showEdit(id: string): Promise<"drawn" | "elsewhere" | "gone"> {
+  try {
+    const { offer } = await api.liveEdit(id);
+    if (!holdsOpen(offer.kind, offer.target)) return "elsewhere";
+    offerLiveEdit(offer, "asked");
+    return "drawn";
+  } catch {
+    return "gone";
   }
 }
 

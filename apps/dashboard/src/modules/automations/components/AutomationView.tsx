@@ -99,8 +99,11 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
   const saving = useSave(automation?.id ?? null, loaded, draft, (id) => {
     // Saved: nothing of it is left to keep. One just made is another page's now, and this one's draft would open on the next "New automation".
     editor.forgetKept();
-    if (fresh) void navigate({ to: "/automations/$id", params: { id } });
-    else editor.discard();
+    if (fresh) {
+      // And a change the agent wrote to the one being made, still waiting: it was for this draft, which is over.
+      change.over();
+      void navigate({ to: "/automations/$id", params: { id } });
+    } else editor.discard();
   });
 
   const editable = writable && !automation?.proposal && view === "steps" && !showsSuggested;
@@ -231,8 +234,10 @@ export function AutomationView({ detail, blank, home }: { detail: AutomationDeta
             saving.forget();
             // Cancel throws it away; "Automations" over the page leaves it kept.
             editor.forgetKept();
-            if (fresh) void navigate({ to: "/automations" });
-            else editor.discard();
+            if (fresh) {
+              change.over();
+              void navigate({ to: "/automations" });
+            } else editor.discard();
           }}
         />
       ) : null}
