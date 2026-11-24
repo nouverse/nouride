@@ -30,7 +30,7 @@ import {
 } from "@/modules/router/agent-mentions.ts";
 import { HookRegistry, parseCommand } from "@/modules/hooks/registry.ts";
 import { withQuotedContext } from "./messages.ts";
-import { heldToOpenAgent } from "./open-door.ts";
+import { heldToOpenAgent, strangerAsleep, strangerCommand } from "./open-door.ts";
 import { requireMentionHere } from "./room-mention.ts";
 import { isSystemEvent } from "./deps.ts";
 import type { Admission } from "./admission.ts";
@@ -702,7 +702,8 @@ export class InboundRouter {
     // What the turn is asked: the message, or the words a command that falls through hands the agent instead.
     let asked = text;
     if (command && this.hooks.has(command.command)) {
-      const result = await this.hooks.run(command.command, command.args, agent, envelope);
+      // A sender let in only because the agent is open has three commands, and the rest do nothing (`open-door.ts`).
+      const result = (this.admission.strangerOf(envelope) ? strangerCommand(command.command) : null) ?? (await this.hooks.run(command.command, command.args, agent, envelope));
       if (!result.handled && result.prompt) asked = result.prompt;
       if (result.reply) {
         await this.ctx.voice.reply(envelope, result.reply);
@@ -741,7 +742,8 @@ export class InboundRouter {
       }
       log.info("agent asleep, not answering", { agent_id: agent.config.id, chat_id: envelope.chatId });
       const notice = this.ctx.asleep.notice({ id: agent.config.id, displayName: agent.config.displayName }, envelope);
-      if (notice) await this.ctx.voice.reply(envelope, notice, agent.config.id);
+      // A stranger is not told of a command they do not have.
+      if (notice) await this.ctx.voice.reply(envelope, this.admission.strangerOf(envelope) ? strangerAsleep(agent.config.displayName) : notice, agent.config.id);
       this.ctx.deps.chatEvents?.record({
         gatewayId: envelope.gatewayId,
         chatId: envelope.chatId,

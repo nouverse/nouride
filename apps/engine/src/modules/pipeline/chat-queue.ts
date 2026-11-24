@@ -25,7 +25,7 @@ export function chatQueue(parts: {
   hooks: HookRegistry;
   turnContext: Pick<TurnContext, "returned">;
   inbound: Pick<InboundRouter, "handle">;
-  admission: Pick<Admission, "noticeDropped">;
+  admission: Pick<Admission, "noticeDropped" | "strangerOf">;
   voice: Pick<Voice, "reply">;
   /** The inbox, built after the queue it puts messages back into — read when a message is taken or dropped. */
   inbox: () => Pick<InboxDesk, "track" | "dropped">;
@@ -111,7 +111,8 @@ export function chatQueue(parts: {
       return parts.inbox().track(envelope, async () => {
         // A command for another of our bots, by the tag in front of it: that bot's own copy answers it.
         if (commandForAnotherBot({ hooks, tags: botTags }, envelope)) return;
-        if (!(await answerGroupCommand(groupCommand, envelope))) await inbound.handle(envelope);
+        // Not a stranger's on an open agent's connection: a command of theirs is held to their three (`open-door.ts`).
+        if (admission.strangerOf(envelope) || !(await answerGroupCommand(groupCommand, envelope))) await inbound.handle(envelope);
       });
     },
     onDropped: (envelope, reason) => {

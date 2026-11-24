@@ -155,6 +155,57 @@ describe("in a group, an open agent answers only when it is addressed", () => {
   });
 });
 
+describe("a stranger has three commands", () => {
+  const NOT_THEIRS = "That command is not for this chat. /help shows what is.";
+
+  test("/start is the opening of a chat, handed to the agent to greet in its own words: never the command that wakes it", async () => {
+    const h = await install({ turns: ["Hello! I can tell you our prices and opening hours."] });
+    await h.dm("nora", { text: "/start" });
+    expect(h.said().nora).toEqual(["Hello! I can tell you our prices and opening hours."]);
+    expect(JSON.stringify(h.requests[0])).toContain("This person has just opened a chat with you. Greet them in a sentence or two, in your own words, and say what you can help with.");
+    // Put to sleep by its owner, it stays asleep for a stranger's /start, who is told so without the command they do not have.
+    h.registry.pause("nora");
+    await h.dm("nora", { text: "/start" });
+    expect({ asleep: h.registry.isPaused("nora"), requests: h.requests.length, said: h.said().nora!.at(-1) }).toEqual({ asleep: true, requests: 1, said: "Nora is not answering at the moment." });
+    // The same command from a person let in by name wakes it, as it does on any bot.
+    await h.dm("nora", { senderId: OWNER, senderName: "Gading", text: "/start" });
+    expect({ asleep: h.registry.isPaused("nora"), said: h.said().nora!.at(-1) }).toEqual({ asleep: false, said: "Awake." });
+  });
+
+  test("/help lists what they have, and /new clears their own conversation", async () => {
+    const h = await install();
+    await h.dm("nora", { text: "/help" });
+    expect(h.said().nora).toEqual(["/new starts a new conversation with me, and /help shows this. For anything else, just write to me."]);
+    await h.dm("nora", { text: "what are your opening hours?" });
+    await h.dm("nora", { text: "/new" });
+    expect(h.said().nora!.at(-1)).toStartWith("New conversation started.");
+    expect(h.requests).toHaveLength(1);
+    expect(h.sessions.load({ agentId: "nora", gatewayId: "telegram:nora", chatId: `dm-${STRANGER}` }).messages).toEqual([]);
+  });
+
+  test("every other command answers one sentence and does nothing: the agent is not put to sleep, its model is not changed, nothing is said of the install", async () => {
+    const h = await install();
+    for (const text of ["/sleep", "/stop", "/model gpt-9", "/status", "/prompt", "/agents", "/effort high", "/approvals"]) await h.dm("nora", { text });
+    expect(h.said().nora).toEqual(Array.from({ length: 8 }, () => NOT_THEIRS));
+    expect({ requests: h.requests.length, asleep: h.registry.isPaused("nora") }).toEqual({ requests: 0, asleep: false });
+    // A person let in by name has the commands they have anywhere.
+    await h.dm("nora", { senderId: OWNER, senderName: "Gading", text: "/sleep" });
+    expect({ asleep: h.registry.isPaused("nora"), said: h.said().nora!.at(-1) }).toEqual({ asleep: true, said: expect.stringContaining("Asleep.") });
+  });
+
+  test("in a group, a command about the group is not a stranger's either: said to the bot it is refused, said to nobody it is nobody's", async () => {
+    const h = await install({ bots: ["nora"] });
+    await h.group({ text: "/mention off" }, { bot: "nora" });
+    expect(h.said().nora).toEqual([NOT_THEIRS]);
+    await h.group({ text: "/mention off" });
+    expect(h.said().nora).toEqual([NOT_THEIRS]);
+    // The group's own setting is as it was: a person let in by name is told so by the command itself.
+    await h.group({ senderId: OWNER, senderName: "Gading", text: "/mention" });
+    expect(h.said().nora!.at(-1)).not.toBe(NOT_THEIRS);
+    expect(h.requests).toHaveLength(0);
+  });
+});
+
 describe("what an open agent says wakes nobody", () => {
   test("a tag in its answer is not handed to the agent it names", async () => {
     // Telegram hands no bot another bot's message, so a tag between agents is handed over by the daemon itself.
