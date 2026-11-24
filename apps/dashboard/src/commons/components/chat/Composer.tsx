@@ -23,6 +23,7 @@ import { ErrorNote } from "@/commons/components/ui/ui";
 import { MentionMenu, type MentionCandidate } from "./MentionMenu.tsx";
 import { SlashMenu } from "./SlashMenu.tsx";
 import { completionKey } from "@/commons/lib/completion";
+import { fitTextarea } from "@/commons/lib/fit-textarea";
 
 /** One completion menu, from the composer's point of view. */
 export interface MenuState<T> {
@@ -182,8 +183,7 @@ export function Composer(props: ComposerProps) {
               // Back to the top: the list has just been refiltered by the keystroke, so a
               // highlight held over from the old list would point at a different name.
               props.mention.onTyped();
-              e.target.style.height = "auto";
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+              fitTextarea(e.target);
             }}
             onKeyDown={(e) => {
               /**
