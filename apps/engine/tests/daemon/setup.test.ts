@@ -17,7 +17,7 @@ import { parseToml, readTextFile, readTextFileIfExists, writeTextFileAtomic } fr
 import { AgentRegistry } from "@nouride/persona";
 import { resolveApprovalLevel } from "@nouride/policy";
 import { ProviderRegistry } from "@/modules/llm/providers.ts";
-import { assertGatewayExecPosture } from "@/modules/config/global/index.ts";
+import { parseConfig } from "@/modules/config/global/index.ts";
 import { PRESETS } from "@/modules/setup/presets.ts";
 import { SetupService, SETUP_PROFILE } from "@/modules/setup/service.ts";
 
@@ -621,7 +621,7 @@ describe("createAgent", () => {
     expect(tools?.approvalRequired).toContain("edit");
   });
 
-  test("the boot guard that withholding exec was meant to avoid is satisfied by the default", () => {
+  test("what withholding exec was meant to guard against cannot be set: no install is open to everyone", () => {
     /**
      * The argument for the flag, tested instead of repeated.
      *
@@ -629,16 +629,13 @@ describe("createAgent", () => {
      * True, and not something a toolset list holds back: `exec` is on `DEFAULT_APPROVAL_REQUIRED`
      * either way, and the default `[security.exec]` is `mode = "full"` with `ask = "on-miss"`.
      *
-     * The one thing that *does* refuse is this: a chat gateway beside an agent with `exec` and no way
-     * to stop strangers. The default `[security.access] mode = "pair"` is such a way, so a fresh
-     * install boots — and the flag was buying nothing while costing the agent nine tools.
+     * What made it dangerous was a chat gateway beside an agent with `exec` and no way to stop strangers. A fresh
+     * install asks a stranger to pair, and no install can do otherwise: `open` is one agent's, which then
+     * holds none of its pack's tools (`tests/tools/open-agent.test.ts`), and a file that says it for everyone loads as
+     * `pair`.
      */
-    const exec = { mode: "full", ask: "on-miss", askFallback: "deny", sensitivePaths: "ask", allowlist: [], blocked: [] } as never;
-    const posture = { gatewaysEnabled: true, agentsWithExec: ["nouva"], senderAllowlist: [], exec };
-
-    expect(() => assertGatewayExecPosture({ ...posture, accessMode: "pair" })).not.toThrow();
-    // And it still refuses the shape it exists for: pairing turned off and nobody named.
-    expect(() => assertGatewayExecPosture({ ...posture, accessMode: "open" })).toThrow(/exec tool/);
+    expect(DEFAULT_CONFIG.security.access.mode).toBe("pair");
+    expect(parseConfig({ security: { access: { mode: "open" } } }).security.access.mode).toBe("pair");
   });
 
   /**

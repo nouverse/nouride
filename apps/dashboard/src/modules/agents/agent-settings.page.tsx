@@ -36,7 +36,7 @@ export default function AgentSettingsPage({ agentId }: { agentId: string }) {
       <AgentJobQuiet agent={agent} editable={editable} />
       <AgentBackgroundHelpers agent={agent} editable={editable} />
       <AgentMissionSlots agent={agent} editable={editable} />
-      <AgentTools agentId={agent.id} tools={agent.tools} admin={isAdmin(me.data ?? null)} />
+      <AgentTools agentId={agent.id} tools={agent.tools} admin={isAdmin(me.data ?? null)} open={agent.access === "open"} />
       {/* The orchestrator's alone: in any other agent's pack the setting changes nothing. */}
       {offersSharedTools(status.data?.orchestrator, agent) ? <SharedTools agent={agent} editable={isAdmin(me.data ?? null)} /> : null}
       {/* Last on the page, and an admin's alone: what it takes does not come back. */}

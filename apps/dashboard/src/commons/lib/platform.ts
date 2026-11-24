@@ -10,6 +10,11 @@ export function platformName(id: string): string {
   return NAMES[platform] ?? platform;
 }
 
+/** A connection as a person reads it: `telegram:nora` → Telegram (nora). */
+export function connectionSaid(id: string): string {
+  return `${platformName(id)} (${id.split(":").slice(1).join(":")})`;
+}
+
 /**
  * Each app's colour on its tag: WhatsApp's green, Telegram's blue, Discord's blurple. All three were one lilac pill, so
  * a list of groups from three apps read as one app.

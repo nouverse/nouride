@@ -282,6 +282,7 @@ export const SCANS_ALLOWED: Record<string, string> = {
  * query of the table scan it. For a step that runs once, at an upgrade, and has to look at every row to do its work.
  */
 export const SCANNING_STORES: Record<string, string> = {
+  "open-mode.store.ts": "reads every turn's sender once, at the start that brings an install forward from `open` for everyone, to let each of them in by name",
   "moved-paths.store.ts": "renames every path under a folder that moved: out of `data/` at the 0.8.0 move or a move that stopped half-way, or the whole install, at its first start in another folder",
 };
 

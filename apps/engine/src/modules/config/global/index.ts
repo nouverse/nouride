@@ -30,7 +30,7 @@ import { loadPeopleDir, peopleDirOf } from "@/modules/people/files.ts";
 
 export { INSTALL_ROOT, defaultConfigPath } from "./paths.ts";
 export { mergeConfig } from "./merge.ts";
-export { assertGatewayExecPosture, reportConfigAdvisories } from "./validate.ts";
+export { reportConfigAdvisories } from "./validate.ts";
 
 
 export interface LoadedConfig {
@@ -237,6 +237,9 @@ export function parseConfig(raw: Record<string, unknown>): GlobalConfig {
   // Before anything reads a value: a string where a boolean belongs was true, a scalar where a list belongs was split
   // into characters, and a number where text belongs took the load down on its first `.trim()`.
   assertTypes(merged);
+  // `open` for the whole install is an old form: read as `pair`, which is what the next start writes over it once it
+  // has let in everyone who already talks to an agent here (`boot/open-mode.ts`). `open` is one agent's now.
+  if ((merged.security.access.mode as string) === "open") merged.security.access.mode = "pair";
   // Left out, this machine's zone, by name — so every config a parse hands back can format a date. The empty default
   // only says "not set"; handed to `Intl` it is refused, and whatever skipped `applyEnvOverrides` ran without memory.
   if (typeof merged.daemon.timezone === "string" && !merged.daemon.timezone.trim()) merged.daemon.timezone = hostTimeZone();

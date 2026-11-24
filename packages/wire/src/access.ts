@@ -2,7 +2,8 @@
  * Who may talk to the agents (`routes/access.ts`): who is asking, the answers, and what was answered before.
  */
 
-export type AccessMode = "open" | "allowlist" | "pair";
+/** An install asks a stranger to pair, or takes only who is listed. Open to everyone is one agent's (`AgentSummary.access`). */
+export type AccessMode = "allowlist" | "pair";
 
 export interface SenderRecord {
   gatewayId: string;

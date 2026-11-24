@@ -196,14 +196,15 @@ export interface WebPolicySection {
 }
 
 /**
- * How a stranger becomes someone the daemon will act for.
+ * How a stranger becomes someone the daemon will act for, as a door is asked it.
  *
- * `pair` is the default because the other two are each wrong for a different reason: `open` means
- * anyone who finds the bot can run the agent's tools, and `allowlist` is correct but adding a person
- * requires editing a file and restarting.
+ * `pair` is an install's default: `allowlist` is correct but adding a person requires editing a file and restarting.
+ * `open` is no install's: it is one agent's (`AgentAccess`), which then holds a few tools of the daemon's own, and it
+ * is here as the door's word for a connection such an agent owns. A config file that still says it for the whole
+ * install is read as `pair`, and brought forward at the next start (`boot/open-mode.ts`).
  */
 export type AccessMode =
-  /** Anyone may talk to it. Only sane for a daemon with no chat gateway. */
+  /** Anyone may talk to it: a connection an agent open to everyone owns. */
   | "open"
   /** Only ids in `allowlist`. Anyone else is dropped in silence — no reply, no error. */
   | "allowlist"
@@ -211,7 +212,7 @@ export type AccessMode =
   | "pair";
 
 export interface AccessSection {
-  mode: AccessMode;
+  mode: Exclude<AccessMode, "open">;
   /**
    * Pre-approved senders, honoured in every mode.
    *

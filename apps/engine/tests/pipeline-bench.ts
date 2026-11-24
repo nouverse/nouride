@@ -123,6 +123,8 @@ interface Install {
   db: SqliteDb;
   dataDir: string;
   agentsDir: string;
+  /** Whether the bench's door stands open: no `[security.access]` was given. */
+  everyoneIn: boolean;
 }
 
 export async function pipelineBench(options: BenchOptions = {}): Promise<Bench> {
@@ -139,20 +141,31 @@ export async function pipelineBench(options: BenchOptions = {}): Promise<Bench> 
     await writeAgentPack(agentsDir, { soul: "Be brief.", configToml: options.agentToml ?? '[llm]\nprovider = "test"\n', ...spec });
   }
   const config = parseConfig({ ...BASE_CONFIG, ...options.config });
-  if ((options.config?.security as { access?: unknown } | undefined)?.access === undefined) config.security.access.mode = "open";
   config.daemon.agentsDir = agentsDir;
   isolateInstallPaths(config, dataDir);
   const opened = await openAndMigrate(join(dataDir, "test.db"));
   const db = options.db ? options.db(opened) : opened;
   await options.configure?.(config, db);
 
-  const bench = await boot({ config, db, dataDir, agentsDir }, options);
+  const gated = (options.config?.security as { access?: unknown } | undefined)?.access !== undefined;
+  const bench = await boot({ config, db, dataDir, agentsDir, everyoneIn: !gated }, options);
   bench.dispose = () => {
     opened.close();
     removePath(agentsDir);
     removePath(installDir);
   };
   return bench;
+}
+
+/**
+ * The access store with its door standing open: every sender is let in at arrival, with no code. Asked whether a
+ * sender is let in by name (`allowlist`, which `Admission.admitsByName` asks as), it answers as the store does, so who
+ * may use an admin's command is still the list's to say. What the install's own `open` was, before `open` became one
+ * agent's.
+ */
+function everyoneIn(store: AccessStore): AccessStore {
+  const check: AccessStore["check"] = (params) => (params.mode === "allowlist" ? store.check(params) : { action: "allow" });
+  return Object.assign(Object.create(store) as AccessStore, { check });
 }
 
 /** One process over `install`: everything boot makes per process, made now. */
@@ -181,7 +194,10 @@ async function boot(install: Install, options: RebootOptions): Promise<Bench> {
   const turns = new EventedTurnStore(db, events);
   const durable = durableStores(db, events);
   const sessions = new SessionStore(db);
-  const access = new AccessStore({ db, ...config.security.access });
+  // Everyone is let in unless the test gives `[security.access]`: a test that is not about the door runs behind one
+  // that stands open, and a test about it says who is let in.
+  const store = new AccessStore({ db, ...config.security.access });
+  const access = install.everyoneIn ? everyoneIn(store) : store;
   const made: Made = { db, config, dataDir, agentsDir, gateways, registry, providers, sessions, turns, events, journal: durable.journal, inbox: durable.inbox, durable, access };
   const given = typeof options.deps === "function" ? await options.deps(made) : options.deps;
   const pipeline = new Pipeline({

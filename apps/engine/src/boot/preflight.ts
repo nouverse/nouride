@@ -19,7 +19,7 @@ import { envNamesFor } from "@nouride/secrets";
 import { skillsDirFor } from "@nouride/persona";
 import { assertCredentialsUnreadable } from "@nouride/persona";
 import type { AgentRegistry } from "@nouride/persona";
-import { assertGatewayExecPosture, reportConfigAdvisories } from "@/modules/config/global/index.ts";
+import { reportConfigAdvisories } from "@/modules/config/global/index.ts";
 import { openAdvisories, type Advise } from "./advisories.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
@@ -81,15 +81,6 @@ export function runPreflightChecks(deps: {
     workspaceDirs: [config.daemon.workspaceDir],
   });
 
-  // Checked here rather than in `parseConfig`: it needs the loaded agents to know who holds `exec`.
-  assertGatewayExecPosture({
-    gatewaysEnabled: config.gateways.some((g) => g.enabled),
-    agentsWithExec: registry
-      .active()
-      .filter((agent) => agent.config.tools.enabled.includes("exec"))
-      .map((agent) => agent.config.id),
-    accessMode: config.security.access.mode,
-  });
 
   // Bad, every boot: a setting the daemon cannot use. A deliberate default (no spend cap) at info. The rest once, while
   // it is new (`advisories.ts`) — `nouride doctor` and the dashboard's Overview list the whole set the last boot said.

@@ -7,7 +7,7 @@
  * what they are handed, and are here so that every store the daemon keeps is opened in one place.
  */
 
-import { ensureDir, join, setFileMode } from "@nouride/runtime";
+import { ensureDir, join, readTextFileIfExists, setFileMode } from "@nouride/runtime";
 import { TransientSecrets } from "@nouride/secrets";
 import { addLogSink, type GlobalConfig, type LoadedAgent } from "@nouride/shared";
 import { VERSION } from "@/commons/version.ts";
@@ -19,6 +19,8 @@ import { LogBuffer } from "@/commons/log-buffer.ts";
 import { LogStore } from "@/commons/logs.store.ts";
 import { AccessStore } from "@/modules/access/access.store.ts";
 import { OpenDoorStore } from "@/modules/access/open-door.store.ts";
+import { OpenModeStore } from "@/modules/access/open-mode.store.ts";
+import { bringOpenModeForward } from "./open-mode.ts";
 import { ChatAttachmentIndex } from "@/modules/attachments/chat-attachments.store.ts";
 import { AttachmentStore } from "@/modules/attachments/store.ts";
 import { ChatEventStore } from "@/modules/chat-events/chat-events.store.ts";
@@ -208,6 +210,8 @@ export async function openStores(input: {
   const { codeTtlMs, notifyCooldownMs, denyCooldownMs } = config.security.access;
   const access = new AccessStore({ db, audit, codeTtlMs, notifyCooldownMs, denyCooldownMs });
   const openDoor = new OpenDoorStore(db);
+  // An install that held `open` for everyone: who already talks to it is let in by name, then the file says `pair`.
+  await bringOpenModeForward({ configPath: input.configPath, config, source: (await readTextFileIfExists(input.configPath)) ?? "", senders: new OpenModeStore(db), access });
 
   // Constructed before the pipeline, and given its wake-up callback afterwards: the job store needs to
   // reach the pipeline, and the pipeline needs the job store for `exec background: true`.

@@ -199,9 +199,10 @@ export class Admission {
       senderId: envelope.senderId,
       ...(envelope.senderName ? { senderName: envelope.senderName } : {}),
       chatId: envelope.chatId,
+      mode,
       // A stranger is paired only by the connection they spoke to. The rest of a room's connections are
       // handed the same message and answer it as the allowlist would: no code, no request, no alert.
-      mode: mode === "pair" && !this.addressedHere(envelope) ? "allowlist" : mode,
+      ...(mode === "pair" && !this.addressedHere(envelope) ? { quiet: true } : {}),
       staticAllowlist,
       ...(envelope.senderAlso ? { alsoKnownAs: envelope.senderAlso } : {}),
     });

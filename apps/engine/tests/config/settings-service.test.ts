@@ -689,43 +689,23 @@ describe("access mode", () => {
     expect(read()).toContain("# This comment must survive every edit made through the dashboard.");
   });
 
-  test("refuses a mode that is not one of the three", async () => {
+  test("refuses a mode that is not one of the two", async () => {
     const result = await settings.setAccessMode({ mode: "off", actor: "test" });
-    expect(result.ok).toBe(false);
+    expect(result).toEqual({ ok: false, error: 'unknown access mode "off": use pair or allowlist' });
     expect(config.security.access.mode).toBe("pair");
     expect(read()).not.toContain("[security.access]");
   });
 
-  test("refuses `open` when it would stop the daemon booting again", async () => {
-    /**
-     * Boot refuses a chat gateway plus an agent holding `exec` plus an unguarded access mode. Writing
-     * that combination from the dashboard would save cleanly and then brick the next restart, with the
-     * chat that could have fixed it gone with the process. Same guard, applied before the write.
-     */
-    await settings.saveGateway({
-      platform: "telegram",
-      name: "nouva",
-      enabled: true,
-      token: TOKEN,
-      actor: "test",
+  test("refuses `open`, whoever holds a shell: an install is never open to everyone, and the refusal says what is", async () => {
+    // It was taken where no agent could run commands, and refused beside one that could. One agent may be open now,
+    // with a few tools of the daemon's own, so the install's switch has no such position at all.
+    const result = await settings.setAccessMode({ mode: "open", actor: "test" });
+    expect(result).toEqual({
+      ok: false,
+      error: 'access mode "open" is gone: an install is never open to everyone. Open one agent on its Access page in the dashboard instead; for the install, use pair or allowlist',
     });
-    // An allowlist does not make `open` safe — `open` admits everyone before the list is read.
-    config.security.access.allowlist = ["telegram:nouva:5550001111"];
-
-    const result = await settings.setAccessMode({
-      mode: "open",
-      agentsWithExec: ["nouva"],
-      actor: "test",
-    });
-
-    expect(result.ok).toBe(false);
     expect(config.security.access.mode).toBe("pair");
-  });
-
-  test("allows `open` when no agent can run commands", async () => {
-    const result = await settings.setAccessMode({ mode: "open", agentsWithExec: [], actor: "test" });
-    expect(result.ok).toBe(true);
-    expect(config.security.access.mode).toBe("open");
+    expect(read()).not.toContain("[security.access]");
   });
 });
 

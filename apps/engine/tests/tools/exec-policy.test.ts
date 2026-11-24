@@ -10,7 +10,7 @@ import { foregroundTimeoutFor, isService } from "@/modules/tools/builtins/exec-b
 import { waitSeconds } from "@/modules/tools/builtins/exec-background.ts";
 import { createBuiltinTools, resolveToolset } from "@/modules/tools/registry.ts";
 import { toolGrantKey } from "@nouride/policy";
-import { assertGatewayExecPosture } from "@/modules/config/global/index.ts";
+import { parseConfig } from "@/modules/config/global/index.ts";
 
 let root: string;
 let project: string;
@@ -731,64 +731,20 @@ describe("auto-backgrounding long-running commands", () => {
   });
 });
 
-describe("boot posture", () => {
-  const ok = {
-    gatewaysEnabled: true,
-    agentsWithExec: ["nouva"],
-    accessMode: "pair" as const,
-  };
-
-  /** Nothing stops a stranger: unknown senders are let straight through. */
-  const wideOpen = { ...ok, accessMode: "open" as const };
-
-  test("names the agents involved", () => {
-    try {
-      assertGatewayExecPosture({ ...wideOpen, agentsWithExec: ["nouva", "nox"] });
-      throw new Error("should have refused");
-    } catch (err) {
-      expect(String(err)).toContain("nouva, nox");
-    }
-  });
-
-  test('pair mode is enough on its own — an empty allowlist is not the question, and this is the default posture', () => {
-    // The question is "can a stranger reach this agent", and pairing answers it no: an unknown sender
-    // gets a code and their message is dropped until the operator approves.
-    //
-    // Checking the allowlist alone made this refuse a *safe* install, and it cost a live outage — an
-    // agent wired up its own Telegram gateway, the daemon refused to boot over an allowlist it did
-    // not need, systemd restarted it every five seconds, and the chat that could have fixed it went
-    // with the process.
-    //
-    expect(() => assertGatewayExecPosture(ok)).not.toThrow();
-  });
-
-  test("allowlist mode is enough too", () => {
-    expect(() =>
-      assertGatewayExecPosture({ ...ok, accessMode: "allowlist" }),
-    ).not.toThrow();
-  });
-
-  test("access wide open is refused whatever the allowlist holds — open admits everyone before reading it", () => {
-    // This said the opposite, and boot believed it: `open` with a non-empty `[security] sender_allowlist`
-    // booted, and `AccessStore.check` let a stranger through to `exec` without looking at the list. The
-    // guard no longer takes a list at all — and its message no longer advises one.
-    // Telegram bot + exec + nothing stopping strangers = remote shell for whoever finds the bot, and
-    // no exec policy fixes that — which is why this is the only refusal left.
-    expect(() => assertGatewayExecPosture(wideOpen)).toThrow(/anyone who\s+finds the bot/);
-    expect(() => assertGatewayExecPosture(wideOpen)).toThrow(/open admits everyone, whatever \[security\.access\] allowlist holds/);
-    expect(() => assertGatewayExecPosture(wideOpen)).not.toThrow(/Set an allowlist/);
-  });
-
-  test("does not apply without a gateway — local-only is the operator's own shell", () => {
-    expect(() =>
-      assertGatewayExecPosture({ ...wideOpen, gatewaysEnabled: false }),
-    ).not.toThrow();
-  });
-
-  test("does not apply when no agent has exec", () => {
-    expect(() =>
-      assertGatewayExecPosture({ ...ok, agentsWithExec: [] }),
-    ).not.toThrow();
+describe("a stranger never reaches a shell", () => {
+  /**
+   * Boot refused one posture: a chat gateway, an agent holding `exec`, and `[security.access] mode = "open"`, which let
+   * everyone in before any list was read. It cost a live outage once, refusing a safe install over an empty allowlist,
+   * and it was the last refusal left. There is nothing to refuse now: no install is open to everyone. The one agent
+   * that may be holds the daemon's few tools and none of its pack's, `exec` among them
+   * (`tests/tools/open-agent.test.ts`); and a file that still says `open` for everyone is read as `pair`, the next
+   * start writing that once it has let in everyone who already talks to an agent (`tests/boot/open-mode.test.ts`).
+   */
+  test("an install asks a stranger to pair, or takes only who is listed: `open` in a file is read as pair", () => {
+    expect(parseConfig({}).security.access.mode).toBe("pair");
+    expect(parseConfig({ security: { access: { mode: "allowlist" } } }).security.access.mode).toBe("allowlist");
+    expect(parseConfig({ security: { access: { mode: "open", allowlist: ["123"] } } }).security.access).toMatchObject({ mode: "pair", allowlist: ["123"] });
+    expect(() => parseConfig({ security: { access: { mode: "everyone" } } })).toThrow('[security.access] mode must be one of "allowlist", "pair", got "everyone"');
   });
 });
 
@@ -801,7 +757,7 @@ describe("approval_required, for the tools without a gate of their own", () => {
     jobMaxMs: 0,
     senderAllowlist: [],
     rateLimit: { messagesPerMinute: 10, cooldownReply: "slow" },
-    access: { mode: "open" as const, allowlist: [], codeTtlMs: 1000, notifyCooldownMs: 1000, denyCooldownMs: 1000 },
+    access: { mode: "pair" as const, allowlist: [], codeTtlMs: 1000, notifyCooldownMs: 1000, denyCooldownMs: 1000 },
     web: { allowPrivateUrls: false, searchKind: "brave", searchEndpoint: "", searchApiKey: "brave_search_api_key", fallbackEnabled: true, fallbackBackends: ["duckduckgo"] },
     approvals: "careful" as const,
     modelGuard: "",

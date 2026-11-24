@@ -29,54 +29,6 @@ const log = createLogger("config");
 /** The longest a timer can be set for: a longer one fires at once (`[security] job_max_ms`). */
 const MAX_TIMER_MS = 2_147_483_647;
 
-/**
- * Refuse a configuration that turns the daemon into an open remote shell.
- *
- * A chat gateway plus an agent holding `exec` plus no sender allowlist means anyone who finds the
- * bot can run commands on the host. That is what a first server deployment naturally lands on,
- * which is exactly why it is a refusal and not a warning nobody reads.
- *
- * How much an agent asks is *not* part of the refusal: that is the approval level, and boot says so at `warn` when an
- * agent or the daemon is set to `trusted` (`boot/preflight.ts`).
- *
- * Agents are not loaded yet at this point, so the exec check is applied by the caller once the
- * registry exists; this function covers what config alone can see.
- */
-export function assertGatewayExecPosture(params: {
-  gatewaysEnabled: boolean;
-  agentsWithExec: string[];
-  /** How unknown senders are handled. `pair` and `allowlist` both stop them; `open` does not. */
-  accessMode: "open" | "allowlist" | "pair";
-}): void {
-  if (!params.gatewaysEnabled || params.agentsWithExec.length === 0) return;
-
-  const who = `${params.agentsWithExec.join(", ")} ${params.agentsWithExec.length === 1 ? "has" : "have"} the exec tool`;
-
-  // The question is "can a stranger reach this agent", and there are two ways to answer it no.
-  //
-  // This used to check the static allowlist alone, which made it refuse a *safe* install: with
-  // `access.mode = "pair"` — the default — an unknown sender is given a code and their message is
-  // dropped until the operator approves it. That is the same protection the allowlist provides,
-  // arrived at from the other direction, and the guard did not know the mode existed.
-  //
-  // It cost a live outage. An agent wired up its own Telegram gateway, the daemon then refused to
-  // boot over an empty allowlist it did not need, systemd restarted it every five seconds, and the
-  // chat that could have fixed it was gone with the process. Only `open` is genuinely unguarded.
-  //
-  // And `open` is unguarded whatever the allowlist says: it admits everyone before the list is read
-  // (`AccessStore.check`). Counting a non-empty list as protection let exactly this posture boot — and
-  // the refusal's own advice, "set an allowlist", led there.
-  if (params.accessMode === "open") {
-    throw new ConfigError(
-      `refusing to start: a chat gateway is enabled and ${who}.\n` +
-        `  - [security.access] mode = "open", so anyone who finds the bot can run commands on this host:\n` +
-        `    open admits everyone, whatever [security.access] allowlist holds\n` +
-        `Use access mode "pair" (strangers get a code you approve) or "allowlist" with your own account in\n` +
-        `[security.access] allowlist, or remove exec from those agents. See docs/CLI.md.`,
-    );
-  }
-}
-
 function validateEnum<T extends string>(
   value: unknown,
   allowed: readonly T[],

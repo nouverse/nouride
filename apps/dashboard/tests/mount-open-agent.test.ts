@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { AgentOpen, AgentSummary } from "@nouride/wire";
+import { openOn } from "../src/modules/access/open-agents.tsx";
 import { limitTyped, reachedOn, todaySaid } from "../src/modules/agents/components/OpenToEveryone.tsx";
 import { answer, buttons, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
@@ -187,5 +188,64 @@ describe("an open agent", () => {
     });
     expect(has).toContain("Close it");
     expect(has).not.toContain("Change its limits");
+  });
+});
+
+describe("where else an open agent is said", () => {
+  const OPEN: AgentOpen = { ...CAN, limits: { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30, closedReply: null }, today: { tokens: 0, estimated: false, people: 0, messages: 0 } };
+
+  test("the Access page, which lists who was let in, names the agents that answer anyone and where: nobody of theirs is in its lists", async () => {
+    answer(withNora(OPEN, "open"));
+    let said = "";
+    await renderPage("/access", async (host) => {
+      await eventually(() => host.querySelector("[data-open-agents]") !== null, 3_000, "the line");
+      said = host.querySelector("[data-open-agents]")?.textContent ?? "";
+    });
+    expect(said).toBe("Open to everyone, with no code: Nora on Telegram (nora), WhatsApp (shop). Whoever writes to it is not in the lists below: nobody was asked for a code.");
+    expect(openOn({ open: { ...OPEN, connections: [] } })).toBe("with no connection of its own yet");
+    // No agent open: no line.
+    answer(withNora(CAN));
+    let drawn = true;
+    await renderPage("/access", async (host) => {
+      await eventually(() => host.textContent?.includes("Pending") === true, 3_000, "the page");
+      drawn = host.querySelector("[data-open-agents]") !== null;
+    });
+    expect(drawn).toBe(false);
+  });
+
+  test("its Tools are shown switched off while it is open, with why and the way to close it; a closed agent's are its own to switch", async () => {
+    answer(withNora(OPEN, "open"));
+    const seen = { said: "", off: false, save: false };
+    await renderPage("/agents/nora/settings", async (host) => {
+      await eventually(() => host.querySelector("[data-tools-locked]") !== null, 3_000, "the notice");
+      seen.said = host.querySelector("[data-tools-locked]")?.textContent ?? "";
+      const tools = [...host.querySelectorAll<HTMLElement>("section")].find((card) => card.querySelector("h2")?.textContent === "Tools")!;
+      await eventually(() => tools.querySelectorAll("input").length > 0, 3_000, "the switches");
+      seen.off = [...tools.querySelectorAll<HTMLInputElement>("input")].every((input) => input.disabled);
+      seen.save = [...tools.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Save tools")!.disabled;
+    });
+    expect(seen.said).toContain("Switched off while this agent is open to everyone.");
+    expect(seen.said).toContain("What is picked below is kept, and used again once you close it on its Access tab.");
+    expect(seen).toMatchObject({ off: true, save: true });
+
+    answer(withNora(CAN));
+    let locked = true;
+    let on = false;
+    await renderPage("/agents/nora/settings", async (host) => {
+      const tools = () => [...host.querySelectorAll<HTMLElement>("section")].find((card) => card.querySelector("h2")?.textContent === "Tools");
+      await eventually(() => (tools()?.querySelectorAll("input").length ?? 0) > 0, 3_000, "the switches");
+      locked = host.querySelector("[data-tools-locked]") !== null;
+      on = [...tools()!.querySelectorAll<HTMLInputElement>("input")].some((input) => !input.disabled);
+    });
+    expect({ locked, on }).toEqual({ locked: false, on: true });
+  });
+
+  test("the switch for every agent has two positions, and says where one agent is opened to everyone", async () => {
+    let said = "";
+    await renderPage("/agents/settings", async (host) => {
+      await eventually(() => host.textContent?.includes("Accept new senders") === true, 3_000, "the switch");
+      said = host.textContent ?? "";
+    });
+    expect(said).toContain("To let anyone write to one agent with no code, open that agent to everyone there.");
   });
 });

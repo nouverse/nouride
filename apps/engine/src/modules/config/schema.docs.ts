@@ -104,9 +104,9 @@ export const ANNOTATIONS: Record<string, Annotation> = {
   "security.rate_limit.cooldown_reply": { description: "What to say to a sender who is over the limit." },
   "security.access.mode": { live: true,
     description:
-      "`open` answers anyone, `allowlist` answers only listed senders, `pair` (the default) issues a code an operator approves.",
+      "`pair` (the default) issues a code an operator approves, `allowlist` answers only listed senders.",
     caveat:
-      "`open` with a chat gateway and an agent holding `exec` is refused, at boot and when switched to: anyone who finds the bot could run commands on this host. The allowlist does not change that; `open` admits everyone before it is read.",
+      "An install is never open to everyone. One agent may be: `access = \"open\"` under `[agent]` in its own config.toml, with `[open]` and its two daily limits, set from its Access page. A file that still says `open` here is read as `pair`, and the next start writes that after letting in everyone an agent had already answered.",
   },
   "security.access.allowlist": {
     description: "Sender ids admitted without pairing, bare or gateway-scoped (`telegram:main:123`), in `pair` and `allowlist` mode.",

@@ -14,7 +14,7 @@
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Lock, Shield } from "lucide-react";
+import { Lock, Shield } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { Card, PageHeader } from "@/commons/components/ui/ui";
 import { useState } from "react";
@@ -26,6 +26,7 @@ import { ApprovedTab } from "./approved.tab";
 import { BlockedTab } from "./blocked.tab";
 import { DeniedTab } from "./denied.tab";
 import { HistoryTab } from "./history.tab";
+import { OpenAgents } from "./open-agents";
 import { PendingTab } from "./pending.tab";
 import type { AccessSearch, AccessTab } from "./search";
 import { SenderQuery } from "./sender-line";
@@ -82,19 +83,9 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
       ) : (
         <>
           <p className="text-base-content/65 text-sm flex items-start gap-2">
-            {mode === "open" ? (
-              <AlertTriangle size={14} className="text-warning mt-0.5 shrink-0" />
-            ) : mode === "pair" ? (
-              <Shield size={14} className="text-info mt-0.5 shrink-0" />
-            ) : (
-              <Lock size={14} className="text-success mt-0.5 shrink-0" />
-            )}
+            {mode === "pair" ? <Shield size={14} className="text-info mt-0.5 shrink-0" /> : <Lock size={14} className="text-success mt-0.5 shrink-0" />}
             <span>
-              {mode === "open"
-                ? "Open: anyone who messages a bot is answered, without pairing."
-                : mode === "pair"
-                  ? "A stranger who messages a bot gets a pairing code and waits here."
-                  : "New senders are turned away; only those already approved are answered."}{" "}
+              {mode === "pair" ? "A stranger who messages a bot gets a pairing code and waits here." : "New senders are turned away; only those already approved are answered."}{" "}
               That is the default; an agent can decide for itself on its own Access tab. Change the default on{" "}
               <Link to="/agents/settings" className="link link-primary">
                 Agent Settings
@@ -102,6 +93,8 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
               .
             </span>
           </p>
+
+          <OpenAgents />
 
           {/* The tabs, the agent and the filter stay at the top of the window while the list scrolls under them. */}
           <StickyBar

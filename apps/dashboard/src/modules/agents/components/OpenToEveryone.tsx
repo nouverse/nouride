@@ -14,7 +14,7 @@ import { useState } from "react";
 import { Globe } from "lucide-react";
 import type { AgentOpen, AgentSummary } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
-import { platformName } from "@/commons/lib/platform";
+import { connectionSaid } from "@/commons/lib/platform";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
@@ -24,9 +24,6 @@ const NEVER: Record<NonNullable<AgentOpen["never"]>, string> = {
   orchestrator: "This is the main agent, the one that looks after this server, so it is never opened to everyone. Make another agent for the public, and open that one.",
   cli: "This agent works through a coding tool that brings tools of its own, and those cannot be taken away. So it is never opened to everyone. Open an agent that answers on a model instead.",
 };
-
-/** `telegram:nora` as a person reads it. */
-const connectionSaid = (id: string): string => `${platformName(id)} (${id.split(":").slice(1).join(":")})`;
 
 /** Where strangers would reach it, as one sentence. */
 export function reachedOn(connections: readonly string[]): string {

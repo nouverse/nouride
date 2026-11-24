@@ -1,4 +1,5 @@
 import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@nouride/cli-kit";
+import { openAgentChecks, openFromStatus } from "./open-agents.ts";
 import { cliPartsChecks, cliVersionChecks, BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
 import { formatBytes, type GlobalConfig } from "@nouride/shared";
 import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
@@ -271,6 +272,8 @@ export async function doctor(args: string[] = []): Promise<void> {
   }
 
   for (const check of guessedWindows(running)) add(check.level, check.message, check.hint);
+  // Who answers anyone, on which connections and within which numbers: nothing under `nouride access` says it.
+  for (const check of openAgentChecks(openFromStatus(running))) add(check.level, check.message, check.hint);
 
   if (status.gateways.length === 0) {
     add(

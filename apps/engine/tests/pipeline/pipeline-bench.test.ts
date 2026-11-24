@@ -52,9 +52,12 @@ test("several packs, the connections a test names, and config sections as an ope
   expect(bench.registry.enabled().map((agent) => agent.config.id).sort()).toEqual(["nouva", "nox"]);
   expect([...bench.gateways.keys()]).toEqual([local.id]);
   expect(bench.config.agents.mentionMaxHops).toBe(7);
-  // A section the test did not give is still the bench's — and access is open, since `[security.access]` was not given.
+  // A section the test did not give is still the bench's — and its door stands open, since `[security.access]` was not
+  // given: anyone is let in, and nobody is let in by name.
   expect(bench.config.llm.defaults.provider).toBe("test");
-  expect(bench.config.security.access.mode).toBe("open");
+  const anyone = { gatewayId: local.id, senderId: "anyone", chatId: "c", staticAllowlist: [] };
+  expect(bench.access.check({ ...anyone, mode: "pair" })).toEqual({ action: "allow" });
+  expect(bench.access.check({ ...anyone, mode: "allowlist" }).action).toBe("ignore");
 });
 
 test("the next process over the install has the first one's conversation and pauses, and everything else of its own", async () => {
