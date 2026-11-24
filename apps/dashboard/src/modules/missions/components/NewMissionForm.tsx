@@ -145,7 +145,7 @@ export function NewMissionForm({
               className="input input-sm w-full rounded-xl"
               value={review}
               disabled={noReview}
-              placeholder="The changelog names every breaking change"
+              placeholder="The changelog lists what breaks"
               onChange={(e) => setReview(e.target.value)}
             />
           </Field>
