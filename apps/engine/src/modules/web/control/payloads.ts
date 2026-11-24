@@ -236,3 +236,10 @@ export function cronPatchFrom(body: Record<string, unknown>, timezone: string): 
     ...(typeof body.keepAfterRun === "boolean" ? { keepAfterRun: body.keepAfterRun } : {}),
   };
 }
+
+/** A query parameter read as a number, with a default for absent and for nonsense. */
+export function clampNumber(raw: string | undefined, fallback: number, min: number, max: number): number {
+  const value = Number(raw);
+  if (!raw || !Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(Math.floor(value), max));
+}

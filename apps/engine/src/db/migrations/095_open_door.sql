@@ -7,6 +7,9 @@ CREATE TABLE open_door (
   day INTEGER NOT NULL,
   gateway_id TEXT NOT NULL,
   sender_id TEXT NOT NULL,
+  -- What the chat app called them when they last wrote: a private chat keeps no name anywhere else, and the agent's
+  -- page would list its public by number alone. Not verified, and never given to a model.
+  name TEXT,
   -- The messages of theirs that were answered that day.
   messages INTEGER NOT NULL DEFAULT 0,
   -- Said once a day, not once a message: that the agent is closed for the day, and that they have sent all they may.

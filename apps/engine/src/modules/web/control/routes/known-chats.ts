@@ -7,6 +7,7 @@
 import type { KnownChat } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { readerOf, Spoke } from "../whose.ts";
+import { openAgentsOn } from "../agent-open.ts";
 
 export function registerKnownChatRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/chats", (c) => {
@@ -20,8 +21,12 @@ export function registerKnownChatRoutes(control: ControlApp, deps: ControlDeps):
       const opener = deps.sessions?.openerOfChat(chat.gatewayId, chat.chatId);
       return (opener !== undefined && reader.ids.includes(opener)) || chat.people.some((person) => person.key !== undefined && person.key === reader.person);
     };
+    // Where a message or a report can be sent: not a stranger's chat with an open agent, which no automation is aimed
+    // at. A chat on its connection with somebody People knows is that person's, as on any connection.
+    const open = new Set(openAgentsOn(deps).flatMap((one) => one.gateways));
+    const strangers = (chat: { gatewayId: string; people: readonly unknown[] }) => open.has(chat.gatewayId) && chat.people.length === 0;
     return c.json({
-      chats: deps.pipeline.reachableChats().filter(theirs).map((chat) => ({
+      chats: deps.pipeline.reachableChats().filter((chat) => !strangers(chat) && theirs(chat)).map((chat) => ({
         gatewayId: chat.gatewayId,
         chatId: chat.chatId,
         platform: chat.platform,

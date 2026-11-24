@@ -27,3 +27,18 @@ export function openOf(deps: Pick<ControlDeps, "ctx" | "usage" | "openDoor">, ag
     ...(isOpenAgent(agent) ? { today: today() } : {}),
   };
 }
+
+/**
+ * Each agent open to everyone with the connections it owns: where strangers write to it. Its conversations there are
+ * no person's own, so the lists of chats leave them out (`SessionListOptions.notPublic`) and its own page lists them
+ * (`routes/agent-public.ts`). Another agent's conversation on such a connection is a known person's, who named that
+ * agent there, and is listed as any.
+ */
+export function openAgentsOn(deps: Pick<ControlDeps, "ctx" | "registry">): { agentId: string; gateways: string[] }[] {
+  const byAgent = new Map<string, string[]>();
+  for (const gateway of deps.ctx.config.gateways) {
+    if (gateway.agent === undefined || !isOpenAgent(deps.registry.get(gateway.agent))) continue;
+    byAgent.set(gateway.agent, [...(byAgent.get(gateway.agent) ?? []), gateway.id]);
+  }
+  return [...byAgent].map(([agentId, gateways]) => ({ agentId, gateways }));
+}

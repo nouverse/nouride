@@ -8,9 +8,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { AgentOpen, AgentSummary } from "@nouride/wire";
+import type { AgentOpen, AgentSummary, PublicConversation } from "@nouride/wire";
 import { openOn } from "../src/modules/access/open-agents.tsx";
 import { limitTyped, reachedOn, todaySaid } from "../src/modules/agents/components/OpenToEveryone.tsx";
+import { whoWrote } from "../src/modules/agents/components/PublicConversations.tsx";
 import { answer, buttons, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -23,9 +24,12 @@ const CAN: AgentOpen = { never: null, notes: false, connections: ["telegram:nora
 /** Nora beside the install's first agent, with what her page is told of being open. */
 const withNora = (open: AgentOpen, access: AgentSummary["access"] = "follow") => ({
   "/status": ok({ ...STATUS, orchestrator: "nouva", agents: [STATUS.agents[0]!, { ...STATUS.agents[0]!, id: "nora", displayName: "Nora", access, open }] }),
+  // Nobody has written to it, unless a test says who did.
+  "/agents/nora/public": ok({ conversations: [], total: 0 }),
 });
 const card = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("section, div")].find((one) => one.querySelector("h2, h3")?.textContent?.trim() === "Open to everyone") ?? host;
 const drawn = (host: HTMLElement) => eventually(() => host.textContent?.includes("Open to everyone") === true, 3_000, "the card");
+const drawn_card = drawn;
 const field = (host: HTMLElement, label: string) => [...host.querySelectorAll("label")].find((one) => one.textContent?.includes(label))!.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")!;
 
 describe("the words", () => {
@@ -247,5 +251,98 @@ describe("where else an open agent is said", () => {
       said = host.textContent ?? "";
     });
     expect(said).toContain("To let anyone write to one agent with no code, open that agent to everyone there.");
+  });
+});
+
+describe("the people who wrote to it", () => {
+  const OPEN: AgentOpen = { ...CAN, limits: { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30, closedReply: null }, today: { tokens: 0, estimated: false, people: 2, messages: 3 } };
+  const row = (sessionId: string, more: Partial<PublicConversation>): PublicConversation => ({ sessionId, gatewayId: "telegram:nora", chatId: sessionId, kind: "private", sender: { id: "7001", name: "Budi Santoso", blocked: false }, title: "when do you open?", updatedAt: Date.now() - 5 * 60_000, ...more });
+  const BUDI = row("ses_budi", {});
+  const SITI = row("ses_siti", { gatewayId: "whatsapp:shop", sender: { id: "62812@s.whatsapp.net", name: null, blocked: true }, title: "berapa harga kopi?" });
+  const GROUP = row("ses_group", { kind: "group", sender: { id: "9009", name: null, blocked: false }, title: "are you a bot?" });
+  const rows = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("[data-public-row]")];
+
+  test("are listed on its Access page with what they first asked, each read as any conversation is; a blocked sender is marked, and has no Block", async () => {
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3 }) });
+    const seen = { said: [] as string[], read: [] as (string | null)[], block: [] as boolean[] };
+    await renderPage("/agents/nora/access", async (host) => {
+      await eventually(() => rows(host).length === 3, 3_000, "the rows");
+      seen.said = rows(host).map((one) => one.textContent ?? "");
+      seen.read = rows(host).map((one) => one.querySelector("a")?.getAttribute("href") ?? null);
+      seen.block = rows(host).map((one) => [...one.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Block"));
+    });
+    expect(seen.said[0]).toContain("9009, in a group");
+    expect(seen.said[0]).toContain("“are you a bot?”");
+    expect(seen.said[1]).toContain("62812@s.whatsapp.net");
+    expect(seen.said[1]).toContain("WhatsApp");
+    expect(seen.said[1]).toContain("Blocked");
+    expect(seen.said[2]).toContain("Budi Santoso");
+    expect(seen.said[2]).toContain("Telegram");
+    expect(seen.said[2]).toContain("5 min ago");
+    expect(seen.read).toEqual(["/dashboard/chat/ses_group", "/dashboard/chat/ses_siti", "/dashboard/chat/ses_budi"]);
+    expect(seen.block).toEqual([true, false, true]);
+    expect(whoWrote({ kind: "private", sender: null })).toBe("Somebody");
+  });
+
+  test("Block asks first, says what it does, and blocks that sender on that connection", async () => {
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [BUDI], total: 1 }) });
+    const posted = recordPosts({ "/access/block": ok({ ok: true }) });
+    let asked = "";
+    await renderPage("/agents/nora/access", async (host) => {
+      await eventually(() => rows(host).length === 1, 3_000, "the row");
+      press(rows(host)[0]!, "Block");
+      await eventually(() => host.ownerDocument.body.textContent?.includes("Block Budi Santoso?") === true, 2_000, "the question");
+      const question = () => [...host.ownerDocument.querySelectorAll<HTMLDialogElement>("dialog")].find((one) => one.textContent?.includes("Block Budi Santoso?"))!;
+      const answer = (label: string) => [...question().querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label)!.click();
+      asked = question().textContent ?? "";
+      // A no blocks nobody. The button is held while its question is open and what follows it runs: free again, the
+      // no has been acted on, whatever it did.
+      const block = () => [...rows(host)[0]!.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Block")!;
+      answer("Cancel");
+      await eventually(() => !block().disabled, 2_000, "the no acted on");
+      expect(posted.posts).toEqual([]);
+      press(rows(host)[0]!, "Block");
+      await eventually(() => question()?.open === true, 2_000, "the question again");
+      answer("Block");
+      await eventually(() => posted.posts.length === 1, 2_000, "the post");
+    });
+    posted.restore();
+    expect(asked).toContain("Their messages are ignored from now on, with no reply, on this connection.");
+    expect(posted.posts.map((one) => one.path)).toEqual(["/access/block"]);
+  });
+
+  test("more than a page: the rest are asked for under the ones on screen", async () => {
+    const first = Array.from({ length: 2 }, (_, n) => row(`ses_a${n}`, { title: `first ${n}` }));
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: first, total: 3, nextBefore: 1234 }), "/agents/nora/public?before=1234": ok({ conversations: [row("ses_b", { title: "the last one" })], total: 3 }) });
+    let shown: string[] = [];
+    let offered = "";
+    await renderPage("/agents/nora/access", async (host) => {
+      await eventually(() => rows(host).length === 2, 3_000, "the first page");
+      offered = buttons(host).find((label) => label.startsWith("Show more")) ?? "";
+      press(host, offered);
+      await eventually(() => rows(host).length === 3, 3_000, "the next page");
+      shown = rows(host).map((one) => one.dataset.publicRow ?? "");
+    });
+    expect(offered).toBe("Show more (1 more)");
+    expect(shown).toEqual(["ses_a0", "ses_a1", "ses_b"]);
+  });
+
+  test("nobody yet is said; and an operator, or a closed agent's page, has no such list", async () => {
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [], total: 0 }) });
+    let said = "";
+    await renderPage("/agents/nora/access", async (host) => {
+      await eventually(() => host.textContent?.includes("Nobody has written to it yet.") === true, 3_000, "the empty line");
+      said = host.textContent ?? "";
+    });
+    expect(said).toContain("People who wrote");
+    for (const override of [{ ...withNora(OPEN, "open"), "/auth/me": ok({ ...ME, role: "operator", user: { ...ME.user, role: "operator" } }) }, withNora(CAN)]) {
+      answer({ ...override, "/agents/nora/public": ok({ conversations: [BUDI], total: 1 }) });
+      let drawn = true;
+      await renderPage("/agents/nora/access", async (host) => {
+        await drawn_card(host);
+        drawn = host.textContent?.includes("People who wrote") === true;
+      });
+      expect(drawn).toBe(false);
+    }
   });
 });

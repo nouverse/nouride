@@ -150,6 +150,27 @@ export interface AgentOpen {
   today?: { tokens: number; estimated: boolean; people: number; messages: number };
 }
 
+/** One conversation an agent open to everyone had on a connection of its own: a row of its page. */
+export interface PublicConversation {
+  sessionId: string;
+  gatewayId: string;
+  chatId: string;
+  kind: "private" | "group";
+  /** Who began it: their id on the chat app, what it called them where that was kept, and whether they are blocked. */
+  sender: { id: string; name: string | null; blocked: boolean } | null;
+  /** The first thing asked in it. */
+  title: string;
+  updatedAt: number;
+}
+
+/** What `GET /agents/:id/public` answers: its conversations with the public, newest first, a page at a time. */
+export interface AgentPublic {
+  conversations: PublicConversation[];
+  total: number;
+  /** The cursor for the next page, or absent on the last. */
+  nextBefore?: number;
+}
+
 export interface AgentSummary {
   id: string;
   /** When the daemon first saw it, ms (0.8.1): the order agents were made in. Null or absent from older daemons. */

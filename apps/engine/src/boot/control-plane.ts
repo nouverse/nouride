@@ -128,7 +128,7 @@ export async function startControlPlane(deps: {
   toolGrants: ToolGrantsPort;
   access: AccessPort;
   /** What strangers used of an open agent today, for its page (`web/control/agent-open.ts`). */
-  openDoor: Pick<OpenDoorStore, "today">;
+  openDoor: Pick<OpenDoorStore, "today" | "names">;
   /** What is remembered about people — the Memory routes (`nouride memory`). */
   memory: Memory;
   /** Memory's nightly pass: run on demand, reported on, and the model call forgetting someone needs. */

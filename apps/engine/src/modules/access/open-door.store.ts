@@ -54,10 +54,11 @@ export class OpenDoorStore {
    * One stranger's message for an open agent, on the day that began at `day`: counted here when it may be answered.
    * `tokensToday` is what the agent has used since then, whoever it answered.
    */
-  take(input: { agentId: string; gatewayId: string; senderId: string; day: number; tokensToday: number; limits: Pick<OpenLimits, "maxDailyTokens" | "maxDailyMessagesPerPerson"> }): DoorVerdict {
+  take(input: { agentId: string; gatewayId: string; senderId: string; name?: string; day: number; tokensToday: number; limits: Pick<OpenLimits, "maxDailyTokens" | "maxDailyMessagesPerPerson"> }): DoorVerdict {
     const { agentId, gatewayId, senderId, day } = input;
     return this.db.transaction((): DoorVerdict => {
       const theirs = this.row(agentId, day, gatewayId, senderId);
+      if (input.name?.trim()) this.db.prepare("UPDATE open_door SET name = ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(input.name.trim().slice(0, 120), agentId, day, gatewayId, senderId);
       if (input.tokensToday >= input.limits.maxDailyTokens) {
         const agents = this.row(agentId, day, "", "");
         if (!agents.told_closed) this.toldClosed(agentId, day, "", "");
@@ -71,6 +72,17 @@ export class OpenDoorStore {
       this.db.prepare("UPDATE open_door SET messages = messages + 1 WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(agentId, day, gatewayId, senderId);
       return { action: "answer" };
     });
+  }
+
+  /**
+   * What the chat app last called each sender on one of an agent's connections, among the days kept: the newest name
+   * wins. A week's rows at most, read whole for the connection: the page that asks lists a few dozen of them.
+   */
+  names(agentId: string, gatewayId: string): Map<string, string> {
+    const rows = this.db
+      .prepare<{ sender_id: string; name: string }>("SELECT sender_id, name FROM open_door WHERE agent_id = ? AND gateway_id = ? AND name IS NOT NULL ORDER BY day")
+      .all(agentId, gatewayId);
+    return new Map(rows.map((row) => [row.sender_id, row.name]));
   }
 
   /** How many people wrote to an agent on the day that began at `day`, and how many of their messages it answered. */

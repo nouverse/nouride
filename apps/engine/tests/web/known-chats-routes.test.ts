@@ -21,7 +21,7 @@ function mount(role: "admin" | "viewer", spoke: string[] = []) {
         { gatewayId: "telegram:nouva", chatId: "-1005550002", platform: "telegram", kind: "group", title: "Nouride", people: [{ name: "Gading" }, { name: "Mira" }], lastActive: 1 },
       ],
     },
-    ctx: { config: { people: [{ key: "mira", name: "Mira", ids: ["web:u1", "telegram:77"] }] } },
+    ctx: { config: { people: [{ key: "mira", name: "Mira", ids: ["web:u1", "telegram:77"] }], gateways: [] } },
     sessions: { openerOfChat: () => undefined },
     roomMessages: { spokeIn: (ids: string[]) => new Set(ids.includes("telegram:77") ? spoke.map((chat) => `telegram\u0000${chat}`) : []) },
   } as never);

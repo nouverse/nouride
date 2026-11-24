@@ -127,7 +127,7 @@ export interface ControlDeps {
   /** Who may talk to the daemon. */
   access?: AccessPort;
   /** What strangers used of an agent open to everyone today, for its page. */
-  openDoor?: Pick<OpenDoorStore, "today">;
+  openDoor?: Pick<OpenDoorStore, "today" | "names">;
   /** Senders who switched approval off — dropped with their access (`AutoApprove.forget`). */
   autoApprove?: AutoApprovePort;
   /** Tokens for Nouride's MCP server (`/mcp`). */

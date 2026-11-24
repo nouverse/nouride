@@ -495,6 +495,16 @@ describe("retention sweeping", () => {
     expect(existsSync(recent.localPath)).toBe(true);
   });
 
+  test("a file a stranger sent an agent open to everyone goes at the same age: it is kept by day, whoever sent it and whichever agent it was for", async () => {
+    // An open agent takes files from anyone, so its folder is the one that would only ever grow. It has no window of
+    // its own to forget: the sweep is of days, across every agent and chat.
+    const strangers = { ...SCOPE, agentId: "nora", gatewayId: "telegram:nora", chatId: "7001" };
+    const old = await seed("2026-08-01", strangers);
+    const recent = await seed("2026-08-10", strangers);
+    expect(storeAt("2026-08-11").sweep(7)).toEqual({ removed: 1, freedBytes: 100 });
+    expect({ old: existsSync(old.localPath), recent: existsSync(recent.localPath) }).toEqual({ old: false, recent: true });
+  });
+
   test("the cutoff is exclusive at exactly the boundary", async () => {
     // 7 days back from the 11th is the 4th. The 4th itself is inside the window; the 3rd is not.
     await seed("2026-08-04");
