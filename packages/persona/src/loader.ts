@@ -64,6 +64,9 @@ const PERSONA_FILES = {
   memory: "MEMORY.md",
 } as const;
 
+/** The one file of a pack its agent writes itself, which the registry reads again as it changes (`withOwnMemory`). */
+export const MEMORY_FILE = PERSONA_FILES.memory;
+
 export interface LoadAgentOptions {
   /** `agents/` — where the shared skill pool, `skills/`, lives. */
   agentsDir: string;
