@@ -26,7 +26,7 @@ export const missionsApi = {
   missionPictureUrl: (id: string, index: number): string => `${control}/missions/${encodeURIComponent(id)}/files/${index}`,
 
   /** 201 with the mission; a refusal (no such agent, no goal, a relative folder) is a 400 whose `error` is a sentence. */
-  startMission: (input: MissionStart) => post<{ mission: MissionView }>(`${control}/missions`, input),
+  startMission: (input: MissionStart) => post<{ mission: MissionView; briefFailed?: string; note?: string; plain?: string }>(`${control}/missions`, input),
 
   /** A draft changed before it starts (0.8.11); a 409 says why not — it started, or nothing changes. */
   editMission: (id: string, change: MissionEdit) =>

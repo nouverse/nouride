@@ -14,13 +14,14 @@
  */
 
 import type { MissionDetail, MissionView } from "@nouride/wire";
-import { sessionIdFor } from "@nouride/shared";
+import { missionLimitRefusal, sessionIdFor } from "@nouride/shared";
 import { retryAt, stepsDone } from "@/modules/missions/decide.ts";
 import type { DraftChange } from "@/modules/missions/drafts.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { workedMs } from "@/modules/missions/page.ts";
 import type { Acted, Deleted, Refused } from "@/modules/missions/person.ts";
+import { LIMIT_KEYS } from "@/modules/missions/start.ts";
 import type { TellAnswer, TellWhere } from "@/modules/missions/tell.ts";
 import { seenAs, type Mission } from "@/modules/missions/types.ts";
 import { LOCAL_GATEWAY_ID } from "@/modules/gateways/local.ts";
@@ -182,6 +183,23 @@ function strings(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : undefined;
 }
 
+/**
+ * The limits a new mission's body names as its own, each held to the bounds its setting keeps — or the first that is
+ * out of them, as a sentence about that limit. One that is not a number is refused, not dropped: a limit typed wrong
+ * and ignored would start the mission with a limit its person did not choose.
+ */
+function ownLimitsOf(value: unknown): { own: Partial<Mission["limits"]> } | { refused: string } {
+  const given = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const own: Partial<Mission["limits"]> = {};
+  for (const key of LIMIT_KEYS) {
+    if (given[key] === undefined || given[key] === null) continue;
+    const why = missionLimitRefusal(key, given[key], `Its ${key} limit`);
+    if (why) return { refused: why };
+    own[key] = given[key] as number;
+  }
+  return { own };
+}
+
 /** What a body sent to a draft's edit changes: only the fields it names, each as the draft takes it (`MissionEdit`). */
 function draftChangeOf(body: Record<string, unknown>): DraftChange {
   const checks = strings(body.checks);
@@ -295,6 +313,9 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     const body = await jsonBody(c);
     if (!body || typeof body.agent !== "string" || typeof body.goal !== "string") return c.json({ error: "send { agent, goal }" }, 400);
     const checks = strings(body.checks);
+    // Its own limits, the ones the form filled: one out of its bounds is refused here, in the page's words.
+    const limits = ownLimitsOf(body.limits);
+    if ("refused" in limits) return c.json({ error: limits.refused, plain: "The mission was not made. Check the limits you typed for it, and try again." }, 400);
     const started = missions.start({
       agentId: body.agent,
       ...(typeof body.title === "string" && body.title.trim() ? { title: body.title } : {}),
@@ -303,6 +324,8 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
       ...(body.noReview === true ? { review: false as const } : typeof body.review === "string" && body.review.trim() ? { review: body.review } : {}),
       ...(body.accept === true ? { accept: true } : {}),
       ...(typeof body.workdir === "string" && body.workdir.trim() ? { workdir: body.workdir.trim() } : {}),
+      ...(Object.keys(limits.own).length > 0 ? { limits: limits.own } : {}),
+      ...(typeof body.brief === "string" && body.brief.trim() ? { brief: body.brief.trim() } : {}),
       // Saved to the backlog: a draft, which waits there until someone starts it.
       ...(body.draft === true ? { proposed: true } : {}),
       startedBy: principal.user?.id ?? principal.actor,
@@ -313,7 +336,13 @@ export function registerMissionRoutes(control: ControlApp, deps: ControlDeps): v
     });
     if ("refused" in started) return c.json({ error: started.refused, plain: "The mission was not started. Check its goal, its checks and its folder, and try again." }, 400);
     deps.audit.record({ action: body.draft === true ? "mission_drafted" : "mission_started", actor: principal.actor, agentId: started.mission.agentId, details: { mission: started.mission.id } });
-    return c.json({ mission: view(missions, started.mission, thingsFor(deps, principal)) } satisfies { mission: MissionView }, 201);
+    // Its brief is in its folder before the page that opens next reads it; one that could not be written is said.
+    const briefFailed = started.drafted ? await started.drafted : null;
+    const mission = view(missions, started.mission, thingsFor(deps, principal));
+    if (briefFailed) {
+      return c.json({ mission, briefFailed, note: `Its brief could not be written: ${briefFailed}.`, plain: "Saved, but its brief could not be written, so it has none for now. Whoever runs the server can see why." } satisfies { mission: MissionView; briefFailed?: string; note?: string; plain?: string }, 201);
+    }
+    return c.json({ mission } satisfies { mission: MissionView; briefFailed?: string; note?: string; plain?: string }, 201);
   });
 
   /**
