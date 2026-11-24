@@ -8,12 +8,11 @@
  */
 
 import { assertSecretName, looksLikeCredential } from "@nouride/secrets";
+import { accessOf } from "./access.ts";
 import { externalOf } from "./external.ts";
 import { lookOf } from "./look.ts";
 import { fallbacksOf } from "./fallbacks.ts";
 import {
-  AGENT_ACCESS,
-  isAgentAccess,
   isAgentApprovalLevel,
   isLlmEffort,
   LLM_EFFORTS,
@@ -290,17 +289,8 @@ export function parseAgentConfig(
             return agent.approvals;
           })(),
         }),
-    // `[agent] access` — the same shape as `approvals` above: absent stays absent, a bad value fails at load.
-    ...(agent.access === undefined
-      ? {}
-      : {
-          access: (() => {
-            if (!isAgentAccess(agent.access)) {
-              throw new ConfigError(`${where} [agent] access must be one of ${AGENT_ACCESS.join(", ")}, got ${JSON.stringify(agent.access)}`);
-            }
-            return agent.access;
-          })(),
-        }),
+    // `[agent] access`: absent stays absent, a bad value fails at load, and so does `open` on a coding CLI.
+    ...accessOf(agent.access, raw?.external !== undefined, where),
     llm: {
       provider,
       model: str(llm.model, `${where} [llm] model`) ?? defaults.model,

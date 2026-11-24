@@ -523,6 +523,17 @@ describe("[agent] access", () => {
       expect(() => parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS })).toThrow(/\[agent\] access must be one of follow, pair, allowlist, open/);
     }
   });
+
+  test("open on a coding CLI fails at load, naming the field: the CLI brings tools the daemon cannot take away", () => {
+    const external = { cli: "codex" };
+    expect(() => parseAgentConfig("solo", { agent: { access: "open" }, external }, { defaults: DEFAULTS, knownClis: ["codex"] })).toThrow(
+      'agents/solo/config.toml [agent] access = "open": an agent on a coding CLI ([external]) is never open to everyone, since the CLI brings tools of its own that Nouride cannot take away. ' +
+        "Open an agent that answers on a model, or keep this one to the people you let in",
+    );
+    // Either half alone loads: an agent on a CLI kept to the people let in, and an open one on a model.
+    expect(parseAgentConfig("solo", { agent: { access: "pair" }, external }, { defaults: DEFAULTS, knownClis: ["codex"] }).external).toEqual({ cli: "codex" });
+    expect(parseAgentConfig("solo", { agent: { access: "open" } }, { defaults: DEFAULTS, knownClis: ["codex"] }).access).toBe("open");
+  });
 });
 
 describe("[jobs] quiet_after_minutes", () => {

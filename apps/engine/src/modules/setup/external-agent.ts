@@ -9,7 +9,7 @@ import { createLogger, type ExternalPermissions } from "@nouride/shared";
 import { removeTomlKey, removeTomlTable, upsertTomlTable } from "@/modules/config/edit.ts";
 import { editPackFile } from "@/modules/config/config-file.ts";
 import type { SetupDeps } from "./service.ts";
-import { externalOrchestratorRefusal } from "./agent-access.ts";
+import { cliOnOpenRefusal, externalOrchestratorRefusal } from "./agent-access.ts";
 
 const log = createLogger("setup");
 
@@ -88,6 +88,7 @@ export async function setAnsweredBy(
   if (!agent) return { ok: false, error: `no agent "${input.agentId}"` };
   // The choice itself refused (0.8.23): the page names it.
   if (input.cli !== null && deps.config.daemon.orchestrator === input.agentId) return { ok: false, field: "cli", error: externalOrchestratorRefusal(input.agentId) };
+  if (input.cli !== null && agent.config.access === "open") return { ok: false, field: "cli", error: cliOnOpenRefusal(input.agentId) };
   if (input.cli === null && !agent.config.external) return { ok: true };
   const profile = input.profile?.trim();
   const cli = input.cli;

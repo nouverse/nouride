@@ -41,7 +41,7 @@ import { AgentsSeen } from "@/commons/agents-seen.ts";
 import { bootMemory } from "@/boot/memory.ts";
 import { machineFor, reportCommandIsolation } from "@/boot/commands-cgroup.ts";
 import { VaultFormatError } from "@/modules/memory/format.ts";
-import { refusingExternalOrchestrator, runPreflightChecks } from "@/boot/preflight.ts";
+import { refusedByThisInstall, runPreflightChecks } from "@/boot/preflight.ts";
 import { oauthReady, resolveOauthSupport } from "@/modules/users/oidc.ts";
 import { resolveMultiUserSupport } from "@/modules/users/multi-user.ts";
 import { resolveLinkedPlugins } from "@/boot/linked-plugins.ts";
@@ -158,7 +158,7 @@ export async function runDaemon(): Promise<void> {
     skillsOffGlobally: () => config.skills.off,
     // Kept in the database, so `/stop` holds through a restart.
     pauses: pausedAgentsState(state),
-    refuse: refusingExternalOrchestrator(config),
+    refuse: refusedByThisInstall(config),
   });
   // Each agent's user and folders; an agent loaded later, when it loads. Not waited on: the first start hands every
   // agent's folders over — on the live box some 450,000 files — and the gateways connect meanwhile; a command that

@@ -61,6 +61,8 @@ export function registerAgentToolRoutes(control: ControlApp, deps: ControlDeps):
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
     const body = ((await jsonBody(c)) ?? {}) as { access?: unknown };
     if (!isAgentAccess(body.access)) return c.json({ error: `access must be one of ${AGENT_ACCESS.join(", ")}` }, 400);
+    // Not a word among the others: an agent is opened to everyone with the limits on what strangers may cost, or not at all.
+    if (body.access === "open") return c.json({ error: "an agent is opened to everyone with its daily limits, not by this setting", plain: NOT_SAVED }, 400);
     const result = await deps.setup.setAgentAccess({ agentId: c.req.param("id"), access: body.access, actor: principal.actor });
     return result.ok ? c.json({ ok: true } satisfies { ok: true }) : c.json({ error: result.error, plain: NOT_SAVED }, 400);
   });

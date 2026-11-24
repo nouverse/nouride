@@ -77,6 +77,6 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "internals/pro/packages/appliance/src/ui/features/wifi/WifiTab.tsx": { WifiTab: { lines: 243, why: COMPONENT("the Wi-Fi setup: a network, its password, the poll and why it failed") } },
   "packages/mcp/src/http.ts": { streamableHttpTransport: { lines: 156, why: "MCP's streamable HTTP transport: one endpoint, a JSON or event-stream answer per POST, and the session they share, in one closure" } },
   "packages/mcp/tests/fixtures/oauth-servers.ts": { oauthServers: { lines: 210, why: "a test fixture: an MCP server and the OAuth server in front of it, started together for the tests that sign in" } },
-  "packages/persona/src/config.ts": { parseAgentConfig: { lines: 165, why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field; its readers are helpers beside it already" } },
+  "packages/persona/src/config.ts": { parseAgentConfig: { lines: 156, why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field; its readers are helpers beside it already" } },
   "scripts/check-arch.ts": { main: { lines: 180, why: "the import rules over every file in one loop that reads each file once; a rule as a function of its own is the seam" } },
 };

@@ -410,8 +410,10 @@ describe("an agent's preset, tools and default, from the dashboard", () => {
     expect((await post(scoped, "/agents/nix/tools", { tools: "read" })).status).toBe(400);
     expect((await post(scoped, "/agents/nix/access", { access: "allowlist" })).status).toBe(200);
     expect(seen.at(-1)).toEqual({ access: { agentId: "nix", access: "allowlist", actor: "cli" } });
-    // `open` is never an agent's to choose: the daemon refuses it for any agent with exec.
-    expect((await post(scoped, "/agents/nix/access", { access: "open" })).status).toBe(400);
+    // `open` is not a word among the others here: an agent is opened with its daily limits, or not at all.
+    const opened = await post(scoped, "/agents/nix/access", { access: "open" });
+    expect({ status: opened.status, body: await opened.json() }).toEqual({ status: 400, body: { error: "an agent is opened to everyone with its daily limits, not by this setting", plain: expect.any(String) } });
+    expect(seen.at(-1)).toEqual({ access: { agentId: "nix", access: "allowlist", actor: "cli" } });
   });
 
   test("an orchestrator refused for an agent that is there is a conflict; one that is not there, not found (0.8.10)", async () => {
