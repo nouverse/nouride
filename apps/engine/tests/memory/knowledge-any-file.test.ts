@@ -113,6 +113,22 @@ describe("what a file with no words of its own is found by", () => {
     expect(h.memory.knowledge.document("house", "floorplan.png")!.reason).toBe("Nouride does not read the words of this kind of file. It is kept as it is, and found by its title and what is written about it.");
   });
 
+  test("a picture an install listed before, with nothing to find it by, is found by its name after the next sync", async () => {
+    const { h, found } = await home();
+    mkdirSync(join(h.knowledgeRoot, "house"), { recursive: true });
+    writeFileSync(join(h.knowledgeRoot, "house", "knowledge.toml"), 'name = "House"\nreaders = ["gading"]\n');
+    writeFileSync(join(h.knowledgeRoot, "house", "floorplan.png"), PHOTO);
+    await h.memory.knowledge.sync();
+    // As the release before left it: the document's row, and no section of it in the index.
+    h.db.prepare("DELETE FROM knowledge_sections WHERE collection = 'house'").run();
+    h.db.prepare("UPDATE knowledge_documents SET sections = 0, reason = 'Nouride does not read this kind of file, so it is kept here but not searched.' WHERE collection = 'house'").run();
+    expect(h.memory.knowledge.sectionsOf("house", "floorplan.png")).toEqual([]);
+
+    expect(await h.memory.knowledge.sync()).toMatchObject({ unchanged: 0, notSearched: 1 });
+    expect(await found(GADING_DM, "floorplan")).toEqual(["knowledge:house/floorplan.png#0"]);
+    expect(h.memory.knowledge.document("house", "floorplan.png")!.reason).toBe("Nouride does not read the words of this kind of file. It is kept as it is, and found by its title.");
+  });
+
   test("a file removed takes its note with it", async () => {
     const { h, keep } = await home();
     await keep({ collection: "Car", title: TITLE, file: "brv-qr.jpg", content: LINE });
