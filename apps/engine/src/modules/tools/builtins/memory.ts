@@ -63,8 +63,11 @@ export function agentsOf(args: Record<string, unknown>): string[] | undefined {
 
 /** Who is asking, where — every memory tool starts from it. */
 export function speakerOf(ctx: ToolContext): Speaker {
-  // A coding CLI's call is answered into its own session, which keeps it (`Speaker.keeps`).
-  return { agentId: ctx.agentId, gatewayId: ctx.gatewayId, senderId: ctx.senderId, chatId: ctx.chatId, chatType: ctx.chatType, ...(ctx.lent ? { keeps: true as const } : {}) };
+  // What is answered here is kept by somebody other than this turn (`Speaker.keeps`): a coding CLI's own session, the
+  // agent that asked this one, the turn a helper reports to. A helper's turn is built as a direct chat's, so the chat
+  // its report goes into is what it reads memory as.
+  const keeps = ctx.lent === true || ctx.askedBy !== undefined || ctx.reportsInto !== undefined;
+  return { agentId: ctx.agentId, gatewayId: ctx.gatewayId, senderId: ctx.senderId, chatId: ctx.chatId, chatType: ctx.reportsInto ?? ctx.chatType, ...(keeps ? { keeps: true as const } : {}) };
 }
 
 /**

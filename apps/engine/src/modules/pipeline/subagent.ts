@@ -12,7 +12,7 @@ import { readOnlyToolset } from "@/modules/tools/read-only.ts";
 import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { workNotesCopy } from "@/modules/notes/tail.ts";
 import { dirname, join } from "@nouride/runtime";
-import { childSessionId, resolveToolIterations, resolveTurnDurationMs, tierModel, toUserMessage, type GateDecision, type LoadedAgent, type Tool, type ToolDefinition } from "@nouride/shared";
+import { childSessionId, resolveToolIterations, resolveTurnDurationMs, tierModel, toUserMessage, type ChatType, type GateDecision, type LoadedAgent, type Tool, type ToolDefinition } from "@nouride/shared";
 import { TurnExecutor } from "@/modules/llm/executor/index.ts";
 import { wrapUpReserveMs } from "@/modules/llm/executor/deadline.ts";
 import type { ExecutorDeps, TurnRequest } from "@/modules/llm/executor/types.ts";
@@ -252,7 +252,7 @@ export function helperAgent(parent: LoadedAgent, mode: { budget: number; backgro
  * not offered, and a write through one that also reads — a change to a person's notes — is refused at the gate. The
  * parent decides what is kept.
  */
-function helperToolset(toolset: AgentToolset, mode: HelperMode): AgentToolset {
+function helperToolset(toolset: AgentToolset, mode: HelperMode, reportsInto: ChatType): AgentToolset {
   const withheld = (name: string): boolean => WITHHELD.has(name) || toolset.get(name)?.keepsInPrompt === true;
   // Without `delegate` there is nothing to start in the background, and its prompt says nothing of it.
   const { backgroundHelpers: _none, ...rest } = toolset;
@@ -262,7 +262,9 @@ function helperToolset(toolset: AgentToolset, mode: HelperMode): AgentToolset {
     definitions: toolset.definitions.filter((definition) => !withheld(definition.name)).map(shown),
     get: (name) => {
       const tool = withheld(name) ? undefined : toolset.get(name);
-      return tool && name === "exec" ? foregroundExec(tool, mode) : tool;
+      const own = tool && name === "exec" ? foregroundExec(tool, mode) : tool;
+      // Told the chat its report is kept in (`ToolContext.reportsInto`): what it reads of memory is what that chat reads.
+      return own ? { ...own, execute: (args, toolCtx) => own.execute(args, { ...toolCtx, reportsInto }) } : undefined;
     },
     gate: (name, args, toolCtx): GateDecision => {
       const tool = toolset.get(name);
@@ -427,7 +429,7 @@ export function helperTurn(
     // answer however long it takes (0.7.19) — one in the background that moved an ask behind itself would leave a turn
     // nobody watches waiting on nothing, with the answer bound for a conversation it is not in (`waitingForm`).
     toolset: (request.readOnly ? readOnlyToolset : (toolset: AgentToolset) => toolset)(
-      helperToolset(resolveToolset(blank, ctx.tools, ctx.deps.config.security, { ...ctx.toolsetDeps(), backgroundHelpers: () => 0 }), extra.mode ?? { background: false }),
+      helperToolset(resolveToolset(blank, ctx.tools, ctx.deps.config.security, { ...ctx.toolsetDeps(), backgroundHelpers: () => 0 }), extra.mode ?? { background: false }, request.ctx.reportsInto ?? request.ctx.chatType),
     ),
     history: [],
     // With a read-only copy of the task in the parent's work notes this is part of (`workNotesCopy`).

@@ -185,6 +185,38 @@ describe("the tools, and what the conversation keeps of what they found", () => 
   });
 });
 
+describe("an answer that somebody else's conversation keeps", () => {
+  test("an agent asked by another, on his turn in the group, finds none of his own: its answer goes into the asker's conversation", async () => {
+    const search = createMemorySearchTool(h.memory);
+    const asked = await search.execute({ query: "subsidy" }, ctx(GADING_HERE, { askedBy: "nix" }));
+    expect(asked.content).toContain("Nothing found");
+    expect(asked.turnOnly).toBeUndefined();
+    expect((await createMemoryReadTool(h.memory).execute({ document: ITEM }, ctx(GADING_HERE, { askedBy: "nix" }))).isError).toBe(true);
+    // What the group reads is found as ever.
+    expect(String((await search.execute({ query: "quiet" }, ctx(GADING_HERE, { askedBy: "nix" }))).content)).toContain("Family rules");
+  });
+
+  test("a helper started from the group reads as the group reads, though its own turn is built as a direct chat's", async () => {
+    await h.memory.noteAboutSpeaker(speaker(GADING_DM), { op: "add", section: "Vehicles", text: "The spare key of the BR-V is in the top drawer." });
+    const search = createMemorySearchTool(h.memory);
+    // As the daemon hands a helper its calls: the group's chat, the one who spoke, a direct chat's kind, and where it reports.
+    const helper = (reportsInto?: "dm" | "group") => ctx({ ...GADING_HERE, chatType: "dm" as const }, reportsInto ? { reportsInto } : {});
+    const fromGroup = await search.execute({ query: "spare key" }, helper("group"));
+    expect(fromGroup.content).toContain("Nothing found");
+    expect((await search.execute({ query: "subsidy" }, helper("group"))).content).toContain("Nothing found");
+    expect(String((await search.execute({ query: "quiet" }, helper("group"))).content)).toContain("Family rules");
+    // Not told where it reports, it read his private fact from the group: what this is for.
+    expect(String((await search.execute({ query: "spare key" }, helper())).content)).toContain("The spare key of the BR-V");
+  });
+
+  test("a helper started from his direct chat reads what that chat reads, as before", async () => {
+    await h.memory.noteAboutSpeaker(speaker(GADING_DM), { op: "add", section: "Vehicles", text: "The spare key of the BR-V is in the top drawer." });
+    const found = await createMemorySearchTool(h.memory).execute({ query: "spare key" }, ctx(GADING_DM, { reportsInto: "dm" }));
+    expect(String(found.content)).toContain("gading · Vehicles: The spare key of the BR-V is in the top drawer.");
+    expect(found.turnOnly).toBeUndefined();
+  });
+});
+
 describe("in the prompt", () => {
   const HARNESS: HarnessFacts = { approvalRequired: [], approvalAvailable: true, maxToolIterations: 25, maxTurnDurationMs: 300_000, commands: ["/new"], truncates: true };
   const promptFor = (where: typeof GADING_DM, person: string): BuiltPrompt =>
