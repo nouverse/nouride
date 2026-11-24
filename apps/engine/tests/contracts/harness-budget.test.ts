@@ -33,8 +33,14 @@ import { createBuiltinTools } from "@/modules/tools/registry.ts";
 import { envelope, FakeGateway } from "../helpers.ts";
 import { pipelineBench } from "../pipeline-bench.ts";
 
-/** The harness of an agent with every built-in tool, one-to-one. 35,369 measured when this was written. */
-const HARNESS = 35_700;
+/**
+ * The harness of an agent with every built-in tool, one-to-one. 35,369 measured when this was written. 35,776 with
+ * four things said under MEMORY (~390): what someone told it in private is theirs alone in a group, what one person
+ * asks for each time is a fact of theirs and not a line of MEMORY.md, a file handed over goes to the knowledge base
+ * and never a folder of its own, and a kept file comes back with `send_file`. Unsaid, an agent kept a person's photo
+ * in its own folder and their standing request in the file every chat reads.
+ */
+const HARNESS = 35_900;
 /**
  * The eighteen built-in skills' descriptions together, which every agent's list carries. 7,996 measured: 65 of them
  * are what `nouride` says of setting up semantic search, and 479 are `carousel`'s, which is what a carousel costs

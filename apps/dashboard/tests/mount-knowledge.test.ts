@@ -103,7 +103,7 @@ describe("the Knowledge tab", () => {
       expect(body().querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe("Knowledge");
       expect(card("House").textContent).toContain("Your agents may answer anyone from it.");
       expect(card("House").textContent).toContain("Every agent looks in it.");
-      expect(card("House").textContent).toContain("3 documents · 3 sections");
+      expect(card("House").textContent).toContain("3 documents · 4 sections");
       expect(card("Kak Sam's check-ups").textContent).toContain("Your agents may answer only you and Kak Sam from it, each in a chat with just them.");
       expect(card("Kak Sam's check-ups").textContent).toContain("Only Nouva looks in it.");
       expect(card("Kak Sam's check-ups").textContent).toContain("About Kak Sam.");
@@ -151,6 +151,32 @@ describe("the Knowledge tab", () => {
     ]);
   });
 
+  test("a collection kept to people can be kept out of groups, or follow the memory setting; one open to everyone has no such choice", async () => {
+    const sent = watch({ "POST /knowledge": ok({ collection: null }) });
+    await renderPage("/memories", async () => {
+      await shows("House");
+      click("New collection");
+      await shows("Who may be answered from it");
+      // Kept to its maker: the choice is there, following the memory setting until one is made.
+      const select = () => body().querySelector('select[aria-label="In a group"]') as HTMLSelectElement | null;
+      expect([...select()!.options].map((option) => option.textContent)).toEqual(["As the Settings tab says", "Yes, on their own messages", "No, never in a group"]);
+      expect(select()!.value).toBe("");
+      expect(text()).toContain("Used there only on the messages one of its own people sends, never on anyone else's.");
+      // Open to everyone, a group reads it whoever is asking: nothing to choose.
+      ([...body().querySelectorAll("label")].find((label) => label.textContent?.startsWith("Everyone"))!.querySelector("input") as HTMLInputElement).click();
+      await eventually(() => select() === null, 2_000, "no choice for a collection open to everyone");
+      ([...body().querySelectorAll("label")].find((label) => label.textContent?.startsWith("Only me"))!.querySelector("input") as HTMLInputElement).click();
+      await eventually(() => select() !== null, 2_000, "the choice back for one kept to its maker");
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(select()!), "value")!.set!.call(select()!, "off");
+      select()!.dispatchEvent(new (dom as unknown as typeof globalThis).Event("change", { bubbles: true }));
+      type(body().querySelector('input[placeholder="Mum\'s health"]') as HTMLInputElement, "My papers");
+      await eventually(() => button("Make collection")?.disabled === false, 2_000, "Make collection enabled");
+      click("Make collection");
+      await eventually(() => sent.some((request) => request.method === "POST"), 2_000, "the collection made");
+    });
+    expect(sent.find((request) => request.method === "POST")!.body).toEqual({ name: "My papers", description: "", agents: null, about: [], inGroups: false });
+  });
+
   test("a new collection: an operator keeps it to themselves, and is told when that means the admins", async () => {
     answer(asOperator);
     const sent = watch({ "POST /knowledge": ok({ collection: null }) });
@@ -195,7 +221,7 @@ describe("documents", () => {
   });
 
   test("a document that could not be read says why; where a program is missing, the orchestrator is asked to install it", async () => {
-    const pdf = { ...HOUSE.documents[1], path: "lab.pdf", title: "lab", status: "unreadable", reason: "A program that reads PDF files is not installed, so it is kept here but not searched.", needs: "poppler-utils", sections: 0 };
+    const pdf = { ...HOUSE.documents[1], path: "lab.pdf", title: "lab", status: "unreadable", reason: "A program that reads PDF files is not installed. It is kept as it is, and found by its title.", needs: "poppler-utils", sections: 0 };
     answer({ "/status": ok({ ...STATUS, orchestrator: "nouva" }), "/knowledge/house/documents": ok({ documents: [...HOUSE.documents, pdf] }) });
     await renderPage("/memories", async (_host, app) => {
       await open("House");
@@ -210,8 +236,8 @@ describe("documents", () => {
       expect(details.textContent).toContain("It needs the poppler-utils package.");
       // Kept, not read: a photo says why, and asks nothing.
       const porch = row("porch");
-      expect(porch.textContent).toContain("Kept, not searched");
-      expect(porch.textContent).toContain("Nouride does not read this kind of file, so it is kept here but not searched.");
+      expect(porch.textContent).toContain("Kept as it is");
+      expect(porch.textContent).toContain("Nouride does not read the words of this kind of file. It is kept as it is, and found by its title.");
       const asksIn = (one: Element) => [...one.querySelectorAll("button")].filter((button) => button.textContent?.trim().startsWith("Ask "));
       expect(asksIn(porch)).toEqual([]);
       // The Ask button opens the chat over the page with Nouva, the request in the box for the person to send.
@@ -322,7 +348,7 @@ describe("searching the collections", () => {
       await eventually(() => button("Search")?.disabled === false, 2_000, "Search enabled");
       expect(sent.filter((request) => request.path === "/knowledge/search")).toEqual([]);
       click("Search");
-      await shows("6 sections found, best first: what your agents would find.");
+      await shows("7 sections found, best first: what your agents would find.");
       expect(sent.filter((request) => request.path === "/knowledge/search").map((request) => request.query)).toEqual(["?q=router"]);
       expect(text()).toContain("House · Router › Wifi");
       ([...body().querySelectorAll('section[aria-label="What search found"] button')][0] as HTMLButtonElement).click();

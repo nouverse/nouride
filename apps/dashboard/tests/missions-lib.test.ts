@@ -14,6 +14,7 @@ import { missionName } from "@/commons/lib/mission-name";
 import { actionsFor, briefShown, inFolder, isHeldUp, isPaused, meters, needsYouSaid, rowLine, searchedIn, seenAs, seenTone, triesAgain, whyStarted } from "@/modules/missions/lib/mission";
 import { ownPicture } from "@/modules/missions/components/MissionResult";
 import { startInput } from "@/modules/missions/components/NewMissionForm";
+import { limitsAreNumbers } from "@/modules/missions/components/OwnLimits";
 import { fieldText, fits, limitsPatch, range } from "@/modules/missions/lib/limits";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
@@ -286,6 +287,23 @@ describe("the new mission form", () => {
     // Its name where one was typed; left empty, none is sent and the daemon names it from its goal.
     expect(startInput({ ...base, checks: "", review: "", title: "  The client upgrade  " })).toEqual({ agent: "nova", title: "The client upgrade", goal: "Upgrade the client" });
     expect(startInput({ ...base, checks: "", review: "", title: "   " })).toEqual({ agent: "nova", goal: "Upgrade the client" });
+  });
+
+  test("its brief where one was typed, and its own limits as numbers: tokens typed in millions are sent whole, a field left empty is not sent", () => {
+    const base = { agent: "nova", goal: "Upgrade the client", checks: "", review: "", noReview: false, accept: false, workdir: "" };
+    expect(startInput({ ...base, brief: "  Read the changelog first.\nThen the tests.  ", limits: { hours: " 24 ", turns: "", tokens: "400" } })).toEqual({
+      agent: "nova",
+      goal: "Upgrade the client",
+      brief: "Read the changelog first.\nThen the tests.",
+      limits: { hours: 24, tokens: 400_000_000 },
+    });
+    // Half an hour, and a part of a million: as typed, tokens rounded to whole ones.
+    expect(startInput({ ...base, limits: { hours: "0.5", turns: "120", tokens: "0.25" } }).limits).toEqual({ hours: 0.5, turns: 120, tokens: 250_000 });
+    // Nothing typed in any: no limits of its own, and no brief.
+    expect(startInput({ ...base, brief: "   ", limits: { hours: "", turns: " ", tokens: "" } })).toEqual({ agent: "nova", goal: "Upgrade the client" });
+    // What is not a number is told apart before anything is sent.
+    expect(limitsAreNumbers({ hours: "12", turns: "", tokens: "250" })).toBe(true);
+    expect(limitsAreNumbers({ hours: "a day", turns: "", tokens: "" })).toBe(false);
   });
 
   test("a limit is sent only inside the bounds the daemon reports", () => {

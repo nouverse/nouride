@@ -132,6 +132,19 @@ describe("Related documents, over HTTP", () => {
     expect(body.related[0]).toMatchObject({ collection: "home", collectionName: "Home network", title: "Wifi" });
   });
 
+  test("a file found by its title alone is not offered as related, however near its title is", async () => {
+    await kept({ embedded: true });
+    // A photo named for the router: its one section is its name, as near to the router's document as the wifi's is.
+    put("home/router-photo.jpg", "\u00ff\u00d8\u00ff");
+    await h.memory.knowledge.sync();
+    await h.memory.embedCatchUp();
+    await eventually(() => h.vectors.count("fake/vec@4") === 9, 2_000, "the photo's title embedded");
+    expect(h.memory.knowledge.document("home", "router-photo.jpg")).toMatchObject({ status: "listed", sections: 1 });
+    expect((await related("home", "router.md")).body.related.map((document) => document.path)).toEqual(["wifi.md", "modem.md", "switch.md"]);
+    // Asked about itself, it is shown what is near it among the documents that were read.
+    expect((await related("home", "router-photo.jpg")).body.related.map((document) => document.path)).toContain("router.md");
+  });
+
   test("none for a document on a subject of its own, and none from a collection put away", async () => {
     await kept({ embedded: true });
     expect((await related("health", "lab.md")).body.related).toEqual([]);

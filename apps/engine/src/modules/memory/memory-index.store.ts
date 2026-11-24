@@ -86,6 +86,7 @@ interface FactRow {
   source: string | null;
   readers: string | null;
   readers_chat: string | null;
+  readers_direct: number;
 }
 
 /** `,a,b,` — so `LIKE '%,sam,%'` never matches `rinaldi`. */
@@ -95,6 +96,11 @@ function delimited(values: readonly string[]): string {
 
 function undelimit(value: string): string[] {
   return value.split(",").filter(Boolean);
+}
+
+/** A fact's readers as its row keeps them; asked only of a row that has some. */
+function readersOfRow(row: FactRow): Readers {
+  return { people: undelimit(row.readers ?? ""), ...(row.readers_chat ? { chat: row.readers_chat } : {}), ...(row.readers_direct ? { direct: true as const } : {}) };
 }
 
 /** Pages a night's merge of the word index writes at most — 64 of FTS5's 4 KB pages. */
@@ -391,10 +397,10 @@ export class MemoryIndexStore {
     this.db.transaction(() => {
       this.deleteFacts(subject);
       const insert = this.db.prepare(
-        "INSERT INTO memory_facts (id, subject, position, section, text, source, readers, readers_chat) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+        "INSERT INTO memory_facts (id, subject, position, section, text, source, readers, readers_chat, readers_direct) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
       );
       for (const [position, fact] of facts.entries()) {
-        insert.run(fact.id, subject, position, fact.section, fact.text, fact.source ?? null, fact.readers ? delimited(fact.readers.people) : null, fact.readers?.chat ?? null);
+        insert.run(fact.id, subject, position, fact.section, fact.text, fact.source ?? null, fact.readers ? delimited(fact.readers.people) : null, fact.readers?.chat ?? null, fact.readers?.direct ? 1 : 0);
         this.fts.put(fact.id, fact.doc);
       }
       this.setFile(file.path, file.state);
@@ -424,7 +430,7 @@ export class MemoryIndexStore {
         section: row.section,
         text: row.text,
         ...(row.source ? { source: row.source } : {}),
-        ...(row.readers !== null ? { readers: { people: undelimit(row.readers), ...(row.readers_chat ? { chat: row.readers_chat } : {}) } } : {}),
+        ...(row.readers !== null ? { readers: readersOfRow(row) } : {}),
       }));
   }
 

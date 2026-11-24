@@ -70,6 +70,8 @@ export function situationOf(req: TurnRequest, told?: Situation): Situation {
     ...(personRef ? { personRef } : {}),
     ...(personRefPlatform ? { personRefPlatform } : {}),
   });
+  // What the one speaking brings into a group (`Recall.own`) is not told to a CLI: its session keeps every prompt it
+  // was given, so the next person's turn would hold what was only the last one's. `who` above is built without it.
   const recall = req.recall ? (renderRecall({ recall: { ...req.recall, recent: [], waiting: [] } }) ?? "") : "";
   return { who, recall, writing: writingLine(req.formatting), agents: agentsOf(req) };
 }

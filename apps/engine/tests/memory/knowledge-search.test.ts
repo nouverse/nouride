@@ -46,9 +46,11 @@ describe("searching documents", () => {
     const hit = mine[0] as Extract<SearchHit, { kind: "section" }>;
     expect(hit.collection).toBe("Finance");
     expect(hit.section.trail).toBe("Expense policy › Hotels");
-    // Sam's chat, and a group the admin is in, find nothing of it.
+    // Sam's chat finds nothing of it, and neither does a group the admin is in on anyone else's turn. On his own turn
+    // there it is found as his own: `knowledge-own-in-group.test.ts`.
     expect(await h.memory.search(speaker(SAM_DM, "nix"), { query: "hotels receipt" })).toEqual([]);
-    expect(await h.memory.search(speaker(FAMILY), { query: "hotels receipt" })).toEqual([]);
+    expect(await h.memory.search(speaker({ ...FAMILY, senderId: "62877" }), { query: "hotels receipt" })).toEqual([]);
+    expect((await h.memory.search(speaker(FAMILY), { query: "hotels receipt" })).map((found) => (found.kind === "section" ? found.own : null))).toEqual([true]);
   });
 
   test("a folder with no settings is the admins'; everyone's is anyone's, a group's included", async () => {
@@ -217,6 +219,6 @@ describe("what the agent reads", () => {
 
   test("the memory harness tells an agent documents keep their own language, and to cite them", () => {
     const lines = renderMemory({ ctx: { harness: {}, tools: [{ name: "memory_search" }] }, toolNames: [], gated: [], free: [] } as never);
-    expect(lines).toContain("- Documents people keep for reference (an SOP, a manual, a price list) are found by `memory_search` too, labelled `document`, and `memory_read` with `document` opens one. Each keeps its own language, with an English title: search in either. Answer from one with the document and section named.");
+    expect(lines).toContain("- Documents people keep for reference (an SOP, a manual, a price list) are found by `memory_search` too, labelled `document`, and `memory_read` with `document` opens one. Each keeps its own language, with an English title: search in either. Answer from one with the document and section named. A kept file of any kind (a picture, a PDF) is handed back as it is with `send_file` and `document`, the id the search gave it.");
   });
 });

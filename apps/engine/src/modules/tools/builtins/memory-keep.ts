@@ -35,6 +35,20 @@ function nameAsSent(path: string, ctx: ToolContext, files?: Pick<AttachmentReadO
   return listed?.name ?? sentName(basename(path));
 }
 
+/**
+ * Who is answered from the collection a document went into, as the agent is to say it: it guessed where a fact was
+ * read, and told a person theirs was one chat's.
+ */
+function collectionReadWhere(saved: { readers: "everyone" | "admins" | "people" | "group"; inGroups: boolean }): string {
+  // One open to everyone is wider than any chat, so a document for it waits for an admin and is never said here.
+  if (saved.readers === "everyone") return "";
+  if (saved.readers === "group") return "This collection is one group's: used in that group, whoever is asking there.";
+  const whose = saved.readers === "admins" ? "the admins'" : "its people's";
+  return saved.inGroups
+    ? `This collection is ${whose}: used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.`
+    : `This collection is ${whose}: used in a direct chat with one of them, and in no group.`;
+}
+
 /** What an agent is told when a kept document's title is missing or not English. */
 const KEEP_TITLE =
   "Give the document a `title` in English: what it is, with its own terms as they are, e.g. \"NIB, business registration certificate (Nomor Induk Berusaha)\". Search finds it by those words in any language.";
@@ -81,10 +95,13 @@ export async function keepDocument(knowledge: Pick<Memory["knowledge"], "keep">,
   }
   const { saved } = result;
   const made = result.made ? ", a collection made now for the people in this chat" : "";
+  // Where a file's own words are not read, what it is found by is said, and what to give for it to be found by more.
+  const found = saved.noted ? "" : " Say what it shows in `content`, kept with the same `file`, and it is found by that too.";
   const read = saved.archived
     ? "The collection is archived, so it is kept but not searched until someone brings it back."
     : saved.status === "indexed"
       ? "It can be searched now."
-      : `It is kept but not searched: ${saved.reason ?? "it could not be read"}`;
-  return { content: `Kept in "${saved.collection}" as ${saved.path}${made}. ${read}`, isError: false, metadata: { about: "knowledge" } };
+      : `${saved.reason ?? "Its words could not be read: it is kept as it is, and found by its title."}${found}`;
+  const back = file ? ` \`send_file\` with document="${saved.item}" sends the file itself, here or in any chat that may read this collection.` : "";
+  return { content: `Kept in "${saved.collection}" as ${saved.path}${made}. ${read}${back} ${collectionReadWhere(saved)}`.trimEnd(), isError: false, metadata: { about: "knowledge" } };
 }

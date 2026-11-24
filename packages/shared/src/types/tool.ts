@@ -98,6 +98,13 @@ export interface ToolContext {
    */
   askedBy?: string;
   /**
+   * Set only by the daemon for a helper's call (`delegate`): the kind of chat the turn it reports to is in. A helper's
+   * own turn is built as a direct chat's, and its report is kept in the conversation of the turn that started it. Read
+   * as a direct chat, a helper started from a group read what the one speaking had said in private, and its report
+   * left that in the group's conversation for whoever spoke next. Memory reads by this (`speakerOf`).
+   */
+  reportsInto?: ChatType;
+  /**
    * Where work happens: the agent's default directory, and what a relative path resolves against.
    *
    * `data/workspace/<agent>/`, created at boot. **Nobody configures this** — an agent that cannot do
@@ -236,6 +243,12 @@ export interface ToolResult {
    * as data in `content`. The executor remembers it for the rest of the turn (`ToolContext.untrustedRead`).
    */
   untrusted?: true;
+  /**
+   * The result holds what only the one speaking may read: their own, shown in a group for their turn. This is what the
+   * conversation keeps in its place once the turn has ended, so the next person's turn holds none of it. The turn's own
+   * requests carry the whole result; it is never written to a file, and it is journaled as this.
+   */
+  turnOnly?: string;
   /** Present when the tool already put its full output on disk. See `ToolContext.spoolPath`. */
   spooled?: SpooledOutput;
   /**

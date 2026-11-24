@@ -1286,6 +1286,12 @@ export interface MemorySection {
    * and reads memory with its tools. A person's own `recall` overrides it.
    */
   recall: boolean;
+  /**
+   * Whether what is one person's own goes with them into a group: their facts, read on a turn they are the one
+   * speaking there. Off, a group reads only what was said in it, as every release before this one did. A fact its
+   * person kept to their direct chats stays there either way.
+   */
+  privateInGroups: boolean;
   /** Days an episode keeps its transcript readable. After that only its summary is kept. `0` keeps it forever. */
   transcriptDays: number;
   /** Keep a compressed copy of each transcript when it stops being readable. Moot with `transcriptDays = 0`. */

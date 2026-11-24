@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react";
+import { fitTextarea } from "@/commons/lib/fit-textarea";
 
 /**
  * The box with the message in it. An empty box is the message. What the person had typed is theirs and stays: the
@@ -33,8 +34,7 @@ export function useDraft({ draft, onTaken, setInput, textareaRef }: {
     requestAnimationFrame(() => {
       const box = textareaRef.current;
       if (!box) return;
-      box.style.height = "auto";
-      box.style.height = `${Math.min(box.scrollHeight, 160)}px`;
+      fitTextarea(box);
       box.focus();
     });
   }, [draft, setInput, textareaRef]);

@@ -23,18 +23,22 @@ Draft tidak menjalankan apa pun sampai kamu memulainya:
 
 Revise the RFC to the owner's answers of today, section by section, and say what changed in each.
 
-5 checks · signed off by: you · brief: on the mission's page
+5 checks · signed off by: you · brief: BRIEF.md, the file below
 
 Start it: /mission accept msn_3f2a91 · drop it: /mission stop msn_3f2a91
 [Start it] [Drop it]
+📎 BRIEF.md
 ```
 
 - **Namanya** adalah beberapa kata setelah nama agent (0.8.39), dan goal-nya utuh di bawahnya. Sejak itu misi
   disebut dengan namanya: di notifikasinya, di daftar, di kartu yang menunggu kamu. Agent memberi nama setiap misi yang
   ia draft atau mulai. Misi yang kamu mulai sendiri memakai **Name** yang kamu isi di form dashboard, atau dinamai dari
   kalimat pertama goal-nya. Misi yang dibuat sebelum 0.8.39 dinamai dengan cara itu waktu 0.8.39 dipasang.
-- **Brief-nya** adalah `BRIEF.md` di folder misi: apa kerjaannya, kenapa, apa yang perlu dibaca, apa arti selesai. Ia
-  ada di halaman misi, dan setiap giliran misi dimulai dari situ.
+- **Brief-nya** adalah `BRIEF.md` di folder misi: apa kerjaannya, kenapa, apa yang perlu dibaca, apa arti selesai.
+  Setiap giliran misi dimulai dari situ. Kamu dikirimi brief itu sebagai file di bawah draft (0.8.47), dan lagi tiap
+  kali agent mengubahnya, jadi kamu membaca apa yang akan dikerjakan di tempat kamu diminta memulainya; ia juga ada di
+  halaman misi. Agent menulis brief bersama draft-nya, dan tidak lagi menutup goal dengan path file miliknya sendiri.
+  Chat yang tidak bisa menerima file diberi tahu.
 - **Ubah dulu** kalau belum pas: bilang ke agent ("cek-nya cuma grep, tambahkan yang menjalankan test") dan ia mengirim
   draft-nya lagi dengan perubahan yang disebut; atau ubah di halaman misi di dashboard. Setelah jalan, goal dan cek-nya
   tetap.
@@ -80,8 +84,10 @@ Untuk memulai sendiri:
 ```
 
 atau **Missions → New mission** di dashboard: **Save to backlog** menyimpannya sebagai draft sampai kamu memulainya,
-dan **Start now** langsung menjalankannya. Agent yang kamu sapa yang menjalankannya, atas nama kamu, dan ia melapor ke
-chat tempat kamu memulainya.
+dan **Start now** langsung menjalankannya. Form-nya menerima **Brief** dan batasnya sendiri, **Hours**, **Turns** dan
+**Tokens** (dalam juta), saat kamu membuatnya (0.8.47); batas yang dikosongkan memakai batas yang dipakai setiap misi,
+ditampilkan abu-abu. Agent yang kamu sapa yang menjalankannya, atas nama kamu, dan ia melapor ke chat tempat kamu
+memulainya.
 
 `/goal`, nama yang dipakai tool lain, juga memulai misi. Misi adalah tujuan yang disahkan pihak lain: ia selesai kalau
 cek-nya lulus dan pemeriksa setuju, bukan waktu agent bilang sudah selesai.
@@ -315,8 +321,9 @@ berikutnya menunggu di antrean dan bilang sedang menunggu apa. Sebelum 0.8.46 ti
 
 **Batas milik satu misi** (0.8.46) gak mengubah setelan di atas. Agent mengisinya di draft (`limit_hours`,
 `limit_turns`, `limit_tokens`), masing-masing dalam rentang yang boleh untuk setelannya (seperempat jam sampai 168
-jam, 1 sampai 1.000 giliran, 100.000 token atau lebih), dan draft menunjukkannya ke kamu sebelum kamu mulai. Kamu
-mengubahnya di form draft: **Hours**, **Turns** dan **Tokens**, dalam juta. Bagian kerja yang diserahkan sebuah misi
+jam, 1 sampai 1.000 giliran, 100.000 token atau lebih), dan draft menunjukkannya ke kamu sebelum kamu mulai. Untuk
+misi yang kamu buat sendiri, kamu mengisinya di form New mission (0.8.47), baik disimpan ke backlog maupun langsung
+dijalankan, dan mengubahnya di form draft: **Hours**, **Turns** dan **Tokens**, dalam juta. Bagian kerja yang diserahkan sebuah misi
 ke agent lain, dan langkah misi di sebuah automation, mulai tanpa ada yang bilang ya, jadi tetap memakai setelan. Misi
 yang ditinggal sebuah automation sebagai draft juga memakai setelan, dan kamu mengubahnya di form draft-nya sebelum
 memulainya.

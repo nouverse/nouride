@@ -36,15 +36,28 @@ export interface CollectionSettings {
   /** Kept, never searched. */
   archived: boolean;
   /**
+   * Whether a collection of named people (or the admins') is used in a group on a turn one of them is the one speaking
+   * (`goesWithItsReader`). Unset, it follows `[memory] private_in_groups`. Nothing for a collection open to everyone or
+   * to one group, which the group reads whoever speaks.
+   */
+  inGroups?: boolean;
+  /**
    * A document's title by its path, kept beside its file's name (0.8.23): what search finds it by in any language. An
    * agent gives an English one when it keeps a document; a person sets one on the dashboard. Absent, a document's title
    * is its first heading or its file's name.
    */
   titles?: Readonly<Record<string, string>>;
+  /**
+   * What a file is, in a line or two, by its path: what search finds a file by when its own words are not read (a
+   * picture, a video, a scan). An agent writes one as it keeps a file it was shown; a person writes one in the file.
+   */
+  notes?: Readonly<Record<string, string>>;
 }
 
 /** A title's length at most: a line naming a document, not its summary. */
 export const TITLE_MAX = 200;
+/** A note's length at most: what a file is and what is in it, not its text. */
+export const NOTE_MAX = 600;
 
 export interface Collection {
   /** The folder's name: the collection's id in every item and route. */
@@ -102,8 +115,10 @@ export function parseSettings(id: string, source: string | null): { settings: Co
   if (raw.agents !== undefined && !agents) problems.push("agents is not a list of agent ids");
   const about = raw.about === undefined ? [] : strings(raw.about);
   if (raw.about !== undefined && !about) problems.push("about is not a list of people's keys");
-  const titles = raw.titles === undefined ? {} : titlesFrom(raw.titles);
+  const titles = raw.titles === undefined ? {} : linesFrom(raw.titles, TITLE_MAX);
   if (!titles) problems.push("titles is not a table of file names and their titles");
+  const notes = raw.notes === undefined ? {} : linesFrom(raw.notes, NOTE_MAX);
+  if (!notes) problems.push("notes is not a table of file names and what each file is");
   const settings: CollectionSettings = {
     name: typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : id,
     description: typeof raw.description === "string" ? raw.description.trim() : "",
@@ -111,19 +126,21 @@ export function parseSettings(id: string, source: string | null): { settings: Co
     readers: "problem" in readers ? { kind: "admins" } : readers,
     about: about ?? [],
     archived: raw.archived === true,
+    ...(typeof raw.in_groups === "boolean" ? { inGroups: raw.in_groups } : {}),
     titles: titles ?? {},
+    notes: notes ?? {},
   };
   return problems.length ? { settings, problem: problems.join("; ") } : { settings };
 }
 
-/** `[titles]` as written: each a file's path and a line naming it. One that is not is dropped, and the rest kept. */
-function titlesFrom(value: unknown): Record<string, string> | null {
+/** `[titles]` or `[notes]` as written: each a file's path and a line about it. One that is not is dropped, and the rest kept. */
+function linesFrom(value: unknown, max: number): Record<string, string> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-  const titles: Record<string, string> = {};
-  for (const [path, title] of Object.entries(value)) {
-    if (typeof title === "string" && title.trim() && path.trim()) titles[path] = title.trim().slice(0, TITLE_MAX);
+  const lines: Record<string, string> = {};
+  for (const [path, line] of Object.entries(value)) {
+    if (typeof line === "string" && line.trim() && path.trim()) lines[path] = line.trim().slice(0, max);
   }
-  return titles;
+  return lines;
 }
 
 /** `knowledge.toml` as the dashboard writes it: every key that says something, the default ones left out. */
@@ -134,9 +151,12 @@ export function renderSettings(settings: CollectionSettings): string {
   lines.push(`readers = ${readersToml(settings.readers)}`);
   if (settings.about.length) lines.push(`about = ${JSON.stringify(settings.about)}`);
   if (settings.archived) lines.push("archived = true");
+  if (settings.inGroups !== undefined) lines.push(`in_groups = ${String(settings.inGroups)}`);
   // A table comes after the keys in TOML: the titles last, by path, so the file reads the same each time it is written.
   const titles = Object.entries(settings.titles ?? {}).sort(([a], [b]) => a.localeCompare(b));
   if (titles.length) lines.push("", "[titles]", ...titles.map(([path, title]) => `${JSON.stringify(path)} = ${JSON.stringify(title)}`));
+  const notes = Object.entries(settings.notes ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  if (notes.length) lines.push("", "[notes]", ...notes.map(([path, note]) => `${JSON.stringify(path)} = ${JSON.stringify(note)}`));
   return `${lines.join("\n")}\n`;
 }
 
@@ -179,6 +199,23 @@ export function mayUse(collection: Pick<Collection, "settings">, who: { agentId:
     case "people":
       return who.audience.kind === "dm" && readers.people.includes(who.audience.person);
   }
+}
+
+/**
+ * Whether a collection the group may not be answered from goes with its reader into it: on a turn one of its people is
+ * the one speaking, as a person's own facts do (`followsItsPerson`). A private collection was never searched in a
+ * group, "even one its reader is in": a person who had an agent keep a photo asked for it in a group and was told
+ * there was no such thing. Never true where `mayUse` is, so a collection is counted once; never for another group's
+ * collection; and off where the collection says so, or where it says nothing and the install does (`brings`).
+ */
+export function goesWithItsReader(collection: Pick<Collection, "settings">, who: { agentId: string; audience: Audience; admins: readonly string[]; brings: boolean }): boolean {
+  const { settings } = collection;
+  if (settings.archived || who.audience.kind !== "group" || !who.audience.speaker) return false;
+  if (settings.agents && !settings.agents.includes(who.agentId)) return false;
+  if (!(settings.inGroups ?? who.brings)) return false;
+  const { readers } = settings;
+  if (readers.kind === "people") return readers.people.includes(who.audience.speaker);
+  return readers.kind === "admins" && who.admins.includes(who.audience.speaker);
 }
 
 /** Who a collection made from this conversation is for: its one person, or its group. */

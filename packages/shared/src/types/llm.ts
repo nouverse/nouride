@@ -145,6 +145,11 @@ export interface ChatMessage {
   toolCallId?: string;
   /** Wall-clock time the message entered the conversation. */
   timestamp?: number;
+  /**
+   * On a tool message, while its turn runs: what the conversation keeps in its place once the turn has ended
+   * (`ToolResult.turnOnly`). Never stored: the message that is kept has this as its content and no such key.
+   */
+  turnOnly?: string;
 }
 
 /**

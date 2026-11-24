@@ -11,6 +11,7 @@ import { api } from "@/commons/lib/api";
 import type { MissionEdit, MissionView } from "@nouride/wire";
 import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
+import { MILLION, OwnLimits } from "./OwnLimits";
 
 /** The most a mission's name holds, as the daemon holds it to (`MISSION_TITLE_MAX`). */
 const TITLE_MAX = 60;
@@ -30,8 +31,6 @@ interface Values {
   tokens: string;
   brief: string;
 }
-
-const MILLION = 1_000_000;
 
 /** The form's values as the draft has them: its own folder shown as empty, as the new-mission form takes it. */
 function valuesOf(mission: MissionView, brief: string | null, ownFolder: boolean): Values {
@@ -153,23 +152,7 @@ export function DraftForm({ mission, brief, ownFolder, writable }: { mission: Mi
         </Field>
       </div>
       {/* This mission's own, where it stops to ask whether to go on: the Limits card's three, for this one alone. */}
-      <div className="space-y-1.5">
-        <div className="grid grid-cols-3 gap-4 sm:max-w-md">
-          <Field label="Hours">
-            <input className="input input-sm w-full rounded-xl tabular-nums" inputMode="decimal" value={values.hours} onChange={(e) => set("hours")(e.target.value)} />
-          </Field>
-          <Field label="Turns">
-            <input className="input input-sm w-full rounded-xl tabular-nums" inputMode="numeric" value={values.turns} onChange={(e) => set("turns")(e.target.value)} />
-          </Field>
-          <Field label="Tokens">{/* plain-words-ok: tokens, the unit a model's use is billed in, as the Limits card names it */}
-            <span className="input input-sm w-full rounded-xl">
-              <input className="min-w-0 grow tabular-nums" inputMode="decimal" value={values.tokens} onChange={(e) => set("tokens")(e.target.value)} />
-              <span className="text-base-content/65">M</span>
-            </span>
-          </Field>
-        </div>
-        <p className="text-[11px] leading-snug text-base-content/65">Where this mission stops to ask you whether to go on. Only this one: the limits every mission starts with stay as they are.</p>
-      </div>
+      <OwnLimits values={values} onChange={(key, value) => set(key)(value)} note="Where this mission stops to ask you whether to go on. Only this one: the limits every mission starts with stay as they are." />
 
       <ErrorNote error={save.error} />
 

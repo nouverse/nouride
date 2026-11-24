@@ -171,6 +171,10 @@ export interface MissionStart {
   noReview?: boolean;
   accept?: boolean;
   workdir?: string;
+  /** Its brief, kept in its folder: what the work is, why, what to read, what done means. */
+  brief?: string;
+  /** Its own limits, where it stops to ask whether to go on: each left out is the setting's. Tokens whole, not in millions. */
+  limits?: { hours?: number; turns?: number; tokens?: number };
   /** Saved to the backlog: a draft that waits until someone starts it. Left out, it starts at once. */
   draft?: boolean;
 }

@@ -17,7 +17,7 @@ import type { PromptContext } from "./types.ts";
 const line = (date: string | undefined, text: string, name?: string | null): string => `- ${date ? `${date} · ` : ""}${name ? `${name} · ` : ""}${text}`;
 
 /** Facts under their headings, the way the profile file keeps them. */
-function bySection(facts: readonly RecalledFact[]): string {
+export function bySection(facts: readonly RecalledFact[]): string {
   const sections = new Map<string, string[]>();
   for (const fact of facts) sections.set(fact.section, [...(sections.get(fact.section) ?? []), line(fact.learned, fact.text)]);
   return [...sections].map(([section, lines]) => `${section}:\n${lines.join("\n")}`).join("\n");

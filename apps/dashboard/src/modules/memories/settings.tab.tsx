@@ -29,6 +29,39 @@ import { HelperStatus } from "./helper-status";
 type Editable = Omit<MemorySettings, "semantic" | "summaryModel">;
 type Semantic = MemorySettings["semantic"];
 
+/** One memory setting as the form holds it, and how it is changed there. */
+interface FormOf {
+  value: <K extends keyof Editable>(key: K) => Editable[K];
+  set: <K extends keyof Editable>(key: K, next: Editable[K]) => void;
+}
+
+/** What goes into a prompt of what is remembered, and where a person's own facts are used. */
+function WhatAgentsSee({ value, set, editable }: FormOf & { editable: boolean }) {
+  return (
+    <Card title="What agents see">
+      <div className="space-y-4">
+        <ToggleRow
+          label="Put what is remembered into each prompt"
+          hint="People's facts, shared knowledge, what is coming up and the latest conversations. Off, the nightly pass still learns and agents still search memory when they need it. A person's own setting on the People tab wins."
+          disabled={!editable}
+          checked={value("recall")}
+          onChange={(next) => set("recall", next)}
+        />
+        <ToggleRow
+          label="In a group, an agent uses what a person told it in private when that person is the one asking"
+          hint="A car's plate, a plan, a preference: said in a direct chat, known in a group on that person's own messages and on nobody else's. Off, an agent in a group knows only what was said in that group. A person can ask an agent to keep one thing to their direct chats."
+          disabled={!editable}
+          checked={value("privateInGroups") ?? true}
+          onChange={(next) => set("privateInGroups", next)}
+        />
+        <Field label="Recent conversations in each prompt" hint="Summaries only, never transcripts, and only those the chat may see. 0 leaves them out.">
+          <input type="number" min={0} max={20} className="input input-sm w-24 rounded-xl" disabled={!editable} value={value("promptRecent")} onChange={(event) => set("promptRecent", Number(event.target.value))} />
+        </Field>
+      </div>
+    </Card>
+  );
+}
+
 /** Where semantic search stands, and a way to catch it up — beside the switch it is about. */
 function SemanticStatus({ editable }: { editable: boolean }) {
   const queryClient = useQueryClient();
@@ -193,20 +226,7 @@ export function SettingsTab({ editable, admin }: { editable: boolean; admin: boo
         </div>
       </Card>
 
-      <Card title="What agents see">
-        <div className="space-y-4">
-          <ToggleRow
-            label="Put what is remembered into each prompt"
-            hint="People's facts, shared knowledge, what is coming up and the latest conversations. Off, the nightly pass still learns and agents still search memory when they need it. A person's own setting on the People tab wins."
-            disabled={!editable}
-            checked={value("recall")}
-            onChange={(next) => set("recall", next)}
-          />
-          <Field label="Recent conversations in each prompt" hint="Summaries only, never transcripts, and only those the chat may see. 0 leaves them out.">
-            <input type="number" min={0} max={20} className="input input-sm w-24 rounded-xl" disabled={!editable} value={value("promptRecent")} onChange={(event) => set("promptRecent", Number(event.target.value))} />
-          </Field>
-        </div>
-      </Card>
+      <WhatAgentsSee value={value} set={set} editable={editable} />
 
       <Card title="Semantic search" actions={<AskAgentButton {...SEMANTIC_SEARCH_ASK} variant="soft" whole />}>
         <div className="space-y-3">

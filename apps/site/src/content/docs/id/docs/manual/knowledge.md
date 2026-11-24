@@ -31,9 +31,20 @@ Koleksi tertutup sampai Anda membukanya. Siapa yang boleh dijawab darinya tergan
 
 Admin bisa membuka koleksi untuk semua orang, atau untuk satu grup, dari kartunya. Agent tidak pernah bisa.
 
-Sebuah koleksi hanya dipakai kalau setiap orang di percakapan boleh dijawab darinya. Jadi koleksi untuk satu orang tidak
-pernah dipakai di grup, bahkan grup yang ada orang itu di dalamnya, dan koleksi grup keluarga tidak dipakai di chat
-pribadi.
+Sebuah koleksi dipakai kalau setiap orang di percakapan boleh dijawab darinya. Jadi koleksi grup keluarga tidak dipakai
+di chat pribadi.
+
+**Koleksi milik satu orang ikut orangnya ke grup**, pada pesan yang ia kirim di sana dan tidak pada pesan orang lain:
+Anda meminta dokumen Anda sendiri di grup keluarga dan agent menemukannya, sedangkan orang lain di grup yang memintanya
+diberi tahu bahwa dokumen itu tidak ada. Siapa yang bertanya adalah pengirim yang dilaporkan aplikasi chat, bukan isi
+pesannya. Yang ditemukan agent untuk Anda tidak disimpan di percakapan grup, jadi pertanyaan orang berikutnya tidak
+memilikinya.
+
+- Tiap koleksi seperti itu punya **In a group** di setelannya: ikut setelan memory, ya, atau tidak. Setelan memory-nya
+  adalah **In a group, an agent uses what a person told it in private** di Knowledge & Memory → Settings, menyala
+  kecuali Anda matikan.
+- Agent yang berjalan di coding CLI tidak diberi koleksi milik seseorang di grup: sesinya menyimpan semua yang pernah
+  dikatakan kepadanya.
 
 ## Menambah dokumen
 
@@ -48,8 +59,13 @@ pribadi.
 Nouride membaca Markdown, teks, CSV, halaman web, PDF, Word, Excel, PowerPoint dan versi OpenDocument-nya, sampai 50 MB
 per file. File PDF dan Office dibaca dengan Python, yang tidak ada di image Docker; PDF juga butuh `pdftotext` (atau pypdf
 di Python), dan file lama `.doc`, `.xls` dan `.ppt` butuh LibreOffice. Kalau belum ada, dokumennya memberi tahu dan
-halaman menawarkan untuk memasangnya; setelah terpasang, dokumen terbaca dalam lima menit. Gambar dan video disimpan dan
-didaftar, tidak dicari, begitu juga PDF hasil scan, yang tidak berisi teks untuk dibaca.
+halaman menawarkan untuk memasangnya; setelah terpasang, dokumen terbaca dalam lima menit.
+
+**File jenis apa pun bisa disimpan.** Gambar, video, atau PDF hasil scan yang tidak berisi teks disimpan apa adanya.
+Nouride tidak membaca kata-katanya, jadi file itu ditemukan lewat judulnya dan lewat satu kalimat tentang isinya: agent
+yang menyimpan foto kiriman Anda menulis kalimat itu dari yang dilihatnya ("kode QR yang dipindai petugas SPBU, mobil BG
+1234 XY"). File yang ditaruh langsung di folder ditemukan lewat namanya, dan Anda bisa menulis kalimatnya di bawah
+`[notes]` di `knowledge.toml` milik koleksinya.
 
 Di dashboard, dokumen sebuah koleksi diurutkan dari yang terbaru, masing-masing dengan kapan ditambahkan.
 
@@ -72,6 +88,9 @@ Inggris, agent menemukannya dari bahasa apa pun. Tanpa judul, judul dokumen adal
 - Dokumen selalu bisa ditemukan lewat kata-katanya, dan lewat makna kalau pencarian makna sudah diatur: model yang sama
   dengan memory, diatur sekali di Knowledge & Memory.
 - Dokumen tetap dalam bahasa aslinya, dan judul berbahasa Inggrisnya membuatnya ketemu lewat bahasa Inggris.
+- **Agent mengirim balik file yang disimpan, apa adanya**, saat Anda memintanya: fotonya, PDF-nya, spreadsheet-nya,
+  sebagai lampiran di chat. Hanya dari koleksi yang boleh dipakai untuk menjawab di chat itu.
+- Link disimpan sebagai keterangannya dan alamatnya, dan agent menjawab dengan alamat itu.
 
 ## Memory atau knowledge base
 
@@ -95,6 +114,7 @@ nouride knowledge add <file> --to <koleksi>
 nouride knowledge add - --name <nama file> --to <koleksi> < <file>   # file lewat standard input
 nouride knowledge reindex [koleksi]                # baca ulang yang berubah di folder
 nouride knowledge archive|unarchive <koleksi>
+nouride knowledge in-groups <koleksi> on|off|default   # koleksi milik seseorang, di grup, pada pesannya sendiri
 nouride knowledge title <koleksi>/<file> <kata>   # judulnya; "" menghapusnya
 nouride knowledge rm <koleksi>/<file>
 ```

@@ -783,7 +783,8 @@ track = "latest"
 #
 # Who sees what is decided by who was in the conversation, never by a model: a DM recalls what its
 # person took part in, on any agent; a group recalls what was said in it. A fact is readable exactly
-# where the conversation it came from is.
+# where the conversation it came from is, and a person's own facts go with them into a group on the
+# messages they send there (`private_in_groups`, below).
 #
 # Kept outside `daemon.agents_dir` on purpose: the packs are usually git repositories, and a
 # household's conversations do not belong in one.
@@ -824,6 +825,12 @@ prompt_recent = 3
 # tools. A [[people]] entry's own `recall` overrides it; off there, their facts are left out
 # everywhere and a DM with them carries none.
 recall = true
+
+# In a group, let an agent use what a person told it in private on the messages that person sends:
+# their own facts, whichever chat they were said in. Nobody else's message in the group gets them,
+# and who is asking is the sender the chat app reports. Off, a group knows only what was said in it.
+# A fact its person asked an agent to keep to their direct chats stays there either way.
+private_in_groups = true
 
 # A conversation's transcript stays readable this many days; its summary is kept forever. With
 # `archive`, the transcript is then kept compressed under archive/, where no agent can read it — to

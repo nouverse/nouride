@@ -1,16 +1,20 @@
 /**
  * A new mission from the dashboard: who does it, what it is, and how it is judged done — commands that must pass,
- * a reviewer's criteria, a person's accept. Saved to the backlog it is a draft that waits to be started, as an agent's
- * is; "Start now" starts it at once. It reports to the dashboard's own chat; nothing here parses a goal or a
- * check, and a refusal (no such agent, a folder that is not an absolute path) is the daemon's sentence, shown under it.
+ * a reviewer's criteria, a person's accept — with its brief and its own limits, the fields a draft is changed with:
+ * they were only there, so a mission could be given neither as it was made. Saved to the backlog it is a draft that
+ * waits to be started, as an agent's is; "Start now" starts it at once. It reports to the dashboard's own chat;
+ * nothing here parses a goal or a check, and a refusal (no such agent, a folder that is not an absolute path, a limit
+ * out of its bounds) is the daemon's sentence, shown under it.
  */
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/commons/lib/api";
 import type { AgentSummary, MissionStart, MissionView } from "@nouride/wire";
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
+import { useToast } from "@/commons/components/ui/toast";
 import { ErrorNote, Field } from "@/commons/components/ui/ui";
+import { limitsAreNumbers, limitsTyped, MILLION, OwnLimits, type OwnLimitValues } from "./OwnLimits";
 
 /** The form's fields as the route takes them: checks one per line, blanks dropped; a reviewer's words or none at all. */
 export function startInput(draft: {
@@ -23,8 +27,13 @@ export function startInput(draft: {
   noReview: boolean;
   accept: boolean;
   workdir: string;
+  /** Its brief; left empty, it has none and each turn starts from its goal alone. */
+  brief?: string;
+  /** Its own limits as typed, tokens in millions; each left empty is the limit every mission starts with. */
+  limits?: OwnLimitValues;
 }): MissionStart {
   const checks = draft.checks.split("\n").map((line) => line.trim()).filter(Boolean);
+  const limits = draft.limits ? limitsTyped(draft.limits) : {};
   return {
     agent: draft.agent,
     ...(draft.title?.trim() ? { title: draft.title.trim() } : {}),
@@ -33,6 +42,8 @@ export function startInput(draft: {
     ...(draft.noReview ? { noReview: true } : draft.review.trim() ? { review: draft.review.trim() } : {}),
     ...(draft.accept ? { accept: true } : {}),
     ...(draft.workdir.trim() ? { workdir: draft.workdir.trim() } : {}),
+    ...(draft.brief?.trim() ? { brief: draft.brief.trim() } : {}),
+    ...(Object.keys(limits).length > 0 ? { limits } : {}),
   };
 }
 
@@ -58,15 +69,27 @@ export function NewMissionForm({
   const [noReview, setNoReview] = useState(false);
   const [accept, setAccept] = useState(false);
   const [workdir, setWorkdir] = useState("");
+  const [brief, setBrief] = useState("");
+  const [limits, setLimits] = useState<OwnLimitValues>({ hours: "", turns: "", tokens: "" });
+  const toast = useToast();
+  // The limits every mission starts with, shown in the empty fields: the Limits card's own read, shared with it.
+  const settings = useQuery({ queryKey: ["mission-settings"], queryFn: api.missionSettings, retry: false });
+  const usual = settings.data ? { hours: String(settings.data.limitHours), turns: String(settings.data.limitTurns), tokens: String(settings.data.limitTokens / MILLION) } : undefined;
   const chosen = agent || orchestrator || ordered[0]?.id || "";
 
   // One form, two ends: saved to the backlog as a draft (the form's own button, as an agent's mission is one first),
   // or started now. Which was pressed goes with the request, so the answer is handed to the right end.
   const start = useMutation({
-    mutationFn: (draft: boolean) => api.startMission({ ...startInput({ agent: chosen, title, goal, checks, review, noReview, accept, workdir }), ...(draft ? { draft: true } : {}) }),
-    onSuccess: ({ mission }, draft) => (draft ? onSaved(mission) : onStarted(mission)),
+    mutationFn: (draft: boolean) => api.startMission({ ...startInput({ agent: chosen, title, goal, checks, review, noReview, accept, workdir, brief, limits }), ...(draft ? { draft: true } : {}) }),
+    onSuccess: ({ mission, plain }, draft) => {
+      // Made, but its brief could not be kept: said, since the page that opens next shows none.
+      if (plain) toast.error("Its brief was not kept", plain);
+      if (draft) onSaved(mission);
+      else onStarted(mission);
+    },
   });
-  const ready = Boolean(chosen && goal.trim());
+  const numbers = limitsAreNumbers(limits);
+  const ready = Boolean(chosen && goal.trim()) && numbers;
 
   return (
     <form
@@ -100,6 +123,9 @@ export function NewMissionForm({
               onChange={(e) => setGoal(e.target.value)}
             />
           </Field>
+          <Field label="Brief" hint="Optional. Kept in its folder: what the work is, why, what to read, what done means. Each turn starts from it.">
+            <textarea className="textarea textarea-sm w-full rounded-xl font-mono text-xs leading-relaxed" rows={4} value={brief} onChange={(e) => setBrief(e.target.value)} />
+          </Field>
         </div>
       </div>
 
@@ -119,7 +145,7 @@ export function NewMissionForm({
               className="input input-sm w-full rounded-xl"
               value={review}
               disabled={noReview}
-              placeholder="The changelog names every breaking change"
+              placeholder="The changelog lists what breaks"
               onChange={(e) => setReview(e.target.value)}
             />
           </Field>
@@ -143,6 +169,14 @@ export function NewMissionForm({
         />
       </Field>
 
+      {/* This mission's own, where it stops to ask whether to go on: the Limits card's three, for this one alone. */}
+      <OwnLimits
+        values={limits}
+        usual={usual}
+        onChange={(key, value) => setLimits((now) => ({ ...now, [key]: value }))}
+        note="Where this mission stops to ask you whether to go on. Only this one. Left empty, it has the limit every mission starts with."
+      />
+
       <ErrorNote error={start.error} />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -156,7 +190,7 @@ export function NewMissionForm({
         <button type="button" className="btn btn-ghost btn-sm rounded-xl" onClick={onCancel}>
           Cancel
         </button>
-        {!ready && <span className="text-[11px] text-base-content/65">Needs an agent and a goal.</span>}
+        {!ready && <span className="text-[11px] text-base-content/65">{numbers ? "Needs an agent and a goal." : "A limit is a number: 12, or 0.5 for half an hour."}</span>}
       </div>
     </form>
   );

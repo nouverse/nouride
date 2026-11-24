@@ -12,6 +12,7 @@ import { createLogger, type ChatMessage } from "@nouride/shared";
 import { formatTokens } from "@/modules/hooks/format.ts";
 import { sumUpOldSteps } from "@/modules/llm/summarize-steps.ts";
 import type { TurnCeilings, TurnPlan } from "./prepare.ts";
+import { keptOf } from "./turn-only.ts";
 import type { ExecutorDeps, TurnRequest } from "./types.ts";
 
 const log = createLogger("llm.executor");
@@ -32,7 +33,9 @@ export async function roomInTurn(o: {
   const { req, plan, working, ceilings } = o;
   const say = (text: string, detail: Record<string, unknown>) => void o.deps.onActivity?.("compact", text, detail);
   try {
-    const room = await sumUpOldSteps(working, o.turnStart, {
+    // What is the turn's alone is summed up as the line the conversation keeps of it: a summary is kept, and is read by
+    // whoever speaks next. Summed up, the turn goes on without those results and can ask for them again.
+    const room = await sumUpOldSteps(working.map(keptOf), o.turnStart, {
       provider: plan.summarizer.provider,
       model: plan.summarizer.model,
       summarizerWindow: ceilings.compaction.summarizerWindow,

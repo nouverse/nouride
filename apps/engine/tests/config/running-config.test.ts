@@ -184,6 +184,7 @@ const ROWS: Row[] = [
   { method: "setMemorySettings", via: "[memory.semantic], a table of its own", write: ({ settings }) => settings.setMemorySettings({ patch: { semantic: { model: "bge-m3", dimensions: 512 } }, actor }) },
   { method: "setPersonFacts", via: "one person's facts", write: ({ settings }) => settings.setPersonFacts({ key: "gading", facts: "ask", actor }) },
   { method: "setMemorySettings", via: "[memory] recall off", write: ({ settings }) => settings.setMemorySettings({ patch: { recall: false }, actor }) },
+  { method: "setMemorySettings", via: "[memory] private_in_groups off", write: ({ settings }) => settings.setMemorySettings({ patch: { privateInGroups: false }, actor }) },
   { method: "setPersonRecall", via: "one person's recall", write: ({ settings }) => settings.setPersonRecall({ key: "gading", recall: false, actor }) },
   { method: "setRetentionDays", via: "the log window", write: ({ settings }) => settings.setRetentionDays({ scope: "log", days: 7, actor }) },
   { method: "setRetentionDays", via: "the audit window", write: ({ settings }) => settings.setRetentionDays({ scope: "audit", days: 90, actor }) },

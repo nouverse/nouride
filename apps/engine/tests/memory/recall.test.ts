@@ -48,10 +48,14 @@ describe("recall in the prompt", () => {
     expect(recall.recent.map((episode) => episode.summary)).toEqual(["Sam tanya jam lampu teras mati.", "Sam cerita kabar pribadi."]);
   });
 
-  test("the family group: what was said there; her private fact never, though she is speaking", () => {
+  test("the family group: what was said there; her private fact never among it, and hers for her own turn only", () => {
     const recall = h.memory.recall(speaker({ ...FAMILY, senderId: "62877" }));
     expect(recall.profiles).toEqual([{ name: "Kak Sam", facts: [{ section: "Home", text: "Menanyakan lampu teras.", learned: "2026-09-25" }] }]);
     expect(recall.recent.map((episode) => episode.summary)).toEqual(["Sam tanya jam lampu teras mati."]);
+    // Told in private, it goes with her into the group on the turns she is the one speaking, apart from what the
+    // group's prompt holds: `follows-person.test.ts`. On the admin's turn there it is nowhere.
+    expect(recall.own).toEqual({ name: "Kak Sam", facts: [{ section: "Life", text: "Sedang hamil.", learned: "2026-09-25" }] });
+    expect(JSON.stringify(h.memory.recall(speaker(FAMILY)).own ?? null)).not.toContain("hamil");
   });
 
   test("a conversation another agent had is labelled so, and the block is worded as a record", () => {
@@ -95,7 +99,11 @@ describe("memory_search", () => {
     expect(mine.content).toContain("sam · Life: Sedang hamil.");
     const gading = await search().execute({ query: "hamil" }, toolCtx(GADING_DM));
     expect(gading.content).toContain("Nothing found");
-    const group = await search().execute({ query: "hamil" }, toolCtx({ ...FAMILY, senderId: "62877" }));
+    // In the family group it is found on her own turn, as hers and for that turn only; on anyone else's, never.
+    const hers = await search().execute({ query: "hamil" }, toolCtx({ ...FAMILY, senderId: "62877" }));
+    expect(hers.content).toContain("sam (theirs) · Life: Sedang hamil.");
+    expect(hers.turnOnly).toBeDefined();
+    const group = await search().execute({ query: "hamil" }, toolCtx(FAMILY));
     expect(group.content).toContain("Nothing found");
   });
 
@@ -228,8 +236,9 @@ describe("memory_write", () => {
     expect(await profile()).toContain("- Allergic to peanuts and shrimp. {gading}");
     expect(await profile()).not.toContain("- Allergic to peanuts. {");
 
-    // The family group may not read what was said in the admin's DM, so it cannot change it either.
-    expect(await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx(FAMILY))).toMatchObject({ isError: true });
+    // On someone else's turn the family group does not read what was said in the admin's DM, so it cannot change it
+    // either. On his own turn there it is his to change: `follows-person.test.ts`.
+    expect(await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx({ ...FAMILY, senderId: "62877" }))).toMatchObject({ isError: true });
     expect(await write().execute({ about: "person", change: "update", current: "Allergic to peanuts and shrimp." }, toolCtx(GADING_DM))).toMatchObject({ isError: true });
 
     expect((await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx(GADING_DM))).content).toBe("Removed from their profile.");

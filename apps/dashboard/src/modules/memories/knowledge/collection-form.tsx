@@ -59,6 +59,27 @@ function Chip({ on, onToggle, children }: { on: boolean; onToggle: () => void; c
 
 const toggled = (list: readonly string[], item: string) => (list.includes(item) ? list.filter((other) => other !== item) : [...list, item]);
 
+/** A collection's own answer to whether it is used in a group, as the form's choice holds it: "" follows the memory setting. */
+type InGroups = "" | "on" | "off";
+const inGroupsOf = (value: boolean | undefined): InGroups => (value === undefined ? "" : value ? "on" : "off");
+const inGroupsSent = (choice: InGroups): boolean | null => (choice === "" ? null : choice === "on");
+
+/**
+ * Whether a collection kept to people goes with them into a group: its own answer, or the memory setting's. Each choice
+ * is short enough to be read whole in the box on a phone, where a longer one is cut off at its end.
+ */
+function InGroupsChoice({ value, onChange }: { value: InGroups; onChange: (next: InGroups) => void }) {
+  return (
+    <Field label="In a group" hint="Used there only on the messages one of its own people sends, never on anyone else's.">
+      <select className="select select-sm w-full rounded-xl" aria-label="In a group" value={value} onChange={(event) => onChange(event.target.value as InGroups)}>
+        <option value="">As the Settings tab says</option>
+        <option value="on">Yes, on their own messages</option>
+        <option value="off">No, never in a group</option>
+      </select>
+    </Field>
+  );
+}
+
 function Choose({ checked, label, hint, onChoose, children }: { checked: boolean; label: string; hint?: string; onChoose: () => void; children?: ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -86,6 +107,7 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
   const [people, setPeople] = useState<string[]>(start.people);
   const [agents, setAgents] = useState<string[] | null>(collection?.agents ? [...collection.agents] : null);
   const [about, setAbout] = useState<string[]>([...(collection?.about ?? [])]);
+  const [inGroups, setInGroups] = useState<InGroups>(inGroupsOf(collection?.inGroups));
 
   const readers = readersOf(choice, { group, people, me: names.me }, making);
   const problem = !name.trim()
@@ -101,7 +123,7 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
   const save = useMutation({
     mutationFn: async () => {
       if (making) {
-        const made = await api.createCollection({ name: name.trim(), description: description.trim(), agents, about, ...(readers ? { readers } : {}) });
+        const made = await api.createCollection({ name: name.trim(), description: description.trim(), agents, about, ...(readers ? { readers } : {}), ...(inGroups ? { inGroups: inGroupsSent(inGroups) } : {}) });
         return made.collection?.id ?? null;
       }
       const patch: CollectionInput = {};
@@ -110,6 +132,7 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
       if (!same(agents, collection.agents)) patch.agents = agents;
       if (!same(about, collection.about)) patch.about = about;
       if (admin && readers && JSON.stringify(readers) !== JSON.stringify(collection.readers)) patch.readers = readers;
+      if (inGroups !== inGroupsOf(collection.inGroups)) patch.inGroups = inGroupsSent(inGroups);
       await api.updateCollection(collection.id, patch);
       return collection.id;
     },
@@ -158,12 +181,12 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
                 <Choose
                   checked={choice === "me"}
                   label="Only me"
-                  hint={noPerson ? "Your account is not linked to anyone in People, so only the admins can be answered from it." : "In a chat with just you."}
+                  hint={noPerson ? "Your account is not linked to anyone in People, so only the admins can be answered from it." : "In a chat with just you, and in a group on your own messages."}
                   onChoose={() => setChoice("me")}
                 />
               ) : null}
               {!making && (collection.readers.kind === "admins" || noPerson) ? (
-                <Choose checked={choice === "admins"} label="Only the admins" hint="Each in a chat with just them." onChoose={() => setChoice("admins")} />
+                <Choose checked={choice === "admins"} label="Only the admins" hint="Each in a chat with just them, and in a group on their own messages." onChoose={() => setChoice("admins")} />
               ) : null}
               {admin ? (
                 <>
@@ -182,7 +205,7 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
                       <p className="text-base-content/65 text-xs">No group chat is known yet. Groups show up once an agent has talked in one.</p>
                     )}
                   </Choose>
-                  <Choose checked={choice === "people"} label="Chosen people" hint="Each in a chat with just them, never in a group." onChoose={() => setChoice("people")}>
+                  <Choose checked={choice === "people"} label="Chosen people" hint="Each in a chat with just them, and in a group on their own messages." onChoose={() => setChoice("people")}>
                     <div className="flex flex-wrap gap-1.5">
                       {names.people.map((person) => (
                         <Chip key={person.key} on={people.includes(person.key)} onToggle={() => setPeople(toggled(people, person.key))}>
@@ -198,6 +221,7 @@ export function CollectionForm({ collection, names, admin, onClose, onSaved }: {
             </>
           )}
         </fieldset>
+        {choice === "me" || choice === "admins" || choice === "people" ? <InGroupsChoice value={inGroups} onChange={setInGroups} /> : null}
 
         <fieldset className="space-y-2">
           <legend className="text-base-content/85 mb-1.5 text-xs font-semibold uppercase tracking-wider font-mono">Which agents look in it</legend>

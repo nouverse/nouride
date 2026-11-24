@@ -16,8 +16,8 @@
  */
 
 import { dirname, join } from "@nouride/runtime";
-import { createLogger, type ChatType, type MemorySection, type MemorySemanticSection, oneLine, type Person } from "@nouride/shared";
-import { audienceOf, canSeeEpisode, canSeeFact, memoryChatKey, scopeOf, type Audience } from "./access.ts";
+import { createLogger, type ChatType, type MemorySection, type MemorySemanticSection, type Person } from "@nouride/shared";
+import { audienceOf, canSeeEpisode, memoryChatKey, scopeOf, type Audience } from "./access.ts";
 import { analyze, type AnalyzeRequest } from "./analyze.ts";
 import { passBacklog, type PassBacklog } from "./backlog.ts";
 import { localTime } from "@/commons/clock.ts";
@@ -35,14 +35,14 @@ import { withKnowledge, type GraphFilter, type MemoryGraph } from "./graph-view.
 import { createTagTools } from "./memory-tags.ts";
 import { archiveSize } from "./maintain.ts";
 import { identityOf, personOf } from "./people.ts";
-import type { FactOperation, Readers } from "./profile.ts";
+import { noteOwnFact, type FactReach, type OwnFactChange } from "./own-fact.ts";
+export type { FactReach } from "./own-fact.ts";
 import { recallFor, type Recall } from "./recall.ts";
 import { cutActive, cutChat, runPass, type ActivitySource, type PassReport, type RunDeps } from "./run.ts";
 import { saveConversation, type SaveRequest } from "./saved.ts";
 import { searchMemory, type SearchHit } from "./search.ts";
 import { catchUp, parseVectorKey, rankingModel, rankingVectors, vectorKey, type CatchUpReport, type Embedder, type Semantic } from "./semantic.ts";
 import { vaultAt } from "./vault.ts";
-import { editProfile } from "./write.ts";
 import { idsOf } from "@/modules/people/match.ts";
 import type { Collection } from "./knowledge/collections.ts";
 import { createKnowledge, type KeepRequest, type KeepResult, type KnowledgeDeps } from "./knowledge/surface.ts";
@@ -85,6 +85,11 @@ export interface Speaker {
   senderId: string;
   chatId: string;
   chatType: ChatType;
+  /**
+   * What is answered goes to a session that keeps everything it is told: a coding CLI's own call. Nothing there can be
+   * for one turn only, so what is one person's own is not brought into a group for it.
+   */
+  keeps?: true;
 }
 
 /** Days looked back when an analysis names no range: a month for a ranking, a quarter for a trend. */
@@ -174,10 +179,12 @@ export function createMemory(deps: MemoryDeps) {
     const identity = identityOf(config.people, sender);
     const entry = personOf(config.people, sender);
     const present = speaker.chatType === "dm" ? [] : (deps.speakersIn?.(speaker.gatewayId, speaker.chatId) ?? []).map((senderId) => identityOf(config.people, { gatewayId: speaker.gatewayId, senderId }));
+    const audience = audienceOf({ chat: memoryChatKey(speaker.gatewayId, speaker.chatId), chatType: speaker.chatType, person: identity, present });
     return {
       identity,
       person: entry?.key ? { key: entry.key, name: entry.name } : null,
-      audience: audienceOf({ chat: memoryChatKey(speaker.gatewayId, speaker.chatId), chatType: speaker.chatType, person: identity, present }),
+      // Whose turn it is, from the sender id the platform gave: what a person brings into a group goes by it.
+      audience: audience.kind === "group" && !speaker.keeps ? { ...audience, speaker: identity } : audience,
     };
   }
 
@@ -227,7 +234,7 @@ export function createMemory(deps: MemoryDeps) {
   /** People's names for their keys, as a collection's `about` lists them: what the model reads is who, not a key. */
   const namesOf = (keys: readonly string[]) => keys.map((key) => config.people.find((person) => person.key === key)?.name ?? key);
   /** Who is asking, as the knowledge base reads it: the agent, and what the chat may see. */
-  const who = (speaker: Speaker) => ({ agentId: speaker.agentId, audience: situate(speaker).audience });
+  const who = (speaker: Speaker) => ({ agentId: speaker.agentId, audience: situate(speaker).audience, brings: config.memory.privateInGroups });
   const knowledge = createKnowledge({ ...(deps.knowledge ? { knowledge: deps.knowledge } : {}), now, semantic: semanticNow, embeds: () => embedder() !== null, embedCatchUp });
 
 
@@ -236,25 +243,24 @@ export function createMemory(deps: MemoryDeps) {
 
     recall(speaker: Speaker): Recall {
       const semantic = semanticNow();
-      const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, timeZone: timeZone(), now: now(), ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
-      // The collections it may search here, by name: never their documents.
-      return {
-        ...recall,
-        knowledge: knowledge.usable(who(speaker)).map((collection) => ({
-          name: collection.settings.name,
-          description: collection.settings.description,
-          ...(collection.settings.about.length ? { about: namesOf(collection.settings.about) } : {}),
-        })),
-      };
+      const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, privateInGroups: config.memory.privateInGroups, timeZone: timeZone(), now: now(), ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
+      // The collections it may search here, by name: never their documents. Those that went with the one speaking are
+      // said with what else is theirs, apart from what the group's prompt caches.
+      const named = (collection: Collection) => ({ name: collection.settings.name, description: collection.settings.description, ...(collection.settings.about.length ? { about: namesOf(collection.settings.about) } : {}) });
+      const theirs = knowledge.brought(who(speaker)).map(named);
+      const person = situate(speaker).person;
+      const own = recall.own ?? (theirs.length && person ? { name: person.name, facts: [] } : undefined);
+      return { ...recall, knowledge: knowledge.usable(who(speaker)).map(named), ...(own ? { own: { ...own, ...(theirs.length ? { collections: theirs } : {}) } } : {}) };
     },
 
     async search(speaker: Speaker, query: { query: string; since?: string; until?: string; people?: string[]; agents?: readonly string[]; limit?: number; kind?: "knowledge" }): Promise<SearchHit[]> {
       const semantic = semanticNow();
       const { kind, ...asked } = query;
-      const scopes = knowledge.usable(who(speaker)).map((collection) => ({ id: collection.id, name: collection.settings.name, about: collection.settings.about }));
+      const scoped = (collection: Collection) => ({ id: collection.id, name: collection.settings.name, about: collection.settings.about });
+      const scopes = [...knowledge.usable(who(speaker)).map(scoped), ...knowledge.brought(who(speaker)).map((collection) => ({ ...scoped(collection), own: true as const }))];
       const hits = await searchMemory(
         { index, people: config.people, now, timeZone: timeZone(), ...(semantic ? { semantic } : {}), ...(deps.knowledge ? { knowledge: deps.knowledge.store } : {}) },
-        { audience: situate(speaker).audience, ...asked, knowledge: scopes },
+        { audience: situate(speaker).audience, ...asked, knowledge: scopes, brings: config.memory.privateInGroups },
       );
       return kind === "knowledge" ? hits.filter((hit) => hit.kind === "section") : hits;
     },
@@ -302,31 +308,9 @@ export function createMemory(deps: MemoryDeps) {
       return order.flatMap((id) => visible.get(id) ?? []).slice(0, limit);
     },
 
-    /**
-     * Keep, correct or drop something about the speaker, now — `memory_write` with about=person. What
-     * is written is stamped with this chat's audience, so it is readable where this conversation is;
-     * a fact to correct or drop is named by its words, and only one this chat may read can be touched.
-     */
-    async noteAboutSpeaker(
-      speaker: Speaker,
-      change: { op: "add"; section: string; text: string } | { op: "update"; current: string; text: string } | { op: "remove"; current: string },
-    ): Promise<{ status: "written" | "unchanged" } | { refused: string }> {
-      const { person, identity, audience } = situate(speaker);
-      if (!person) return { refused: "The person you are talking to has no profile yet. If you know their name, record them with `person_record` first, then call this again. If you do not, keep it only for this conversation: do not put it in MEMORY.md." };
-      const readers: Readers = audience.kind === "dm" ? { people: [identity] } : { people: [...audience.present], chat: audience.chat };
-      const same = (a: string, b: string) => oneLine(a).toLowerCase() === oneLine(b).toLowerCase();
-      const result = await editProfile({ vault, index, state, now }, person.key, {
-        operations: (facts): FactOperation[] | { refused: string } => {
-          if (change.op === "add") return [change];
-          const fact = facts.find((candidate) => same(candidate.text, change.current) && canSeeFact(candidate, person.key, audience));
-          if (!fact) return { refused: `No fact reading "${change.current}" is known here. Use the words exactly as they appear under what you know about them.` };
-          return [change.op === "update" ? { op: "update", n: fact.n, text: change.text } : { op: "remove", n: fact.n }];
-        },
-        provenance: { readers },
-        cause: "agent",
-        name: person.name,
-      });
-      return result.status === "refused" ? { refused: result.reason } : { status: result.status };
+    /** Keep, correct or drop something about the speaker, now — `memory_write` with about=person (`own-fact.ts`). */
+    async noteAboutSpeaker(speaker: Speaker, change: OwnFactChange): Promise<{ status: "written" | "unchanged"; reach: FactReach } | { refused: string }> {
+      return await noteOwnFact({ vault, index, state, now }, { ...situate(speaker), brings: config.memory.privateInGroups }, change);
     },
 
     /** Cut this chat into episodes now — `/new` and `/reset`. */
@@ -403,6 +387,8 @@ export function createMemory(deps: MemoryDeps) {
     knowledge: {
       ...knowledge.surface,
       usable: (speaker: Speaker): Collection[] => knowledge.usable(who(speaker)),
+      /** A kept document's own file, for `send_file` to send where it is asked from: only what this chat may read. */
+      fileOf: (speaker: Speaker, item: string) => knowledge.fileOf(who(speaker), item),
       /** A document kept from this chat (`memory_write` about knowledge): saved, or waiting for an admin's yes. */
       keep: (speaker: Speaker, request: Omit<KeepRequest, "from"> & { name?: string; where: string }): Promise<KeepResult> => {
         // Who, as People knows them: in a one-to-one chat a platform's display name is not given to a turn (it is not

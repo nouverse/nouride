@@ -27,7 +27,7 @@ export function WriteDialog({ collection, onClose }: { collection: KnowledgeColl
     mutationFn: () => api.writeDocument(collection.id, title.trim(), text),
     onSuccess: async ({ saved }) => {
       const first = saved[0];
-      if (first && first.status !== "indexed") toast.warning(`${title.trim()} saved, not searched`, first.reason);
+      if (first && first.status !== "indexed") toast.warning(`${title.trim()} saved, found by its title only`, first.reason);
       else toast.success(`${title.trim()} saved to ${collection.name}`);
       for (const key of [["knowledge-documents", collection.id], ["knowledge"], ["memory-graph"]]) await queryClient.invalidateQueries({ queryKey: key });
       onClose();

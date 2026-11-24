@@ -13,7 +13,8 @@ import {
   type LLMDefaultsSection,
   type LoadedAgent,
 } from "@nouride/shared";
-import { discoverAgents, loadAgent, reloadSkills } from "./loader.ts";
+import { join, readTextFileSync, statFile } from "@nouride/runtime";
+import { discoverAgents, loadAgent, MEMORY_FILE, reloadSkills } from "./loader.ts";
 
 const log = createLogger("agents.registry");
 
@@ -201,7 +202,44 @@ export class AgentRegistry {
   }
 
   get(id: string): LoadedAgent | undefined {
-    return this.agents.get(id);
+    const agent = this.agents.get(id);
+    return agent && this.withOwnMemory(agent);
+  }
+
+  /**
+   * `MEMORY.md` as each agent's prompt last read it: the file's size and time.
+   *
+   * The one file of a pack its agent writes itself, and a pack is read as it loads: what an agent kept with
+   * `memory_write` was on disk at once and in no prompt until a restart or a reload, while its own prompt said the next
+   * turn would hold it. A fuel code kept at an agent's own suggestion was unknown in the next chat that asked for it.
+   */
+  private memoryRead = new Map<string, string>();
+
+  /**
+   * The agent with its `MEMORY.md` as the file is now. Done where an agent is handed out, so no kind of turn can leave
+   * it out; by a stat, so a file that did not change costs no read; and with no reload, whose listeners reconnect the
+   * agent's MCP servers. A write that leaves the size and the time as they were is not seen: one made with the tools
+   * replaces the file, and its time is the write's.
+   */
+  private withOwnMemory(agent: LoadedAgent): LoadedAgent {
+    const id = agent.config.id;
+    const path = join(agent.dir, MEMORY_FILE);
+    const stat = statFile(path);
+    const stamp = stat && !stat.isDirectory ? `${stat.size}:${stat.mtimeMs}` : "";
+    if (this.memoryRead.get(id) === stamp) return agent;
+    let memory = "";
+    try {
+      if (stamp) memory = readTextFileSync(path);
+    } catch {
+      // Not readable this once: what the agent holds stays, and the next asking reads again.
+      return agent;
+    }
+    this.memoryRead.set(id, stamp);
+    if ((agent.persona.memory ?? "") === memory) return agent;
+    const { memory: _was, ...rest } = agent.persona;
+    const fresh: LoadedAgent = { ...agent, persona: { ...rest, ...(memory ? { memory } : {}) } };
+    this.agents.set(id, fresh);
+    return fresh;
   }
 
   /**
@@ -220,7 +258,7 @@ export class AgentRegistry {
 
   /** Every loaded pack, including disabled ones — the dashboard shows those too. */
   all(): LoadedAgent[] {
-    return [...this.agents.values()];
+    return [...this.agents.values()].map((agent) => this.withOwnMemory(agent));
   }
 
   /**

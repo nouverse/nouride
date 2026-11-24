@@ -23,6 +23,10 @@
  * the nightly pass — except the day, once, at midnight, a fact written now, and in a group who has
  * been speaking lately; so it is a cached block of its own, after the harness (`llm/prompt/index.ts`).
  *
+ * **What the one speaking brings along is not in this block.** In a group a person's own facts, said elsewhere, are
+ * read on the turns they speak (`Recall.own`, `followsItsPerson`); they change with every change of speaker, so they
+ * are worded with the line that says who is speaking, at the end of the prompt, and nothing above moves with them.
+ *
  * **Never in the order people spoke.** It was: the speaker first and in full, the rest in the order
  * they appear in the room's last 30 messages. So in a group every turn whose speaker was not the last
  * one's rewrote these bytes, and everything the cache held behind them went with them. Measured on the
@@ -35,7 +39,7 @@
  */
 
 import type { Person } from "@nouride/shared";
-import { canSeeFact, scopeOf, type Audience } from "./access.ts";
+import { canSeeFact, followsItsPerson, scopeOf, type Audience } from "./access.ts";
 import { localTime } from "@/commons/clock.ts";
 import { comingOn, FOLLOW_UPS, isOver } from "./fact-dates.ts";
 import type { IndexedFact, MemoryIndexPort } from "./memory-index.store.ts";
@@ -63,6 +67,12 @@ export interface Recall {
   waiting: { id: string; day: string; time: string; agents: string[]; preview: string; theirs: boolean }[];
   /** The knowledge collections this agent may search in this chat (0.8.20), by name: what is in them is searched for. */
   knowledge?: { name: string; description: string; about?: string[] }[];
+  /**
+   * In a group, what the one speaking told an agent elsewhere: their own facts, which this group does not read, and
+   * their own knowledge collections, by name. Theirs for this turn only, so it is never part of the cached block the
+   * rest of this is.
+   */
+  own?: { name: string; facts: RecalledFact[]; collections?: { name: string; description: string; about?: string[] }[] };
 }
 
 /** Facts of one person shown per prompt — past it, `memory_search` finds the rest. */
@@ -92,6 +102,8 @@ export function recallFor(input: {
   vectors?: ReadonlyMap<string, Int8Array>;
   /** `[memory] recall`; absent is on, the default. */
   recall?: boolean;
+  /** `[memory] private_in_groups`; absent is on, the default. */
+  privateInGroups?: boolean;
 }): Recall {
   const { index, audience } = input;
   const today = localTime(input.now ?? Date.now(), input.timeZone).day;
@@ -174,7 +186,19 @@ export function recallFor(input: {
           }))
       : [];
 
-  return { profiles, shared, upcoming, followUps, recent, waiting };
+  // `facts` are those of the people here whose facts go into prompts at all, so a speaker left out of them, or one the
+  // install does not know, brings none.
+  const speaker = audience.kind === "group" ? audience.speaker : undefined;
+  const brought =
+    speaker && (input.privateInGroups ?? true)
+      ? oncePerMeaning(
+          facts.filter((fact) => fact.subject === speaker && followsItsPerson(fact, speaker, audience)),
+          input.vectors,
+        ).slice(0, MAX_FACTS_PER_PERSON)
+      : [];
+  const own = brought.length > 0 ? { own: { name: nameOf(input.people, speaker!), facts: brought.map(recalled) } } : {};
+
+  return { profiles, shared, upcoming, followUps, recent, waiting, ...own };
 }
 
 /**

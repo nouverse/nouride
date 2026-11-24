@@ -8,13 +8,26 @@ import { describe, expect, test } from "bun:test";
 import { readersOf } from "@/modules/memories/knowledge/collection-form";
 import { addedLine } from "@/modules/memories/knowledge/uploads";
 import { listed } from "@/commons/lib/listed";
-import { aboutLine, agentsLine, countsLine, groupKey, installMessage, pagesLine, readersLine, statusOf, type Names } from "@/modules/memories/knowledge/words";
+import { aboutLine, agentsLine, countsLine, groupKey, inGroupsLine, installMessage, pagesLine, readersLine, statusOf, type Names } from "@/modules/memories/knowledge/words";
 
 const NAMES: Names = {
   person: (key) => ({ gading: "Gading", sam: "Kak Sam", raka: "Raka" })[key] ?? key,
   group: (chat) => (chat === "telegram:main:-100200" ? "Rumah" : undefined),
   me: "gading",
 };
+
+describe("whether a collection kept to people is used in a group", () => {
+  test("its own answer, or the memory setting's where it has none; nothing for one a group reads anyway", () => {
+    const mine = { kind: "people", people: ["gading"] } as const;
+    expect(inGroupsLine(mine, undefined, true)).toBe("In a group, only on the messages they send themselves.");
+    expect(inGroupsLine(mine, undefined, false)).toBe("Never in a group.");
+    expect(inGroupsLine(mine, false, true)).toBe("Never in a group.");
+    expect(inGroupsLine(mine, true, false)).toBe("In a group, only on the messages they send themselves.");
+    expect(inGroupsLine({ kind: "admins" }, undefined, true)).toBe("In a group, only on the messages they send themselves.");
+    expect(inGroupsLine({ kind: "everyone" }, undefined, true)).toBe("");
+    expect(inGroupsLine({ kind: "group", chat: "telegram:main:-100200" }, false, true)).toBe("");
+  });
+});
 
 describe("who may be answered from a collection", () => {
   test("anyone, a group by its name, the admins, you, or the people it names, each in a chat with just them", () => {
@@ -60,7 +73,7 @@ describe("a document, said", () => {
   test("ready, could not be read, or on its way in", () => {
     expect(statusOf({ status: "indexed" })).toEqual({ label: "Ready", tone: "ready" });
     expect(statusOf({ status: "unreadable" })).toEqual({ label: "Could not be read", tone: "not-read" });
-    expect(statusOf({ status: "listed" })).toEqual({ label: "Kept, not searched", tone: "not-read" });
+    expect(statusOf({ status: "listed" })).toEqual({ label: "Kept as it is", tone: "not-read" });
     expect(statusOf({ status: "reading" as never })).toEqual({ label: "Being read", tone: "reading" });
   });
 

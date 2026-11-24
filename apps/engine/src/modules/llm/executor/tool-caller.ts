@@ -27,6 +27,7 @@ import { coerceArguments } from "@/modules/tools/arguments.ts";
 import { inFoldedWords, openFolded, unfoldCall } from "@/modules/tools/fold.ts";
 import { logToolThrow } from "@/modules/tools/audited.ts";
 import { resultCharsFor } from "@/modules/llm/spill.ts";
+import { withinRoom } from "./turn-only.ts";
 import { compactResult } from "@/modules/llm/output-by-kind.ts";
 import { sendsShortenedArgument } from "@/modules/llm/context.ts";
 import { scratchpadFor } from "@nouride/persona";
@@ -456,6 +457,8 @@ export class ToolCaller {
        * whole reason anyone wants to see it.
        */
       if (!this.deps.spill) return result;
+      // One person's own, for this turn: cut where it is too long, and written to no file a later turn could open.
+      if (result.turnOnly !== undefined) return withinRoom(result, resultCharsFor(maxResultTokens));
       const spill = this.deps.spill;
       // Smaller by kind first, its whole text kept in this conversation's folder as a cleared one is.
       const scope = { agentId: agent.config.id, sessionId: req.sessionId, callId: call.id };

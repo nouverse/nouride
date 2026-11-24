@@ -58,6 +58,12 @@ export interface SendFileOptions {
    */
   sendTogether?: (ctx: ToolContext, attachments: readonly Attachment[]) => Promise<{ ids: string[]; delivered: boolean; refused?: string }>;
   maxBytes: number;
+  /**
+   * A document kept in the knowledge base, as its own file: by the id a search gave it, and only one the chat this is
+   * asked from may be answered from. Absent where there is no knowledge base, and `document` is then not offered. The
+   * knowledge folder is none of an agent's directories, so a kept file was found by search and could not be handed back.
+   */
+  documentFile?: (ctx: ToolContext, item: string) => { path: string; name: string; title: string } | { refused: string };
   /** The same policy `web_fetch` uses. Absent means a URL cannot be sent, only a path. */
   urlPolicy?: UrlPolicy;
   fetchImpl?: typeof fetch;
@@ -405,7 +411,14 @@ async function localFile(raw: string, ctx: ToolContext, options: SendFileOptions
     }
   }
   if (!resolved) return { error: `\`${raw}\` is outside the directories you may use (${roots.length} configured).` };
+  return await checkedFile(resolved, raw, ctx, options);
+}
 
+/**
+ * A file at a path the daemon has already decided this turn may send from, read and checked: one of the agent's own
+ * directories (`localFile`), or a kept document's (`SendFileOptions.documentFile`). `raw` is how the agent named it.
+ */
+async function checkedFile(resolved: string, raw: string, ctx: ToolContext, options: SendFileOptions): Promise<{ file: Attachment; at: string } | { error: string }> {
   const stat = await statFile(resolved);
   if (!stat || stat.isDirectory) return { error: stat ? `\`${raw}\` is a directory.` : `\`${raw}\` does not exist.` };
   if (stat.size === 0) {
@@ -497,7 +510,9 @@ export function createSendFileTool(options: SendFileOptions): Tool {
         "Send a file to this conversation, so the person receives it as a real attachment instead of " +
         "pasted text. " +
         "Give either `path` for a file in your workspace, `paths` for several that belong together (the slides of " +
-        "a carousel, the pages of a scan) in ONE call, or `url` to send something from the web: " +
+        "a carousel, the pages of a scan) in ONE call, " +
+        (options.documentFile ? "`document` for a file kept in the knowledge base, " : "") +
+        "or `url` to send something from the web: " +
         'the `image:` URL from `web_search` with `kind: "image"` goes straight in here. ' +
         "**Do not download it with `curl` or `wget` first.** A shell download of an image succeeds " +
         "with exit 0 when the server answers with a Cloudflare check or a login wall, so you end up " +
@@ -525,6 +540,9 @@ export function createSendFileTool(options: SendFileOptions): Tool {
             items: { type: "string" },
             description: "Several files of your workspace, sent together in this order: one album where the chat has albums. Instead of `path`.",
           },
+          ...(options.documentFile
+            ? { document: { type: "string", description: "A file kept in the knowledge base, sent as it is: the id `memory_search` gave it, in ⟨⟩. Instead of `path`." } }
+            : {}),
           caption: {
             type: "string",
             description: "A short line sent with the file, or once with a set. Say what it is; do not restate its contents.",
@@ -538,16 +556,20 @@ export function createSendFileTool(options: SendFileOptions): Tool {
       const raw = typeof args.path === "string" ? args.path.trim() : "";
       const remote = typeof args.url === "string" ? args.url.trim() : "";
       const several = Array.isArray(args.paths) ? args.paths.map((one) => (typeof one === "string" ? one.trim() : "")).filter(Boolean) : [];
+      const kept = typeof args.document === "string" ? args.document.trim() : "";
 
-      if ([raw, remote, several.length > 0].filter(Boolean).length > 1) {
-        return { content: "Give one of `path`, `paths` or `url`, not more.", isError: true };
+      if ([raw, remote, several.length > 0, kept].filter(Boolean).length > 1) {
+        return { content: `Give one of \`path\`, \`paths\`${options.documentFile ? ", `document`" : ""} or \`url\`, not more.`, isError: true };
       }
       if (remote) return await sendRemote(remote, args, ctx, options);
       if (several.length > 1) return await sendSeveral(several, args, ctx, options);
-      const one = raw || several[0] || "";
+      // A kept document's file: found by the daemon, which asks who may read its collection, then checked as any file.
+      const found = kept ? (options.documentFile?.(ctx, kept) ?? { refused: "Documents cannot be sent here: this Nouride keeps no knowledge base." }) : null;
+      if (found && "refused" in found) return { content: found.refused, isError: true };
+      const one = found?.name || raw || several[0] || "";
       if (!one) return { content: "Give the `path` or the `url` of the file to send, or `paths` for several.", isError: true };
 
-      const read = await localFile(one, ctx, options);
+      const read = found ? await checkedFile(found.path, found.name, ctx, options) : await localFile(one, ctx, options);
       if ("error" in read) return { content: read.error, isError: true };
       const attachment = read.file;
       const { filename = one, size = 0 } = attachment;
@@ -570,7 +592,7 @@ export function createSendFileTool(options: SendFileOptions): Tool {
       });
       return {
         // Said so the agent does not write an address of its own under it.
-        content: `Sent \`${filename}\` (${formatBytes(size)}) to this conversation${page ? ", with the link that opens it as a page in the dashboard written under it" : ""}.`,
+        content: `Sent \`${filename}\` (${formatBytes(size)})${found ? `, the file kept as "${found.title}",` : ""} to this conversation${page ? ", with the link that opens it as a page in the dashboard written under it" : ""}.`,
         isError: false,
       };
     },

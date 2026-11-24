@@ -984,10 +984,13 @@ describe("what the missions keep in memory", () => {
       h.missions.claim(running.id, { kind: "done", summary: "Done.", report: "Wrote it.", files: [] });
     });
     await h.settle();
-    expect(h.missions.tables()).toEqual({ turns: 1, toldQueued: 1, sameCheck: 1, sameQuestion: 1, swept: 0 });
+    // A third, an agent's own with no draft before it and held back too: its chat is owed its brief once it begins.
+    const handed = await h.start("and this piece", { byAgent: "nova", brief: "Read the plan first." });
+    expect(h.missions.tables()).toEqual({ turns: 1, toldQueued: 2, sameCheck: 1, sameQuestion: 1, swept: 0, startBriefs: 1 });
+    h.missions.stop(handed.id, "Gading");
     h.missions.stop(queued.id, "Gading");
     h.missions.stop(running.id, "Gading");
-    expect(h.missions.tables()).toEqual({ turns: 0, toldQueued: 0, sameCheck: 0, sameQuestion: 0, swept: 0 });
+    expect(h.missions.tables()).toEqual({ turns: 0, toldQueued: 0, sameCheck: 0, sameQuestion: 0, swept: 0, startBriefs: 0 });
     h.missions.turnEnded(running.id, { toolCalls: 1, worked: 1, tokens: 10, failed: false, interrupted: false, readOutside: false });
     expect(h.missions.tables().turns).toBe(0);
     h.missions.shapeFor("nova", h.queued.filter((one) => one.chatId === running.id).at(-1)!);
@@ -1096,11 +1099,12 @@ describe("the tool's answer to a start", () => {
     expect(asked).toEqual(["main", "feat/x"]);
   });
 
-  test("a goal too long points at a file the caller writes first, not notes that do not exist yet", async () => {
+  test("a goal too long is told its detail goes in the brief, not in a file of the caller's own nor notes that do not exist yet", async () => {
     const h = await missionsHarness();
     const answer = await createMissionTools(h.missions).chat.execute({ action: "start", title: "A test mission", goal: "x".repeat(5000) }, ctx);
     expect(answer.isError).toBe(true);
-    expect(answer.content).toContain("write the detail to a brief file first (in English, and whole, as the goal is) and name its absolute path in the goal");
+    expect(answer.content).toContain("Keep the goal under 2000 characters: say there what must be true when the work is done, and put the detail in the brief (`brief`), in English and whole, never in a file of your own that the goal points at.");
+    expect(answer.content).not.toContain("absolute path");
     expect(answer.content).not.toContain("notes");
   });
 });

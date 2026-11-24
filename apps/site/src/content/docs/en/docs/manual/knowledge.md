@@ -32,9 +32,19 @@ A collection is closed until you open it. Who may be answered from one depends o
 
 An admin can open a collection to everyone, or to one group, from its card. An agent never can.
 
-A collection is used only when every person in the conversation may be answered from it. So a collection kept for one
-person is never used in a group, even a group that person is in, and the family group's collection is not used in a
-one-to-one chat.
+A collection is used when every person in the conversation may be answered from it. So the family group's collection
+is not used in a one-to-one chat.
+
+**A collection kept for one person goes with them into a group**, on the messages they send there and on nobody else's:
+you ask for your own document in the family group and the agent finds it, and someone else in the group who asks for
+it is told there is no such document. Who is asking is the sender the chat app reports, never what a message says.
+What the agent found for you is not kept in the group's conversation, so the next person's question does not have it.
+
+- Each such collection has **In a group** in its settings: follow the memory setting, yes, or no. The memory setting
+  is **In a group, an agent uses what a person told it in private** under Knowledge & Memory → Settings, on unless you
+  turn it off.
+- An agent that runs on a coding CLI is not given a person's own collection in a group: its session keeps everything
+  it is told.
 
 ## Adding documents
 
@@ -49,8 +59,12 @@ one-to-one chat.
 Nouride reads Markdown, text, CSV, web pages, PDF, Word, Excel, PowerPoint and their OpenDocument forms, up to 50 MB a
 file. PDF and Office files are read with Python, which the Docker image does not have; PDF also needs `pdftotext` (or
 Python's pypdf), and old `.doc`, `.xls` and `.ppt` files need LibreOffice. When one is missing, the document says so and
-the page offers to have it installed; once it is, the document is read within five minutes. Pictures and videos are kept
-and listed, not searched, and so is a scanned PDF, which has no text in it to read.
+the page offers to have it installed; once it is, the document is read within five minutes.
+
+**A file of any kind can be kept.** A picture, a video, or a scanned PDF with no text in it is kept as it is. Nouride
+does not read its words, so it is found by its title and by a line saying what it is: an agent that keeps a photo you
+sent writes that line from what it saw ("the QR code a pump attendant scans, car BG 1234 XY"). A file put in the folder by
+hand is found by its name, and you can write its line under `[notes]` in the collection's `knowledge.toml`.
 
 On the dashboard a collection's documents are listed newest first, each saying when it was added.
 
@@ -73,6 +87,9 @@ it whatever language they search in. Without one, a document's title is its firs
 - Documents are found by their words always, and by meaning when search by meaning is set up: the same model memory
   uses, set once under Knowledge & Memory.
 - A document keeps the language it was written in, and its English title finds it in English.
+- **An agent sends a kept file back as it is**, when you ask for it: the photo, the PDF, the spreadsheet, as an
+  attachment in the chat. Only from a collection that chat may be answered from.
+- A link is kept as what it is and its address, and the agent answers with the address.
 
 ## Memory or the knowledge base
 
@@ -96,6 +113,7 @@ nouride knowledge add <file> --to <collection>
 nouride knowledge add - --name <file name> --to <collection> < <file>   # the file on standard input
 nouride knowledge reindex [collection]             # read again what changed in the folder
 nouride knowledge archive|unarchive <collection>
+nouride knowledge in-groups <collection> on|off|default   # a person's own collection, in a group, on their own messages
 nouride knowledge title <collection>/<file> <words>   # its title; "" takes it off
 nouride knowledge rm <collection>/<file>
 ```

@@ -384,6 +384,7 @@ facts = "off"                       # auto | ask | off; `facts` di [[people]] me
 propose_shared = false              # izinkan pass mengusulkan isi shared.md, tiap usulan menunggu kamu
 prompt_recent = 3
 recall = true                        # yang diingat masuk ke tiap prompt; recall milik entri [[people]] menang
+private_in_groups = true             # di grup, fakta milik seseorang dipakai pada pesan yang ia kirim, dan gak pada pesan orang lain
 transcript_days = 180                # 0 menyimpan semua transkrip selamanya
 archive = true
 

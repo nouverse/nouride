@@ -30,6 +30,8 @@ import { parseFront, renderFront, type Front } from "./frontmatter.ts";
 export interface Readers {
   people: string[];
   chat?: string;
+  /** Kept to its people's direct chats: not read in a group, even on a turn its person speaks (`followsItsPerson`). */
+  direct?: true;
 }
 
 export interface Fact {
@@ -61,14 +63,18 @@ const FACT = /^[-*]\s+(.*?)(?:\s+\(\[\[([^\]|]+)\]\]\))?(?:\s+\{([^}]*)\})?\s*$/
 /** Where a fact goes when a person or a model names no heading. */
 const DEFAULT_SECTION = "Notes";
 
+/** How a line says its fact is kept to direct chats. Two words, so it is never a person's key. */
+const DIRECT_ONLY = "direct only";
+
 function renderReaders(readers: Readers): string {
-  return `{${[...readers.people, ...(readers.chat ? [`in ${readers.chat}`] : [])].join(", ")}}`;
+  return `{${[...readers.people, ...(readers.chat ? [`in ${readers.chat}`] : []), ...(readers.direct ? [DIRECT_ONLY] : [])].join(", ")}}`;
 }
 
 function parseReaders(raw: string): Readers {
   const readers: Readers = { people: [] };
   for (const item of raw.split(",").map((part) => part.trim()).filter(Boolean)) {
     if (item.startsWith("in ")) readers.chat = item.slice(3).trim();
+    else if (item === DIRECT_ONLY) readers.direct = true;
     else readers.people.push(item);
   }
   return readers;

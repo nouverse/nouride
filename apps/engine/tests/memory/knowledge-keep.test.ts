@@ -39,16 +39,27 @@ describe("keeping a document from a chat", () => {
   test("a new collection is made for the person in the chat, and the document is searched at once, there only", async () => {
     const { h, keep, found } = await home();
     const kept = await keep({ collection: "Health", title: "Lab results", content: "Cholesterol 180 in October." });
-    expect(kept).toMatchObject({ isError: false, content: 'Kept in "Health" as Lab results.md, a collection made now for the people in this chat. It can be searched now.' });
+    expect(kept).toMatchObject({ isError: false, content: 'Kept in "Health" as Lab results.md, a collection made now for the people in this chat. It can be searched now. This collection is its people\'s: used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.' });
     expect(readFileSync(join(h.knowledgeRoot, "health", "knowledge.toml"), "utf8")).toContain('readers = ["gading"]');
     expect(await found(GADING_DM, "cholesterol")).toEqual(["knowledge:health/Lab results.md#0"]);
     expect(await found(SAM_DM, "cholesterol", "nix")).toEqual([]);
   });
 
-  test("from a group, the collection is the group's", async () => {
+  test("from a group, the collection is the group's, and the agent is told so", async () => {
     const { h, keep } = await home();
-    await keep({ collection: "Family rules", title: "Rules", content: "Quiet after 22:00." }, FAMILY, "Gading");
+    const kept = await keep({ collection: "Family rules", title: "Rules", content: "Quiet after 22:00." }, FAMILY, "Gading");
+    expect(String(kept.content)).toEndWith("It can be searched now. This collection is one group's: used in that group, whoever is asking there.");
     expect(readFileSync(join(h.knowledgeRoot, "family-rules", "knowledge.toml"), "utf8")).toContain('readers = "group:whatsapp:main:1203@g.us"');
+  });
+
+  test("where the install keeps private things out of groups, or the collection does, the agent is told it is used in no group", async () => {
+    const { h, keep } = await home();
+    h.config.memory.privateInGroups = false;
+    expect(String((await keep({ collection: "Health", title: "Lab results", content: "Cholesterol 180 in October." })).content)).toEndWith("This collection is its people's: used in a direct chat with one of them, and in no group.");
+    // Its own answer, written in its settings since: the install's is not asked.
+    h.config.memory.privateInGroups = true;
+    writeFileSync(join(h.knowledgeRoot, "health", "knowledge.toml"), 'name = "Health"\nreaders = ["gading"]\nin_groups = false\n');
+    expect(String((await keep({ collection: "Health", title: "Blood pressure", content: "120 over 80 in November." })).content)).toEndWith("and in no group.");
   });
 
   test("a page keeps its address, and its title as a heading", async () => {
@@ -69,23 +80,25 @@ describe("keeping a document from a chat", () => {
     expect(outside).toMatchObject({ isError: true, content: 'No file "/etc/hosts" that you may read here: an attachment of this chat, or one in your workspace.' });
   });
 
-  test("a file with no text in it is kept, and the agent is told it is not searched and why, never that it can be", async () => {
+  test("a file with no text in it is kept, and the agent is told why its words are not read and what it is found by, never that they can be searched", async () => {
     const { h, workspace, keep } = await home();
     writeFileSync(join(workspace, "blank.txt"), "\n\n");
     expect(await keep({ collection: "Legal", title: "A blank page", file: "blank.txt" })).toMatchObject({
       isError: false,
-      content: 'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It is kept but not searched: It has no text to search, as a scanned page has none, so it is kept here but not searched.',
+      content:
+        'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It has no text to read, as a scanned page has none. It is kept as it is, and found by its title. ' +
+        'Say what it shows in `content`, kept with the same `file`, and it is found by that too. `send_file` with document="knowledge:legal/blank.txt#0" sends the file itself, here or in any chat that may read this collection. This collection is its people\'s: used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.',
     });
     expect(existsSync(join(h.knowledgeRoot, "legal", "blank.txt"))).toBe(true);
   });
 
   // Nestor, asked to put a person's legal PDFs in the knowledge base, said it did not know whether a PDF's text could be
   // read, and planned to take the text out first (2026-11-07): the words said "a file to keep as it is", and no more.
-  test("agents are told a PDF or an Office file is read for its text, to give the file itself, and when one is not searched", async () => {
+  test("agents are told a PDF or an Office file is read for its text, to give the file itself, and what to give with a file whose words are not read", async () => {
     const { h } = await home();
     const tool = createMemoryWriteTool(h.memory);
     expect(tool.definition.description).toContain(
-      "A PDF, Word, Excel or PowerPoint file is read for its text, so give the file itself, not text taken out of it; a scan, with no text, is kept but not searched.",
+      "A PDF, Word, Excel or PowerPoint file is read for its text, so give the file itself, not text taken out of it. A picture, a video, a scan or any file whose words are not read is kept as it is: give `content` with it, saying what it shows, which search finds it by. A link is kept as `content` saying what it is and `source`.",
     );
     expect(JSON.stringify(tool.definition.parameters)).not.toContain("as it is");
   });
@@ -209,11 +222,11 @@ describe("keeping a document from a chat", () => {
     writeFileSync(join(h.knowledgeRoot, "ops", "runbook.md"), "# Runbook\nVzdump at 02:00.\n");
     // The fixture's household has one admin, so the admins' folder reaches nobody beyond this chat.
     const kept = await keep({ collection: "ops", title: "Backups", content: "PBS at 03:00." });
-    expect(kept.content).toBe('Kept in "ops" as Backups.md. It can be searched now.');
+    expect(kept.content).toBe('Kept in "ops" as Backups.md. It can be searched now. This collection is the admins\': used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.');
     expect(await found(GADING_DM, "pbs")).toEqual(["knowledge:ops/Backups.md#0"]);
     writeFileSync(join(h.knowledgeRoot, "ops", "knowledge.toml"), 'readers = "admins"\narchived = true\n');
     const archived = await keep({ collection: "ops", title: "Restore", content: "Restore from PBS." });
-    expect(archived.content).toBe('Kept in "ops" as Restore.md. The collection is archived, so it is kept but not searched until someone brings it back.');
+    expect(archived.content).toBe('Kept in "ops" as Restore.md. The collection is archived, so it is kept but not searched until someone brings it back. This collection is the admins\': used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.');
   });
 
   test("without a knowledge base, a document is refused, never written into MEMORY.md", async () => {
@@ -229,7 +242,7 @@ describe("keeping a document from a chat", () => {
   test("agents are told where things go, and to ask once when it is not clear", () => {
     const lines = renderMemory({ ctx: { harness: {}, tools: [{ name: "memory_search" }] }, toolNames: [], gated: [], free: [] } as never);
     expect(lines).toContain(
-      '- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: "person"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: "knowledge"`; how you work is your MEMORY.md. Never turn one into another. When it is not clear that something is to be kept as a document, ask once.',
+      '- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: "person"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: "knowledge"`, never into a folder of your own, where no search finds it; how you work is your MEMORY.md. Never turn one into another: what one person asks you to do for them each time is theirs (`about: "person"`), and MEMORY.md is read on everyone\'s turn. When it is not clear that something is to be kept as a document, ask once.',
     );
   });
 });

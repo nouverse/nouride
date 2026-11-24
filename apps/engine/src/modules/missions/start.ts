@@ -39,12 +39,12 @@ export interface StartRequest {
   jobId?: string;
   /** The request body that started it, when a webhook did: data on its page, and the mission marked untrusted. */
   request?: string;
-  /** A draft's brief (0.8.11): written to `BRIEF.md` in its folder (`drafts.ts`). */
+  /** Its brief: written to `BRIEF.md` in its folder, as a draft is made (`drafts.ts`) or before a start's first turn (`brief-sent.ts`). */
   brief?: string;
   /**
-   * Its own limits, each where it stops to ask the person whether to go on; one left out follows the setting. A draft's
-   * only: the person's start is their yes to them, and they are said in its notice (`ownLimits`). Work that starts
-   * with nobody's yes keeps the settings, which are a person's.
+   * Its own limits, each where it stops to ask the person whether to go on; one left out follows the setting. A draft's,
+   * where the person's start is their yes to them and they are said in its notice (`ownLimits`), or those of a start a
+   * person makes themselves. Work that starts with nobody's yes keeps the settings, which are a person's.
    */
   limits?: Partial<Mission["limits"]>;
   /** The chat conversation the work came from, and the turn there that started it: its task moves into the mission (`carry.ts`). */
@@ -125,13 +125,13 @@ export const LIMIT_FIELDS = { hours: "limit_hours", turns: "limit_turns", tokens
 
 /**
  * Why a mission's own limits cannot be these, or null: each held to the bounds its setting keeps, and given only to a
- * draft. A piece handed out inside a mission starts with nobody's yes, so an agent naming its limits there would be
- * raising what bounds work nobody watches.
+ * draft, or to a start a person makes themselves (`yes`: the person's own yes is there). A piece handed out inside a
+ * mission starts with nobody's yes, so an agent naming its limits there would be raising what bounds work nobody watches.
  */
-function limitsRefusal(limits: StartRequest["limits"], draft: boolean): string | null {
+function limitsRefusal(limits: StartRequest["limits"], yes: boolean): string | null {
   const named = LIMIT_KEYS.filter((key) => limits?.[key] !== undefined);
   if (named.length === 0) return null;
-  if (!draft) return `${named.map((key) => `\`${LIMIT_FIELDS[key]}\``).join(", ")}: a mission's own limits are a draft's, which the person starts with them in front of them. This one starts without that, so it keeps the limits in the settings: call it again without them.`;
+  if (!yes) return `${named.map((key) => `\`${LIMIT_FIELDS[key]}\``).join(", ")}: a mission's own limits are a draft's, which the person starts with them in front of them. This one starts without that, so it keeps the limits in the settings: call it again without them.`;
   for (const key of named) {
     const why = missionLimitRefusal(key, limits![key], `\`${LIMIT_FIELDS[key]}\``);
     if (why) return why;
@@ -155,7 +155,9 @@ export function startRefusal(
   if (!deps.exists(request.agentId)) return `There is no agent called ${request.agentId}.`;
   const goal = request.goal.trim();
   if (!goal) return "A mission needs a goal: what should be true when it is done.";
-  if (goal.length > GOAL_MAX) return `Keep the goal under ${GOAL_MAX} characters: write the detail to a brief file first (in English, and whole, as the goal is) and name its absolute path in the goal.`;
+  // The detail has one place, the brief, which the daemon keeps in the mission's folder and sends the person: told to
+  // write a file and name its path, agents ended every goal with a path on the server that nobody could open from a chat.
+  if (goal.length > GOAL_MAX) return `Keep the goal under ${GOAL_MAX} characters: say there what must be true when the work is done, and put the detail in the brief (\`brief\`), in English and whole, never in a file of your own that the goal points at.`;
   // A scheduled job's run is named by its job, whoever made it.
   const title = titleRefusal(request.title, Boolean(request.byAgent) && request.jobId === undefined);
   if (title) return title;
@@ -174,7 +176,7 @@ export function startRefusal(
   }
   const brief = request.brief === undefined ? null : briefRefusal(request.brief, Boolean(request.byAgent));
   if (brief) return brief;
-  const limits = limitsRefusal(request.limits, request.proposed === true);
+  const limits = limitsRefusal(request.limits, request.proposed === true || request.byAgent === undefined);
   if (limits) return limits;
   if (request.workdir !== undefined && !request.workdir.startsWith("/")) return "`workdir` is an absolute path to a folder the agent can reach.";
   // A worktree is made only for a folder given in a repository: the mission's own folder is never one.

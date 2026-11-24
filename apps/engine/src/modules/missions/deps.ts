@@ -176,6 +176,8 @@ export interface MissionsDeps {
   pageOf?: (mission: Mission) => string | null;
   /** Its report sent to its chat as `report.md` (0.8.11): null once sent, else why it was not. */
   sendReport?: (mission: Mission) => Promise<string | null>;
+  /** Its brief sent to its chat as `BRIEF.md`, the way its report goes (`brief-sent.ts`): null once sent, else why not. */
+  sendBrief?: (mission: Mission, text: string) => Promise<string | null>;
   /** What a person allowed a job's runs to send without asking again (`Job.allowed`'s keys) — a job's mission reads it each turn. */
   jobAllowed?: (jobId: string) => readonly string[];
   /** The reviewer: a fresh context on the agent's high tier, holding only the tools that read (`checking.ts`); `earlier`, the notes of a pass that ran out of time. */

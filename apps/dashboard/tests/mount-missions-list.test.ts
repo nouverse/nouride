@@ -217,6 +217,41 @@ describe("New mission", () => {
     expect(seen.closed).toBe(true);
     expect(seen.landed).toBe("/missions/msn_1");
   });
+
+  test("the form takes a brief and the mission's own limits, shows the usual limits in the empty fields, and sends no limit that is not a number", async () => {
+    const usual = WIRE["/policy/missions"] as { limitHours: number; limitTurns: number; limitTokens: number };
+    let sent: { path: string; body: unknown }[] = [];
+    const seen = { said: "", placeholders: [] as string[], refused: "", blocked: true };
+    await renderPage("/missions", async (host) => {
+      press(host, "New mission");
+      await eventually(() => buttons(host).includes("Save to backlog"), 2_000, "the form");
+      const limits = () => [...host.querySelectorAll<HTMLInputElement>("form input.tabular-nums")];
+      await eventually(() => limits()[0]?.placeholder !== "", 2_000, "the usual limits");
+      seen.said = host.textContent ?? "";
+      seen.placeholders = limits().map((one) => one.placeholder);
+      const record = recordPosts({ "/missions": { status: 201, body: { mission: { ...RUNNING, id: "msn_2" } } } });
+      type(host.querySelector('textarea[placeholder^="Upgrade the API"]') as HTMLTextAreaElement, "Summarise last week's logs");
+      const brief = [...host.querySelectorAll<HTMLTextAreaElement>("form textarea")].find((one) => one.closest("label, div")?.textContent?.includes("Brief") && !one.placeholder)!;
+      type(brief, "Read the incident notes first.");
+      // Not a number: said under the form, and neither button sends it.
+      type(limits()[0]!, "a day");
+      await eventually(() => (host.textContent ?? "").includes("A limit is a number"), 2_000, "the limit refused");
+      seen.refused = host.textContent ?? "";
+      seen.blocked = [...host.querySelectorAll<HTMLButtonElement>("form button")].filter((one) => ["Save to backlog", "Start now"].includes(one.textContent?.trim() ?? "")).every((one) => one.disabled);
+      type(limits()[0]!, "24");
+      type(limits()[2]!, "400");
+      await enabled(host, "Save to backlog");
+      press(host, "Save to backlog");
+      await eventually(() => !buttons(host).includes("Save to backlog"), 2_000, "the form closed");
+      record.restore();
+      sent = record.posts;
+    });
+    expect(seen.said).toContain("Where this mission stops to ask you whether to go on. Only this one. Left empty, it has the limit every mission starts with.");
+    expect(seen.placeholders).toEqual([String(usual.limitHours), String(usual.limitTurns), String(usual.limitTokens / 1_000_000)]);
+    expect(seen.refused).toContain("A limit is a number: 12, or 0.5 for half an hour.");
+    expect(seen.blocked).toBe(true);
+    expect(sent).toEqual([{ path: "/missions", body: { agent: "nouva", goal: "Summarise last week's logs", brief: "Read the incident notes first.", limits: { hours: 24, tokens: 400_000_000 }, draft: true } }]);
+  });
 });
 
 describe("Finished", () => {
