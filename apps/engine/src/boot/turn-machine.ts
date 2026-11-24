@@ -248,7 +248,7 @@ export function buildTurnParts(
 type MachineStores = Pick<
   Stores,
   | "db" | "state" | "secrets" | "accounts" | "cron" | "watch" | "jobWakes" | "providers" | "sessions" | "turns" | "durable" | "chatEvents" | "rooms"
-  | "roomMessages" | "grants" | "toolGrants" | "attachments" | "attachmentIndex" | "access" | "jobs" | "spill" | "notes"
+  | "roomMessages" | "grants" | "toolGrants" | "attachments" | "attachmentIndex" | "access" | "openDoor" | "jobs" | "spill" | "notes"
   | "usage" | "autoApprove" | "childEnv" | "heldSecrets" | "ownSecrets" | "audit" | "credentialsDir"
 >;
 
@@ -344,6 +344,7 @@ export async function buildTurnMachine(
     attachments: stores.attachments,
     attachmentIndex: stores.attachmentIndex,
     access: stores.access,
+    openDoor: stores.openDoor,
     jobs,
     spill: stores.spill,
     notes: stores.notes,

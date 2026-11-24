@@ -95,6 +95,6 @@ export function arriveEdit(parts: ArrivalParts, gateway: Gateway, envelope: Mess
   log.info(answering ? "an edit of a message a turn is at work on" : "an edit of a message already answered", about);
   // A one-to-one chat's turn at work reads it at its next step, as it would a message sent now; anywhere else it is
   // routed as a message, and the agent it is for reads it in its turn or answers it in one of its own (`inbound.ts`).
-  if (parts.deps.config.queue.steer && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
+  if (parts.deps.config.queue.steer && !parts.admission.strangerOf(envelope) && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
   parts.batcher.accept(envelope);
 }

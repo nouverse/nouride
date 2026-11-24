@@ -373,7 +373,7 @@ export async function runDaemon(): Promise<void> {
     initialAdminPassword,
     gateway: nougate,
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
-    grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
+    grants, toolGrants, access, openDoor: stores.openDoor, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
     supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state, agentAccounts: agentUsers,
     builtinTools: tools,

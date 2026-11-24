@@ -25,7 +25,9 @@ import { stateRows } from "../helpers.ts";
 const NOUVA = '[agent]\ndisplay_name = "Nouva"\n';
 const NORA = '[agent]\ndisplay_name = "Nora"\n';
 const CODER = '[agent]\ndisplay_name = "Coder"\n\n[external]\ncli = "codex"\n';
-const OPEN = 'access = "open"\n';
+/** What opening writes into a pack: the word, and the two limits it is never without. */
+const OPEN = 'access = "open"\n\n[open]\nmax_daily_tokens = 200000\nmax_daily_messages_per_person = 30\n';
+const LIMITS = { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 };
 
 const ORCHESTRATOR_NEVER_OPEN = "nouva is the orchestrator, the agent that holds this install, so it is never open to everyone. Make another agent for the public and open that one.";
 
@@ -85,8 +87,8 @@ describe("opening an agent to everyone", () => {
   test("is refused for the orchestrator and for an agent on a coding CLI, with nothing written; any other agent is opened", async () => {
     const agents = await registry();
     const service = await setup(agents);
-    expect(await service.setAgentAccess({ agentId: "nouva", access: "open", actor: "t" })).toEqual({ ok: false, error: ORCHESTRATOR_NEVER_OPEN });
-    expect(await service.setAgentAccess({ agentId: "coder", access: "open", actor: "t" })).toEqual({
+    expect(await service.openAgent({ agentId: "nouva", limits: LIMITS, actor: "t" })).toEqual({ ok: false, error: ORCHESTRATOR_NEVER_OPEN });
+    expect(await service.openAgent({ agentId: "coder", limits: LIMITS, actor: "t" })).toEqual({
       ok: false,
       error: "coder works through a coding CLI, which brings tools of its own that Nouride cannot take away, so it is never open to everyone. Open an agent that answers on a model instead.",
     });
@@ -95,8 +97,8 @@ describe("opening an agent to everyone", () => {
     // The two may still be told who they take: the refusal is of `open` alone.
     expect(await service.setAgentAccess({ agentId: "nouva", access: "allowlist", actor: "t" })).toEqual({ ok: true });
     expect(await service.setAgentAccess({ agentId: "coder", access: "pair", actor: "t" })).toEqual({ ok: true });
-    expect(await service.setAgentAccess({ agentId: "nora", access: "open", actor: "t" })).toEqual({ ok: true });
-    expect({ file: configOf("nora"), loaded: agents.get("nora")?.config.access }).toEqual({ file: `${NORA}${OPEN}`, loaded: "open" });
+    expect(await service.openAgent({ agentId: "nora", limits: LIMITS, actor: "t" })).toEqual({ ok: true });
+    expect({ file: configOf("nora"), loaded: agents.get("nora")?.config.access, limits: agents.get("nora")?.config.open }).toEqual({ file: `${NORA}${OPEN}`, loaded: "open", limits: LIMITS });
   });
 });
 

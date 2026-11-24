@@ -74,7 +74,7 @@ function orchestratorOpenRefusal(agentId: string): string {
  * Nor is an agent on a coding CLI, whichever is asked for second: what makes an open agent safe is that the daemon
  * decides its tools, and a CLI brings its own.
  */
-function openOnCliRefusal(agentId: string): string {
+export function openOnCliRefusal(agentId: string): string {
   return `${agentId} works through a coding CLI, which brings tools of its own that Nouride cannot take away, so it is never open to everyone. Open an agent that answers on a model instead.`;
 }
 
@@ -100,17 +100,15 @@ export async function setOrchestrator(
 /**
  * Whether this agent's connections pair a stranger or drop them, or follow the daemon — `[agent]
  * access` in its own config.toml. `follow` is written rather than the key removed, the way `approvals`
- * writes `per-person`: the file then says it follows, instead of saying nothing.
+ * writes `per-person`: the file then says it follows, instead of saying nothing. Not `open`: an agent is
+ * opened with its limits, in one edit (`open-agent.ts`).
  */
 export async function setAgentAccess(
-  deps: Pick<SetupDeps, "registry" | "audit" | "config">,
-  input: { agentId: string; access: AgentAccess; actor: string },
+  deps: Pick<SetupDeps, "registry" | "audit">,
+  input: { agentId: string; access: Exclude<AgentAccess, "open">; actor: string },
 ): Promise<Result> {
   const agent = deps.registry.get(input.agentId);
   if (!agent) return { ok: false, error: `no agent "${input.agentId}"` };
-  // Said before anything is written. The reload a save ends in refuses both too (the loader, and boot's `refuse`).
-  if (input.access === "open" && deps.config.daemon.orchestrator === input.agentId) return { ok: false, error: openOrchestratorRefusal(input.agentId) };
-  if (input.access === "open" && agent.config.external) return { ok: false, error: openOnCliRefusal(input.agentId) };
   const saved = await editPackFile({
     path: join(agent.dir, "config.toml"),
     reload: () => deps.registry.reload(input.agentId),

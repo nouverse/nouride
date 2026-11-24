@@ -18,6 +18,7 @@ import { modelWindowsState } from "@/commons/daemon-state.ts";
 import { LogBuffer } from "@/commons/log-buffer.ts";
 import { LogStore } from "@/commons/logs.store.ts";
 import { AccessStore } from "@/modules/access/access.store.ts";
+import { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import { ChatAttachmentIndex } from "@/modules/attachments/chat-attachments.store.ts";
 import { AttachmentStore } from "@/modules/attachments/store.ts";
 import { ChatEventStore } from "@/modules/chat-events/chat-events.store.ts";
@@ -206,6 +207,7 @@ export async function openStores(input: {
 
   const { codeTtlMs, notifyCooldownMs, denyCooldownMs } = config.security.access;
   const access = new AccessStore({ db, audit, codeTtlMs, notifyCooldownMs, denyCooldownMs });
+  const openDoor = new OpenDoorStore(db);
 
   // Constructed before the pipeline, and given its wake-up callback afterwards: the job store needs to
   // reach the pipeline, and the pipeline needs the job store for `exec background: true`.
@@ -250,7 +252,7 @@ export async function openStores(input: {
   return {
     dbPath, vaultFormat, db, state, agentUsers, secrets, heldSecrets, ownSecrets, knownSecrets, providers, sessions,
     events, turns, durable, chatEvents, rooms, roomMessages, attachmentIndex, recoveredTurns, orphanedTurns, usage,
-    integrity, audit, credentialsDir, childEnv, cron, watch, logs, logStore, attachments, access, jobWakes, jobs, uploads, spill,
+    integrity, audit, credentialsDir, childEnv, cron, watch, logs, logStore, attachments, access, openDoor, jobWakes, jobs, uploads, spill,
     notes, accounts, drafts, autoApprove, grants, toolGrants,
   };
 }

@@ -14,7 +14,7 @@ import { PRESETS, TOOL_GROUPS, toolsFor } from "@/modules/setup/presets.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
-import { NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
+import { NOT_CHANGED, NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
 
 /** Each part of an agent's cat a save can be refused for, as its Look tab names it. */
 const LOOK_FIELDS: Record<keyof AgentLook, string> = {
@@ -81,6 +81,41 @@ export function registerAgentToolRoutes(control: ControlApp, deps: ControlDeps):
     }
     const result = await deps.setup.setLook({ agentId: c.req.param("id"), look, actor: principal.actor });
     return result.ok ? c.json({ ok: true } satisfies { ok: true }) : c.json({ error: result.error, plain: notSaved(result.field && LOOK_FIELDS[result.field]) }, 400);
+  });
+
+  /**
+   * Open an agent to everyone, with the two limits on what strangers may cost it. Admin only: a protection turned
+   * off, and one that spends its owner's tokens for anyone who finds the agent. A chat's sender is not a signed-in
+   * person, so no tool of an agent's reaches this.
+   */
+  control.post("/agents/:id/open", async (c) => {
+    if (!deps.setup) return c.json({ error: "setup is not available on this daemon", plain: NOT_RUNNING }, 501);
+    const principal = c.get("principal");
+    if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
+    const body = ((await jsonBody(c)) ?? {}) as { maxDailyTokens?: unknown; maxDailyMessagesPerPerson?: unknown; closedReply?: unknown; knowsItsNotes?: unknown };
+    const whole = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 1;
+    if (!whole(body.maxDailyTokens) || !whole(body.maxDailyMessagesPerPerson)) {
+      return c.json({ error: "maxDailyTokens and maxDailyMessagesPerPerson must each be a whole number of 1 or more", plain: notSaved("the two daily limits: each is a whole number, 1 or more") }, 400);
+    }
+    if (body.closedReply !== undefined && typeof body.closedReply !== "string") return c.json({ error: "closedReply must be text", plain: notSaved("the closing sentence") }, 400);
+    const result = await deps.setup.openAgent({
+      agentId: c.req.param("id"),
+      limits: { maxDailyTokens: body.maxDailyTokens, maxDailyMessagesPerPerson: body.maxDailyMessagesPerPerson, ...(body.closedReply?.trim() ? { closedReply: body.closedReply } : {}) },
+      knowsItsNotes: body.knowsItsNotes === true,
+      actor: principal.actor,
+    });
+    if (result.ok) return c.json({ ok: true } satisfies { ok: true });
+    if (result.notes) return c.json({ error: result.error, notes: true, plain: "This agent has notes of its own, and it may say what they hold to anyone. Read them first, then tick that you have." }, 409);
+    return c.json({ error: result.error, plain: "This agent was not opened. Nothing was changed." }, deps.registry.get(c.req.param("id")) ? 409 : 404);
+  });
+
+  /** Close an agent that is open to everyone. Operator and up: turning a protection back on is anyone's who may change the agent. */
+  control.post("/agents/:id/close", async (c) => {
+    if (!deps.setup) return c.json({ error: "setup is not available on this daemon", plain: NOT_RUNNING }, 501);
+    const principal = c.get("principal");
+    if (!atLeast(principal, "operator")) return c.json({ error: "operator only" }, 403);
+    const result = await deps.setup.closeAgent({ agentId: c.req.param("id"), actor: principal.actor });
+    return result.ok ? c.json({ ok: true } satisfies { ok: true }) : c.json({ error: result.error, plain: NOT_CHANGED }, deps.registry.get(c.req.param("id")) ? 400 : 404);
   });
 
   control.post("/agents/:id/orchestrator", async (c) => {

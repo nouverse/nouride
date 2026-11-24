@@ -12,7 +12,9 @@ import { afterEach, describe, expect, test } from "bun:test";
 import type { SqliteDb } from "@nouride/runtime";
 import type { MessageEnvelope } from "@nouride/shared";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
-import { pipelineBench } from "../pipeline-bench.ts";
+import { pipelineBench, type BenchOptions } from "../pipeline-bench.ts";
+
+type BenchDeps = NonNullable<BenchOptions["deps"]>;
 
 let cleanup: (() => void)[] = [];
 afterEach(() => {
@@ -32,7 +34,7 @@ const conversationsOf = (db: SqliteDb, agent: string): string[] =>
  * Nouva is the orchestrator and pairs strangers; Nora is open. Each has its own Telegram bot, unless `bots` says
  * Nora's alone. The owner is on the install's list; nobody else is known.
  */
-async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; groupsRequireMention?: boolean } = {}) {
+async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps } = {}) {
   const bots = options.bots ?? ["nouva", "nora"];
   const connections = Object.fromEntries(bots.map((id) => [id, new FakeGateway(`telegram:${id}`, "telegram")]));
   // As Telegram is: no bot is handed another bot's message, so a tag between agents is the daemon's to hand over.
@@ -41,7 +43,7 @@ async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[];
     turns: (options.turns ?? ["answer 1", "answer 2", "answer 3"]).map((text) => ({ text })),
     agents: [
       { id: "nouva", configToml: '[agent]\ndisplay_name = "Nouva"\n\n[llm]\nprovider = "test"\n' },
-      { id: "nora", configToml: '[agent]\ndisplay_name = "Nora"\naccess = "open"\n\n[llm]\nprovider = "test"\n' },
+      { id: "nora", configToml: `[agent]\ndisplay_name = "Nora"\naccess = "open"\n\n[open]\nmax_daily_tokens = ${options.maxDailyTokens ?? 1_000_000}\nmax_daily_messages_per_person = ${options.maxDailyMessages ?? 100}\n${options.closedReply ? `closed_reply = "${options.closedReply}"\n` : ""}\n[llm]\nprovider = "test"\n` },
     ],
     config: {
       daemon: { orchestrator: "nouva" },
@@ -50,6 +52,7 @@ async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[];
       gateways: { telegram: Object.fromEntries(bots.map((id) => [id, { enabled: true, token: `t-${id}`, agent: id }])) },
     },
     gateways: Object.values(connections),
+    ...(options.deps ? { deps: options.deps } : {}),
   });
   cleanup.push(bench.dispose);
   bench.pipeline.setTools(new Map());

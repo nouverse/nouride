@@ -333,6 +333,20 @@ export function approvalLevelRefusal(value: unknown): string {
 export type AgentAccess = "follow" | "pair" | "allowlist" | "open";
 export const AGENT_ACCESS: readonly AgentAccess[] = ["follow", "pair", "allowlist", "open"];
 
+/**
+ * What strangers may cost an agent open to everyone, in a day of the operator's own: `[open]` in its pack. Both
+ * numbers are the admin's and neither has a default: an agent that spends its owner's tokens for anyone is not opened
+ * by accident, and a number chosen here would be invented.
+ */
+export interface OpenLimits {
+  /** The agent's tokens in a day, in and out, whoever it answered. Past it, it is closed to strangers until the next day. */
+  maxDailyTokens: number;
+  /** One person's messages to it in a day. Past it, they are told once and left unanswered until the next day. */
+  maxDailyMessagesPerPerson: number;
+  /** What a stranger is told once the day's tokens are spent, in the admin's words. Absent: the daemon's sentence. */
+  closedReply?: string;
+}
+
 /** Whether an agent is open to everyone. One place, since the tools, memory and the pipeline each rest on it. */
 export function isOpenAgent(agent: { config: { access?: AgentAccess } } | undefined): boolean {
   return agent?.config.access === "open";
@@ -410,6 +424,8 @@ export interface AgentConfig {
   look?: AgentLook;
   /** Whether a stranger messaging this agent's connections is paired or dropped. See `AgentAccess`. */
   access?: AgentAccess;
+  /** `[open]`: the two limits on what strangers may cost it. There whenever `access` is `open`; kept while it is not. */
+  open?: OpenLimits;
 
   /**
    * How much this agent asks, for everyone who talks to it. Absent or `per-person` defers.

@@ -24,7 +24,7 @@ function app() {
   const nova = filled({ config: filled({ id: "nova", llm: filled({ provider: "local", model: "m", effort: "high" }) }) }) as unknown as LoadedAgent;
   const scoped = new Hono();
   mountControlRoutes(scoped, {
-    ctx: { config: { daemon: {}, llm: { defaults: { effort: "medium" } }, security: {}, delegate: {}, missions: { perAgent: 1 } }, gateways: new Map(), startedAt: Date.now(), status: "ready", providerErrors: new Map() } as unknown as DaemonContext,
+    ctx: { config: { daemon: {}, gateways: [], llm: { defaults: { effort: "medium" } }, security: {}, delegate: {}, missions: { perAgent: 1 } }, gateways: new Map(), startedAt: Date.now(), status: "ready", providerErrors: new Map() } as unknown as DaemonContext,
     token: TOKEN,
     registry: { get: (id: string) => (id === "nova" ? nova : undefined), all: () => [nova], status: () => "running", loadFailures: () => [], enabled: () => [] } as unknown as AgentRegistry,
     setup: { setEffort: async (input: { agentId: string; effort: string }) => (written.push(`${input.agentId} ${input.effort}`), { ok: true as const }) },

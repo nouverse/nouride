@@ -137,6 +137,11 @@ export const KEY_COLUMNS: readonly KeyColumn[] = [
 
   { table: "memory_changes", column: "subject", kind: "person" },
 
+  // What strangers used of an open agent, by day: counts of a week at most, named by who wrote and on which connection.
+  { table: "open_door", column: "agent_id", kind: "agent" },
+  { table: "open_door", column: "gateway_id", kind: "gateway" },
+  { table: "open_door", column: "sender_id", kind: "sender" },
+
   { table: "memory_episode_agents", column: "agent_id", kind: "agent" },
   { table: "memory_episode_people", column: "person", kind: "person" },
 
@@ -304,6 +309,8 @@ export const ON_AGENT_DELETE: Readonly<Record<string, AgentDeleteRule>> = {
   "mcp_tokens.agents": "unlisted",
   // What it remembered, and the graph: kept, and joined again by an agent of the same id.
   "memory_episode_agents.agent_id": "kept",
+  // What strangers used of it while it was open: its own counts, and an agent made later under the id starts its own.
+  "open_door.agent_id": "deleted",
   // Whether a room addresses it only when named, and which tools it has been seen to use: its own settings and counts.
   "room_mention.agent_id": "deleted",
   "rsi_tool_seen.agent_id": "deleted",

@@ -133,6 +133,23 @@ export interface FallbackPair {
   model: string;
 }
 
+/** An agent and being open to everyone: whether it may be, on what terms, and today's use while it is. */
+export interface AgentOpen {
+  /** Why it can never be opened, or null when it can: it is the orchestrator, or a coding CLI answers it. */
+  never: "orchestrator" | "cli" | null;
+  /** Whether its notes hold anything: opening it then takes a second yes, since it may say what they hold. */
+  notes: boolean;
+  /** The connections it owns, which is where strangers would reach it. */
+  connections: string[];
+  /** Its two limits and its own closing sentence, as its pack holds them; null while it has none. */
+  limits: { maxDailyTokens: number; maxDailyMessagesPerPerson: number; closedReply: string | null } | null;
+  /**
+   * While it is open, today in the operator's own day: the tokens it used, with `estimated` true where part of that is
+   * the daemon's own count for a provider that reported none; the people who wrote to it; and their answered messages.
+   */
+  today?: { tokens: number; estimated: boolean; people: number; messages: number };
+}
+
 export interface AgentSummary {
   id: string;
   /** When the daemon first saw it, ms (0.8.1): the order agents were made in. Null or absent from older daemons. */
@@ -175,6 +192,8 @@ export interface AgentSummary {
   approvals: "per-person" | "careful" | "balanced" | "trusted";
   /** Whether its connections take new senders; `follow` defers to the daemon. Absent from an older daemon. */
   access?: "follow" | "pair" | "allowlist" | "open";
+  /** What its page needs to open it to everyone, and what strangers used of it today. Absent from an older daemon. */
+  open?: AgentOpen;
   /** Whether, as the orchestrator, it installs the programs every agent runs (0.8.0). Absent before. */
   sharedTools?: boolean;
   /** Its second look (0.8.0): the pack's own `model_guard` or null, and the daemon's. Absent before. */

@@ -25,6 +25,7 @@ import type { Machine } from "@/commons/machine.ts";
 import { DaemonStateStore } from "@/commons/daemon-state.store.ts";
 import { openAndMigrate } from "@/db/index.ts";
 import { AccessStore } from "@/modules/access/access.store.ts";
+import { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import { parseConfig } from "@/modules/config/global/index.ts";
 import { EventStore } from "@/modules/events/events.store.ts";
 import { EventedTurnStore } from "@/modules/events/turn-events.store.ts";
@@ -180,6 +181,7 @@ async function boot(install: Install, options: RebootOptions): Promise<Bench> {
     config,
     machine: BENCH_MACHINE,
     access,
+    openDoor: new OpenDoorStore(db),
     registry,
     providers,
     sessions,

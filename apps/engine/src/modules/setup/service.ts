@@ -27,6 +27,7 @@ import { upsertTomlTable } from "@/modules/config/edit.ts";
 import { probeProvider, type ProbeResult, type ProviderKind } from "@/modules/setup/probe.ts";
 import { STARTER_AGENTS, STARTER_MEMORY, STARTER_README } from "@/modules/setup/starter-pack.ts";
 import { namingOrchestrator, setAgentAccess, setAgentTools, setOrchestrator } from "./agent-access.ts";
+import { closeAgent, openAgent, type Opened } from "./open-agent.ts";
 import { externalAgentLlm, setAnsweredBy, setExternal, type ExternalSettings } from "./external-agent.ts";
 import { setEffort } from "./agent-effort.ts";
 import { lookLines, setLook, type LookChange } from "./agent-look.ts";
@@ -154,8 +155,17 @@ export class SetupService {
   }
 
   /** Whether an agent's connections take new senders (`agent-access.ts`). */
-  async setAgentAccess(input: { agentId: string; access: AgentAccess; actor: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  async setAgentAccess(input: { agentId: string; access: Exclude<AgentAccess, "open">; actor: string }): Promise<{ ok: true } | { ok: false; error: string }> {
     return await setAgentAccess(this.deps, input);
+  }
+
+  /** Open an agent to everyone, with its two limits; and close it again (`open-agent.ts`). */
+  async openAgent(input: Parameters<typeof openAgent>[1]): Promise<Opened> {
+    return await openAgent(this.deps, input);
+  }
+
+  async closeAgent(input: { agentId: string; actor: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+    return await closeAgent(this.deps, input);
   }
 
   /** An external agent's CLI settings (`external-agent.ts`). */

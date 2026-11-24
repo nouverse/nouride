@@ -7,8 +7,10 @@
  */
 
 import { createLogger, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
+import { startOfLocalDay } from "@/commons/clock.ts";
 import type { HookResult } from "@/modules/hooks/registry.ts";
 import type { Admission } from "./admission.ts";
+import type { PipelineDeps } from "./deps.ts";
 
 const log = createLogger("pipeline.open-door");
 
@@ -51,3 +53,55 @@ export function strangerCommand(command: string): HookResult | null {
 
 /** What a stranger is told of an agent put to sleep, in place of the sentence that names the command that wakes it. */
 export const strangerAsleep = (displayName: string): string => `${displayName} is not answering at the moment.`;
+
+/** What a stranger is told once, the day an agent's tokens are used, where its admin wrote no sentence of their own. */
+const closedForToday = (displayName: string): string => `${displayName} has answered all it can for today. Please write again tomorrow.`;
+const enoughForToday = (most: number): string => `That is all for today: I can take ${most} ${most === 1 ? "message" : "messages"} a day from each person. Please write again tomorrow.`;
+
+/**
+ * Whether a stranger's message may be answered, counted as it is asked: the agent's tokens for the day, then this
+ * person's messages for the day (`OpenDoorStore`). Past either nothing is begun, and `say` is what they are told, once
+ * a day. The first stranger turned away because the agent's day is used is also when its admin is told, once.
+ *
+ * Asked only for a stranger: a person let in by name is held to neither number, and what the agent uses for them
+ * counts in its day as everything it uses does.
+ */
+function strangerMay(
+  deps: Pick<PipelineDeps, "openDoor" | "usage" | "config" | "notifier">,
+  agent: LoadedAgent,
+  envelope: Pick<MessageEnvelope, "gatewayId" | "senderId">,
+  now: number = Date.now(),
+): { answer: true } | { answer: false; say: string | null } {
+  const limits = agent.config.open;
+  if (!deps.openDoor || !limits) {
+    log.error("a stranger's message is not answered: this process keeps no count for an open agent", { agent_id: agent.config.id });
+    return { answer: false, say: null };
+  }
+  const day = startOfLocalDay(now, deps.config.daemon.timezone);
+  const used = deps.usage?.since(day, agent.config.id);
+  const verdict = deps.openDoor.take({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: envelope.senderId, day, tokensToday: used ? used.inputTokens + used.outputTokens : 0, limits });
+  if (verdict.action === "answer") return { answer: true };
+  if (verdict.action === "enough") return { answer: false, say: verdict.say ? enoughForToday(limits.maxDailyMessagesPerPerson) : null };
+  if (verdict.first) {
+    log.info("an open agent has used its tokens for the day, and is closed to strangers until the next", { agent_id: agent.config.id, max_daily_tokens: limits.maxDailyTokens });
+    void deps.notifier?.alert(
+      `open_agent_closed:${agent.config.id}`,
+      `${agent.config.displayName} has used the ${limits.maxDailyTokens.toLocaleString("en-US")} tokens it may use in a day, and answers nobody from the public until tomorrow. ` +
+        "Its daily limit is on its page in the dashboard, under Access.",
+    );
+  }
+  return { answer: false, say: verdict.say ? (limits.closedReply ?? closedForToday(agent.config.displayName)) : null };
+}
+
+/** A stranger's message asked of the door, and they told what it says when it turns them away. True when it did. */
+export async function turnedAway(
+  deps: Parameters<typeof strangerMay>[0],
+  agent: LoadedAgent,
+  envelope: Pick<MessageEnvelope, "gatewayId" | "senderId">,
+  say: (text: string) => Promise<unknown>,
+): Promise<boolean> {
+  const may = strangerMay(deps, agent, envelope);
+  if (may.answer) return false;
+  if (may.say) await say(may.say);
+  return true;
+}

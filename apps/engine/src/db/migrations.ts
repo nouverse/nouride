@@ -74,6 +74,7 @@ import deviceTokens from "./migrations/091_device_tokens.sql" with { type: "text
 import missionPausedBy from "./migrations/092_mission_paused_by.sql" with { type: "text" };
 import skillLearningSeen from "./migrations/093_skill_learning_seen.sql" with { type: "text" };
 import factDirectOnly from "./migrations/094_fact_direct_only.sql" with { type: "text" };
+import openDoor from "./migrations/095_open_door.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -120,6 +121,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 92, name: "092_mission_paused_by.sql", sql: missionPausedBy },
   { version: 93, name: "093_skill_learning_seen.sql", sql: skillLearningSeen },
   { version: 94, name: "094_fact_direct_only.sql", sql: factDirectOnly },
+  { version: 95, name: "095_open_door.sql", sql: openDoor },
 ];
 
 /**

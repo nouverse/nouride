@@ -384,6 +384,12 @@ describe("an agent's preset, tools and default, from the dashboard", () => {
         setAgentTools: async (input: Record<string, unknown>) => (seen.push({ tools: input }), { ok: true as const }),
         setOrchestrator: async (input: Record<string, unknown>) => (seen.push({ orchestrator: input }), { ok: true as const }),
         setAgentAccess: async (input: Record<string, unknown>) => (seen.push({ access: input }), { ok: true as const }),
+        openAgent: async (input: { agentId: string; knowsItsNotes?: boolean }) => {
+          seen.push({ open: input });
+          if (input.agentId === "diary" && !input.knowsItsNotes) return { ok: false as const, notes: true as const, error: "diary has notes of its own" };
+          return input.agentId === "nouva" ? { ok: false as const, error: "nouva is the orchestrator" } : { ok: true as const };
+        },
+        closeAgent: async (input: Record<string, unknown>) => (seen.push({ close: input }), { ok: true as const }),
       },
     } as unknown as ControlDeps);
     return { seen, app: scoped };
@@ -414,6 +420,55 @@ describe("an agent's preset, tools and default, from the dashboard", () => {
     const opened = await post(scoped, "/agents/nix/access", { access: "open" });
     expect({ status: opened.status, body: await opened.json() }).toEqual({ status: 400, body: { error: "an agent is opened to everyone with its daily limits, not by this setting", plain: expect.any(String) } });
     expect(seen.at(-1)).toEqual({ access: { agentId: "nix", access: "allowlist", actor: "cli" } });
+  });
+
+  test("an agent is opened to everyone by an admin, with both of its limits as whole numbers, and nothing else reaches the service", async () => {
+    const { seen, app: scoped } = withSetup();
+    const limits = { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 };
+    expect((await post(scoped, "/agents/nix/open", { ...limits, closedReply: " Closed for today. " })).status).toBe(200);
+    expect(seen).toEqual([{ open: { agentId: "nix", limits: { ...limits, closedReply: " Closed for today. " }, knowsItsNotes: false, actor: "cli" } }]);
+    // Neither number has a default: one left out, a fraction, a zero or a number written as text opens nothing.
+    for (const body of [{}, { maxDailyTokens: 200_000 }, { maxDailyMessagesPerPerson: 30 }, { ...limits, maxDailyTokens: 0 }, { ...limits, maxDailyMessagesPerPerson: 1.5 }, { ...limits, maxDailyTokens: "200000" }]) {
+      const refused = await post(scoped, "/agents/nix/open", body);
+      expect({ status: refused.status, body: await refused.json() }).toEqual({
+        status: 400,
+        body: { error: "maxDailyTokens and maxDailyMessagesPerPerson must each be a whole number of 1 or more", plain: "Nothing was saved. Check the two daily limits: each is a whole number, 1 or more, and try again." },
+      });
+    }
+    expect((await post(scoped, "/agents/nix/open", { ...limits, closedReply: 5 })).status).toBe(400);
+    expect(seen).toHaveLength(1);
+    // An operator may not: opening spends the owner's tokens for anyone.
+    const cookie = cookieFrom(await login("opal", OPERATOR_PASSWORD));
+    const asOperator = (path: string, body: unknown) => scoped.request(`/api/control${path}`, { method: "POST", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify(body) }, { clientAddress: "203.0.113.10" });
+    const operator = await asOperator("/agents/nix/open", limits);
+    expect({ status: operator.status, body: await operator.json(), reached: seen.length }).toEqual({ status: 403, body: { error: "admin only" }, reached: 1 });
+    // Closing it again is anyone's who may change the agent.
+    expect((await asOperator("/agents/nix/close", {})).status).toBe(200);
+    expect(seen.at(-1)).toEqual({ close: { agentId: "nix", actor: "opal" } });
+  });
+
+  test("an agent with notes of its own is opened only once the admin says they know, and one that never may be is a conflict", async () => {
+    const { seen, app: scoped } = withSetup();
+    const limits = { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 };
+    const first = await post(scoped, "/agents/diary/open", limits);
+    expect({ status: first.status, body: await first.json() }).toEqual({
+      status: 409,
+      body: { error: "diary has notes of its own", notes: true, plain: "This agent has notes of its own, and it may say what they hold to anyone. Read them first, then tick that you have." },
+    });
+    expect((await post(scoped, "/agents/diary/open", { ...limits, knowsItsNotes: true })).status).toBe(200);
+    expect(seen.map((entry) => (entry.open as { knowsItsNotes: boolean }).knowsItsNotes)).toEqual([false, true]);
+    // Anything but `true` is not a yes.
+    expect((await post(scoped, "/agents/diary/open", { ...limits, knowsItsNotes: "yes" })).status).toBe(409);
+    // Refused for an agent that is there, it is a conflict; one that is not there is not found.
+    const refusing = new Hono();
+    mountControlRoutes(refusing, {
+      ...deps(),
+      registry: { get: (id: string) => (id === "nouva" ? { config: { id: "nouva" } } : undefined) } as unknown as AgentRegistry,
+      setup: { openAgent: async (input: { agentId: string }) => ({ ok: false as const, error: input.agentId === "nouva" ? "nouva is the orchestrator" : `no agent "${input.agentId}"` }) },
+    } as unknown as ControlDeps);
+    const never = await post(refusing, "/agents/nouva/open", limits);
+    expect({ status: never.status, body: await never.json() }).toEqual({ status: 409, body: { error: "nouva is the orchestrator", plain: "This agent was not opened. Nothing was changed." } });
+    expect((await post(refusing, "/agents/ghost/open", limits)).status).toBe(404);
   });
 
   test("an orchestrator refused for an agent that is there is a conflict; one that is not there, not found (0.8.10)", async () => {

@@ -7,6 +7,7 @@
  * a store it will never use.
  */
 
+import type { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import type { NotesPort } from "@/modules/notes/store.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
@@ -125,6 +126,8 @@ export interface ControlDeps {
   toolGrants?: ToolGrantsPort;
   /** Who may talk to the daemon. */
   access?: AccessPort;
+  /** What strangers used of an agent open to everyone today, for its page. */
+  openDoor?: Pick<OpenDoorStore, "today">;
   /** Senders who switched approval off — dropped with their access (`AutoApprove.forget`). */
   autoApprove?: AutoApprovePort;
   /** Tokens for Nouride's MCP server (`/mcp`). */

@@ -148,6 +148,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageE
   // Read by the turn already at work in this one-to-one chat, at its next step — `steering.ts` — or, past what one
   // turn reads, left to wait for it with its sender told so (`steer-accept.ts`).
   const isCommand = (text: string) => parts.hooks.has(parseCommand(text)?.command ?? "");
-  if (parts.deps.config.queue.steer && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
+  // Not a stranger's on an open agent's connection: each message of theirs is counted where its turn is begun (`open-door.ts`).
+  if (parts.deps.config.queue.steer && !parts.admission.strangerOf(envelope) && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
   parts.batcher.accept(envelope);
 }
