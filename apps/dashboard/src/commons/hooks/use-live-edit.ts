@@ -9,13 +9,18 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { LiveEditOffer } from "@nouride/wire";
-import { dropLiveEdit, holdOpen, waitingLiveEdit, watchLiveEdit } from "@/commons/lib/live-edit";
+import { dropLiveEdit, endLiveEdit, holdOpen, waitingLiveEdit, watchLiveEdit } from "@/commons/lib/live-edit";
 
 export interface LiveEditing<T> {
   /** The change waiting for this page, with the thing as it would be with it made; none where none waits. */
   offer: (Omit<LiveEditOffer, "value"> & { value: T }) | null;
   /** That change answered, applied or discarded: it no longer waits. */
   done: () => void;
+  /**
+   * What this page holds is over (one being made was saved as its own, or thrown away): a change waiting for it,
+   * whenever it came, goes with it. Read when it is called, not when the page was last drawn.
+   */
+  over: () => void;
 }
 
 export function useLiveEdit<T>(page: { kind: string; id: string | null; value: () => unknown; enabled: boolean }): LiveEditing<T> {
@@ -27,5 +32,5 @@ export function useLiveEdit<T>(page: { kind: string; id: string | null; value: (
   const waiting = useSyncExternalStore(watchLiveEdit, waitingLiveEdit, waitingLiveEdit);
   // This page's only: one for another thing waits for the page that holds it.
   const offer = enabled && waiting && waiting.kind === kind && waiting.target === id ? (waiting as LiveEditing<T>["offer"]) : null;
-  return { offer, done: () => (offer ? dropLiveEdit(offer.id) : undefined) };
+  return { offer, done: () => (offer ? dropLiveEdit(offer.id) : undefined), over: () => endLiveEdit(kind, id) };
 }

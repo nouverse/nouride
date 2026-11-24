@@ -10,6 +10,12 @@
  * One page holds one thing, and one change waits at a time: a newer one for the same thing is the agent's last word.
  * Both are the browser's alone, kept for as long as the dashboard is open and no longer.
  *
+ * A change waits for the thing it was written for and no longer. One for something being made names nothing (its
+ * target is none), so it fits every page that makes one: applied and saved, it was drawn again over the next new
+ * one a person began. So a change answered is not offered again as it arrives (`answered`), one still waiting when
+ * its page's draft is over goes with it (`endLiveEdit`), and one asked for from the chat is drawn only where the
+ * page on screen holds what it changes (`holdsOpen`), never left for a later page.
+ *
  * `changesBetween` is what any such page marks a change with: which of a list's items it adds, changes and removes.
  */
 
@@ -32,6 +38,9 @@ export function liveEditHeld(): LiveEdit | undefined {
   return held ? { kind: held.kind, id: held.id, value: held.value() } : undefined;
 }
 
+/** Whether the page on screen holds that very thing now: a change to it would be drawn at once. */
+export const holdsOpen = (kind: string, id: string | null): boolean => held !== null && held.kind === kind && held.id === id;
+
 /** The change waiting to be drawn, and who listens for one. */
 let offer: LiveEditOffer | null = null;
 const listeners = new Set<() => void>();
@@ -39,16 +48,43 @@ const tell = () => {
   for (const listener of listeners) listener();
 };
 
-/** A change an agent wrote, handed to whichever page holds what it changes. The newest takes the place of one waiting. */
-export function offerLiveEdit(next: LiveEditOffer): void {
+/** The changes this browser has answered, by their ids: the newest of them, which is all a page can still be handed. */
+const answered = new Set<string>();
+const ANSWERED_KEPT = 200;
+
+/**
+ * A change an agent wrote, handed to whichever page holds what it changes. The newest takes the place of one waiting.
+ * `arrived`: as the agent's turn wrote it; one answered already is not taken again, and this says so. `asked`: the
+ * person asked the chat for it again, which is theirs to do with one they applied or discarded.
+ */
+export function offerLiveEdit(next: LiveEditOffer, how: "arrived" | "asked" = "arrived"): boolean {
+  if (how === "arrived" && answered.has(next.id)) return false;
   offer = next;
   tell();
+  return true;
 }
 
 /** A change answered, applied or discarded: no longer waiting. One that is not the one waiting is left alone. */
 export function dropLiveEdit(id: string): void {
+  answered.add(id);
+  if (answered.size > ANSWERED_KEPT) answered.delete(answered.values().next().value as string);
   if (offer?.id !== id) return;
   offer = null;
+  tell();
+}
+
+/**
+ * What a page held is over: one being made was saved as a thing of its own, or thrown away. A change still waiting
+ * for it goes with it, as answered. One for anything else is left alone.
+ */
+export function endLiveEdit(kind: string, target: string | null): void {
+  if (offer && offer.kind === kind && offer.target === target) dropLiveEdit(offer.id);
+}
+
+/** Nothing waits and nothing is remembered as answered: the page's tests begin each case as a browser just opened does. */
+export function forgetLiveEdits(): void {
+  offer = null;
+  answered.clear();
   tell();
 }
 

@@ -23,7 +23,7 @@ import { AgentReply } from "@/commons/components/chat/AgentReply";
 import { sectionTitle } from "@/commons/components/floating-chat/page-open";
 import { TaggedText } from "@/commons/components/chat/AgentTag";
 import { useToast } from "@/commons/components/ui/toast";
-import { offerEdit } from "@/commons/hooks/use-page-follows";
+import { showEdit } from "@/commons/hooks/use-page-follows";
 
 export function UserBubble({
   text,
@@ -277,9 +277,10 @@ function ShowEdit({ id }: { id: string }) {
       className="btn btn-xs h-7 gap-1.5 rounded-full border-0 bg-secondary/10 text-secondary hover:bg-secondary/20"
       onClick={async () => {
         setAsking(true);
-        const there = await offerEdit(id);
+        const shown = await showEdit(id);
         setAsking(false);
-        if (!there) toast.show({ kind: "info", message: "That change is no longer here. Ask for it again." });
+        if (shown === "gone") toast.show({ kind: "info", message: "That change is no longer here. Ask for it again." });
+        if (shown === "elsewhere") toast.show({ kind: "info", message: "That change is not for the page you have open. Open the page it was written for, then press this again." });
       }}
     >
       <PencilLine size={12} aria-hidden="true" />

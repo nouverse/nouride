@@ -410,7 +410,10 @@ change** menampilkan keduanya, dan **Apply** atau **Discard** menjawabnya. Perub
 begitu, beserta step yang perlu dibaca dulu. Apply gak menyimpan apa pun: perubahannya masuk ke halaman, **Undo**
 menariknya lagi, dan tombol **Save** halaman itu tetap kamu yang menekan. Gak ada yang disimpan di tengah jalan dan
 gak ada yang dinyalakan. Step di chat yang membuat perubahan itu punya **Show the change on the page**, untuk
-menggambarnya lagi selama daemon masih memegangnya (sehari, atau sampai daemon restart). Ini cuma untuk chat di
+menggambarnya lagi selama daemon masih memegangnya (sehari, atau sampai daemon restart): di halaman tempat
+perubahan itu ditulis, dan di halaman lain tombolnya bilang begitu. Perubahan yang ditulis untuk automation yang
+sedang kamu buat ikut selesai begitu kamu simpan atau batalkan, jadi gak pernah digambar di automation baru
+berikutnya. Ini cuma untuk chat di
 dashboard: kalau diminta dari Telegram, Discord, atau WhatsApp, perubahan tetap berupa usulan seperti di atas.
 Automation yang terlalu panjang untuk ditunjukkan utuh ke agent (48.000 karakter seperti yang dikirim halaman)
 diubah di halamannya langsung, dan agent bilang begitu.

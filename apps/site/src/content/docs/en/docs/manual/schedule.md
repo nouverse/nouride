@@ -388,7 +388,9 @@ that over yours, each step it adds, changes or removes marked, under a bar that 
 brings a script says so, with the step to read first. Applying saves nothing: the change goes into the page, **Undo**
 takes it back, and the page's own **Save** is still yours to press. Nothing is stored on the way and nothing is
 turned on. The step in the chat that made the change has **Show the change on the page**, to draw it again while
-the daemon still holds it (a day, or until it restarts). This is the dashboard's chat alone: asked in Telegram,
+the daemon still holds it (a day, or until it restarts): on the page it was written for, and on any other it says
+so. A change written for an automation you are making goes with it once you save or cancel, so it is never drawn
+on the next one you begin. This is the dashboard's chat alone: asked in Telegram,
 Discord or WhatsApp, a change is a proposal as above. An automation too long to show the agent whole (48,000
 characters as the page sends it) is changed on the page itself, and the agent says so.
 

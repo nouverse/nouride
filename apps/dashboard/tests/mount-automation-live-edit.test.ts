@@ -12,9 +12,9 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import type { AutomationChange, AutomationStep } from "@nouride/wire";
-import { dropLiveEdit, waitingLiveEdit } from "@/commons/lib/live-edit";
+import { waitingLiveEdit } from "@/commons/lib/live-edit";
 import { answer, dom, recordPosts, renderPage, type, useMountHarness } from "./mount-harness.ts";
-import { automation, detail, drawn, editStep, flowDrawn, ok, saveBar, stepCard, STEPS } from "./automation-fixtures.ts";
+import { automation, barButton, detail, drawn, editStep, flowDrawn, ok, saveBar, stepCard, STEPS } from "./automation-fixtures.ts";
 import { AT_REST, boxIn, card, floatButton, LAST_AGENT_KEY, recordRequests, sendIn } from "./floating-chat-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -22,9 +22,6 @@ useMountHarness();
 
 afterEach(() => {
   dom.localStorage.removeItem(LAST_AGENT_KEY);
-  // The change waiting is the whole browser's: one a test left would be drawn on the next test's page.
-  const waiting = waitingLiveEdit();
-  if (waiting) dropLiveEdit(waiting.id);
 });
 
 const PAGE = "/automations/cron_e";
@@ -533,5 +530,141 @@ describe("on the page that makes a new one", () => {
     } finally {
       posted.restore();
     }
+  });
+
+  describe("once that one is saved, a change written for it is not drawn on the next one a person makes", () => {
+    // As it was met: the agent filled a new automation in, its person applied it and saved, pressed "New
+    // automation" for another, and the change they had already taken was drawn over the empty page. A change for one
+    // being made names no automation, so it fitted every page that makes one.
+    const made = automation({ id: "cron_new", name: "Shop check, made here", payload: { kind: "steps", steps: CHANGED } as AutomationChange["payload"] });
+    const WROTE = wrote("edit_6");
+    // The daemon as the turn goes on and ends: its step with the change, then done; a reader that asks from the start
+    // is handed the whole turn, as the daemon does for a turn that is over.
+    const daemon = {
+      "/sessions/ses_1/live?after=1": turn("running", [WROTE], 2),
+      "/sessions/ses_1/live?after=2": turn("done", [], 2, "Drawn on your page."),
+      "/sessions/ses_1/live?after=0": turn("done", [ASKED, WROTE], 2, "Drawn on your page."),
+      "/sessions/ses_1/live": turn("done", [], 2, "Drawn on your page."),
+      "/live-edits/edit_6": offer("edit_6", change({ name: "Shop check, made here" }), null),
+      "/automations/cron_new": detail(made),
+    };
+    const link = (host: HTMLElement, words: string) => [...host.querySelectorAll<HTMLElement>("a, button")].find((one) => one.textContent?.trim() === words);
+    const pressLink = async (host: HTMLElement, words: string) => {
+      await eventually(() => link(host, words) !== undefined, 4_000, `"${words}", to press`);
+      link(host, words)!.click();
+    };
+    const show = () => [...(card()?.querySelectorAll("button") ?? [])].find((one) => one.textContent?.trim() === "Show the change on the page") as HTMLButtonElement | undefined;
+    /** A new automation, the agent's change drawn on it and applied: the draft holds it, unsaved. */
+    async function applied(host: HTMLElement): Promise<void> {
+      await eventually(() => host.textContent?.includes("Add the first step") === true, 4_000, "the page that makes one");
+      await asked(host, "make one that checks the shop");
+      answer(base(daemon));
+      await eventually(() => bar(host) !== null, 4_000, "the change, drawn on the page");
+      press(host, "Apply");
+      await eventually(() => drawn(host).length === 4, 2_000, "its steps on the page");
+    }
+    async function saved(host: HTMLElement, app: { location: () => string }): Promise<void> {
+      await eventually(() => barButton(host, "Save automation") !== undefined && !barButton(host, "Save automation")!.disabled, 3_000, "Save, to press");
+      barButton(host, "Save automation")!.click();
+      await eventually(() => app.location().endsWith("/automations/cron_new"), 4_000, "the saved automation's page");
+    }
+    /** "Automations", then "New automation": the page that makes another, and what is drawn on it after a moment. */
+    async function another(host: HTMLElement, app: { location: () => string }): Promise<{ bar: string | null; waiting: string | null }> {
+      await pressLink(host, "Automations");
+      await eventually(() => app.location().endsWith("/automations"), 4_000, "the list");
+      await pressLink(host, "New automation");
+      await eventually(() => app.location().endsWith("/automations/new") && host.textContent?.includes("Add the first step") === true, 4_000, "the page that makes another");
+      // A change that waits is drawn as its page is: read here, the page being drawn, it is there or it is not.
+      return { bar: bar(host)?.textContent ?? null, waiting: waitingLiveEdit()?.id ?? null };
+    }
+
+    test("applied and saved: the next one is empty", async () => {
+      answer(base());
+      const posted = recordPosts({ ...SENT, "/cron": ok({ job: made }) });
+      let next = { bar: "not read" as string | null, waiting: "not read" as string | null };
+      try {
+        await renderPage("/automations/new", async (host, app) => {
+          await applied(host);
+          await saved(host, app);
+          next = await another(host, app);
+        });
+        expect(next).toEqual({ bar: null, waiting: null });
+      } finally {
+        posted.restore();
+      }
+    });
+
+    test("shown again from the chat and left waiting when the person saved: it goes with the draft it was for", async () => {
+      answer(base());
+      const posted = recordPosts({ ...SENT, "/cron": ok({ job: made }) });
+      const seen = { again: "", next: { bar: "not read" as string | null, waiting: "not read" as string | null } };
+      try {
+        await renderPage("/automations/new", async (host, app) => {
+          await applied(host);
+          // Its marks are gone once applied; a person who wants to see what it changed asks the chat for it again.
+          await eventually(() => show() !== undefined, 3_000, "the chat's way back to the change");
+          show()!.click();
+          await eventually(() => bar(host)?.textContent?.includes("Nothing changes until you apply it") === true, 3_000, "the change, drawn again");
+          seen.again = bar(host)!.textContent ?? "";
+          // The bar that saves is not drawn over a change being shown: back to their own, which is what they save.
+          press(host, "As you have it");
+          await saved(host, app);
+          seen.next = await another(host, app);
+        });
+        // Drawn over a draft that already holds it, the bar says it changes nothing.
+        expect(seen.again).toContain("It would run as it does now.");
+        expect(seen.next).toEqual({ bar: null, waiting: null });
+      } finally {
+        posted.restore();
+      }
+    });
+
+    test("left waiting when the one being made is cancelled: it goes with that draft too", async () => {
+      answer(base());
+      const posted = recordPosts(SENT);
+      let next = { bar: "not read" as string | null, waiting: "not read" as string | null };
+      try {
+        await renderPage("/automations/new", async (host, app) => {
+          await applied(host);
+          await eventually(() => show() !== undefined, 3_000, "the chat's way back to the change");
+          show()!.click();
+          await eventually(() => bar(host)?.textContent?.includes("Nothing changes until you apply it") === true, 3_000, "the change, drawn again");
+          press(host, "As you have it");
+          await eventually(() => barButton(host, "Cancel") !== undefined, 3_000, "Cancel, to press");
+          barButton(host, "Cancel")!.click();
+          await eventually(() => app.location().endsWith("/automations"), 4_000, "the list");
+          await pressLink(host, "New automation");
+          await eventually(() => app.location().endsWith("/automations/new") && host.textContent?.includes("Add the first step") === true, 4_000, "the page that makes another");
+          next = { bar: bar(host)?.textContent ?? null, waiting: waitingLiveEdit()?.id ?? null };
+        });
+        expect(next).toEqual({ bar: null, waiting: null });
+      } finally {
+        posted.restore();
+      }
+    });
+
+    test("asked for from the chat on a page that does not hold it: said, and nothing is left waiting for a later page", async () => {
+      answer(base());
+      const posted = recordPosts({ ...SENT, "/cron": ok({ job: made }) });
+      const seen = { told: false, waiting: "not read" as string | null, next: { bar: "not read" as string | null, waiting: "not read" as string | null } };
+      try {
+        await renderPage("/automations/new", async (host, app) => {
+          await applied(host);
+          await saved(host, app);
+          // On the automation it became, the chat still has the change that was written for one being made.
+          await eventually(() => show() !== undefined, 3_000, "the chat's way back to the change");
+          show()!.click();
+          await eventually(() => dom.document.body.textContent?.includes("That change is not for the page you have open") === true, 3_000, "told it is for another page");
+          seen.told = true;
+          seen.waiting = waitingLiveEdit()?.id ?? null;
+          seen.next = await another(host, app);
+        });
+        expect(seen.told).toBe(true);
+        expect(seen.waiting).toBeNull();
+        expect(seen.next).toEqual({ bar: null, waiting: null });
+      } finally {
+        posted.restore();
+      }
+    });
   });
 });

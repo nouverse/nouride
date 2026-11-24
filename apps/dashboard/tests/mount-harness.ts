@@ -448,6 +448,9 @@ export function useMountHarness(): void {
     // What a test saved does not wait for a restart in the next one, in this file or another. Imported here, as the
     // pages are: the dashboard's modules are loaded once the browser's globals are in place.
     (await import("@/commons/lib/restart")).forgetRestartPending();
+    // Nor does a change an agent wrote, or one a test answered, wait for the next test's page: both are the whole
+    // browser's, and a change is told from another by its id, which the tests give again and again.
+    (await import("@/commons/lib/live-edit")).forgetLiveEdits();
   });
 
   afterAll(async () => {

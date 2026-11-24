@@ -66,6 +66,9 @@ export const TEST_ONLY_EXPORTS: Readonly<Record<string, Readonly<Record<string, 
   "apps/cli/src/commands/access.ts": {
     ACCESS_CHANGES: "the verbs that change somebody's standing; own-cli-verbs.test.ts holds @nouride/policy's copy to it",
   },
+  "apps/dashboard/src/commons/lib/live-edit.ts": {
+    forgetLiveEdits: "the change waiting and the ones answered are module state; the mount harness clears them after each test",
+  },
   "apps/dashboard/src/commons/lib/restart.ts": {
     forgetRestartPending: "the saves that wait for a restart are module state; the mount harness clears them after each test",
   },
