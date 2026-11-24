@@ -276,15 +276,14 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   const id = shortId(mission.id);
   const page = pageOf?.(mission.id);
   const pageLine = page ? `\nPage: ${page}` : "";
-  // Whether it has a brief the person was sent: its own, or a file its goal names.
-  const has = missions.brief(mission) !== null;
+  // The brief the person was sent, and where it is: its own, or a file its goal names, named by that file's own path.
+  const sent = missions.brief(mission);
   if (isDraft(mission)) {
-    const brief = missions.briefPath(mission);
     const briefLine = briefFailed
       ? `\nIts brief could not be written: ${briefFailed}. Write it again with \`edit\`.`
-      : has
-        ? `\nIts brief: ${brief}. The person was sent it as ${BRIEF_FILE} under the notice: do not paste it into the chat as well. Change it before it starts with \`edit\`, and they are sent it again.`
-        : `\nIt has no brief. One given with \`edit\` is kept as ${brief} and sent to the person.`;
+      : sent
+        ? `\nIts brief: ${sent.path}. The person was sent it as ${BRIEF_FILE} under the notice: do not paste it into the chat as well. Change it before it starts with \`edit\`, and they are sent it again.`
+        : `\nIt has no brief. One given with \`edit\` is kept as ${missions.briefPath(mission)} and sent to the person.`;
     // What was taken of the limits it named, as the person reads them in the notice.
     const own = missions.ownLimits(mission);
     const limitsLine = own ? `\n${own}. The person sees this in its notice.` : "";
@@ -298,7 +297,7 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   const state = mission.status === "queued" ? "queued" : "started";
   // Why it waits is the dispatcher's own decision (`blockedBy`), not guessed again here.
   const waits = result.queued ? `\nIt waits because ${result.queued}; it starts by itself once that clears.` : "";
-  const briefLine = briefFailed ? `\nIts brief could not be written (${briefFailed}): it starts from its goal alone.` : has ? `\nIts brief is in its folder as ${BRIEF_FILE}, and the person is sent it under the notice that it started.` : "";
+  const briefLine = briefFailed ? `\nIts brief could not be written (${briefFailed}): it starts from its goal alone.` : sent ? `\nIts brief is in its folder as ${BRIEF_FILE}, and the person is sent it under the notice that it started.` : "";
   return ok(`Mission ${id} ${state}, "${mission.title}": ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${briefLine}${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
 }
 

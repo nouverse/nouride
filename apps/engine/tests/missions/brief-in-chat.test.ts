@@ -50,9 +50,11 @@ describe("a draft's brief, in the chat", () => {
   test("a brief the goal names by its path, in the agent's own folder, is sent as the same file", async () => {
     const named = "/work/private/nova/work/audit/BRIEF.md";
     const { h, draft } = await setup({ goalBriefOf: (mission) => (mission.goal.includes(named) ? named : null), readBrief: (path) => (path === named ? "Audit five vouchers against the ledger." : null) });
-    const { mission } = await draft({ goal: `The five vouchers are audited. Full brief: ${named}` });
+    const { mission, answer } = await draft({ goal: `The five vouchers are audited. Full brief: ${named}` });
     expect(h.briefsSent).toEqual([{ mission: mission!.id, text: "Audit five vouchers against the ledger." }]);
     expect(h.told.at(-1)!.text).toContain("brief: BRIEF.md, the file below");
+    // The agent is told where that brief is, by the file's own path: the mission's folder holds none.
+    expect(answer.content).toContain(`Its brief: ${named}. The person was sent it as BRIEF.md under the notice`);
   });
 
   test("a draft with no brief sends none, and says so", async () => {
