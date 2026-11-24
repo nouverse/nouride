@@ -85,6 +85,11 @@ export interface Speaker {
   senderId: string;
   chatId: string;
   chatType: ChatType;
+  /**
+   * What is answered goes to a session that keeps everything it is told: a coding CLI's own call. Nothing there can be
+   * for one turn only, so what is one person's own is not brought into a group for it.
+   */
+  keeps?: true;
 }
 
 /** Days looked back when an analysis names no range: a month for a ranking, a quarter for a trend. */
@@ -179,7 +184,7 @@ export function createMemory(deps: MemoryDeps) {
       identity,
       person: entry?.key ? { key: entry.key, name: entry.name } : null,
       // Whose turn it is, from the sender id the platform gave: what a person brings into a group goes by it.
-      audience: audience.kind === "group" ? { ...audience, speaker: identity } : audience,
+      audience: audience.kind === "group" && !speaker.keeps ? { ...audience, speaker: identity } : audience,
     };
   }
 
@@ -229,7 +234,7 @@ export function createMemory(deps: MemoryDeps) {
   /** People's names for their keys, as a collection's `about` lists them: what the model reads is who, not a key. */
   const namesOf = (keys: readonly string[]) => keys.map((key) => config.people.find((person) => person.key === key)?.name ?? key);
   /** Who is asking, as the knowledge base reads it: the agent, and what the chat may see. */
-  const who = (speaker: Speaker) => ({ agentId: speaker.agentId, audience: situate(speaker).audience });
+  const who = (speaker: Speaker) => ({ agentId: speaker.agentId, audience: situate(speaker).audience, brings: config.memory.privateInGroups });
   const knowledge = createKnowledge({ ...(deps.knowledge ? { knowledge: deps.knowledge } : {}), now, semantic: semanticNow, embeds: () => embedder() !== null, embedCatchUp });
 
 
@@ -239,24 +244,23 @@ export function createMemory(deps: MemoryDeps) {
     recall(speaker: Speaker): Recall {
       const semantic = semanticNow();
       const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, privateInGroups: config.memory.privateInGroups, timeZone: timeZone(), now: now(), ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
-      // The collections it may search here, by name: never their documents.
-      return {
-        ...recall,
-        knowledge: knowledge.usable(who(speaker)).map((collection) => ({
-          name: collection.settings.name,
-          description: collection.settings.description,
-          ...(collection.settings.about.length ? { about: namesOf(collection.settings.about) } : {}),
-        })),
-      };
+      // The collections it may search here, by name: never their documents. Those that went with the one speaking are
+      // said with what else is theirs, apart from what the group's prompt caches.
+      const named = (collection: Collection) => ({ name: collection.settings.name, description: collection.settings.description, ...(collection.settings.about.length ? { about: namesOf(collection.settings.about) } : {}) });
+      const theirs = knowledge.brought(who(speaker)).map(named);
+      const person = situate(speaker).person;
+      const own = recall.own ?? (theirs.length && person ? { name: person.name, facts: [] } : undefined);
+      return { ...recall, knowledge: knowledge.usable(who(speaker)).map(named), ...(own ? { own: { ...own, ...(theirs.length ? { collections: theirs } : {}) } } : {}) };
     },
 
     async search(speaker: Speaker, query: { query: string; since?: string; until?: string; people?: string[]; agents?: readonly string[]; limit?: number; kind?: "knowledge" }): Promise<SearchHit[]> {
       const semantic = semanticNow();
       const { kind, ...asked } = query;
-      const scopes = knowledge.usable(who(speaker)).map((collection) => ({ id: collection.id, name: collection.settings.name, about: collection.settings.about }));
+      const scoped = (collection: Collection) => ({ id: collection.id, name: collection.settings.name, about: collection.settings.about });
+      const scopes = [...knowledge.usable(who(speaker)).map(scoped), ...knowledge.brought(who(speaker)).map((collection) => ({ ...scoped(collection), own: true as const }))];
       const hits = await searchMemory(
         { index, people: config.people, now, timeZone: timeZone(), ...(semantic ? { semantic } : {}), ...(deps.knowledge ? { knowledge: deps.knowledge.store } : {}) },
-        { audience: situate(speaker).audience, ...asked, knowledge: scopes },
+        { audience: situate(speaker).audience, ...asked, knowledge: scopes, brings: config.memory.privateInGroups },
       );
       return kind === "knowledge" ? hits.filter((hit) => hit.kind === "section") : hits;
     },

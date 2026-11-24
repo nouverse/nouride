@@ -32,9 +32,19 @@ A collection is closed until you open it. Who may be answered from one depends o
 
 An admin can open a collection to everyone, or to one group, from its card. An agent never can.
 
-A collection is used only when every person in the conversation may be answered from it. So a collection kept for one
-person is never used in a group, even a group that person is in, and the family group's collection is not used in a
-one-to-one chat.
+A collection is used when every person in the conversation may be answered from it. So the family group's collection
+is not used in a one-to-one chat.
+
+**A collection kept for one person goes with them into a group**, on the messages they send there and on nobody else's:
+you ask for your own document in the family group and the agent finds it, and someone else in the group who asks for
+it is told there is no such document. Who is asking is the sender the chat app reports, never what a message says.
+What the agent found for you is not kept in the group's conversation, so the next person's question does not have it.
+
+- Each such collection has **In a group** in its settings: follow the memory setting, yes, or no. The memory setting
+  is **In a group, an agent uses what a person told it in private** under Knowledge & Memory → Settings, on unless you
+  turn it off.
+- An agent that runs on a coding CLI is not given a person's own collection in a group: its session keeps everything
+  it is told.
 
 ## Adding documents
 
@@ -103,6 +113,7 @@ nouride knowledge add <file> --to <collection>
 nouride knowledge add - --name <file name> --to <collection> < <file>   # the file on standard input
 nouride knowledge reindex [collection]             # read again what changed in the folder
 nouride knowledge archive|unarchive <collection>
+nouride knowledge in-groups <collection> on|off|default   # a person's own collection, in a group, on their own messages
 nouride knowledge title <collection>/<file> <words>   # its title; "" takes it off
 nouride knowledge rm <collection>/<file>
 ```

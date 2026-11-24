@@ -68,10 +68,11 @@ export interface Recall {
   /** The knowledge collections this agent may search in this chat (0.8.20), by name: what is in them is searched for. */
   knowledge?: { name: string; description: string; about?: string[] }[];
   /**
-   * In a group, what the one speaking told an agent elsewhere: their own facts, which this group does not read. Theirs
-   * for this turn only, so it is never part of the cached block the rest of this is.
+   * In a group, what the one speaking told an agent elsewhere: their own facts, which this group does not read, and
+   * their own knowledge collections, by name. Theirs for this turn only, so it is never part of the cached block the
+   * rest of this is.
    */
-  own?: { name: string; facts: RecalledFact[] };
+  own?: { name: string; facts: RecalledFact[]; collections?: { name: string; description: string; about?: string[] }[] };
 }
 
 /** Facts of one person shown per prompt — past it, `memory_search` finds the rest. */

@@ -31,9 +31,20 @@ Koleksi tertutup sampai Anda membukanya. Siapa yang boleh dijawab darinya tergan
 
 Admin bisa membuka koleksi untuk semua orang, atau untuk satu grup, dari kartunya. Agent tidak pernah bisa.
 
-Sebuah koleksi hanya dipakai kalau setiap orang di percakapan boleh dijawab darinya. Jadi koleksi untuk satu orang tidak
-pernah dipakai di grup, bahkan grup yang ada orang itu di dalamnya, dan koleksi grup keluarga tidak dipakai di chat
-pribadi.
+Sebuah koleksi dipakai kalau setiap orang di percakapan boleh dijawab darinya. Jadi koleksi grup keluarga tidak dipakai
+di chat pribadi.
+
+**Koleksi milik satu orang ikut orangnya ke grup**, pada pesan yang ia kirim di sana dan tidak pada pesan orang lain:
+Anda meminta dokumen Anda sendiri di grup keluarga dan agent menemukannya, sedangkan orang lain di grup yang memintanya
+diberi tahu bahwa dokumen itu tidak ada. Siapa yang bertanya adalah pengirim yang dilaporkan aplikasi chat, bukan isi
+pesannya. Yang ditemukan agent untuk Anda tidak disimpan di percakapan grup, jadi pertanyaan orang berikutnya tidak
+memilikinya.
+
+- Tiap koleksi seperti itu punya **In a group** di setelannya: ikut setelan memory, ya, atau tidak. Setelan memory-nya
+  adalah **In a group, an agent uses what a person told it in private** di Knowledge & Memory → Settings, menyala
+  kecuali Anda matikan.
+- Agent yang berjalan di coding CLI tidak diberi koleksi milik seseorang di grup: sesinya menyimpan semua yang pernah
+  dikatakan kepadanya.
 
 ## Menambah dokumen
 
@@ -103,6 +114,7 @@ nouride knowledge add <file> --to <koleksi>
 nouride knowledge add - --name <nama file> --to <koleksi> < <file>   # file lewat standard input
 nouride knowledge reindex [koleksi]                # baca ulang yang berubah di folder
 nouride knowledge archive|unarchive <koleksi>
+nouride knowledge in-groups <koleksi> on|off|default   # koleksi milik seseorang, di grup, pada pesannya sendiri
 nouride knowledge title <koleksi>/<file> <kata>   # judulnya; "" menghapusnya
 nouride knowledge rm <koleksi>/<file>
 ```

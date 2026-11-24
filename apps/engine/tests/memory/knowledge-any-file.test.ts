@@ -59,7 +59,7 @@ describe("a picture kept from a chat", () => {
       isError: false,
       content:
         'Kept in "Car" as brv-qr.jpg, a collection made now for the people in this chat. Nouride does not read the words of this kind of file. It is kept as it is, and found by its title and what is written about it. ' +
-        `\`send_file\` with document="${ITEM}" sends the file itself, here or in any chat that may read this collection.`,
+        `\`send_file\` with document="${ITEM}" sends the file itself, here or in any chat that may read this collection. This collection is its people's: used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.`,
     });
     // The file is the file: not a word of the line is written into it.
     expect(new Uint8Array(readFileSync(join(h.knowledgeRoot, "car", "brv-qr.jpg")))).toEqual(PHOTO);

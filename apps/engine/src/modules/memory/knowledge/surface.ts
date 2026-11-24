@@ -10,7 +10,7 @@ import { buildKnowledgeLayer, type KnowledgeLayer } from "../graph-view.ts";
 import type { CatchUpReport, Semantic } from "../semantic.ts";
 import { fuse, rankByMeaning, rankingModel, rankingVectors } from "../semantic.ts";
 import { ftsQuery } from "../terms.ts";
-import { mayUse, readCollection, readCollections, type Collection, type CollectionSettings } from "./collections.ts";
+import { goesWithItsReader, mayUse, readCollection, readCollections, type Collection, type CollectionSettings } from "./collections.ts";
 import { addDocument, approvePending, createCollection, declinePending, pendingOf, removeCollection, removeDocument, writeNote, writeSettings, writeTitle, type KnowledgeRefusal, type PendingDocument } from "./files.ts";
 import { keepFromChat, keptFile, type Keeping, type KeepRequest, type KeepResult } from "./kept.ts";
 import { parseItem, type IndexedSection, type KnowledgeDocument, type KnowledgePort } from "./knowledge.store.ts";
@@ -56,6 +56,8 @@ export type { KeepRequest, KeepResult } from "./kept.ts";
 export interface Asker {
   agentId: string;
   audience: Audience;
+  /** `[memory] private_in_groups`: whether what is one person's goes with them into a group, where a collection says nothing. */
+  brings?: boolean;
 }
 
 export function createKnowledge(input: {
@@ -76,6 +78,17 @@ export function createKnowledge(input: {
     if (!knowledge) return [];
     const admins = knowledge.admins();
     return readCollections(knowledge.root).filter((collection) => mayUse(collection, { agentId: asker.agentId, audience: asker.audience, admins }));
+  }
+
+  /**
+   * The collections that go with the one speaking into a group (`goesWithItsReader`): theirs, used for their turn and
+   * named with who is speaking, never in the list the group's prompt caches.
+   */
+  function broughtCollections(asker: Asker): Collection[] {
+    const knowledge = deps.knowledge;
+    if (!knowledge) return [];
+    const admins = knowledge.admins();
+    return readCollections(knowledge.root).filter((collection) => goesWithItsReader(collection, { agentId: asker.agentId, audience: asker.audience, admins, brings: asker.brings ?? true }));
   }
 
   /** One sync of the knowledge index at a time: two would read the same files and write the same rows. */
@@ -109,22 +122,23 @@ export function createKnowledge(input: {
    * A knowledge section, or (`#all`) its whole document, if this agent may search its collection here. Read from the
    * index's text, never from the file: what search found is what is opened.
    */
-  function read(asker: Asker, item: string): { collection: string; about: readonly string[]; title: string; path: string; sections: IndexedSection[] } | { refused: string } {
+  function read(asker: Asker, item: string): { collection: string; about: readonly string[]; title: string; path: string; sections: IndexedSection[]; /** Read as the speaker's own, in a group. */ own?: true } | { refused: string } {
     const parsed = parseItem(item);
     const knowledge = deps.knowledge;
     const nothing = { refused: `no document "${item}" that this chat may read` };
     if (!parsed || !knowledge) return nothing;
-    const collection = usableCollections(asker).find((candidate) => candidate.id === parsed.collection);
+    const brought = broughtCollections(asker).find((candidate) => candidate.id === parsed.collection);
+    const collection = brought ?? usableCollections(asker).find((candidate) => candidate.id === parsed.collection);
     if (!collection) return nothing;
     const document = knowledge.store.document(parsed.collection, parsed.path);
     const all = knowledge.store.sectionsOf(parsed.collection, parsed.path);
     const sections = parsed.n === "all" ? all : all.filter((section) => section.n === parsed.n);
     if (!document || sections.length === 0) return nothing;
-    return { collection: collection.settings.name, about: collection.settings.about, title: document.title, path: document.path, sections };
+    return { collection: collection.settings.name, about: collection.settings.about, title: document.title, path: document.path, sections, ...(brought ? { own: true as const } : {}) };
   }
 
   /** A document kept from a chat, and a kept file handed back to one: `kept.ts`. */
-  const keeping = (knowledge: KnowledgeDeps): Keeping => ({ knowledge, usable: usableCollections, sync: syncKnowledgeNow, now });
+  const keeping = (knowledge: KnowledgeDeps): Keeping => ({ knowledge, usable: (asker) => [...usableCollections(asker), ...broughtCollections(asker)], sync: syncKnowledgeNow, now });
   const keep = async (asker: Asker, request: KeepRequest): Promise<KeepResult> => (deps.knowledge ? await keepFromChat(keeping(deps.knowledge), asker, request) : { refused: "This Nouride keeps no knowledge base." });
   const fileOf = (asker: Asker, item: string) => (deps.knowledge ? keptFile(keeping(deps.knowledge), asker, item) : { refused: `no document "${item}" that this chat may read` });
 
@@ -303,5 +317,5 @@ export function createKnowledge(input: {
     },
   };
 
-  return { usable: usableCollections, read, keep, fileOf, surface };
+  return { usable: usableCollections, brought: broughtCollections, read, keep, fileOf, surface };
 }

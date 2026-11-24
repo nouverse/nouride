@@ -23,6 +23,11 @@ export interface KnowledgeCollection {
   about: readonly string[];
   /** Kept, never searched. */
   archived: boolean;
+  /**
+   * Whether a collection kept to people is used in a group on the messages one of them sends. Absent, it follows the
+   * memory setting for what is private in groups.
+   */
+  inGroups?: boolean;
   documents: number;
   sections: number;
   /** What of its settings could not be read; its defaults stand until it is fixed. */
@@ -100,4 +105,6 @@ export interface CollectionInput {
   agents?: string[] | null;
   about?: string[];
   archived?: boolean;
+  /** Null: follow the memory setting again. */
+  inGroups?: boolean | null;
 }

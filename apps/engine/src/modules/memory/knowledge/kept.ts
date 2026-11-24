@@ -40,8 +40,12 @@ export interface KeepRequest {
 
 export type KeepResult =
   | {
-      /** `item` is the id search gives it and `send_file` sends its file by; `noted`, that a line about a file was kept with it. */
-      saved: { collection: string; path: string; status: string; reason?: string; archived?: true; item: string; noted?: true };
+      /**
+       * `item` is the id search gives it and `send_file` sends its file by; `noted`, that a line about a file was kept
+       * with it; `readers` and `inGroups`, who is answered from its collection and whether that goes with them into a
+       * group, for the agent to say.
+       */
+      saved: { collection: string; path: string; status: string; reason?: string; archived?: true; item: string; noted?: true; readers: "everyone" | "admins" | "people" | "group"; inGroups: boolean };
       made: boolean;
     }
   | { waiting: { collection: string; path: string } }
@@ -112,6 +116,8 @@ export async function keepFromChat(keeping: Keeping, asker: Asker, request: Keep
       ...(target.settings.archived ? { archived: true } : {}),
       item: sectionItem(target.id, added.path, 0),
       ...(note ? { noted: true as const } : {}),
+      readers: target.settings.readers.kind,
+      inGroups: target.settings.inGroups ?? asker.brings ?? true,
     },
     made,
   };

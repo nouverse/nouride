@@ -13,7 +13,7 @@ import { Details } from "@/commons/components/ui/Details";
 import { DropOverlay, useFileDrop } from "@/commons/components/ui/FileDrop";
 import { cn } from "@/commons/lib/utils";
 import type { KnowledgeNames } from "./names";
-import { aboutLine, agentsLine, countsLine, readersLine } from "./words";
+import { aboutLine, agentsLine, countsLine, inGroupsLine, readersLine } from "./words";
 
 /** One line of what a collection's settings say, with its icon. */
 function SettingLine({ icon: Icon, children }: { icon: typeof Users; children: ReactNode }) {
@@ -28,9 +28,15 @@ function SettingLine({ icon: Icon, children }: { icon: typeof Users; children: R
 /** Its settings as sentences: who may be answered from it, which agents look in it, whom it is about. */
 export function SettingLines({ collection, names }: { collection: KnowledgeCollection; names: KnowledgeNames }) {
   const about = aboutLine(collection.about, names);
+  // What a collection with no answer of its own follows: the memory setting, on until it is read.
+  const memory = useQuery({ queryKey: ["memory-settings"], queryFn: api.memorySettings });
+  const inGroups = inGroupsLine(collection.readers, collection.inGroups, memory.data?.privateInGroups ?? true);
   return (
     <ul className="text-base-content/80 space-y-1 text-sm">
-      <SettingLine icon={Users}>{readersLine(collection.readers, names)}</SettingLine>
+      <SettingLine icon={Users}>
+        {readersLine(collection.readers, names)}
+        {inGroups ? ` ${inGroups}` : ""}
+      </SettingLine>
       <SettingLine icon={Bot}>{agentsLine(collection.agents, names.agent)}</SettingLine>
       {about ? <SettingLine icon={UserRound}>{about}</SettingLine> : null}
     </ul>

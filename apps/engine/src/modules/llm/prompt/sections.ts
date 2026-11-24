@@ -280,9 +280,13 @@ export function renderDynamic(ctx: Speaker): string {
      * told: its turn is built without the recall (`external-agents/situation.ts`), so nothing of this reaches it.
      */
     const own = ctx.recall?.own;
-    if (own?.facts.length) {
+    if (own && (own.facts.length || own.collections?.length)) {
+      const told = own.facts.length ? `What ${own.name} told you outside this group, shown to you because ${own.name} is the one speaking now:\n${bySection(own.facts)}\n` : "";
+      // Their collections by name, as the group's are in RECALL: what is in them is searched for, on this turn.
+      const listed = (own.collections ?? []).map((one) => `- ${one.name}${one.about?.length ? ` (about ${one.about.join(", ")})` : ""}${one.description ? `: ${one.description}` : ""}`);
+      const kept = listed.length ? `${own.name}'s own collections, which \`memory_search\`, \`memory_read\` and \`send_file\` reach on this turn because ${own.name} is the one speaking:\n${listed.join("\n")}\n` : "";
       lines.push(
-        `What ${own.name} told you outside this group, shown to you because ${own.name} is the one speaking now:\n${bySection(own.facts)}\n` +
+        `${told}${kept}` +
           `It is theirs, and the others here have not been told it. Use what this message of theirs needs, and leave the rest unsaid. ` +
           `On anyone else's turn you are not shown it: never tell it to them, and if they ask for it, say it is ${own.name}'s to ask for.`,
       );

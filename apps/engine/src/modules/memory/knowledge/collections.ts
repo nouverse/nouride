@@ -36,6 +36,12 @@ export interface CollectionSettings {
   /** Kept, never searched. */
   archived: boolean;
   /**
+   * Whether a collection of named people (or the admins') is used in a group on a turn one of them is the one speaking
+   * (`goesWithItsReader`). Unset, it follows `[memory] private_in_groups`. Nothing for a collection open to everyone or
+   * to one group, which the group reads whoever speaks.
+   */
+  inGroups?: boolean;
+  /**
    * A document's title by its path, kept beside its file's name (0.8.23): what search finds it by in any language. An
    * agent gives an English one when it keeps a document; a person sets one on the dashboard. Absent, a document's title
    * is its first heading or its file's name.
@@ -120,6 +126,7 @@ export function parseSettings(id: string, source: string | null): { settings: Co
     readers: "problem" in readers ? { kind: "admins" } : readers,
     about: about ?? [],
     archived: raw.archived === true,
+    ...(typeof raw.in_groups === "boolean" ? { inGroups: raw.in_groups } : {}),
     titles: titles ?? {},
     notes: notes ?? {},
   };
@@ -144,6 +151,7 @@ export function renderSettings(settings: CollectionSettings): string {
   lines.push(`readers = ${readersToml(settings.readers)}`);
   if (settings.about.length) lines.push(`about = ${JSON.stringify(settings.about)}`);
   if (settings.archived) lines.push("archived = true");
+  if (settings.inGroups !== undefined) lines.push(`in_groups = ${String(settings.inGroups)}`);
   // A table comes after the keys in TOML: the titles last, by path, so the file reads the same each time it is written.
   const titles = Object.entries(settings.titles ?? {}).sort(([a], [b]) => a.localeCompare(b));
   if (titles.length) lines.push("", "[titles]", ...titles.map(([path, title]) => `${JSON.stringify(path)} = ${JSON.stringify(title)}`));
@@ -191,6 +199,23 @@ export function mayUse(collection: Pick<Collection, "settings">, who: { agentId:
     case "people":
       return who.audience.kind === "dm" && readers.people.includes(who.audience.person);
   }
+}
+
+/**
+ * Whether a collection the group may not be answered from goes with its reader into it: on a turn one of its people is
+ * the one speaking, as a person's own facts do (`followsItsPerson`). A private collection was never searched in a
+ * group, "even one its reader is in": a person who had an agent keep a photo asked for it in a group and was told
+ * there was no such thing. Never true where `mayUse` is, so a collection is counted once; never for another group's
+ * collection; and off where the collection says so, or where it says nothing and the install does (`brings`).
+ */
+export function goesWithItsReader(collection: Pick<Collection, "settings">, who: { agentId: string; audience: Audience; admins: readonly string[]; brings: boolean }): boolean {
+  const { settings } = collection;
+  if (settings.archived || who.audience.kind !== "group" || !who.audience.speaker) return false;
+  if (settings.agents && !settings.agents.includes(who.agentId)) return false;
+  if (!(settings.inGroups ?? who.brings)) return false;
+  const { readers } = settings;
+  if (readers.kind === "people") return readers.people.includes(who.audience.speaker);
+  return readers.kind === "admins" && who.admins.includes(who.audience.speaker);
 }
 
 /** Who a collection made from this conversation is for: its one person, or its group. */

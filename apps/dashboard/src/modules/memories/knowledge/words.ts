@@ -21,8 +21,8 @@ export interface Names {
 }
 
 /**
- * Who may be answered from a collection, as a sentence. A collection kept to people is used only in a chat with one of
- * them alone, never in a group, even one they are all in: the rule memory keeps.
+ * Who may be answered from a collection, as a sentence. A collection kept to people is used in a chat with one of them
+ * alone, and in a group on the messages one of them sends (`inGroupsLine`): the rule memory keeps.
  */
 export function readersLine(readers: KnowledgeReaders, names: Names): string {
   switch (readers.kind) {
@@ -40,6 +40,16 @@ export function readersLine(readers: KnowledgeReaders, names: Names): string {
       return readers.people.length === 1 ? `Your agents may answer only ${who} from it, in a chat with just them.` : `Your agents may answer only ${who} from it, each in a chat with just them.`;
     }
   }
+}
+
+/**
+ * Whether a collection kept to people is used in a group, as a sentence under who may be answered from it; nothing for
+ * one open to everyone or to a group, which a group uses whoever is asking. `inGroups` is the collection's own answer,
+ * `everywhere` the memory setting it follows when it has none.
+ */
+export function inGroupsLine(readers: KnowledgeReaders, inGroups: boolean | undefined, everywhere: boolean): string {
+  if (readers.kind !== "people" && readers.kind !== "admins") return "";
+  return (inGroups ?? everywhere) ? "In a group, only on the messages they send themselves." : "Never in a group.";
 }
 
 /** Which agents look in a collection: every one, or those it names. */

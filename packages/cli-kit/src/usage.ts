@@ -274,6 +274,8 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride knowledge add - --name <file name> --to <collection>   The same, the file on stdin
   nouride knowledge reindex [collection]   Read again what changed in the knowledge folder
   nouride knowledge archive|unarchive <collection>   Keep a collection without searching it, or search it again
+  nouride knowledge in-groups <collection> on|off|default   Use a collection kept to people in a group, on the messages
+                                   its own reader sends: default follows memory's private_in_groups
   nouride knowledge title <collection>/<file> <words>   The words search finds a document by, beside its file's name:
                                    in English, it is found in any language; "" takes them off
   nouride knowledge rm <collection>/<file>   Remove a document

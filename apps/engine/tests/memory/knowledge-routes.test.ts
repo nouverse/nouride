@@ -146,4 +146,17 @@ describe("documents", () => {
     const opened = await read(await app("admin").hono.request("/knowledge/ops", json("PATCH", { readers: { kind: "group", chat: "telegram:nouva:-100" }, archived: false })));
     expect(opened.collection).toMatchObject({ archived: false, readers: { kind: "group", chat: "telegram:nouva:-100" } });
   });
+
+  test("whether it goes with its reader into a group: its own yes or no, null to follow the memory setting, in its file", async () => {
+    const file = () => readFileSync(join(h.knowledgeRoot, "ops", "knowledge.toml"), "utf8");
+    const no = await read(await app("operator").hono.request("/knowledge/ops", json("PATCH", { inGroups: false })));
+    expect(no.collection).toMatchObject({ inGroups: false });
+    expect(file()).toContain("in_groups = false");
+    const yes = await read(await app("operator").hono.request("/knowledge/ops", json("PATCH", { inGroups: true })));
+    expect(yes.collection).toMatchObject({ inGroups: true });
+    const follows = await read(await app("operator").hono.request("/knowledge/ops", json("PATCH", { inGroups: null })));
+    expect(follows.collection).not.toHaveProperty("inGroups");
+    expect(file()).not.toContain("in_groups");
+    expect((await app("operator").hono.request("/knowledge/ops", json("PATCH", { inGroups: "sometimes" }))).status).toBe(400);
+  });
 });

@@ -39,16 +39,27 @@ describe("keeping a document from a chat", () => {
   test("a new collection is made for the person in the chat, and the document is searched at once, there only", async () => {
     const { h, keep, found } = await home();
     const kept = await keep({ collection: "Health", title: "Lab results", content: "Cholesterol 180 in October." });
-    expect(kept).toMatchObject({ isError: false, content: 'Kept in "Health" as Lab results.md, a collection made now for the people in this chat. It can be searched now.' });
+    expect(kept).toMatchObject({ isError: false, content: 'Kept in "Health" as Lab results.md, a collection made now for the people in this chat. It can be searched now. This collection is its people\'s: used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.' });
     expect(readFileSync(join(h.knowledgeRoot, "health", "knowledge.toml"), "utf8")).toContain('readers = ["gading"]');
     expect(await found(GADING_DM, "cholesterol")).toEqual(["knowledge:health/Lab results.md#0"]);
     expect(await found(SAM_DM, "cholesterol", "nix")).toEqual([]);
   });
 
-  test("from a group, the collection is the group's", async () => {
+  test("from a group, the collection is the group's, and the agent is told so", async () => {
     const { h, keep } = await home();
-    await keep({ collection: "Family rules", title: "Rules", content: "Quiet after 22:00." }, FAMILY, "Gading");
+    const kept = await keep({ collection: "Family rules", title: "Rules", content: "Quiet after 22:00." }, FAMILY, "Gading");
+    expect(String(kept.content)).toEndWith("It can be searched now. This collection is one group's: used in that group, whoever is asking there.");
     expect(readFileSync(join(h.knowledgeRoot, "family-rules", "knowledge.toml"), "utf8")).toContain('readers = "group:whatsapp:main:1203@g.us"');
+  });
+
+  test("where the install keeps private things out of groups, or the collection does, the agent is told it is used in no group", async () => {
+    const { h, keep } = await home();
+    h.config.memory.privateInGroups = false;
+    expect(String((await keep({ collection: "Health", title: "Lab results", content: "Cholesterol 180 in October." })).content)).toEndWith("This collection is its people's: used in a direct chat with one of them, and in no group.");
+    // Its own answer, written in its settings since: the install's is not asked.
+    h.config.memory.privateInGroups = true;
+    writeFileSync(join(h.knowledgeRoot, "health", "knowledge.toml"), 'name = "Health"\nreaders = ["gading"]\nin_groups = false\n');
+    expect(String((await keep({ collection: "Health", title: "Blood pressure", content: "120 over 80 in November." })).content)).toEndWith("and in no group.");
   });
 
   test("a page keeps its address, and its title as a heading", async () => {
@@ -76,7 +87,7 @@ describe("keeping a document from a chat", () => {
       isError: false,
       content:
         'Kept in "Legal" as blank.txt, a collection made now for the people in this chat. It has no text to read, as a scanned page has none. It is kept as it is, and found by its title. ' +
-        'Say what it shows in `content`, kept with the same `file`, and it is found by that too. `send_file` with document="knowledge:legal/blank.txt#0" sends the file itself, here or in any chat that may read this collection.',
+        'Say what it shows in `content`, kept with the same `file`, and it is found by that too. `send_file` with document="knowledge:legal/blank.txt#0" sends the file itself, here or in any chat that may read this collection. This collection is its people\'s: used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.',
     });
     expect(existsSync(join(h.knowledgeRoot, "legal", "blank.txt"))).toBe(true);
   });
@@ -211,11 +222,11 @@ describe("keeping a document from a chat", () => {
     writeFileSync(join(h.knowledgeRoot, "ops", "runbook.md"), "# Runbook\nVzdump at 02:00.\n");
     // The fixture's household has one admin, so the admins' folder reaches nobody beyond this chat.
     const kept = await keep({ collection: "ops", title: "Backups", content: "PBS at 03:00." });
-    expect(kept.content).toBe('Kept in "ops" as Backups.md. It can be searched now.');
+    expect(kept.content).toBe('Kept in "ops" as Backups.md. It can be searched now. This collection is the admins\': used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.');
     expect(await found(GADING_DM, "pbs")).toEqual(["knowledge:ops/Backups.md#0"]);
     writeFileSync(join(h.knowledgeRoot, "ops", "knowledge.toml"), 'readers = "admins"\narchived = true\n');
     const archived = await keep({ collection: "ops", title: "Restore", content: "Restore from PBS." });
-    expect(archived.content).toBe('Kept in "ops" as Restore.md. The collection is archived, so it is kept but not searched until someone brings it back.');
+    expect(archived.content).toBe('Kept in "ops" as Restore.md. The collection is archived, so it is kept but not searched until someone brings it back. This collection is the admins\': used in a direct chat with one of them, and in a group on the turns one of them is the one speaking.');
   });
 
   test("without a knowledge base, a document is refused, never written into MEMORY.md", async () => {

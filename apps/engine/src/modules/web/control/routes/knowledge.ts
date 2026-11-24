@@ -60,6 +60,7 @@ function viewOf(collection: CollectionView) {
     agents: settings.agents,
     about: settings.about,
     archived: settings.archived,
+    ...(settings.inGroups !== undefined ? { inGroups: settings.inGroups } : {}),
     documents: collection.documents,
     sections: collection.sections,
     ...(collection.problem ? { problem: collection.problem } : {}),
@@ -136,6 +137,12 @@ export function registerKnowledgeRoutes(control: ControlApp, deps: ControlDeps):
     if (body.archived !== undefined) {
       if (typeof body.archived !== "boolean") return { error: "archived is true or false" };
       next.archived = body.archived;
+    }
+    // Its own answer to whether it goes with its reader into a group; null follows the memory setting again.
+    if (body.inGroups !== undefined) {
+      if (body.inGroups !== null && typeof body.inGroups !== "boolean") return { error: "inGroups is true, false, or null to follow the memory setting" };
+      if (body.inGroups === null) delete next.inGroups;
+      else next.inGroups = body.inGroups;
     }
     return next;
   }

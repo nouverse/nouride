@@ -151,6 +151,32 @@ describe("the Knowledge tab", () => {
     ]);
   });
 
+  test("a collection kept to people can be kept out of groups, or follow the memory setting; one open to everyone has no such choice", async () => {
+    const sent = watch({ "POST /knowledge": ok({ collection: null }) });
+    await renderPage("/memories", async () => {
+      await shows("House");
+      click("New collection");
+      await shows("Who may be answered from it");
+      // Kept to its maker: the choice is there, following the memory setting until one is made.
+      const select = () => body().querySelector('select[aria-label="In a group"]') as HTMLSelectElement | null;
+      expect([...select()!.options].map((option) => option.textContent)).toEqual(["As Knowledge & Memory's settings say", "Yes, on their own messages", "No, only in a chat with just them"]);
+      expect(select()!.value).toBe("");
+      expect(text()).toContain("Used there only on the messages one of its own people sends, never on anyone else's.");
+      // Open to everyone, a group reads it whoever is asking: nothing to choose.
+      ([...body().querySelectorAll("label")].find((label) => label.textContent?.startsWith("Everyone"))!.querySelector("input") as HTMLInputElement).click();
+      await eventually(() => select() === null, 2_000, "no choice for a collection open to everyone");
+      ([...body().querySelectorAll("label")].find((label) => label.textContent?.startsWith("Only me"))!.querySelector("input") as HTMLInputElement).click();
+      await eventually(() => select() !== null, 2_000, "the choice back for one kept to its maker");
+      Object.getOwnPropertyDescriptor(Object.getPrototypeOf(select()!), "value")!.set!.call(select()!, "off");
+      select()!.dispatchEvent(new (dom as unknown as typeof globalThis).Event("change", { bubbles: true }));
+      type(body().querySelector('input[placeholder="Mum\'s health"]') as HTMLInputElement, "My papers");
+      await eventually(() => button("Make collection")?.disabled === false, 2_000, "Make collection enabled");
+      click("Make collection");
+      await eventually(() => sent.some((request) => request.method === "POST"), 2_000, "the collection made");
+    });
+    expect(sent.find((request) => request.method === "POST")!.body).toEqual({ name: "My papers", description: "", agents: null, about: [], inGroups: false });
+  });
+
   test("a new collection: an operator keeps it to themselves, and is told when that means the admins", async () => {
     answer(asOperator);
     const sent = watch({ "POST /knowledge": ok({ collection: null }) });

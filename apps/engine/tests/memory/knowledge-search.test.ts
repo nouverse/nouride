@@ -46,9 +46,11 @@ describe("searching documents", () => {
     const hit = mine[0] as Extract<SearchHit, { kind: "section" }>;
     expect(hit.collection).toBe("Finance");
     expect(hit.section.trail).toBe("Expense policy › Hotels");
-    // Sam's chat, and a group the admin is in, find nothing of it.
+    // Sam's chat finds nothing of it, and neither does a group the admin is in on anyone else's turn. On his own turn
+    // there it is found as his own: `knowledge-own-in-group.test.ts`.
     expect(await h.memory.search(speaker(SAM_DM, "nix"), { query: "hotels receipt" })).toEqual([]);
-    expect(await h.memory.search(speaker(FAMILY), { query: "hotels receipt" })).toEqual([]);
+    expect(await h.memory.search(speaker({ ...FAMILY, senderId: "62877" }), { query: "hotels receipt" })).toEqual([]);
+    expect((await h.memory.search(speaker(FAMILY), { query: "hotels receipt" })).map((found) => (found.kind === "section" ? found.own : null))).toEqual([true]);
   });
 
   test("a folder with no settings is the admins'; everyone's is anyone's, a group's included", async () => {

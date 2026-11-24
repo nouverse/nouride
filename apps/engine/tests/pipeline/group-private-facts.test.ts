@@ -31,7 +31,7 @@ async function daemon(turns: NonNullable<Parameters<typeof pipelineBench>[0]>["t
   let memory!: Memory;
   const bench = await pipelineBench({
     turns,
-    agentToml: '[llm]\nprovider = "test"\n\n[tools]\nenabled = ["memory_write"]\napproval_required = []\n',
+    agentToml: '[llm]\nprovider = "test"\n\n[tools]\nenabled = ["memory_write", "memory_search"]\napproval_required = []\n',
     config: {
       memory: { pass: true, facts: "auto", ...memorySettings },
       people: [
@@ -105,4 +105,34 @@ test("with `[memory] private_in_groups` off his own turn in the group holds none
   await bench.pipeline.idle();
   expect(sent(bench, 2)).toContain("You are talking to Gading.");
   expect(sent(bench, 2)).not.toContain("BG 1891 ZD");
+});
+
+test("a document of his, searched on his turn in the group, is in that turn's requests and in none of the next person's", async () => {
+  const { bench } = await daemon([
+    { toolCalls: [{ id: "k1", name: "memory_write", args: { about: "knowledge", collection: "Car", title: "Fuel code", content: "The subsidy code for plate BG 1891 ZD is renewed every October." } }] },
+    { text: "Kept." },
+    { toolCalls: [{ id: "s1", name: "memory_search", args: { query: "subsidy code" } }] },
+    { text: "It is renewed in October." },
+    { text: "That is Gading's to ask for." },
+  ]);
+
+  bench.gateway.receive(envelope({ id: "m1", text: "keep this about my car" }));
+  await bench.pipeline.idle();
+
+  bench.gateway.receive(envelope({ id: "g1", ...GROUP, text: "nouva: when is my fuel code renewed?" }));
+  await bench.pipeline.idle();
+  expect(bench.requests).toHaveLength(4);
+  // His turn is told the collection is his to search there, finds it, and is shown what was found.
+  expect(sent(bench, 2)).toContain("Gading's own collections");
+  expect(sent(bench, 3)).toContain("BG 1891 ZD");
+  expect(sent(bench, 3)).toContain("(theirs)");
+
+  bench.gateway.receive(envelope({ id: "g2", ...GROUP, senderId: "user-2", senderName: "Rina", text: "nouva: what did you find for him?" }));
+  await bench.pipeline.idle();
+  expect(bench.requests).toHaveLength(5);
+  // Her request holds the same conversation: the search he asked for, and a line where what it found was.
+  expect(sent(bench, 4)).toContain("when is my fuel code renewed?");
+  expect(sent(bench, 4)).toContain("shown for that turn only");
+  expect(sent(bench, 4)).not.toContain("BG 1891 ZD");
+  expect(sent(bench, 4)).not.toContain("Gading's own collections");
 });

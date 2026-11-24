@@ -19,7 +19,7 @@
  */
 
 import type { Person } from "@nouride/shared";
-import { canSeeFact, scopeOf, type Audience } from "./access.ts";
+import { followsItsPerson, canSeeFact, scopeOf, type Audience } from "./access.ts";
 import { localTime } from "@/commons/clock.ts";
 import { isOver } from "./fact-dates.ts";
 import type { EpisodeFilter } from "./episode-filter.ts";
@@ -70,12 +70,16 @@ export interface SearchRequest {
   limit?: number;
   /** The knowledge collections this conversation may search, decided by the caller (`mayUse`), and whom each is about. */
   knowledge?: readonly KnowledgeScope[];
+  /** `[memory] private_in_groups`: in a group, the facts of the one speaking that go with them are found too (`followsItsPerson`). */
+  brings?: boolean;
 }
 
 export interface KnowledgeScope {
   id: string;
   name: string;
   about: readonly string[];
+  /** A collection that went with the one speaking into a group (`goesWithItsReader`): what is found in it is theirs. */
+  own?: true;
 }
 
 export type SearchHit =
@@ -87,9 +91,10 @@ export type SearchHit =
       /** The other pieces of the same conversation that were found too, oldest first — one hit stands for them all. */
       parts?: string[];
     }
-  | { kind: "fact"; fact: IndexedFact; score: number }
-  /** A section of a knowledge document (0.8.20), with its collection's name. */
-  | { kind: "section"; section: IndexedSection; collection: string; about: string[]; score: number };
+  /** `own`: found as the speaker's own in a group, which the group does not read: for that turn only. */
+  | { kind: "fact"; fact: IndexedFact; score: number; own?: true }
+  /** A section of a knowledge document (0.8.20), with its collection's name. `own` as a fact's. */
+  | { kind: "section"; section: IndexedSection; collection: string; about: string[]; score: number; own?: true };
 
 export interface SearchDeps {
   index: MemoryIndexPort;
@@ -136,11 +141,13 @@ export async function searchMemory(deps: SearchDeps, request: SearchRequest): Pr
 
   // Facts have no dates and no agents: a search narrowed by either is a search of conversations. So do documents.
   const readsFacts = !request.since && !request.until && !request.agents?.length;
+  // The speaker's own, which the group does not read: found on their turn, and marked so the result is that turn's alone.
+  const brought = (fact: IndexedFact) => request.brings === true && followsItsPerson(fact, fact.subject, request.audience);
   const subjects = subjectsFor(request, deps.people, terms);
   const facts = readsFacts
     ? deps.index
         .facts([...subjects, SHARED])
-        .filter((fact) => fact.subject === SHARED || canSeeFact(fact, fact.subject, request.audience))
+        .filter((fact) => fact.subject === SHARED || canSeeFact(fact, fact.subject, request.audience) || brought(fact))
         // Over is not found either: the conversation it came from still is, by its summary.
         .filter((fact) => !isOver(fact.text, localTime(deps.now(), deps.timeZone).day))
     : [];
@@ -195,12 +202,12 @@ export async function searchMemory(deps: SearchDeps, request: SearchRequest): Pr
         // Whom it is about, by name, for the line the model reads: without it the one found first could not be told apart
         // from its twin (0.8.20's check on the box).
         const named = scope.about.map((key) => deps.people.find((person) => person.key === key)?.name ?? key);
-        hits.set(item, { kind: "section", section, collection: scope.name, about: named, score: WEIGHTS.relevance * relevance + WEIGHTS.importance * 0.6 + WEIGHTS.recency + about });
+        hits.set(item, { kind: "section", section, collection: scope.name, about: named, score: WEIGHTS.relevance * relevance + WEIGHTS.importance * 0.6 + WEIGHTS.recency + about, ...(scope.own ? { own: true as const } : {}) });
       }
     } else {
       const fact = factsById.get(item);
       // A fact is what is known now: full recency, middling importance.
-      if (fact) hits.set(item, { kind: "fact", fact, score: WEIGHTS.relevance * relevance + WEIGHTS.importance * 0.6 + WEIGHTS.recency });
+      if (fact) hits.set(item, { kind: "fact", fact, score: WEIGHTS.relevance * relevance + WEIGHTS.importance * 0.6 + WEIGHTS.recency, ...(brought(fact) ? { own: true as const } : {}) });
     }
   }
 

@@ -17,6 +17,7 @@ interface CollectionRow {
   agents: string[] | null;
   about: string[];
   archived: boolean;
+  inGroups?: boolean;
   documents: number;
   sections: number;
   problem?: string;
@@ -96,7 +97,7 @@ function base64(bytes: Uint8Array): string {
 }
 
 export async function knowledge(client: Client, args: string[]): Promise<void> {
-  knownAction("knowledge", args[0], ["list", "search", "add", "reindex", "archive", "unarchive", "title", "rm"]);
+  knownAction("knowledge", args[0], ["list", "search", "add", "reindex", "archive", "unarchive", "in-groups", "title", "rm"]);
   const action = args[0] && !args[0].startsWith("-") ? args[0] : "list";
 
   if (action === "list") {
@@ -105,7 +106,8 @@ export async function knowledge(client: Client, args: string[]): Promise<void> {
     if (collections.length === 0) return say(`${DIM}no collections yet: make one on the dashboard's Knowledge tab, or a folder in .nouride/knowledge/${RESET}`);
     for (const row of collections) {
       const archived = row.archived ? ` ${YELLOW}archived${RESET}` : "";
-      say(`${BOLD}${row.name}${RESET} ${DIM}(${row.id})${RESET}${archived} · ${row.documents} document(s), ${row.sections} section(s) · for ${readersLine(row.readers)}${row.agents ? ` · agents ${row.agents.join(", ")}` : ""}`);
+      const inGroups = row.inGroups === undefined ? "" : row.inGroups ? " · in groups on its reader's messages" : " · never in a group";
+      say(`${BOLD}${row.name}${RESET} ${DIM}(${row.id})${RESET}${archived} · ${row.documents} document(s), ${row.sections} section(s) · for ${readersLine(row.readers)}${inGroups}${row.agents ? ` · agents ${row.agents.join(", ")}` : ""}`);
       if (row.description) say(`  ${DIM}${row.description}${RESET}`);
       if (row.problem) say(`  ${YELLOW}${row.problem}${RESET}`);
     }
@@ -160,6 +162,16 @@ export async function knowledge(client: Client, args: string[]): Promise<void> {
     const { collection } = await client.patch<{ collection: CollectionRow | null }>(`/knowledge/${encodeURIComponent(id)}`, { archived: action === "archive" });
     emit({ collection });
     return say(action === "archive" ? `✓ ${id} is kept, and no longer searched` : `✓ ${id} is searched again`);
+  }
+
+  // in-groups <collection> on|off|default: whether a collection kept to people goes with its reader into a group.
+  if (action === "in-groups") {
+    const [named, value] = [args[1], args[2]];
+    if (!named || named.startsWith("-") || !value || !["on", "off", "default"].includes(value)) usageError("usage: nouride knowledge in-groups <collection> on|off|default", "`default` follows `nouride memory set private_in_groups`");
+    const id = await collectionId(client, named);
+    const { collection } = await client.patch<{ collection: CollectionRow | null }>(`/knowledge/${encodeURIComponent(id)}`, { inGroups: value === "default" ? null : value === "on" });
+    emit({ collection });
+    return say(value === "default" ? `✓ ${id} follows the memory setting for what is private in groups` : value === "on" ? `✓ ${id} is used in a group on the messages its own reader sends` : `✓ ${id} is used only in a chat with its reader alone`);
   }
 
   // title <collection>/<path> <words…>: what search finds a document by, beside its file's name; "" takes it off.
