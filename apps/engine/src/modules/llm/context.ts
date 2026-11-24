@@ -313,7 +313,8 @@ export function trimToolResults(
 
       // Only tool output is trimmed, and tool output is text — so replacing the whole content
       // with a notice cannot discard a picture.
-      const notice: ChatMessage = { ...message, content: trimNotice(text, options.keep?.(message, text)) };
+      // What is one turn's alone is cleared and kept nowhere: a file would outlast the turn (`executor/turn-only.ts`).
+      const notice: ChatMessage = { ...message, content: trimNotice(text, message.turnOnly === undefined ? options.keep?.(message, text) : undefined) };
       tokens += estimateMessageTokens(notice) - estimateMessageTokens(message);
       out[index] = notice;
       trimmed += 1;
@@ -483,7 +484,7 @@ export function pruneToolOutputs(
   for (const index of candidates) {
     const message = out[index]!;
     const text = messageText(message.content);
-    out[index] = { ...message, content: trimNotice(text, options.keep?.(message, text)) };
+    out[index] = { ...message, content: trimNotice(text, message.turnOnly === undefined ? options.keep?.(message, text) : undefined) };
   }
   return { messages: out, pruned: candidates.length, savedTokens: saved };
 }

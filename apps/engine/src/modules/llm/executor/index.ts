@@ -20,6 +20,7 @@
  */
 
 import { groupParallelCalls } from "./tool-batching.ts";
+import { keptOf, resultMessage } from "./turn-only.ts";
 import { withUniqueIds } from "./call-ids.ts";
 import { estimateMessagesTokens } from "@nouride/llm";
 import {
@@ -430,13 +431,9 @@ export class TurnExecutor {
                 : `${call.name} ${describeToolResult(result)} · ${ran}ms${auto}`,
               { callId: call.id, name: call.name, error: result.isError === true, outcome: toolOutcome(result), ...(result.page && !result.isError ? { page: result.page } : {}), ...(result.liveEdit && !result.isError ? { liveEdit: result.liveEdit } : {}), ...(audit && typeof audit === "object" ? { audit } : {}) },
             );
-            working.push({
-              role: "tool",
-              content: nudge ? `${result.content}\n\n${nudge}` : result.content,
-              toolCallId: call.id,
-              timestamp: Date.now(),
-            });
-            req.journal?.record(working.at(-1)!);
+            working.push(resultMessage(result, call.id, nudge));
+            // What the conversation will keep of it: a result that is this turn's alone is not journaled whole.
+            req.journal?.record(keptOf(working.at(-1)!));
           });
 
           if (result.metadata?.parked !== undefined) parkedIn ??= iterations;
@@ -596,7 +593,8 @@ export class TurnExecutor {
 
       // The message as it was sent, notes and all: stored any other way, the next turn's request differs
       // from this one at that message and its prompt cache stops there (`reminders.ts`).
-      const turnMessages = [plan.userMessage, ...working.slice(window.messages.length)];
+      // A result that was the turn's alone leaves its line: the conversation the next turn reads holds none of it.
+      const turnMessages = [plan.userMessage, ...working.slice(window.messages.length).map(keptOf)];
       const messages = [...history, ...turnMessages];
       const contextTokens = estimateMessagesTokens(messages);
       // The chat's `/effort` level its model refused, said to the chat by the turn (0.8.17).

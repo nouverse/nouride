@@ -236,6 +236,12 @@ export interface ToolResult {
    * as data in `content`. The executor remembers it for the rest of the turn (`ToolContext.untrustedRead`).
    */
   untrusted?: true;
+  /**
+   * The result holds what only the one speaking may read: their own, shown in a group for their turn. This is what the
+   * conversation keeps in its place once the turn has ended, so the next person's turn holds none of it. The turn's own
+   * requests carry the whole result; it is never written to a file, and it is journaled as this.
+   */
+  turnOnly?: string;
   /** Present when the tool already put its full output on disk. See `ToolContext.spoolPath`. */
   spooled?: SpooledOutput;
   /**

@@ -28,8 +28,8 @@ const isSummary = (body: { messages?: { role: string; content: unknown }[] }) =>
  * its context; `steps` rounds of one call each, then an answer. `summary`: what the summarizer answers, or a status
  * it fails with.
  */
-async function longTurn(options: { steps: number; window: number; summary?: string | number; declared?: number; pauseAt?: number }) {
-  const seen = { order: [] as ("turn" | "summary")[], refused: 0, requests: [] as { messages: { role: string; content: unknown; tool_calls?: unknown[]; tool_call_id?: string }[] }[] };
+async function longTurn(options: { steps: number; window: number; summary?: string | number; declared?: number; pauseAt?: number; /** Each result is the turn's alone: what it holds, and the line kept of it. */ own?: { holds: string; line: string } }) {
+  const seen = { order: [] as ("turn" | "summary")[], refused: 0, summaries: [] as string[], requests: [] as { messages: { role: string; content: unknown; tool_calls?: unknown[]; tool_call_id?: string }[] }[] };
   const probe: Tool = {
     definition: { name: "probe", description: "Read one service's logs.", parameters: { type: "object", properties: { n: { type: "number" } } } },
     requiresApproval: false,
@@ -37,7 +37,7 @@ async function longTurn(options: { steps: number; window: number; summary?: stri
       const n = (args as { n?: number }).n;
       // A shutdown, asked for while this call runs: the turn stops at the next step boundary and is closed.
       if (n === options.pauseAt) bench!.pipeline.pause();
-      return { content: `svc${String(n)}: 2G of logs`, isError: false };
+      return options.own ? { content: `svc${String(n)}: ${options.own.holds}`, isError: false, turnOnly: options.own.line } : { content: `svc${String(n)}: 2G of logs`, isError: false };
     },
   } as Tool;
   const bot = new FakeGateway("telegram:nouva", "telegram");
@@ -49,6 +49,7 @@ async function longTurn(options: { steps: number; window: number; summary?: stri
         const json = (status: number, answer: unknown) => new Response(JSON.stringify(answer), { status, headers: { "content-type": "application/json" } });
         if (isSummary(body)) {
           seen.order.push("summary");
+          seen.summaries.push(JSON.stringify(body));
           if (typeof options.summary === "number") return json(options.summary, { error: { message: "the summarizer is overloaded" } });
           return json(200, { model: "test-model", choices: [{ message: { content: options.summary ?? NOTES }, finish_reason: "stop" }], usage: { prompt_tokens: 10, completion_tokens: 5 } });
         }
@@ -190,4 +191,14 @@ describe("a turn whose own steps fill the model's window", () => {
     expect(JSON.stringify(asked[0]!.messages)).toContain(STEPS_NOTE);
     expect(pairsWhole(asked[0]!.messages)).toBe(true);
   }, 60_000);
+});
+
+describe("results that were the turn's alone", () => {
+  test("are summed up as the line kept of them: the notes are kept, and whoever speaks next reads them", async () => {
+    const run = await longTurn({ steps: 30, window: 40_000, own: { holds: "PLATE-BG-1891-ZD", line: "[One person's own, shown for that turn only.]" } });
+    expect(run.inTurn).toBeGreaterThan(0);
+    expect(run.seen.summaries.join("\n")).toContain("One person's own, shown for that turn only.");
+    expect(run.seen.summaries.join("\n")).not.toContain("PLATE-BG-1891-ZD");
+    expect(JSON.stringify(run.history())).not.toContain("PLATE-BG-1891-ZD");
+  });
 });
