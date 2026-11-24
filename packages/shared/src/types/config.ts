@@ -1,6 +1,6 @@
 /** Daemon configuration — §20 SPEC. Mirrors config.example.toml one-to-one. */
 
-import type { ApprovalLevel, ExternalCliConfig, FallbackPair } from "./agent.ts";
+import type { AgentAccess, ApprovalLevel, ExternalCliConfig, FallbackPair } from "./agent.ts";
 import type { LogLevel } from "../logger.ts";
 import type { GatewayName } from "./envelope.ts";
 import type { LlmEffort, ProviderKind } from "./llm.ts";
@@ -832,6 +832,20 @@ export function toolIterationsRefusal(value: unknown, where: string): string | n
 export function resolveToolIterations(perAgent: number | undefined, daemon: number): number {
   const chosen = perAgent ?? daemon;
   return Math.min(TOOL_ITERATIONS_MAX, Math.max(TOOL_ITERATIONS_MIN, chosen));
+}
+
+/**
+ * The most tool round-trips one message to an agent open to everyone may take, whatever its pack or the daemon says.
+ * The daemon's bound on what one stranger's message costs, and no setting: a search, the document it names, a second
+ * search with other words, that document, and a file sent is five, and the sixth is room for one of them refused.
+ * An estimate, from what its four tools are for: no real model's run has set it yet.
+ */
+export const OPEN_TOOL_ITERATIONS = 6;
+
+/** A turn's tool round-trips for this agent: its own setting or the daemon's, and never past the bound of an open one. */
+export function toolIterationsFor(agent: { config: { access?: AgentAccess; llm: { maxToolIterations?: number } } }, daemon: number): number {
+  const chosen = resolveToolIterations(agent.config.llm.maxToolIterations, daemon);
+  return agent.config.access === "open" ? Math.min(chosen, OPEN_TOOL_ITERATIONS) : chosen;
 }
 
 /**

@@ -16,7 +16,7 @@
  */
 
 import { capStoredTurns } from "@/modules/llm/context.ts";
-import { createLogger, LLMError, toUserMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ChatMessage } from "@nouride/shared";
+import { createLogger, isOpenAgent, LLMError, toUserMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ChatMessage } from "@nouride/shared";
 import type { TurnResult } from "@/modules/llm/executor/types.ts";
 import { settleNotes } from "@/modules/tools/builtins/plan.ts";
 import { HookRegistry, ModelOverrides } from "@/modules/hooks/registry.ts";
@@ -400,8 +400,9 @@ export class TurnRunner {
      * teach except that it did not work, and writing down a half-finished procedure is precisely
      * how a shared skill pool poisons itself.
      */
-    // Not a mission's turn: its work is remembered once, from its report, when it ends.
-    if (!shape) void this.ctx.deps.reflection?.observe({
+    // Not a mission's turn: its work is remembered once, from its report, when it ends. Nor a turn of an agent open to
+    // everyone: what a stranger had it do is not a way of working any agent here should learn.
+    if (!shape && !isOpenAgent(agent)) void this.ctx.deps.reflection?.observe({
       agentId: agent.config.id,
       gatewayId: envelope.gatewayId,
       chatId: envelope.chatId,

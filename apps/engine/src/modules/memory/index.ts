@@ -37,7 +37,7 @@ import { archiveSize } from "./maintain.ts";
 import { identityOf, personOf } from "./people.ts";
 import { noteOwnFact, type FactReach, type OwnFactChange } from "./own-fact.ts";
 export type { FactReach } from "./own-fact.ts";
-import { nobody, PUBLIC_KEEPS_NOTHING, publicAudience, publicRecall } from "./public.ts";
+import { nobody, PUBLIC_KEEPS_NOTHING, publicAudience, publicRecall, withoutPublic } from "./public.ts";
 import { recallFor, type Recall } from "./recall.ts";
 import { cutActive, cutChat, runPass, type ActivitySource, type PassReport, type RunDeps } from "./run.ts";
 import { saveConversation, type SaveRequest } from "./saved.ts";
@@ -126,7 +126,8 @@ export function createMemory(deps: MemoryDeps) {
   const vault = vaultAt(config.memory.dir);
   const now = deps.now ?? Date.now;
   const timeZone = () => config.daemon.timezone;
-  const runDeps = (): RunDeps => ({ vault, index, analytics, state, source: deps.source, config, timeZone: timeZone(), now });
+  // What is cut into episodes and filed: every chat's log but an open agent's own exchanges (`public.ts`).
+  const runDeps = (): RunDeps => ({ vault, index, analytics, state, source: withoutPublic(deps.source, (agentId) => deps.publicAgent?.(agentId) === true), config, timeZone: timeZone(), now });
 
   /** The catch-up in flight, if one is: the pass and a person pressing Embed now both start one. */
   let catchingUp: Promise<CatchUpReport | null> | null = null;

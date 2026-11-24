@@ -42,7 +42,7 @@ export function limitTyped(text: string): number | null {
 
 /** Today against the limit, in one line. */
 export function todaySaid(today: NonNullable<AgentOpen["today"]>, maxDailyTokens: number): string {
-  const tokens = `${today.tokens.toLocaleString("en-US")} of ${maxDailyTokens.toLocaleString("en-US")} tokens used today${today.estimated ? " (part of it counted by Nouride, as an estimate)" : ""}`;
+  const tokens = `${today.tokens.toLocaleString("en-US")} of ${maxDailyTokens.toLocaleString("en-US")} tokens used today${today.estimated ? " (part of it counted by Nouride, as an estimate)" : ""}`; // plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it
   const people = today.people === 0 ? "nobody has written yet" : `${today.people} ${today.people === 1 ? "person has" : "people have"} written, ${today.messages} ${today.messages === 1 ? "message" : "messages"} answered`;
   return `${tokens}; ${people}.`;
 }
@@ -108,15 +108,15 @@ function OpenForm({ agent, open, onClose }: { agent: AgentSummary; open: AgentOp
       ) : null}
 
       <div className="flex flex-wrap items-start gap-4">
-        {number("Most tokens it may use in a day", tokens, setTokens, maxDailyTokens !== null)}
+        {number("Most tokens it may use in a day", tokens, setTokens, maxDailyTokens !== null) /* plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it */}
         {number("Most messages one person may send it in a day", messages, setMessages, maxDailyMessagesPerPerson !== null)}
       </div>
       <p className="text-xs text-base-content/65">
-        Both are yours to choose, and there is no starting value: it answers on your account. When the day's tokens are used it tells people it is closed until tomorrow, and you are told once. A person past their own messages is told once, too.
+        Both are yours to choose, and there is no starting value: it answers on your account. When the first is used up for the day it tells people it is closed until tomorrow, and you are told once. A person past their own messages is told once, too.
       </p>
 
       <label className="block">
-        <span className="mb-1 block text-xs opacity-70">What people are told when the day's tokens are used (optional)</span>
+        <span className="mb-1 block text-xs opacity-70">What people are told when the day's limit is used up (optional)</span>
         {/* Two lines, so the sentence said when this is left empty is read whole on a phone. */}
         <textarea
           rows={2}

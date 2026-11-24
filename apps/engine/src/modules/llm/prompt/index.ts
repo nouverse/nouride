@@ -19,7 +19,7 @@
 
 import { estimateTokens, SYSTEM_BLOCK_SEPARATOR } from "@nouride/llm";
 import { sha256Text } from "@nouride/runtime";
-import type { ChatMessage, SystemBlock } from "@nouride/shared";
+import { isOpenAgent, type ChatMessage, type SystemBlock } from "@nouride/shared";
 import {
   DELIMITER_END,
   DELIMITER_START,
@@ -32,6 +32,7 @@ import {
 } from "./types.ts";
 import { joinBlocks, renderDynamic, renderRuntime, renderSkills } from "./sections.ts";
 import { renderHarness } from "./harness.ts";
+import { OPEN_DYNAMIC, renderOpenHarness, renderOpenRuntime } from "./harness-open.ts";
 import { renderRecall } from "./recall.ts";
 
 export type { BuiltPrompt, HarnessFacts, PromptContext } from "./types.ts";
@@ -175,9 +176,12 @@ function collectSections(ctx: PromptContext): Section[] {
    * repository: the harness, the guardrails, the runtime framing. That prose is the product, and an
    * install being able to print it verbatim on request makes it public.
    */
+  // An agent open to everyone is told what a stranger may hear, and nothing else (`harness-open.ts`): its own files,
+  // a harness written for it, where its words go, and one sentence about who is speaking, the same for everyone.
+  const open = isOpenAgent(agent);
   push("identity", joinBlocks(persona.identity, persona.soul), true, "files", "operator");
   push("agents", persona.agents, true, "files", "operator");
-  push("skills", renderSkills(ctx), false, "files", "operator");
+  if (!open) push("skills", renderSkills(ctx), false, "files", "operator");
   push("memory", persona.memory, false, "files", "operator");
   /**
    * Harness before runtime, and the order is the whole point.
@@ -202,7 +206,7 @@ function collectSections(ctx: PromptContext): Section[] {
    * which reads as the model misbehaving rather than as a missing section.
    */
   // The product's own instructions, written here and shipped in the binary — see `Section.origin`.
-  push("harness", renderHarness(ctx), true, "capability", "shipped");
+  push("harness", open ? renderOpenHarness(ctx) : renderHarness(ctx), true, "capability", "shipped");
   /**
    * What is remembered about the people in this chat — after the harness, in a tier of its own.
    *
@@ -224,14 +228,14 @@ function collectSections(ctx: PromptContext): Section[] {
    * wording. The facts themselves are in `nouride status` and on the dashboard, so hiding this
    * costs the operator nothing they cannot read elsewhere.
    */
-  push("runtime", renderRuntime(ctx), true, "request", "shipped");
+  push("runtime", open ? renderOpenRuntime(ctx) : renderRuntime(ctx), true, "request", "shipped");
   /**
    * Who the agent is speaking to, which is the operator's `[[people]]` entry and not our prose.
    *
    * One line — "You are talking to <name>." — assembled from config they wrote. It reads as part of
    * the harness because of where it sits, and it is not.
    */
-  push("dynamic", renderDynamic(ctx), false, "request", "operator");
+  push("dynamic", open ? OPEN_DYNAMIC : renderDynamic(ctx), false, "request", "operator");
 
   // Guaranteed non-empty even for a bare pack: an agent with one markdown file still
   // needs to know its own name.

@@ -7,7 +7,7 @@
  * except the usage total it is handed.
  */
 
-import { LLMError, createLogger, resolveToolIterations, type ChatMessage, type ChatParams, type ChatResponse, type LlmEffort, type LoadedAgent, type RetryInfo, type StopReason, type SystemBlock, type TokenUsage, type ToolCall, rootSessionOf } from "@nouride/shared";
+import { LLMError, createLogger, toolIterationsFor, type ChatMessage, type ChatParams, type ChatResponse, type LlmEffort, type LoadedAgent, type RetryInfo, type StopReason, type SystemBlock, type TokenUsage, type ToolCall, rootSessionOf } from "@nouride/shared";
 import { estimateMessagesTokens } from "@nouride/llm";
 import { sha256Text } from "@nouride/runtime";
 import { truncateContext } from "@/modules/llm/context.ts";
@@ -446,7 +446,7 @@ export class ProviderCaller {
     const fields = {
       agent_id: req.agent.config.id, turn_id: req.turnId,
       reason,
-      cap: resolveToolIterations(req.agent.config.llm.maxToolIterations, this.deps.llm.limits.maxToolIterations),
+      cap: toolIterationsFor(req.agent, this.deps.llm.limits.maxToolIterations),
     };
     // A finish a tool asked for is the turn going as designed — starting a background job always ends one — and at
     // `warn` it was the commonest warning in a live journal. A rescue (the cap, a deadline, an empty reply) is one.

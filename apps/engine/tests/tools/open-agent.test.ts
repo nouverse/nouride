@@ -58,10 +58,27 @@ describe("an open agent's toolset", () => {
 
   test("the four run with nobody asked: the one in the chat is a stranger", () => {
     expect(open.gate("memory_search", { query: "price list" }, ctx)).toEqual({ action: "run", via: "ceiling" });
-    expect(open.gate("memory_read", { id: "knowledge:prices/list.md#0" }, ctx)).toEqual({ action: "run", via: "ceiling" });
+    expect(open.gate("memory_read", { document: "knowledge:prices/list.md#0" }, ctx)).toEqual({ action: "run", via: "ceiling" });
     expect(open.gate("attachment_read", {}, ctx)).toEqual({ action: "run", via: "ceiling" });
     expect(open.gate("send_file", { document: "knowledge:prices/list.pdf#0" }, ctx)).toEqual({ action: "run", via: "ceiling" });
     for (const name of names) expect(open.requiresApproval(name)).toBe(false);
+  });
+
+  test("the two that read are told as what they are for it: documents opened to everyone, with no conversation, person or agent to name", () => {
+    const told = (name: string) => open.definitions.find((definition) => definition.name === name)!;
+    const fields = (name: string) => Object.keys((told(name).parameters as { properties: Record<string, unknown> }).properties).sort();
+    expect({ search: fields("memory_search"), read: fields("memory_read") }).toEqual({ search: ["limit", "query"], read: ["document"] });
+    expect(told("memory_search").description).toStartWith("Search the documents opened to everyone:");
+    expect(told("memory_read").description).toBe("Open a document that `memory_search` found: one section of it, or the whole document.");
+    // The tools' own words, for an agent that remembers: none of them is this agent's to be told.
+    const sent = JSON.stringify([told("memory_search"), told("memory_read")]);
+    for (const theirs of ["conversation", "people", "agents", "facts", "MEMORY.md", "nouva", "since", "until"]) expect(sent).not.toContain(theirs);
+    expect(JSON.stringify(tools.get("memory_search")!.definition)).toContain("conversations");
+    // A conversation is nobody's to open here; nor its own notes, which it holds already.
+    const refusal = expect.objectContaining({ action: "refuse", reason: expect.stringContaining("there is no conversation for it to open") });
+    expect(open.gate("memory_read", { conversation: "2026-09-25-0459-nouva" }, ctx)).toEqual(refusal);
+    expect(open.gate("memory_read", { document: "knowledge:prices/list.md#0", conversation: "2026-09-25-0459-nouva" }, ctx)).toEqual(refusal);
+    expect(open.gate("memory_read", {}, ctx)).toEqual(refusal);
   });
 
   test("send_file sends a kept document alone: no path, no address, and its schema names neither", () => {

@@ -132,7 +132,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageE
     parts.admission.resetJobWakeChain(envelope.gatewayId, envelope.chatId);
   }
   if (!parts.admission.admit(envelope)) return;
-  tellTaken(parts.deps, gateway, envelope, taken);
+  tellTaken(parts.deps, gateway, envelope, taken, parts.admission.strangerOf(envelope) !== undefined);
   if (!parts.inbox.intake(envelope)) return;
   /**
    * Blue ticks, here and not earlier.

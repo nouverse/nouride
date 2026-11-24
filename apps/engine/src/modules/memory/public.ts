@@ -13,6 +13,7 @@
  */
 
 import type { Audience } from "./access.ts";
+import type { ChatSource } from "./cut.ts";
 import type { Recall } from "./recall.ts";
 
 /** Who an open agent's reads are made as. A colon, so never a person's key; `public`, which no connection is called. */
@@ -32,3 +33,13 @@ export function publicRecall(knowledge: NonNullable<Recall["knowledge"]>): Recal
 
 /** Said to a call that would write, should one ever reach memory for an open agent: it holds no tool that does. */
 export const PUBLIC_KEEPS_NOTHING = "This agent is open to everyone and keeps nothing a chat tells it.";
+
+/**
+ * A chat's log without what an agent open to everyone was asked and answered: its conversations make no episode, so
+ * what one stranger said is neither filed nor read by the nightly pass, and never becomes what any agent remembers.
+ * A chat that only such an agent answered in then has nothing to cut.
+ */
+export function withoutPublic<Source extends Pick<ChatSource, "exchangesBetween">>(source: Source, isPublic: (agentId: string) => boolean): Source {
+  const exchangesBetween: ChatSource["exchangesBetween"] = (...window) => source.exchangesBetween(...window).filter((exchange) => !isPublic(exchange.agentId));
+  return Object.assign(Object.create(source) as Source, { exchangesBetween });
+}

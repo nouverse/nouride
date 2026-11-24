@@ -158,6 +158,15 @@ function takenNotice(taken: readonly TakenSecret[]): string {
 }
 
 /**
+ * What a stranger on an open agent's connection reads instead. Taken out all the same, so no stranger's password is
+ * kept in this install's records; but an open agent runs no command to use one in, and a stranger has no `/secret`.
+ */
+function takenFromStranger(taken: readonly TakenSecret[]): string {
+  const what = taken.map((secret) => secret.label).join(", ");
+  return `🔒 Part of your message looked like a password or a key (${what}), so it was taken out before anything stored or read it. Nothing here can use one, so please do not send them. If it was not one, write it again in other words.`;
+}
+
+/**
  * Which bot says it. In a one-to-one chat, the one it was sent to. In a room, the orchestrator's — the room's front
  * desk — where it has a connection up on this platform: whichever bot's copy of the message came first takes the
  * credential (`secretScope`), and that was Nestor's in a group where Nouva leads (2026-10-21). Another bot's, or none
@@ -175,9 +184,9 @@ function speakerFor(deps: Pick<PipelineDeps, "config" | "gateways">, gateway: Ga
  * Tell the person what was taken: in the chat, from the daemon, and on the dashboard's timeline — where its own
  * connection hands a line only to a request still waiting for it.
  */
-export function tellTaken(deps: Pick<PipelineDeps, "chatEvents" | "config" | "gateways">, gateway: Gateway, envelope: MessageEnvelope, taken: readonly TakenSecret[]): void {
+export function tellTaken(deps: Pick<PipelineDeps, "chatEvents" | "config" | "gateways">, gateway: Gateway, envelope: MessageEnvelope, taken: readonly TakenSecret[], stranger = false): void {
   if (taken.length === 0) return;
-  const text = takenNotice(taken);
+  const text = stranger ? takenFromStranger(taken) : takenNotice(taken);
   deps.chatEvents?.record({
     gatewayId: envelope.gatewayId,
     chatId: envelope.chatId,

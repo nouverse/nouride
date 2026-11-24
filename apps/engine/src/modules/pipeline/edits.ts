@@ -63,7 +63,7 @@ export function arriveEdit(parts: ArrivalParts, gateway: Gateway, envelope: Mess
   parts.admission.resetJobWakeChain(envelope.gatewayId, envelope.chatId);
   if (!parts.admission.admit(envelope)) return;
   // What `arrive` took out of the edit before any of that, said to the person now they are let in (`chat-secrets.ts`).
-  tellTaken(parts.deps, gateway, envelope, taken);
+  tellTaken(parts.deps, gateway, envelope, taken, parts.admission.strangerOf(envelope) !== undefined);
   const isCommand = (text: string) => parts.hooks.has(parseCommand(text)?.command ?? "");
   // Words, never a command: `/approve` written into an old message must not answer what is waiting now.
   if (isCommand(envelope.text)) return void log.info("an edit that now reads as a command, not run", about);

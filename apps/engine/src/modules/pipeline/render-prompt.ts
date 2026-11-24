@@ -8,7 +8,7 @@
 
 import { agentCommandsHaveOwnUsers, dirname, join } from "@nouride/runtime";
 import { agentBins } from "@/modules/toolchain/env.ts";
-import { resolveToolIterations, resolveTurnDurationMs, type MessageEnvelope } from "@nouride/shared";
+import { resolveTurnDurationMs, toolIterationsFor, type MessageEnvelope } from "@nouride/shared";
 import { buildSystemPrompt, workFacts } from "@/modules/llm/prompt/index.ts";
 import type { BuiltPrompt } from "@/modules/llm/prompt/types.ts";
 import { idFormsFor } from "@/modules/people/match.ts";
@@ -104,10 +104,7 @@ envelope: MessageEnvelope,
       // second setting for the same fact is one more thing that can disagree with reality.
       installDir: dirname(dirname(ctx.deps.config.daemon.dataDir)),
       ...agentBins(join(dirname(ctx.deps.config.daemon.dataDir), "bin"), ctx.workspaceFor(agent.config.id).own, agentCommandsHaveOwnUsers()),
-      maxToolIterations: resolveToolIterations(
-        agent.config.llm.maxToolIterations,
-        ctx.deps.config.llm.limits.maxToolIterations,
-      ),
+      maxToolIterations: toolIterationsFor(agent, ctx.deps.config.llm.limits.maxToolIterations),
       maxTurnDurationMs: resolveTurnDurationMs(
         agent.config.llm.maxTurnDurationMs,
         ctx.deps.config.llm.limits.maxTurnDurationMs,

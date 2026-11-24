@@ -14,6 +14,7 @@
  * `timestamp: Date.now()`.
  */
 
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { removePath, type SqliteDb } from "@nouride/runtime";
 import { AgentRegistry } from "@nouride/persona";
@@ -126,7 +127,13 @@ interface Install {
 
 export async function pipelineBench(options: BenchOptions = {}): Promise<Bench> {
   const agentsDir = tempDir("agents");
-  const dataDir = tempDir("data");
+  // The data folder inside a folder of the bench's own, as an install's is inside `.nouride`: the knowledge base is
+  // kept beside the data (`knowledgeDirOf`), and with the data folder straight in the system's temp directory every
+  // bench that booted memory shared one `knowledge` folder there, where one test's kept documents piled up run after
+  // run and were found by another's search.
+  const installDir = tempDir("install");
+  const dataDir = join(installDir, "data");
+  mkdirSync(dataDir, { recursive: true });
   for (const agent of options.agents ?? ["nouva"]) {
     const spec = typeof agent === "string" ? { id: agent } : agent;
     await writeAgentPack(agentsDir, { soul: "Be brief.", configToml: options.agentToml ?? '[llm]\nprovider = "test"\n', ...spec });
@@ -143,7 +150,7 @@ export async function pipelineBench(options: BenchOptions = {}): Promise<Bench> 
   bench.dispose = () => {
     opened.close();
     removePath(agentsDir);
-    removePath(dataDir);
+    removePath(installDir);
   };
   return bench;
 }

@@ -11,7 +11,7 @@
 
 import { estimateTokens, estimateToolsTokens } from "@nouride/llm";
 import { foldDefinitions } from "@/modules/tools/fold.ts";
-import { createLogger, type ChatMessage, type LLMProvider, type Skill, type SystemBlock , resolveToolIterations, resolveTurnDurationMs, tierModel } from "@nouride/shared";
+import { createLogger, type ChatMessage, type LLMProvider, type Skill, type SystemBlock , toolIterationsFor, resolveTurnDurationMs, tierModel } from "@nouride/shared";
 import { compactionThreshold, conversationBudget, pruneToolOutputs, resolveCompactionLimit, truncateContext } from "@/modules/llm/context.ts";
 import { ASSUMED_CACHE_LIFETIME_MS, CacheBreaks } from "@/modules/llm/cache-breaks.ts";
 import { compactHistory } from "@/modules/llm/summarize.ts";
@@ -275,10 +275,7 @@ export async function prepareTurn(
         : {}),
       // What this agent will actually be stopped at — the prompt must not promise a different
       // number from the one the loop enforces.
-      maxToolIterations: resolveToolIterations(
-        req.agent.config.llm.maxToolIterations,
-        deps.llm.limits.maxToolIterations,
-      ),
+      maxToolIterations: toolIterationsFor(req.agent, deps.llm.limits.maxToolIterations),
       // Resolved per agent for the same reason the line above it is: this is the sentence that
       // tells the model what it has, and a prompt that names the daemon's clock beside this
       // agent's round-trip cap reads as though both were the agent's.
