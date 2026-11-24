@@ -13,8 +13,11 @@ export interface Fact {
   section: string;
   text: string;
   source?: string;
-  readers?: { people: string[]; chat?: string };
+  readers?: { people: string[]; chat?: string; direct?: true };
 }
+
+/** How a line says its fact is kept to direct chats, as the engine writes it. */
+const DIRECT_ONLY = "direct only";
 
 const HEADING = /^##\s+(.+?)\s*$/;
 const FACT = /^[-*]\s+(.*?)(?:\s+\(\[\[([^\]|]+)\]\]\))?(?:\s+\{([^}]*)\})?\s*$/;
@@ -45,21 +48,33 @@ export function factsOf(text: string): Fact[] {
       text: match[1].trim(),
       ...(match[2] ? { source: match[2] } : {}),
       ...(readers
-        ? { readers: { people: readers.filter((item) => !item.startsWith("in ")), ...(readers.find((item) => item.startsWith("in ")) ? { chat: readers.find((item) => item.startsWith("in "))!.slice(3) } : {}) } }
+        ? {
+            readers: {
+              people: readers.filter((item) => !item.startsWith("in ") && item !== DIRECT_ONLY),
+              ...(readers.find((item) => item.startsWith("in ")) ? { chat: readers.find((item) => item.startsWith("in "))!.slice(3) } : {}),
+              ...(readers.includes(DIRECT_ONLY) ? { direct: true as const } : {}),
+            },
+          }
         : {}),
     });
   }
   return facts;
 }
 
-/** Who may read a fact, in words. */
-function readersLabel(fact: Fact, nameOf: (key: string) => string): string {
+/**
+ * Who may read a fact, in words. One said in a direct chat is its person's: read wherever they are the one asking, a
+ * group included, unless they kept it to their direct chats or the install keeps private things out of groups
+ * (`inGroups` false).
+ */
+export function readersLabel(fact: Fact, nameOf: (key: string) => string, inGroups = true): string {
   if (!fact.readers) return "Written by hand";
   const people = fact.readers.people.map(nameOf).join(", ");
-  return fact.readers.chat ? `Said in a group with ${people}` : `Only where ${people} ${fact.readers.people.length > 1 ? "are" : "is"}`;
+  if (fact.readers.chat) return `Said in a group with ${people}`;
+  if (fact.readers.direct) return `Kept to direct chats with ${people}`;
+  return inGroups ? `Wherever ${people} ${fact.readers.people.length > 1 ? "are" : "is"} the one asking` : `Only in direct chats with ${people}`;
 }
 
-export function FactList({ facts, nameOf, onOpenEpisode }: { facts: Fact[]; nameOf: (key: string) => string; onOpenEpisode: (id: string) => void }) {
+export function FactList({ facts, nameOf, onOpenEpisode, inGroups }: { facts: Fact[]; nameOf: (key: string) => string; onOpenEpisode: (id: string) => void; inGroups?: boolean }) {
   const sections = [...new Set(facts.map((fact) => fact.section))];
   return (
     <div className="space-y-3">
@@ -72,7 +87,7 @@ export function FactList({ facts, nameOf, onOpenEpisode }: { facts: Fact[]; name
               .map((fact) => (
                 <li key={`${section}:${fact.text}`} className="flex flex-wrap items-baseline gap-x-2 text-sm">
                   <span>{fact.text}</span>
-                  <span className="text-base-content/65 text-xs">{readersLabel(fact, nameOf)}</span>
+                  <span className="text-base-content/65 text-xs">{readersLabel(fact, nameOf, inGroups)}</span>
                   {fact.source ? (
                     <button type="button" className="link link-hover text-base-content/65 inline-flex items-center gap-0.5 text-xs" onClick={() => onOpenEpisode(fact.source!)}>
                       <Link2 size={11} /> from a conversation

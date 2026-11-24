@@ -509,6 +509,9 @@ export const DEFAULT_CONFIG: GlobalConfig = {
     promptRecent: 3,
     // On: what an agent remembers is what makes it the same agent tomorrow. Off is for a person who would rather it asked.
     recall: true,
+    // On: a person asks an agent for something of theirs wherever they happen to be, and a group that could not read it
+    // looked like an agent that had forgotten. Nobody else's turn reads it, and one fact can be kept out by asking.
+    privateInGroups: true,
     // Half a year of verbatim transcript; the summary is kept forever. `0` keeps transcripts forever.
     transcriptDays: 180,
     archive: true,

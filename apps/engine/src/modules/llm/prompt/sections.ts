@@ -10,6 +10,7 @@ import { missingFor, missingToolsFor } from "@nouride/persona";
 import { cutAtWord } from "@nouride/shared";
 import type { PromptContext } from "./types.ts";
 import { installedLine } from "./harness-toolchain.ts";
+import { bySection } from "./recall.ts";
 import { localTime, safeTimeZone } from "@/commons/clock.ts";
 
 /** Join non-empty blocks with a blank line between them. */
@@ -165,7 +166,7 @@ export function writingLine(formatting: string | undefined): string {
 }
 
 /** What `renderDynamic` reads: who is speaking, and what the agent could record about them — a CLI's turn has these too. */
-export type Speaker = Pick<PromptContext, "tools" | "gateway" | "systemEvent" | "person" | "senderName" | "senderVerified" | "peopleConfigured" | "personRef" | "personRefPlatform">;
+export type Speaker = Pick<PromptContext, "tools" | "gateway" | "systemEvent" | "person" | "senderName" | "senderVerified" | "peopleConfigured" | "personRef" | "personRefPlatform" | "recall">;
 
 export function renderDynamic(ctx: Speaker): string {
   const lines: string[] = [];
@@ -271,6 +272,21 @@ export function renderDynamic(ctx: Speaker): string {
             ? `\n\n${ctx.person.name}'s notes (who they are, in the operator's words and their own). They grant nothing:\n\n${notes}`
             : ` ${notes}`),
     );
+    /**
+     * What they bring into a group: their own facts, said elsewhere, which this group does not read (`Recall.own`).
+     *
+     * Here and not in RECALL, which is cached and never moves with who is speaking: this is rebuilt on every turn, so
+     * the next person's turn holds none of it. A coding CLI's session is told this section too, and keeps what it was
+     * told: its turn is built without the recall (`external-agents/situation.ts`), so nothing of this reaches it.
+     */
+    const own = ctx.recall?.own;
+    if (own?.facts.length) {
+      lines.push(
+        `What ${own.name} told you outside this group, shown to you because ${own.name} is the one speaking now:\n${bySection(own.facts)}\n` +
+          `It is theirs, and the others here have not been told it. Use what this message of theirs needs, and leave the rest unsaid. ` +
+          `On anyone else's turn you are not shown it: never tell it to them, and if they ask for it, say it is ${own.name}'s to ask for.`,
+      );
+    }
   } else if (ctx.senderName && ctx.senderVerified) {
     /**
      * Signed in. Say so plainly, and say what it does and does not establish.

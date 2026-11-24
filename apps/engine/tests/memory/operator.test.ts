@@ -81,6 +81,10 @@ describe("[memory] settings", () => {
     const file = (await readTextFileIfExists(configPath)) ?? "";
     expect(file).toContain("prompt_recent = 8");
     expect(file).toContain("transcript_days = 14");
+    // The switch for what a person brings into a group, by its key in the file; read on the next turn, with no restart.
+    expect(await setMemorySettings(settings, { patch: { privateInGroups: false } })).toEqual({ ok: true, restartRequired: false });
+    expect(h.config.memory.privateInGroups).toBe(false);
+    expect((await readTextFileIfExists(configPath)) ?? "").toContain("private_in_groups = false");
   });
 
   test("semantic search is switched on only once it embeds", async () => {
@@ -282,6 +286,10 @@ describe("routes", () => {
     expect((await app("operator").hono.request("/memory/settings", json("PUT", { remember: [] }))).status).toBe(400);
     expect((await app("operator").hono.request("/memory/settings", json("PUT", { recall: false }))).status).toBe(200);
     expect((await app("operator").hono.request("/memory/settings", json("PUT", { recall: "off" }))).status).toBe(400);
+    // Whether a person's own facts are read in a group on their turns: a switch like the others, read back as saved.
+    expect((await app("operator").hono.request("/memory/settings", json("PUT", { privateInGroups: "off" }))).status).toBe(400);
+    expect((await (await app("operator").hono.request("/memory/settings")).json()) as Record<string, unknown>).toMatchObject({ privateInGroups: true });
+    expect((await app("operator").hono.request("/memory/settings", json("PUT", { privateInGroups: false }))).status).toBe(200);
   });
 
   test("one person's recall: true, false, or null to follow the memory setting", async () => {

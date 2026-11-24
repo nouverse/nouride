@@ -22,7 +22,7 @@ import type { AttachmentReadOptions } from "@/modules/tools/builtins/attachment.
 import { withFileLock } from "@/commons/file-lock.ts";
 import { appendBlock, hasSection, leadingHeading, replaceSection } from "@/modules/tools/builtins/memory-markdown.ts";
 import type { Tool, ToolContext, ToolResult } from "@nouride/shared";
-import { memoryTextIsEnglish, WRITE_IN_ENGLISH, type Memory, type Speaker } from "@/modules/memory/index.ts";
+import { memoryTextIsEnglish, WRITE_IN_ENGLISH, type FactReach, type Memory, type Speaker } from "@/modules/memory/index.ts";
 import { keepDocument } from "@/modules/tools/builtins/memory-keep.ts";
 
 const MEMORY_FILE = "MEMORY.md";
@@ -274,7 +274,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
           ? "Keep something. about=agent (the default) is your own MEMORY.md (how you work, your " +
             "conventions, what you are in the middle of) and never facts about a person. about=person " +
             "keeps, corrects or drops one fact about the person you are talking to (their work, family, " +
-            "tastes, plans) right away (change=add, update or remove); their name is `person_record`. " +
+            "tastes, plans, what they ask you to do for them each time) right away (change=add, update or remove); their name is `person_record`. " +
             "The rest is filed for you each night. about=knowledge keeps a document someone hands you to keep for " +
             "reference (an SOP, a manual, a file, a page): `collection` names where (a new name makes one for the people " +
             "here), an English `title`, and the text as `content` or a `file`; `source` is a page's address. A PDF, Word, Excel or " +
@@ -299,6 +299,7 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
                 },
                 change: { type: "string", enum: ["add", "update", "remove"], description: "For about=person: add a fact (the default), or update or remove the one named by `current`." },
                 current: { type: "string", description: "For about=person with update or remove: the fact as it reads now, word for word." },
+                only_direct: { type: "boolean", description: "For about=person, in a direct chat: true keeps the fact to their direct chats, never read in a group; set it when they ask. With change=update and the fact's own words as `content` it changes only this; false lifts it." },
               }
             : { section: { type: "string", description: "Heading text to target, required for replace_section" } }),
           mode: {
@@ -327,12 +328,14 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
       if (change !== "add" && !current) return { content: "`current` must be the fact as it reads now.", isError: true };
       // A fact kept after reading outside content says so on its line, wherever it is shown.
       const kept = ctx.untrustedRead?.length ? factMarkedOutside(text, ctx.untrustedRead) : text;
+      if (args.only_direct !== undefined && typeof args.only_direct !== "boolean") return { content: "`only_direct` must be true or false.", isError: true };
+      const direct = typeof args.only_direct === "boolean" ? { direct: args.only_direct } : {};
       const result = await memory.noteAboutSpeaker(
         speakerOf(ctx),
         change === "add"
-          ? { op: "add", section: typeof args.section === "string" && args.section.trim() ? args.section.trim() : "Notes", text: kept }
+          ? { op: "add", section: typeof args.section === "string" && args.section.trim() ? args.section.trim() : "Notes", text: kept, ...direct }
           : change === "update"
-            ? { op: "update", current, text: kept }
+            ? { op: "update", current, text: kept, ...direct }
             : { op: "remove", current },
       );
       if ("refused" in result) return { content: result.refused, isError: true };
@@ -342,12 +345,25 @@ export function createMemoryWriteTool(memory?: MemoryToolsDeps, files?: Pick<Att
             ? "Already known, so nothing changed."
             : change === "remove"
               ? "Removed from their profile."
-              : "Kept in their profile, readable only in this chat and by the people in it.",
+              : `Kept in their profile. ${factReadWhere(result.reach)}`,
         isError: false,
         metadata: { about: "person" },
       };
     },
   };
+}
+
+/**
+ * Where a fact just kept is read, as the agent is to say it. It said "readable only in this chat" of every fact, which
+ * was true of none: one said in a direct chat is read in every direct chat with its person, and an agent repeated the
+ * sentence to a person whose next question, from another chat, it then could not answer.
+ */
+export function factReadWhere(reach: FactReach): string {
+  if (reach.directOnly) return "It is kept to their direct chats, with any agent: not read in a group, even on a turn they are the one speaking.";
+  if (reach.said === "group") return `It is read in this group and in the direct chats of the people in it${reach.follows ? ", and wherever its person is the one speaking" : ""}.`;
+  return reach.follows
+    ? "It is theirs: read on any turn they are the one speaking, in a direct chat or a group, with any agent, and on nobody else's turn."
+    : "It is read in their direct chats, with any agent, and in no group: this install keeps what is said in private out of groups.";
 }
 
 /**
@@ -467,7 +483,7 @@ async function writeAgentMemory(args: Record<string, unknown>, ctx: ToolContext)
 
     return {
       content:
-        `Memory updated (${mode}). Now ${updated.length} chars.` +
+        `Memory updated (${mode}). Now ${updated.length} chars. It is your own file: every chat you are in reads it from its next turn, whoever is speaking there.` +
         (shrunk
           ? ` That left MEMORY.md ${removed} lines shorter: replace_section keeps only what you sent. ` +
             `If you meant to change part of "${String(args.section)}", write it again whole: the old text is still in your prompt.`

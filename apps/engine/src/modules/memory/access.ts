@@ -9,6 +9,10 @@
  * exactly where that conversation is. A fact a person wrote by hand has none, and is readable wherever
  * its subject is present.
  *
+ * - **A person's own facts go with them** (`followsItsPerson`): on a turn they are the one speaking in a group, what
+ *   their direct chat reads about them is read there too. Not on anyone else's turn, not with `[memory]
+ *   private_in_groups` off, and not a fact its person kept to their direct chats.
+ *
  * The owner is not special here: their DM reaches their own conversations across agents, the same as
  * anyone's, and never someone else's DM.
  *
@@ -21,8 +25,11 @@ import type { Readers } from "./profile.ts";
 export type Audience =
   /** One person. `person` is their identity: a person key, or a platform id. */
   | { kind: "dm"; chat: string; person: string }
-  /** A group: its chat, and the people known to be speaking in it. */
-  | { kind: "group"; chat: string; present: readonly string[] };
+  /**
+   * A group: its chat, and the people known to be speaking in it. `speaker` is whose turn this is, by the identity
+   * the platform's sender id gives, where there is a turn: what the group may read never depends on it.
+   */
+  | { kind: "group"; chat: string; present: readonly string[]; speaker?: string };
 
 /**
  * The chat as memory records it. One spelling, so an episode and an audience always compare.
@@ -62,6 +69,22 @@ export function canSeeFact(fact: { readers?: Readers }, subject: string, audienc
   if (!fact.readers) return audience.kind === "dm" ? audience.person === subject : audience.present.includes(subject);
   if (audience.kind === "dm") return fact.readers.people.includes(audience.person);
   return fact.readers.chat === audience.chat;
+}
+
+/**
+ * Whether a fact about `subject` is one they bring into this group: theirs, read because they are the one speaking.
+ *
+ * A fact said in a direct chat was read in every direct chat with its person and in no group, whoever spoke there. So a
+ * person who had an agent keep their car's fuel code asked for it in a group a minute later and was not known. What
+ * their own direct chat reads now goes where they speak, and the turn of anyone else in the group is as it was: who is
+ * speaking is the sender id the platform gave, never something a message says.
+ *
+ * Never true of what the group reads anyway (`canSeeFact`), so the two never show a fact twice.
+ */
+export function followsItsPerson(fact: { readers?: Readers }, subject: string, audience: Audience): boolean {
+  if (audience.kind !== "group" || audience.speaker !== subject) return false;
+  if (fact.readers?.direct) return false;
+  return canSeeFact(fact, subject, { kind: "dm", chat: "", person: subject }) && !canSeeFact(fact, subject, audience);
 }
 
 /** The audience an episode's facts are stamped with: who took part, and the chat when it was a group. */

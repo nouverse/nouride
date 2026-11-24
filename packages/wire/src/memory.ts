@@ -21,6 +21,8 @@ export interface MemorySettings {
   promptRecent: number;
   /** Whether what is remembered goes into each prompt. A person's own `recall` wins. */
   recall: boolean;
+  /** Whether a person's own facts are read in a group on the turns they are the one speaking. Absent from a daemon before this was a setting: on. */
+  privateInGroups?: boolean;
   transcriptDays: number;
   archive: boolean;
   semantic: { enabled: boolean; provider: string; model: string; dimensions: number };

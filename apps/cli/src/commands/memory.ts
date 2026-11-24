@@ -28,6 +28,8 @@ interface MemorySettingsView {
   promptRecent: number;
   /** Absent from daemons before 0.7.27, which always recalled. */
   recall?: boolean;
+  /** Absent from a daemon that has no such setting: a group there reads only what was said in it. */
+  privateInGroups?: boolean;
   transcriptDays: number;
   archive: boolean;
   semantic: { enabled: boolean; provider: string; model: string };
@@ -116,6 +118,7 @@ const SETTABLE: Record<string, (raw: string) => Record<string, unknown>> = {
   propose_shared: field("proposeShared", bool),
   prompt_recent: field("promptRecent", number),
   recall: field("recall", bool),
+  private_in_groups: field("privateInGroups", bool),
   transcript_days: field("transcriptDays", number),
   archive: field("archive", bool),
   semantic: semanticAsTyped,
@@ -229,6 +232,7 @@ export async function memoryCommand(client: Client, args: string[]): Promise<voi
     say(`${BOLD}facts${RESET}            ${view.facts} ${DIM}(a person's own setting on the Memory page wins)${RESET}`);
     say(`${BOLD}propose_shared${RESET}   ${view.proposeShared ? "on" : "off"}`);
     say(`${BOLD}recall${RESET}           ${view.recall === false ? "off: nothing remembered goes into prompts; agents still search" : "on"} ${DIM}(a person's own setting on the Memory page wins)${RESET}`);
+    if (view.privateInGroups !== undefined) say(`${BOLD}private_in_groups${RESET} ${view.privateInGroups ? "on: in a group, a person's own facts are read on the turns they speak" : "off: a group reads only what was said in it"}`);
     say(`${BOLD}prompt_recent${RESET}    ${view.promptRecent} conversation summaries in each prompt`);
     say(`${BOLD}transcripts${RESET}      ${view.transcriptDays === 0 ? "kept forever" : `readable ${view.transcriptDays} day(s)${view.archive ? ", then archived" : ", then dropped"}`}`);
     return saySemantic(view.semantic, status?.semantic);

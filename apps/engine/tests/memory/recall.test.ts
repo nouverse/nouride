@@ -228,8 +228,9 @@ describe("memory_write", () => {
     expect(await profile()).toContain("- Allergic to peanuts and shrimp. {gading}");
     expect(await profile()).not.toContain("- Allergic to peanuts. {");
 
-    // The family group may not read what was said in the admin's DM, so it cannot change it either.
-    expect(await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx(FAMILY))).toMatchObject({ isError: true });
+    // On someone else's turn the family group does not read what was said in the admin's DM, so it cannot change it
+    // either. On his own turn there it is his to change: `follows-person.test.ts`.
+    expect(await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx({ ...FAMILY, senderId: "62877" }))).toMatchObject({ isError: true });
     expect(await write().execute({ about: "person", change: "update", current: "Allergic to peanuts and shrimp." }, toolCtx(GADING_DM))).toMatchObject({ isError: true });
 
     expect((await write().execute({ about: "person", change: "remove", current: "Allergic to peanuts and shrimp." }, toolCtx(GADING_DM))).content).toBe("Removed from their profile.");

@@ -165,7 +165,7 @@ function PersonRecall({ person, fallback, editable }: { person: PersonSummary; f
   );
 }
 
-function Profile({ person, mode, nameOf, onOpenEpisode }: { person: PersonSummary; mode: FactsMode; nameOf: (key: string) => string; onOpenEpisode: (id: string) => void }) {
+function Profile({ person, mode, nameOf, onOpenEpisode, inGroups }: { person: PersonSummary; mode: FactsMode; nameOf: (key: string) => string; onOpenEpisode: (id: string) => void; inGroups: boolean }) {
   const doc = useQuery({ queryKey: ["memory-document", person.key], queryFn: () => api.memoryDocument(person.key) });
   if (doc.error) return <ErrorNote error={doc.error} />;
   const facts = factsOf(doc.data?.content ?? "");
@@ -176,7 +176,7 @@ function Profile({ person, mode, nameOf, onOpenEpisode }: { person: PersonSummar
       </p>
     );
   }
-  return <FactList facts={facts} nameOf={nameOf} onOpenEpisode={onOpenEpisode} />;
+  return <FactList facts={facts} nameOf={nameOf} onOpenEpisode={onOpenEpisode} inGroups={inGroups} />;
 }
 
 /** `[memory] facts`, for everyone without a setting of their own. Saved at once. */
@@ -278,7 +278,7 @@ export function PeopleTab({ editable, admin }: { editable: boolean; admin: boole
                 <div className="space-y-3">
                   <PersonFacts person={person} fallback={everyone} editable={editable} />
                   <PersonRecall person={person} fallback={recallEveryone} editable={editable} />
-                  <Profile person={person} mode={person.factsMode ?? everyone} nameOf={nameOf} onOpenEpisode={setEpisode} />
+                  <Profile person={person} mode={person.factsMode ?? everyone} nameOf={nameOf} onOpenEpisode={setEpisode} inGroups={settings.data?.privateInGroups ?? true} />
                   <DocumentsAbout person={person.key} onOpen={setReading} />
                 </div>
               </div>

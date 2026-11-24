@@ -71,7 +71,7 @@ describe("memory_write after outside content", () => {
 
   test("a fact about the person says so at the end of its line", async () => {
     const noted: unknown[] = [];
-    const memory = { noteAboutSpeaker: async (_speaker: unknown, change: unknown) => (noted.push(change), { status: "written" as const }) } as never;
+    const memory = { noteAboutSpeaker: async (_speaker: unknown, change: unknown) => (noted.push(change), { status: "written" as const, reach: { said: "direct" as const, directOnly: false, follows: true } }) } as never;
     await createMemoryWriteTool(memory).execute({ about: "person", section: "Work", content: "Works at Tridorian." }, ctx(["mcp_search"]));
     expect(noted).toEqual([{ op: "add", section: "Work", text: "Works at Tridorian (written after reading outside content: mcp_search)." }]);
   });

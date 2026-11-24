@@ -250,7 +250,7 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride people set <key|platform:account> --name <name> [--note <note>] [--reattach]
   nouride people remove <key|platform:account>   Take them out of People; their memory stays (nouride memory forget)
   nouride memory [settings]        What the agents remember: the nightly pass, facts, search
-  nouride memory set <key> <value> pass | pass_at | facts | propose_shared | recall | prompt_recent | transcript_days | …
+  nouride memory set <key> <value> pass | pass_at | facts | propose_shared | recall | private_in_groups | prompt_recent | transcript_days | …
   nouride memory episodes [words] [--agent <id>] [--person <key>] [--tag <tag>] [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--status raw|summarized|compacted] [--limit N]
   nouride memory show <episode>    One conversation, whole
   nouride memory pass              Run the nightly pass now: cut today's conversations and file them

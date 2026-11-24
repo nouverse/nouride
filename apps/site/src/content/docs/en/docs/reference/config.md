@@ -374,6 +374,7 @@ facts = "off"                       # auto | ask | off; a [[people]] entry's own
 propose_shared = false              # let the pass propose shared.md entries, each waiting for you
 prompt_recent = 3
 recall = true                        # what is remembered goes into each prompt; a [[people]] entry's own recall wins
+private_in_groups = true             # in a group, a person's own facts are used on the messages they send, and on nobody else's
 transcript_days = 180                # 0 keeps every transcript forever
 archive = true
 

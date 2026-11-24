@@ -134,8 +134,11 @@ export interface FactEdit {
    * number is known only once the file is read. `{ refused }` writes nothing.
    */
   operations: readonly FactOperation[] | ((facts: readonly Fact[]) => readonly FactOperation[] | { refused: string });
-  /** Stamped on every line written: the conversation, and who may read it. */
-  provenance?: Provenance;
+  /**
+   * Stamped on every line written: the conversation, and who may read it. A function is asked once the operations are
+   * found, for a stamp that goes by the fact being changed: a correction keeps what its fact was kept as.
+   */
+  provenance?: Provenance | (() => Provenance);
   cause: ChangeCause;
   /** Kept from a conversation the subject was not in: what someone else said about them. */
   secondhand?: boolean;
@@ -157,12 +160,13 @@ export async function editProfile(deps: ProfileWrites, subject: string, edit: Fa
     const facts = factsOf(profile.body);
     const operations = typeof edit.operations === "function" ? edit.operations(facts) : edit.operations;
     if ("refused" in operations) return operations;
-    const done = applyFacts(profile.body, operations, edit.provenance);
+    const provenance = typeof edit.provenance === "function" ? edit.provenance() : edit.provenance;
+    const done = applyFacts(profile.body, operations, provenance);
     if (edit.whole && done.rejected.length) return { refused: done.rejected[0]!.reason };
     counted.applied = done.applied.length;
     counted.rejected = done.rejected.length;
     const front = Object.keys(profile.front).length ? profile.front : subject === SHARED ? { type: "shared" } : { type: "person", ...(edit.name ? { name: edit.name } : {}) };
-    const meta = { subject, cause: edit.cause, at: deps.now(), ...(edit.provenance?.source ? { source: edit.provenance.source } : {}), ...(edit.secondhand ? { secondhand: true } : {}) };
+    const meta = { subject, cause: edit.cause, at: deps.now(), ...(provenance?.source ? { source: provenance.source } : {}), ...(edit.secondhand ? { secondhand: true } : {}) };
     return { text: writeProfile({ front, body: done.body }), changes: changesOf(facts, done.applied, meta) };
   });
   return { ...written, ...counted };

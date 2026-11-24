@@ -229,7 +229,7 @@ describe("keeping a document from a chat", () => {
   test("agents are told where things go, and to ask once when it is not clear", () => {
     const lines = renderMemory({ ctx: { harness: {}, tools: [{ name: "memory_search" }] }, toolNames: [], gated: [], free: [] } as never);
     expect(lines).toContain(
-      '- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: "person"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: "knowledge"`; how you work is your MEMORY.md. Never turn one into another. When it is not clear that something is to be kept as a document, ask once.',
+      '- Where things go: what a person says about themselves or their life is memory, filed each night or kept with `about: "person"`; a document, a file or a link someone hands you to keep for reference goes in the knowledge base with `about: "knowledge"`; how you work is your MEMORY.md. Never turn one into another: what one person asks you to do for them each time is theirs (`about: "person"`), and MEMORY.md is read on everyone\'s turn. When it is not clear that something is to be kept as a document, ask once.',
     );
   });
 });

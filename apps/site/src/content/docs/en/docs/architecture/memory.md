@@ -151,7 +151,8 @@ A profile is facts under headings. Each line says where it came from and who may
 ```
 
 - `{…}` is the source conversation's audience: who took part, and the group when it was one. The file
-  alone decides who may read the fact, even after the episode is compacted or deleted.
+  alone decides who may read the fact, even after the episode is compacted or deleted. `direct only`
+  in it, as in `{alex, direct only}`, is a fact its person asked to keep to their direct chats.
 - **Dates are part of the words.** `(until …)`: once the day has passed the fact is not shown or
   found. `(on YYYY-MM-DD)` is one day; `(on --MM-DD)` comes back every year. Both come up in the prompt
   the week before.
@@ -174,10 +175,20 @@ replaced and why, and shown as Recent changes. Each profile keeps its previous v
 | A group | That group's own |
 | An MCP token for a person | As a DM with them, limited to the agents the token names |
 
-A fact is readable exactly where its source conversation is: in a DM with someone in its `{…}` list,
-or in the group it names. What Sam tells an agent in private reaches Sam's DMs and nowhere else; it
-never shows up in the family group, and never in someone else's DM. Deleting an episode deletes the
-facts it taught.
+A fact is readable where its source conversation is: in a DM with someone in its `{…}` list, or in
+the group it names. Deleting an episode deletes the facts it taught.
+
+**A person's own facts go with them.** What Sam tells an agent in private is also used in the family
+group on the messages Sam sends there, and on nobody else's: when someone else in the group asks, the
+agent does not have it. Who is asking is decided from the sender the chat app reports, never from
+what a message says. It never reaches someone else's DM.
+
+- Sam can ask an agent to keep one thing to their direct chats ("keep that between us"); the agent
+  marks that fact, and it stays out of every group.
+- `private_in_groups = false` under `[memory]` turns it off for everyone: on the dashboard, Knowledge
+  & Memory → Settings, or by asking an agent as an admin. A group then knows only what was said in it.
+- An agent that runs on a coding CLI is not given it in a group. Its session keeps everything it was
+  told, so it could not be kept from the next person there.
 
 ## Recall
 
@@ -371,6 +382,7 @@ facts           = "off"       # off | ask | auto; per person on the People tab
 propose_shared  = false
 prompt_recent   = 3
 recall          = true          # what is remembered, in each prompt
+private_in_groups = true        # a person's own facts, in a group, on their own messages
 transcript_days = 180         # 0 = forever
 archive         = true
 

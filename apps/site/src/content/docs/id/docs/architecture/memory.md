@@ -158,7 +158,8 @@ Profil adalah fakta di bawah heading. Tiap baris menyebut asalnya dan siapa yang
 
 - `{…}` adalah audiens percakapan asalnya: siapa yang ikut, dan grupnya kalau itu grup. File itu
   sendiri yang menentukan siapa boleh membaca fakta tersebut, bahkan setelah episodenya di-compact atau
-  dihapus.
+  dihapus. `direct only` di dalamnya, seperti `{alex, direct only}`, adalah fakta yang diminta
+  pemiliknya untuk disimpan di chat langsungnya saja.
 - **Tanggal adalah bagian dari kata-katanya.** `(until …)`: begitu harinya lewat, fakta itu gak
   ditampilkan atau ditemukan lagi. `(on YYYY-MM-DD)` adalah satu hari; `(on --MM-DD)` kembali tiap
   tahun. Keduanya muncul di prompt seminggu sebelumnya.
@@ -183,10 +184,21 @@ sebelumnya: tinggal satu undo.
 | Sebuah grup | Milik grup itu sendiri |
 | Token MCP untuk seseorang | Seperti DM dengan orang itu, dibatasi ke agent yang disebut token tersebut |
 
-Sebuah fakta bisa dibaca tepat di tempat percakapan asalnya bisa dibaca: di DM dengan seseorang di
-daftar `{…}`-nya, atau di grup yang disebutnya. Yang Sam ceritakan ke agent secara pribadi sampai ke
-DM Sam dan gak ke mana pun lagi; gak pernah muncul di grup keluarga, dan gak pernah di DM orang
-lain. Menghapus episode menghapus fakta yang diajarkannya.
+Sebuah fakta bisa dibaca di tempat percakapan asalnya bisa dibaca: di DM dengan seseorang di daftar
+`{…}`-nya, atau di grup yang disebutnya. Menghapus episode menghapus fakta yang diajarkannya.
+
+**Fakta seseorang ikut orangnya.** Yang Sam ceritakan ke agent secara pribadi juga dipakai di grup
+keluarga pada pesan yang Sam kirim di sana, dan gak pada pesan orang lain: kalau orang lain di grup
+yang bertanya, agent gak memegangnya. Siapa yang bertanya ditentukan dari pengirim yang dilaporkan
+aplikasi chat, bukan dari isi pesan. Fakta itu gak pernah sampai ke DM orang lain.
+
+- Sam bisa minta agent menyimpan satu hal di chat langsungnya saja ("yang ini antara kita aja");
+  agent menandai fakta itu, dan fakta itu gak dibawa ke grup mana pun.
+- `private_in_groups = false` di `[memory]` mematikannya untuk semua orang: di dashboard, Knowledge &
+  Memory → Settings, atau dengan meminta agent sebagai admin. Grup lalu hanya tahu yang dikatakan di
+  grup itu.
+- Agent yang berjalan di coding CLI gak diberi fakta itu di grup. Sesinya menyimpan semua yang pernah
+  dikatakan kepadanya, jadi fakta itu gak bisa ditahan dari orang berikutnya di sana.
 
 ## Recall
 
@@ -384,6 +396,7 @@ facts           = "off"       # off | ask | auto; per orang di tab People
 propose_shared  = false
 prompt_recent   = 3
 recall          = true          # yang diingat, masuk ke tiap prompt
+private_in_groups = true        # fakta milik seseorang, di grup, pada pesannya sendiri
 transcript_days = 180         # 0 = forever
 archive         = true
 

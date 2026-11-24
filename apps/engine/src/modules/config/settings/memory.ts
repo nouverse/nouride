@@ -146,7 +146,7 @@ export async function setRetentionDays(deps: SettingsDeps, params: {
 /** The `[memory]` keys `nouride memory set` and the dashboard change. `dir` is not one: moving it moves every file. */
 export type MemorySettings = Pick<
   MemorySection,
-  "pass" | "passAt" | "passPerNight" | "passMaxTokens" | "passProvider" | "passModel" | "maxAttempts" | "facts" | "proposeShared" | "promptRecent" | "recall" | "transcriptDays" | "archive"
+  "pass" | "passAt" | "passPerNight" | "passMaxTokens" | "passProvider" | "passModel" | "maxAttempts" | "facts" | "proposeShared" | "promptRecent" | "recall" | "privateInGroups" | "transcriptDays" | "archive"
 > & { semantic?: Partial<MemorySection["semantic"]> };
 
 export const MEMORY_KEYS: Record<keyof MemorySettings, string> = {
@@ -161,6 +161,7 @@ export const MEMORY_KEYS: Record<keyof MemorySettings, string> = {
   proposeShared: "propose_shared",
   promptRecent: "prompt_recent",
   recall: "recall",
+  privateInGroups: "private_in_groups",
   transcriptDays: "transcript_days",
   archive: "archive",
   semantic: "semantic",

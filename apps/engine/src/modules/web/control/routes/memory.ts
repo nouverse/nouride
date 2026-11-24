@@ -58,6 +58,7 @@ const SETTING_TYPES: Record<keyof StoredMemorySettings, "boolean" | "number" | "
   proposeShared: "boolean",
   promptRecent: "number",
   recall: "boolean",
+  privateInGroups: "boolean",
   transcriptDays: "number",
   archive: "boolean",
   semantic: "semantic",

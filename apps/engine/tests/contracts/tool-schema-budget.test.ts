@@ -199,7 +199,11 @@ const PER_TOOL = 5_040;
 // is offered would give each draft numbers of its own. Tokens say "written whole", where 250 would be read as millions.
 // 53,480 for a mission a job drafts (~175, measured at 53,470): the reason is at `PER_TOOL`.
 // 53,500 for a step's `id` (~16, measured at 53,493): the reason is at `PER_TOOL`.
-const TOTAL = 53_500;
+// 53,810 for a fact kept to direct chats (~310, measured at 53,805): `memory_write`'s `only_direct`, and that what a
+// person asks for each time is a fact of theirs. A person's own facts are read wherever they speak, a group included,
+// so the one way to hold a fact back is said where the fact is written; unsaid, a standing request went into MEMORY.md,
+// which is read on everyone's turn.
+const TOTAL = 53_810;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -211,9 +215,9 @@ const TOTAL = 53_500;
  * `schedule`'s script and a watch's end (measured at 47,712 against 52,543). 47,760 with a watch's script that ends
  * well until its moment comes (measured at 47,752 against 52,583). 48,470 with a draft's own limits (measured at 48,465
  * against 53,296). 48,640 with a mission a job drafts (measured at 48,639 against 53,470). 48,670 with a step's `id`
- * (measured at 48,662 against 53,493).
+ * (measured at 48,662 against 53,493). 48,980 with a fact kept to direct chats (measured at 48,974 against 53,805).
  */
-const SENT = 48_670;
+const SENT = 48_980;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {

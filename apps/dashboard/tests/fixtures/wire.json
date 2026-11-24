@@ -2027,6 +2027,7 @@
     "proposeShared": true,
     "promptRecent": 3,
     "recall": true,
+    "privateInGroups": true,
     "transcriptDays": 180,
     "archive": true,
     "semantic": {
