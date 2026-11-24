@@ -18,9 +18,10 @@ const log = createLogger("missions");
 
 /**
  * The draft's folder made and its brief written, then its notice sent with Start it and Drop it, and its brief under
- * it as a file: when an agent makes the draft, and again when its agent writes the brief anew (`rewritten`). A
- * person's own draft, or their change to a brief, is not sent back to them. Resolves to why the brief could not be
- * written — the notice then says it has none — or null.
+ * it as a file: when an agent makes the draft or an automation's run does (its goal may name a brief, and nobody typed
+ * it just now), and again when its agent writes the brief anew (`rewritten`). A person's own draft, or their change to
+ * a brief, is not sent back to them. Resolves to why the brief could not be written — the notice then says it has
+ * none — or null.
  */
 export async function announceDraft(deps: MissionsDeps, mission: Mission, brief?: string, changed: readonly string[] = [], rewritten = false): Promise<string | null> {
   let failed: string | null = null;
@@ -40,7 +41,7 @@ export async function announceDraft(deps: MissionsDeps, mission: Mission, brief?
   // with no such chat (a test bench) says it as any notice.
   if (deps.tellDraft) await deps.tellDraft(mission, whole, changed.length > 0 ? paged(draftChangedLine(mission, changed), deps.pageOf?.(mission)) : null, buttonsFor(mission) ?? []);
   else await deps.tell(mission, whole, buttonsFor(mission));
-  if (has && ((changed.length === 0 && mission.byAgent !== null) || rewritten)) await sendBrief(deps, mission);
+  if (has && ((changed.length === 0 && (mission.byAgent !== null || mission.jobId !== null)) || rewritten)) await sendBrief(deps, mission);
   return failed;
 }
 

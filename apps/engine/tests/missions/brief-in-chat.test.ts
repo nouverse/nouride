@@ -91,6 +91,14 @@ describe("a draft's brief, in the chat", () => {
     expect(h.briefsSent).toEqual([]);
   });
 
+  test("a draft an automation's run made is sent the brief its goal names: nobody typed it just now", async () => {
+    const named = "/work/private/nova/work/audit/BRIEF.md";
+    const { h } = await setup({ goalBriefOf: (mission) => (mission.goal.includes(named) ? named : null), readBrief: (path) => (path === named ? "Audit five vouchers against the ledger." : null) });
+    const mission = await h.start(`The week's vouchers are audited. Full brief: ${named}`, { proposed: true, jobId: "cron_1" });
+    expect(h.told.at(-1)!.text).toContain("brief: BRIEF.md, the file below");
+    expect(h.briefsSent).toEqual([{ mission: mission.id, text: "Audit five vouchers against the ledger." }]);
+  });
+
   test("started, the brief sent under its draft is not sent a second time", async () => {
     const { h, draft } = await setup();
     const { mission } = await draft({ brief: BRIEF });
