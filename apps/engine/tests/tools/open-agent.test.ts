@@ -7,9 +7,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { Tool, ToolContext } from "@nouride/shared";
+import { isOpenAgent, type Tool, type ToolContext } from "@nouride/shared";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
-import { isOpenAgent, OPEN_AGENT_TOOLS, openToolset } from "@/modules/tools/open-agent.ts";
+import { OPEN_AGENT_TOOLS, openToolset } from "@/modules/tools/open-agent.ts";
 import { createBuiltinTools, resolveToolset } from "@/modules/tools/registry.ts";
 import { fakeAgent } from "../helpers.ts";
 

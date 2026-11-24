@@ -11,14 +11,10 @@
  * Which collections are open to everyone is memory's to say, for an open agent whoever is asking (`memory/public.ts`).
  */
 
-import type { GateDecision, LoadedAgent, Tool, ToolDefinition } from "@nouride/shared";
+import type { GateDecision, Tool, ToolDefinition } from "@nouride/shared";
 import type { AgentToolset } from "./registry.ts";
 
 export const OPEN_AGENT_TOOLS: readonly string[] = ["attachment_read", "memory_read", "memory_search", "send_file"];
-
-export function isOpenAgent(agent: Pick<LoadedAgent, "config">): boolean {
-  return agent.config.access === "open";
-}
 
 const NOT_HELD = "this agent is open to everyone, and holds only the tools that answer from what was opened to everyone";
 const DOCUMENT_ALONE =

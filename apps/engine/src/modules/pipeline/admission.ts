@@ -10,7 +10,7 @@
  * `claim` are after routing — see the notes on each.
  */
 
-import { createLogger, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
+import { createLogger, isOpenAgent, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
 import type { AccessMode } from "@nouride/shared";
 import type { DropReason } from "@nouride/queue";
 import { pairMessage } from "@/modules/access/access.store.ts";
@@ -113,7 +113,7 @@ export class Admission {
    *
    * Before routing, because a stranger never reaches routing — but the same evidence routing reads.
    */
-  private addressedHere(envelope: MessageEnvelope): boolean {
+  addressedHere(envelope: MessageEnvelope): boolean {
     if (envelope.chatType === "dm" || envelope.mentionsSelf) return true;
     const owner = this.deps.config.gateways.find((gateway) => gateway.id === envelope.gatewayId)?.agent;
     const own = owner ? this.deps.registry.get(owner) : undefined;
@@ -125,14 +125,33 @@ export class Admission {
 
   /**
    * The access mode for a message on this connection: its owner's `[agent] access` when that says
-   * `pair` or `allowlist`, the daemon's otherwise. The owner because admission runs before routing and
+   * `pair`, `allowlist` or `open`, the daemon's otherwise. The owner because admission runs before routing and
    * the connection's configured agent is the only one known here — the one whose Access settings a
    * pairing request answers to. A connection with no owner, or one whose owner follows, takes the global.
+   * So `open` is an agent's on the connections it owns, and on no connection several agents share.
    */
   private modeFor(gatewayId: string, global: AccessMode): AccessMode {
+    const own = this.ownerOf(gatewayId)?.config.access;
+    return own === "pair" || own === "allowlist" || own === "open" ? own : global;
+  }
+
+  private ownerOf(gatewayId: string): LoadedAgent | undefined {
     const owner = this.deps.config.gateways.find((gateway) => gateway.id === gatewayId)?.agent;
-    const own = owner ? this.deps.registry.get(owner)?.config.access : undefined;
-    return own === "pair" || own === "allowlist" ? own : global;
+    return owner ? this.deps.registry.get(owner) : undefined;
+  }
+
+  /**
+   * The open agent this sender is let in for, when its being open is the only reason they are: no name on a list, no
+   * pairing, no sign-in. Nothing for a sender let in on their own standing, who has here what they have anywhere.
+   *
+   * Asked after `admit`, by what must hold for a stranger and for nobody else: whose their message is (`inbound.ts`).
+   * A bot's message is never one: an agent's own words are routed by the rules between agents, where a reply that tags
+   * nobody ends the exchange.
+   */
+  strangerOf(envelope: MessageEnvelope): LoadedAgent | undefined {
+    if (envelope.senderIsBot) return undefined;
+    const owner = this.ownerOf(envelope.gatewayId);
+    return isOpenAgent(owner) && !this.admitsByName(envelope) ? owner : undefined;
   }
 
   /**

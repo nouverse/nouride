@@ -333,6 +333,11 @@ export function approvalLevelRefusal(value: unknown): string {
 export type AgentAccess = "follow" | "pair" | "allowlist" | "open";
 export const AGENT_ACCESS: readonly AgentAccess[] = ["follow", "pair", "allowlist", "open"];
 
+/** Whether an agent is open to everyone. One place, since the tools, memory and the pipeline each rest on it. */
+export function isOpenAgent(agent: { config: { access?: AgentAccess } } | undefined): boolean {
+  return agent?.config.access === "open";
+}
+
 export function isAgentAccess(value: unknown): value is AgentAccess {
   return typeof value === "string" && (AGENT_ACCESS as readonly string[]).includes(value);
 }

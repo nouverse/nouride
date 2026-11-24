@@ -12,6 +12,7 @@
 
 import {
   createLogger,
+  isOpenAgent,
   type ChatType,
   type GatewayInstanceConfig,
   type GatewayName,
@@ -29,6 +30,7 @@ import {
 } from "@/modules/router/agent-mentions.ts";
 import { HookRegistry, parseCommand } from "@/modules/hooks/registry.ts";
 import { withQuotedContext } from "./messages.ts";
+import { heldToOpenAgent } from "./open-door.ts";
 import { requireMentionHere } from "./room-mention.ts";
 import { isSystemEvent } from "./deps.ts";
 import type { Admission } from "./admission.ts";
@@ -139,7 +141,10 @@ export class InboundRouter {
     // The group's own `/mention`, then this connection's setting, then the daemon's — which a room made in the dashboard
     // is not held to: its members decide, below (`room-mention.ts`).
     const here = requireMentionHere(this.ctx.deps, envelope);
-    const groupsRequireMention = here.requireMention;
+    // An agent open to everyone answers a group only when it is addressed, whatever its connection says: answering every
+    // message of any group its bot is added to would spend its day on talk nobody addressed to it. A room that names it
+    // with `/mention` has it answer the people let in by name; a stranger's message is held to this before it is routed.
+    const groupsRequireMention = here.requireMention || isOpenAgent(instance?.agent ? this.ctx.deps.registry.get(instance.agent) : undefined);
     const members = this.ctx.roomAgents(envelope);
     // The agent the room named with `/mention <agent>`. In a room with a member list, only while it is one of them: a
     // room made in the dashboard keeps its members' rule. One removed or switched off since is no agent to the router,
@@ -198,6 +203,9 @@ export class InboundRouter {
     // its asker is already at work on what it says.
     const wrote = this.ctx.voice.wroteInbound(envelope);
     if (wrote?.said) return void log.debug("an agent's words that were only said: routed to nobody", { chat_id: envelope.chatId, from: wrote.agentId });
+    // An agent open to everyone asks and tags nobody: what a stranger has it say must not be another agent's work to do.
+    // Here for both roads a tag travels by: a platform's own copy to the other bots, and the daemon's hand-over.
+    if (wrote && isOpenAgent(this.ctx.deps.registry.get(wrote.agentId))) return void log.debug("an open agent's words: routed to nobody", { chat_id: envelope.chatId, from: wrote.agentId });
     const enriched: MessageEnvelope = wrote ? { ...envelope, fromAgent: wrote.agentId } : envelope;
 
     // How deep the agent-to-agent chain is here. The platform carries no field for it, so it cannot
@@ -232,6 +240,9 @@ export class InboundRouter {
     // Worse since authorship became platform-wide: every connection now recognises the message as
     // ours, so every one of them reached this branch and posted its own copy. It is handled after
     // routing and after the claim, where exactly one connection is left holding it.
+
+    // A stranger on an open agent's connection is that agent's alone, whatever their message names (`open-door.ts`).
+    if (await heldToOpenAgent(this.admission, envelope, (agent) => this.admit(agent, envelope, verdict, { addressees: 1, addressed: true }))) return;
 
     // A human replied to something an agent said. No mention, no name — the platform gives a message
     // id, and that is enough to send it back to whoever wrote it. Without this the message reaches
