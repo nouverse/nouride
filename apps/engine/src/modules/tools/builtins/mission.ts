@@ -13,7 +13,7 @@ import { clip, createLogger, MISSION_TITLE_MAX, type Tool, type ToolContext, typ
 import { pagePath, type LinkFor } from "@/modules/web/links.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
 import { isMissionChat } from "@/modules/missions/gateway.ts";
-import { isDraft, signedOffBy, type DraftChange } from "@/modules/missions/drafts.ts";
+import { BRIEF_FILE, isDraft, signedOffBy, type DraftChange } from "@/modules/missions/drafts.ts";
 import type { Missions } from "@/modules/missions/missions.ts";
 import { LIMIT_FIELDS, LIMIT_KEYS, type StartRequest } from "@/modules/missions/start.ts";
 import type { Mission } from "@/modules/missions/types.ts";
@@ -82,7 +82,7 @@ export const WHO_SIGNS =
  */
 const START_FIELDS = {
   title: { type: "string", description: `Its name for the person, in English, at most ${MISSION_TITLE_MAX} characters: what the work is called ("The viewers for 0.8.39"), not what to do.` },
-  goal: { type: "string", description: "What must be true when it is done, in English, and whole: each turn starts from it, not from this conversation. A long one points at a brief file by its absolute path." },
+  goal: { type: "string", description: "What must be true when it is done, in English, and whole: each turn starts from it, not from this conversation. Its detail goes in `brief`, never in a file of your own that the goal points at." },
   checks: {
     type: "array",
     items: { type: "string" },
@@ -108,9 +108,15 @@ export const OWN_LIMITS =
   "whether to go on. Leave them out to follow the person's setting, right for most work; name one when they asked, or " +
   "the work is known to need more or less. The draft's notice shows them to the person.";
 
+/**
+ * What a brief is, as the model reads it in both tools. That the person is sent it is said, so an agent neither pastes
+ * it into the chat as well nor keeps it in a file of its own, whose path was all the person then saw of it.
+ */
+const BRIEF_IS = "brief (what the work is, why, what to read, what done means), in English: kept as BRIEF.md in its folder, named to each turn, and sent to the person as a file under its notice";
+
 /** A chat's own fields (0.8.11): a draft's brief, its own limits, and `edit`'s id. */
 const CHAT_FIELDS = {
-  brief: { type: "string", description: "start, edit: the mission's brief, written to BRIEF.md in its folder (what the work is, why, what to read, what done means), in English. Each turn names it. Change it later with `edit` or your file tools." },
+  brief: { type: "string", description: `start, edit: the mission's ${BRIEF_IS}. Change it with \`edit\`, which sends it again, not with your file tools.` },
   [LIMIT_FIELDS.hours]: { type: "number", description: "start, edit: its own limit in hours of work, 0.25 to 168. Left out: the setting." },
   [LIMIT_FIELDS.turns]: { type: "number", description: "start, edit: its own limit in turns, 1 to 1000. Left out: the setting." },
   [LIMIT_FIELDS.tokens]: { type: "number", description: "start, edit: its own limit in tokens, written whole: 250000000 is 250 million. Left out: the setting." },
@@ -219,6 +225,7 @@ function startFields(args: Record<string, unknown>, ctx: ToolContext): Omit<Star
     ...(workdir ? { workdir } : {}),
     ...(branch ? { branch } : {}),
     ...(limits ? { limits } : {}),
+    ...(text(args.brief) ? { brief: text(args.brief) } : {}),
     byAgent: ctx.agentId,
     ...(ctx.untrustedRead && ctx.untrustedRead.length > 0 ? { untrusted: true } : {}),
   };
@@ -269,9 +276,15 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   const id = shortId(mission.id);
   const page = pageOf?.(mission.id);
   const pageLine = page ? `\nPage: ${page}` : "";
+  // Whether it has a brief the person was sent: its own, or a file its goal names.
+  const has = missions.brief(mission) !== null;
   if (isDraft(mission)) {
     const brief = missions.briefPath(mission);
-    const briefLine = briefFailed ? `\nIts brief could not be written: ${briefFailed}. Write it again with \`edit\`.` : `\nIts brief: ${brief} (yours to change before it starts).`;
+    const briefLine = briefFailed
+      ? `\nIts brief could not be written: ${briefFailed}. Write it again with \`edit\`.`
+      : has
+        ? `\nIts brief: ${brief}. The person was sent it as ${BRIEF_FILE} under the notice: do not paste it into the chat as well. Change it before it starts with \`edit\`, and they are sent it again.`
+        : `\nIt has no brief. One given with \`edit\` is kept as ${brief} and sent to the person.`;
     // What was taken of the limits it named, as the person reads them in the notice.
     const own = missions.ownLimits(mission);
     const limitsLine = own ? `\n${own}. The person sees this in its notice.` : "";
@@ -285,7 +298,8 @@ function started(missions: Missions, result: ReturnType<Missions["start"]>, page
   const state = mission.status === "queued" ? "queued" : "started";
   // Why it waits is the dispatcher's own decision (`blockedBy`), not guessed again here.
   const waits = result.queued ? `\nIt waits because ${result.queued}; it starts by itself once that clears.` : "";
-  return ok(`Mission ${id} ${state}, "${mission.title}": ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
+  const briefLine = briefFailed ? `\nIts brief could not be written (${briefFailed}): it starts from its goal alone.` : has ? `\nIts brief is in its folder as ${BRIEF_FILE}, and the person is sent it under the notice that it started.` : "";
+  return ok(`Mission ${id} ${state}, "${mission.title}": ${mission.goal}${waits}\nDone when ${doneWhen(mission)}.${briefLine}${pageLine}\nIt runs on its own and reports to this chat. Tell the person you started it; do not do the work here as well.${reminder}`);
 }
 
 export function createMissionTools(missions: Missions, options: { linkFor?: LinkFor; audit?: Pick<AuditPort, "record"> } = {}): { chat: Tool; inside: Tool } {
@@ -326,7 +340,6 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
       from,
       proposed: true,
       ...(named ? {} : { review: false as const, accept: true }),
-      ...(typeof args.brief === "string" && args.brief.trim() ? { brief: args.brief.trim() } : {}),
     };
     const { answer, mission } = await startChecked(missions, request, (id) => options.linkFor?.(ctx, { kind: "mission", id }) ?? null);
     return mission ? { ...answer, page: pagePath({ kind: "mission", id: mission.id }) } : answer;
@@ -363,6 +376,7 @@ export function createMissionTools(missions: Missions, options: { linkFor?: Link
           keep_working: { type: "boolean", description: "ask: true when work is left that does not depend on the answer. The question goes out now, you go on with that work, and the answer comes into your turn. Left out: the mission stops here and waits for the answer." },
           reason: { type: "string", description: "fail: why it cannot be done." },
           ...START_FIELDS,
+          brief: { type: "string", description: `start: that mission's ${BRIEF_IS}.` },
         },
         required: ["action"],
       },

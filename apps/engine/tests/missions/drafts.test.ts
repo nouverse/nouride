@@ -377,8 +377,8 @@ describe("D6 — its brief", () => {
     const { mission, answer } = await draft({ brief: "Read docs/rfc first. Done means every section answers the owner." });
     expect(h.briefs.get(mission!.id)).toBe("Read docs/rfc first. Done means every section answers the owner.");
     expect(h.folders).toEqual([mission!.id]);
-    expect(h.told.at(-1)!.text).toContain("brief: on the mission's page");
-    expect(answer.content).toContain(`Its brief: /work/private/nova/missions/${mission!.id}/BRIEF.md (yours to change before it starts).`);
+    expect(h.told.at(-1)!.text).toContain("brief: BRIEF.md, the file below");
+    expect(answer.content).toContain(`Its brief: /work/private/nova/missions/${mission!.id}/BRIEF.md. The person was sent it as BRIEF.md under the notice: do not paste it into the chat as well.`);
     expect(h.missions.brief(h.store.get(mission!.id)!)).toEqual({ path: `/work/private/nova/missions/${mission!.id}/BRIEF.md`, text: "Read docs/rfc first. Done means every section answers the owner." });
     h.missions.accept(mission!.id, "Gading");
     await h.settle();

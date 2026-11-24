@@ -70,7 +70,7 @@ function handedOver(options: Pick<MissionsDeps, "sourceRepository" | "runsOnCli"
   };
 }
 
-export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null; noFolder?: (mission: Mission) => boolean; tellDraft?: MissionsDeps["tellDraft"] } = {}) {
+export async function missionsHarness(options: { settings?: Partial<MissionsInForce>; agents?: string[]; jobAllowed?: (jobId: string) => readonly string[]; prepare?: (mission: Mission) => Promise<string | void>; branchRefusal?: (request: { agentId: string; workdir: string; branch: string }) => Promise<string | null>; sourceRepository?: (workdir: string) => string; runsOnCli?: (agentId: string) => boolean; freeToDelete?: (agentId: string) => boolean; readBrief?: (path: string) => string | null; goalBriefOf?: (mission: Mission) => string | null; stopTurn?: (mission: Mission) => void; helperTokens?: (missionId: string, since: number) => number; runningTokens?: (missionId: string) => number; personSaid?: (mission: Mission) => string | null; turnStartedAt?: (turnId: string) => number | null; checkRefusal?: (request: { agentId: string; workdir?: string }, command: string) => string | null; steerTurn?: (mission: Mission, told: Told) => SteerOutcome; pageOf?: (mission: Mission) => string | null; diskLow?: () => number | null; left?: () => { agentId: string; id: string; changedAt: number }[]; unsavedInLeft?: (missionId: string) => string[]; unsavedIn?: (mission: Mission) => string[]; leftUncommitted?: (mission: Mission) => Promise<string[]>; answerReach?: AnswerReach | null; noFolder?: (mission: Mission) => boolean; tellDraft?: MissionsDeps["tellDraft"]; /** Awaited before a brief is written to its folder: held, a test sees what waits for it; thrown from, a brief that could not be written. */ briefWritten?: (mission: Mission) => Promise<void> } = {}) {
   const db = await openAndMigrate(join(tempDir("missions"), "nouride.db"));
   const store = new MissionStore(db);
   const told: { mission: string; text: string; buttons?: MessageButton[] }[] = [];
@@ -90,7 +90,10 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
   /** Each `report.md` sent, by mission, and what it held (0.8.11). */
   const reports: { mission: string; report: string }[] = [];
   let reportRefused: string | null = null;
-  /** What reached the chat, in order: a notice, a `report.md`, the files. */
+  /** Each `BRIEF.md` sent into a chat, by mission, and what it held. */
+  const briefsSent: { mission: string; text: string }[] = [];
+  let briefRefused: string | null = null;
+  /** What reached the chat, in order: a notice, a `BRIEF.md`, a `report.md`, the files. */
   const sent: string[] = [];
   const remembered: string[] = [];
   /** Each mission handed to skill learning as it ended. */
@@ -135,6 +138,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     readBrief: options.readBrief ?? ((path: string) => [...briefs.entries()].find(([id]) => path.includes(`/missions/${id}/`))?.[1] ?? null),
     draftFolder: async (mission: Mission, brief?: string) => {
       folders.push(mission.id);
+      if (brief !== undefined) await options.briefWritten?.(mission);
       if (brief !== undefined) briefs.set(mission.id, brief);
       return briefs.has(mission.id);
     },
@@ -166,6 +170,7 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     },
     deliver: async (mission) => (delivered.push(...mission.files), sent.push("files"), unsent),
     sendReport: async (mission) => (reports.push({ mission: mission.id, report: mission.report ?? "" }), sent.push("report.md"), reportRefused),
+    sendBrief: async (mission, text) => (briefsSent.push({ mission: mission.id, text }), sent.push("BRIEF.md"), briefRefused),
     now: () => now,
   };
   let missions = new Missions(deps);
@@ -193,6 +198,8 @@ export async function missionsHarness(options: { settings?: Partial<MissionsInFo
     setUnsent: (names: string[]) => void (unsent = names),
     reports,
     setReportRefused: (why: string | null) => void (reportRefused = why),
+    briefsSent,
+    setBriefRefused: (why: string | null) => void (briefRefused = why),
     sent,
     remembered,
     learned,

@@ -16,6 +16,7 @@ import type { TurnOutcome, TurnShape, TurnShaper } from "@/modules/pipeline/turn
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { buttonsFor } from "./actions.ts";
 import { Asking, type Asked } from "./asking.ts";
+import { briefOf, sendBrief, StartBriefs } from "./brief-sent.ts";
 import { Checking, type Reviewing } from "./checking.ts";
 import type { MissionJob, MissionsDeps } from "./deps.ts";
 import { afterTurn, answersWait, blockedBy, continueGives, failuresAfter, limitReached, limitsNear, openInSameRepository, planSignature, stepsDone, type LimitsInForce, type MissionLimit, type Unsettled } from "./decide.ts";
@@ -68,6 +69,8 @@ export class Missions implements TurnShaper {
   private readonly state = new Map<string, TurnState>();
   /** Missions the queue notice was said for — once each — and why the dispatcher held each back, in its words. */
   private readonly toldQueued = new Map<string, string>();
+  /** The briefs of starts that had no draft: written before the first turn, and sent under the started notice. */
+  private readonly startBriefs = new StartBriefs();
   readonly timers: MissionTimers;
   private readonly checking: Checking;
   /** Its questions: asked at the call, counted when alike, waited on at a turn's end (`asking.ts`). */
@@ -222,7 +225,8 @@ export class Missions implements TurnShaper {
 
   /**
    * `queued`: why the dispatcher held it back, when it did — what the queue notice says (`blockedBy`). `drafted`, for a
-   * draft: its folder and brief written and its notice sent — why the brief could not be, or null.
+   * draft: its folder and brief written and its notice sent — why the brief could not be, or null. For a start with no
+   * draft that gave a brief, the same answer about its brief alone.
    */
   start(request: StartRequest): { mission: Mission; queued?: string; drafted?: Promise<string | null> } | { refused: string } {
     const refused = startRefusal(request, { exists: this.deps.agents.exists, store: this.deps.store, now: this.now(), ...(this.deps.checkRefusal ? { checkRefusal: this.deps.checkRefusal } : {}), ...(this.deps.readBrief ? { readBrief: this.deps.readBrief } : {}) });
@@ -241,9 +245,10 @@ export class Missions implements TurnShaper {
       const drafted = announceDraft(this.deps, mission, request.brief);
       return { mission, drafted };
     }
+    const written = this.startBriefs.started(this.deps, mission, request.brief, request.byAgent !== undefined);
     this.schedule();
     const queued = this.toldQueued.get(id);
-    return { mission: this.deps.store.get(id) ?? mission, ...(queued ? { queued } : {}) };
+    return { mission: this.deps.store.get(id) ?? mission, ...(queued ? { queued } : {}), ...(written ? { drafted: written } : {}) };
   }
 
   /** Start what can start: the queued missions, oldest first, as slots and repositories allow. */
@@ -274,6 +279,8 @@ export class Missions implements TurnShaper {
 
   private async begin(started: Mission): Promise<void> {
     let moved: string | void = undefined;
+    // Its brief is in its folder before its first turn names it.
+    await this.startBriefs.written(started.id);
     try {
       moved = await this.deps.prepare(started);
     } catch (err) {
@@ -295,7 +302,11 @@ export class Missions implements TurnShaper {
     }
     log.info("mission started", { mission: mission.id, agent_id: mission.agentId, job: mission.jobId });
     // A job's run starts on its schedule, which its chat already knows: it is told when it is done or needs someone.
-    if (!mission.jobId) void this.deps.tell(mission, paged(startedNotice(mission), this.deps.pageOf?.(mission)));
+    if (!mission.jobId) {
+      const said = this.deps.tell(mission, paged(startedNotice(mission), this.deps.pageOf?.(mission)));
+      // A draft's brief went under its draft; one started with none is sent it here, under the notice that it started.
+      if (this.startBriefs.owes(mission.id)) void said.then(() => sendBrief(this.deps, mission));
+    }
     this.queueTurn(mission, "the mission starts. Write the checklist with `plan` first, then begin.");
   }
 
@@ -586,11 +597,7 @@ export class Missions implements TurnShaper {
 
   /** Its brief as written, and where — what the dashboard shows: its own `BRIEF.md`, else one its goal names (0.8.11). */
   brief(mission: Mission): { path: string; text: string } | null {
-    for (const path of [this.deps.briefOf?.(mission), this.deps.goalBriefOf?.(mission)]) {
-      const text = path ? (this.deps.readBrief?.(path) ?? null) : null;
-      if (path && text !== null) return { path, text };
-    }
-    return null;
+    return briefOf(this.deps, mission);
   }
 
   /** A draft changed before it starts (`draft-edit.ts`): by its agent from its chat, or a person on the dashboard. */
@@ -725,6 +732,7 @@ export class Missions implements TurnShaper {
     this.stoppedAt.delete(mission.id);
     this.timers.forget(mission.id);
     this.toldQueued.delete(mission.id);
+    this.startBriefs.forget(mission.id);
     this.checking.forget(mission.id);
     this.asking.forget(mission.id);
     // A draft dropped — never started — takes its folder with it: its brief, and nothing else was ever written there.
@@ -852,8 +860,8 @@ export class Missions implements TurnShaper {
   }
 
   /** What it keeps in memory, table by table — exposed so a test can catch one growing without bound. */
-  tables(): { turns: number; toldQueued: number; sameCheck: number; sameQuestion: number; swept: number } {
-    return { turns: this.state.size, toldQueued: this.toldQueued.size, sameCheck: this.checking.entries(), sameQuestion: this.asking.entries(), swept: this.timers.entries() };
+  tables(): { turns: number; toldQueued: number; sameCheck: number; sameQuestion: number; swept: number; startBriefs: number } {
+    return { turns: this.state.size, toldQueued: this.toldQueued.size, sameCheck: this.checking.entries(), sameQuestion: this.asking.entries(), swept: this.timers.entries(), startBriefs: this.startBriefs.entries() };
   }
 
   /** The minute's checks — `timers.ts`. */

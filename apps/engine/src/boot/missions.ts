@@ -284,6 +284,14 @@ export function buildMissions(params: {
 
   /** Who else hears a mission change: the scheduler, for a job's step that waits for one. Named once it exists. */
   let heard: ((mission: Mission) => void) | undefined;
+  // A text of the mission's into its chat as a file, under the connection its agent speaks on there: its report when it
+  // ends and its brief when it is drafted go the same way, held to the same size and the same search for a credential.
+  const sendAsFile = async (mission: Mission, name: string, text: string): Promise<string | null> => {
+    const ctx = commandContext(mission);
+    if (!late || !ctx) return "this daemon cannot send files for that agent.";
+    const at = { ...ctx, gatewayId: late.voice(mission.agentId, mission.gatewayId), chatId: mission.chatId };
+    return await sendTextFile({ send: late.sendAttachment, maxBytes: params.config().attachments.maxSizeMb * 1024 * 1024, ...(params.childEnv ? { childEnv: params.childEnv } : {}) }, at, name, text);
+  };
   const missions = new Missions({
     store,
     changed: (mission) => heard?.(mission),
@@ -427,13 +435,8 @@ export function buildMissions(params: {
     goalBriefOf: (mission) => goalBrief(mission.goal, privateWorkspace(params.config().daemon.workspaceDir, mission.agentId), realPathStrict),
     // Its starter is who a DM's link is for: the person it reports to (0.8.11).
     pageOf: (mission) => params.linkFor?.({ gatewayId: mission.gatewayId, chatId: mission.chatId, senderId: mission.startedBy }, { kind: "mission", id: mission.id }) ?? null,
-    sendReport: async (mission) => {
-      const ctx = commandContext(mission);
-      if (!late || !ctx || !mission.report) return "this daemon cannot send files for that agent.";
-      const at = { ...ctx, gatewayId: late.voice(mission.agentId, mission.gatewayId), chatId: mission.chatId };
-      const maxBytes = params.config().attachments.maxSizeMb * 1024 * 1024;
-      return await sendTextFile({ send: late.sendAttachment, maxBytes, ...(params.childEnv ? { childEnv: params.childEnv } : {}) }, at, "report.md", mission.report);
-    },
+    sendReport: async (mission) => (mission.report ? await sendAsFile(mission, "report.md", mission.report) : "this daemon cannot send files for that agent."),
+    sendBrief: (mission, text) => sendAsFile(mission, BRIEF_FILE, text),
     checkRefusal: (request, command) => {
       const exec = late?.exec();
       const workdir = request.workdir ?? join(privateWorkspace(params.config().daemon.workspaceDir, request.agentId), "missions");

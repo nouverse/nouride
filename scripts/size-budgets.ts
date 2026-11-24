@@ -59,8 +59,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the background job table: a command's, a helper's and an ask's rows, every write to `jobs.status` in one class, its log sweep, which are services, who started a command, who is told what one left",
   },
   "apps/engine/src/boot/missions.ts": {
-    lines: 413,
-    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches, skill learning and its coding CLI's leftovers at its end too",
+    lines: 414,
+    why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches: learning, a coding CLI's leftovers, its report and brief sent as files",
   },
   "apps/engine/src/modules/tools/registry.ts": {
     lines: 455,
@@ -83,8 +83,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
   },
   "apps/engine/src/modules/missions/missions.ts": {
-    lines: 602,
-    why: "the missions' one service (start, dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, slots, its jobs, what commands left); +3: a draft's own limits, in words",
+    lines: 606,
+    why: "the missions' one service (start, dispatcher, a turn's shape and its end, ask, stop, pause, continue, going on after tries, slots, its jobs, what commands left); +4: a start's brief kept, then sent",
   },
   "packages/gateways/src/channels/telegram/gateway.ts": {
     lines: 408,

@@ -566,7 +566,7 @@
   "apps/engine/src/modules/missions/review.ts": { "version": 3 },
   "apps/engine/src/modules/missions/similar.ts": { "version": 1 },
   "apps/engine/src/modules/missions/slots.ts": { "version": 1 },
-  "apps/engine/src/modules/missions/start.ts": { "version": 7 },
+  "apps/engine/src/modules/missions/start.ts": { "version": 6 },
   "apps/engine/src/modules/missions/tell.ts": { "version": 3 },
   "apps/engine/src/modules/missions/timers.ts": { "version": 4 },
   "apps/engine/src/modules/missions/types.ts": { "version": 6 },

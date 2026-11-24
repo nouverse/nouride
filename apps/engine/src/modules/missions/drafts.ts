@@ -83,7 +83,9 @@ export function draftNotice(mission: Pick<Mission, "id" | "title" | "goal" | "ag
     // Its name, then the goal whole: what the person decides on is what it will do, and the name is how it is called after.
     `📝 Draft ${id} · ${who}: ${mission.title.trim() || "untitled"}`,
     mission.goal.trim(),
-    `${checks} · signed off by: ${signedOffBy(mission)} · brief: ${brief ? "on the mission's page" : "none"}`,
+    // Named as the file that follows the notice (`brief-sent.ts`): "on the mission's page" sent a person in a chat app
+    // to a dashboard to read what they were about to start.
+    `${checks} · signed off by: ${signedOffBy(mission)} · brief: ${brief ? `${BRIEF_FILE}, the file below` : "none"}`,
     // Its own limits (`ownLimits`), where it has any: none, and the notice is as it always was.
     ...(limits ? [limits] : []),
     `Start it: /mission accept ${id} · drop it: /mission stop ${id}`,

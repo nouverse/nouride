@@ -39,7 +39,7 @@ export interface StartRequest {
   jobId?: string;
   /** The request body that started it, when a webhook did: data on its page, and the mission marked untrusted. */
   request?: string;
-  /** A draft's brief (0.8.11): written to `BRIEF.md` in its folder (`drafts.ts`). */
+  /** Its brief: written to `BRIEF.md` in its folder, as a draft is made (`drafts.ts`) or before a start's first turn (`brief-sent.ts`). */
   brief?: string;
   /**
    * Its own limits, each where it stops to ask the person whether to go on; one left out follows the setting. A draft's
@@ -155,7 +155,9 @@ export function startRefusal(
   if (!deps.exists(request.agentId)) return `There is no agent called ${request.agentId}.`;
   const goal = request.goal.trim();
   if (!goal) return "A mission needs a goal: what should be true when it is done.";
-  if (goal.length > GOAL_MAX) return `Keep the goal under ${GOAL_MAX} characters: write the detail to a brief file first (in English, and whole, as the goal is) and name its absolute path in the goal.`;
+  // The detail has one place, the brief, which the daemon keeps in the mission's folder and sends the person: told to
+  // write a file and name its path, agents ended every goal with a path on the server that nobody could open from a chat.
+  if (goal.length > GOAL_MAX) return `Keep the goal under ${GOAL_MAX} characters: say there what must be true when the work is done, and put the detail in the brief (\`brief\`), in English and whole, never in a file of your own that the goal points at.`;
   // A scheduled job's run is named by its job, whoever made it.
   const title = titleRefusal(request.title, Boolean(request.byAgent) && request.jobId === undefined);
   if (title) return title;

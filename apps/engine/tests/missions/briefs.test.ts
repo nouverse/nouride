@@ -108,10 +108,10 @@ describe("the brief file a mission goal points at", () => {
     expect(h.store.recent(10)).toHaveLength(3);
   });
 
-  test("the goal's field says it must be whole, and where a long one goes", () => {
+  test("the goal's field says it must be whole, and that its detail is the brief's, not a file of the agent's own", () => {
     const start = createMissionTools({} as never).chat.definition.parameters as { properties: { goal: { description: string } } };
     expect(start.properties.goal.description).toBe(
-      "What must be true when it is done, in English, and whole: each turn starts from it, not from this conversation. A long one points at a brief file by its absolute path.",
+      "What must be true when it is done, in English, and whole: each turn starts from it, not from this conversation. Its detail goes in `brief`, never in a file of your own that the goal points at.",
     );
   });
 });
