@@ -116,6 +116,11 @@ export function morningFacts(params: MorningSources): (person: Person, from: num
   };
 }
 
+/** The connection a person's line goes out on for a platform: the first up that no agent open to everyone owns. */
+export function lineOn(gateways: Map<string, Gateway>, platform: string, openOn?: (gatewayId: string) => boolean): Gateway | undefined {
+  return [...gateways.values()].find((one) => one.platform === platform && one.status === "connected" && openOn?.(one.id) !== true);
+}
+
 export function startMorning(params: MorningSources & {
   config: () => GlobalConfig;
   gateways: Map<string, Gateway>;
@@ -126,13 +131,18 @@ export function startMorning(params: MorningSources & {
   pipeline: () => { isAdmin(who: { gatewayId: string; senderId: string }): boolean; voiceGatewayId(agentId: string, gatewayId: string): string };
   /** Where the day each person's line last came is kept (`daemon_state`). */
   state: StateRows;
+  /**
+   * Whether a connection is an agent's open to everyone: never one a person's line goes out on. The day's spend and what
+   * waits for an admin, on the phone or the bot's chat that is the public's (`admin-chats.ts` keeps questions off it too).
+   */
+  openOn?: (gatewayId: string) => boolean;
 }): ReturnType<typeof setInterval> {
   const send = async (person: Person, text: string): Promise<boolean> => {
     const config = params.config();
     const by = config.daemon.orchestrator ?? "";
     const lastFrom = params.turns.lastFrom(accountsOf(person).map((one) => one.account));
     for (const { platform, account } of morningRoute(person, lastFrom)) {
-      const gateway = [...params.gateways.values()].find((one) => one.platform === platform && one.status === "connected");
+      const gateway = lineOn(params.gateways, platform, params.openOn);
       if (!gateway) continue;
       const voice = by ? params.pipeline().voiceGatewayId(by, gateway.id) : gateway.id;
       if (await params.notifier.toChat({ gatewayId: voice, chatId: account }, text)) return true;

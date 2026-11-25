@@ -13,7 +13,7 @@ import { CronStore } from "@/modules/cron/cron.store.ts";
 import { MissionStore } from "@/modules/missions/missions.store.ts";
 import { newMission } from "@/modules/missions/start.ts";
 import { MorningLines, morningText, type MorningFacts } from "@/modules/people/morning-line.ts";
-import { morningFacts, morningRoute } from "@/boot/morning-lines.ts";
+import { lineOn, morningFacts, morningRoute } from "@/boot/morning-lines.ts";
 import { tempDir, turnStore } from "../helpers.ts";
 
 const logged: string[] = [];
@@ -250,5 +250,17 @@ describe("where it goes (0.8.0)", () => {
     expect(turns.lastFrom(["214", "555"])[0]).toEqual({ gatewayId: "telegram:nouva", senderId: "555" });
     expect(route(GADING, turns.lastFrom(["214", "555"]))[0]).toBe("telegram:555");
     expect(turns.lastFrom([])).toEqual([]);
+  });
+});
+
+describe("the connection it goes out on", () => {
+  test("the first up of the platform, never one an agent open to everyone owns: the public's phone or bot", () => {
+    const up = (id: string, platform: string, status = "connected") => [id, { id, platform, status }] as [string, never];
+    const gateways = new Map([up("whatsapp:shop", "whatsapp"), up("whatsapp:home", "whatsapp"), up("telegram:main", "telegram")]);
+    expect(lineOn(gateways, "whatsapp")?.id).toBe("whatsapp:shop");
+    expect(lineOn(gateways, "whatsapp", (id) => id === "whatsapp:shop")?.id).toBe("whatsapp:home");
+    // Only the open agent's is up: none on that platform, and the line goes on its person's next account.
+    const shopOnly = new Map([up("whatsapp:shop", "whatsapp"), up("whatsapp:home", "whatsapp", "reconnecting")]);
+    expect(lineOn(shopOnly, "whatsapp", (id) => id === "whatsapp:shop")).toBeUndefined();
   });
 });
