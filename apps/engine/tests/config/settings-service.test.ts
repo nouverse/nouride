@@ -389,7 +389,19 @@ describe("removing a gateway", () => {
     });
 
     const result = await offline.removeGateway("whatsapp:main", "test");
+    // Its folder held no login, so no phone lists it: nothing to finish there.
     expect(result).toEqual({ ok: true, restartRequired: true });
+    expect(existsSync(sessionDir)).toBe(false);
+  });
+
+  test("a number removed with nothing running, whose folder held a login, is said to be still on its phone", async () => {
+    // Nothing up to tell WhatsApp: the login goes from this machine and the phone goes on listing the device.
+    const sessionDir = join(dir, "wa-offline-linked");
+    mkdirSync(sessionDir, { recursive: true });
+    writeFileSync(join(sessionDir, "creds.enc"), "encrypted-login-bytes");
+    const offline = new SettingsService({ config, configPath, secrets, providers, gatewayStatus: () => new Map() });
+    await offline.saveGateway({ platform: "whatsapp", name: "main", enabled: true, sessionDir, actor: "test" });
+    expect(await offline.removeGateway("whatsapp:main", "test")).toEqual({ ok: true, restartRequired: true, stillOnThePhone: true });
     expect(existsSync(sessionDir)).toBe(false);
   });
 

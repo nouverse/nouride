@@ -8,7 +8,7 @@
 
 import { createLogger } from "@nouride/shared";
 import { GROUP_CONTEXT_MAX, type ConfigurableGatewayName } from "@nouride/shared";
-import { isAbsolute, randomBytes, removePath } from "@nouride/runtime";
+import { isAbsolute, join, randomBytes, removePath, statFile } from "@nouride/runtime";
 import { removeTomlTable, upsertTomlTable } from "@/modules/config/edit.ts";
 import { editConfigFile } from "./file.ts";
 import {
@@ -230,6 +230,8 @@ export async function removeGateway(deps: SettingsDeps, id: string, actor: strin
   // The session is the login. Removed with the connection, because leaving it is how a deleted
   // gateway stays signed in.
   let sessionRemoved = false;
+  // Whether it held a login, read before it goes: a folder with none was never linked, and no phone lists it.
+  const hadLogin = existing.platform === "whatsapp" && existing.sessionDir !== undefined && statFile(join(existing.sessionDir, "creds.enc")) !== null;
   if (existing.platform === "whatsapp" && existing.sessionDir) {
     try {
       removePath(existing.sessionDir);
@@ -268,6 +270,6 @@ export async function removeGateway(deps: SettingsDeps, id: string, actor: strin
   // A restart is only needed for what could not be retired live. Saying "restart required" after
   // the connection is already down and its files are gone sends the operator to do nothing.
   // A number removed without its phone being told is still listed there: said, as the place to finish removing it.
-  const stillOnThePhone = existing.platform === "whatsapp" && sessionRemoved && retired?.loggedOut !== true;
+  const stillOnThePhone = hadLogin && sessionRemoved && retired?.loggedOut !== true;
   return { ok: true, restartRequired: !retired?.stopped, ...(stillOnThePhone ? { stillOnThePhone: true as const } : {}) };
 }
