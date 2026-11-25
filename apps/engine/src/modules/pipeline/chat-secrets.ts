@@ -17,6 +17,7 @@ import { envNamesFor, findSecrets, type TransientSecrets } from "@nouride/secret
 import { createLogger, type Gateway, type MessageEnvelope, type TakenSecret } from "@nouride/shared";
 import type { SecretsHookPort } from "@/modules/hooks/types.ts";
 import { secretScope, type SecretKeeping } from "@/modules/tools/held-secrets.ts";
+import type { Admission } from "./admission.ts";
 import { isSystemEvent, type PipelineDeps } from "./deps.ts";
 import { EDIT_WINDOW_MS, quotedId } from "./edit-rules.ts";
 
@@ -181,11 +182,21 @@ function speakerFor(deps: Pick<PipelineDeps, "config" | "gateways">, gateway: Ga
 }
 
 /**
+ * How a sender is told what was taken out: as a stranger of an agent open to everyone, as anybody else, or not at all —
+ * a stranger in a group who addressed nobody, whom the agent does not answer either. Told there, every such message in
+ * a busy group had the daemon's notice under it, from the room's front desk.
+ */
+export function strangerTold(admission: Pick<Admission, "strangerOf" | "addressedHere">, envelope: MessageEnvelope): boolean | "not told" {
+  if (admission.strangerOf(envelope) === undefined) return false;
+  return envelope.chatType === "dm" || admission.addressedHere(envelope) ? true : "not told";
+}
+
+/**
  * Tell the person what was taken: in the chat, from the daemon, and on the dashboard's timeline — where its own
  * connection hands a line only to a request still waiting for it.
  */
-export function tellTaken(deps: Pick<PipelineDeps, "chatEvents" | "config" | "gateways">, gateway: Gateway, envelope: MessageEnvelope, taken: readonly TakenSecret[], stranger = false): void {
-  if (taken.length === 0) return;
+export function tellTaken(deps: Pick<PipelineDeps, "chatEvents" | "config" | "gateways">, gateway: Gateway, envelope: MessageEnvelope, taken: readonly TakenSecret[], stranger: boolean | "not told" = false): void {
+  if (taken.length === 0 || stranger === "not told") return;
   const text = stranger ? takenFromStranger(taken) : takenNotice(taken);
   deps.chatEvents?.record({
     gatewayId: envelope.gatewayId,
@@ -196,7 +207,8 @@ export function tellTaken(deps: Pick<PipelineDeps, "chatEvents" | "config" | "ga
     ...(envelope.senderId ? { actor: envelope.senderId } : {}),
     details: { handles: taken.map((secret) => secret.handle) },
   });
-  const speaker = speakerFor(deps, gateway, envelope);
+  // A stranger is answered by the open agent's own connection, never the household's front desk.
+  const speaker = stranger ? gateway : speakerFor(deps, gateway, envelope);
   // Quoted where that bot knows the message by this id — not in a Telegram basic group, which numbers it per bot.
   const quote = envelope.chatType === "dm" || (speaker !== gateway && envelope.idsPerConnection) ? {} : { replyTo: quotedId(envelope) };
   const say = (by: Gateway, quoted: object) => by.send({ gatewayId: by.id, chatId: envelope.chatId, text, ...quoted });

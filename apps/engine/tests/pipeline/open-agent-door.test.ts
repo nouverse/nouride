@@ -34,7 +34,7 @@ const conversationsOf = (db: SqliteDb, agent: string): string[] =>
  * Nouva is the orchestrator and pairs strangers; Nora is open. Each has its own Telegram bot, unless `bots` says
  * Nora's alone. The owner is on the install's list; nobody else is known.
  */
-async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; noraOff?: boolean; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps } = {}) {
+async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; noraOff?: boolean; perMinute?: number; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps } = {}) {
   const bots = options.bots ?? ["nouva", "nora"];
   const connections = Object.fromEntries(bots.map((id) => [id, new FakeGateway(`telegram:${id}`, "telegram")]));
   // As Telegram is: no bot is handed another bot's message, so a tag between agents is the daemon's to hand over.
@@ -48,7 +48,7 @@ async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[];
     config: {
       daemon: { orchestrator: "nouva" },
       agents: { mentions_enabled: true, groups_require_mention: options.groupsRequireMention ?? false },
-      security: { access: { mode: "pair", allowlist: [OWNER] } },
+      security: { access: { mode: "pair", allowlist: [OWNER] }, ...(options.perMinute ? { rate_limit: { messages_per_minute: options.perMinute, cooldown_reply: "Slow down, please." } } : {}) },
       gateways: { telegram: Object.fromEntries(bots.map((id) => [id, { enabled: true, token: `t-${id}`, agent: id }])) },
     },
     gateways: Object.values(connections),
@@ -124,6 +124,34 @@ describe("who is let in", () => {
     // Let in, as anyone is by an open agent: fetched for the turn that answers it.
     await h.dm("nora", { text: "what is this?", ...photo("let-in") });
     expect({ fetched, requests: h.requests.length }).toEqual({ fetched: ["wa-held:let-in"], requests: 1 });
+  });
+
+  test("a stranger past the per-minute limit is told to slow down once, not for every message", async () => {
+    // Read by a second reader of the branch: each message past the limit had its own reply and its own record.
+    const h = await install({ perMinute: 1, turns: ["we open at nine"] });
+    for (const text of ["hi", "are you there", "hello?", "hello??"]) await h.dm("nora", { text });
+    expect({ said: h.said().nora, requests: h.requests.length }).toEqual({ said: ["we open at nine", "Slow down, please."], requests: 1 });
+  });
+
+  test("a key a stranger sends in a group is taken out; they are told only where they addressed the open agent, by its bot", async () => {
+    // Read by a second reader of the branch: the notice came under every such message, addressed or not, from the
+    // room's front desk, the household's bot. The open agent's copy is handed over first here, as the platform may.
+    const { TransientSecrets } = await import("@nouride/secrets");
+    const h = await install({ turns: ["noted"], deps: () => ({ heldSecrets: new TransientSecrets() }) });
+    const inGroup = async (id: string, text: string, tagsNora: boolean) => {
+      for (const bot of ["nora", "nouva"] as const) {
+        h.connections[bot]!.receive(envelopeAt({ id, timestamp: Date.now(), gatewayId: `telegram:${bot}`, chatType: "group", chatId: GROUP, senderId: STRANGER, senderName: "A stranger", text, ...(tagsNora && bot === "nora" ? { mentionsSelf: true } : {}) }));
+      }
+      await h.pipeline.idle();
+    };
+    const key = `ghp_${"Zq9xW2vB7nM4kL8p".repeat(3).slice(0, 36)}`;
+    const another = `ghp_${"Pk4Lm8Nq2Rs6Tv1W".repeat(3).slice(0, 36)}`;
+    await inGroup("k-1", `my key is ${key}`, false);
+    expect(h.said()).toEqual({ nouva: [], nora: [] });
+    await inGroup("k-2", `nora, my key is ${another}`, true);
+    expect(h.said().nouva).toEqual([]);
+    expect((h.said().nora ?? []).filter((line) => line.startsWith("🔒 Part of your message looked like a password or a key ("))).toHaveLength(1);
+    for (const one of [key, another]) expect(JSON.stringify(h.requests)).not.toContain(one);
   });
 
   test("a block keeps a sender out of the open agent too", async () => {

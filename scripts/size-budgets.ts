@@ -99,7 +99,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id, files as a set, buttons, presence, reconnect, a login's timeout with why",
   },
   "apps/engine/src/modules/pipeline/inbound.ts": {
-    lines: 401,
+    lines: 402,
     why: "whether a message gets a turn and whose, every decision that costs nothing and their order: who could answer in the room (by what each connection sees), the door, the claim, commands",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {

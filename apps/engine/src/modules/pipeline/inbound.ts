@@ -688,6 +688,7 @@ export class InboundRouter {
 
     // A message a turn handed back was counted when it came in; it is not the sender writing again.
     if (!how.claimed && !this.admission.withinRateLimit(envelope)) {
+      if (!this.admission.tellsSlowDown(envelope)) return; // told once a minute, not once a message
       const cooldown = this.ctx.deps.config.security.rateLimit.cooldownReply;
       await this.ctx.voice.reply(envelope, cooldown);
       // Same reason as the notice above: "you are sending these too fast" is not useful advice if the

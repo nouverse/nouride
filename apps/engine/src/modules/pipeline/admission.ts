@@ -35,6 +35,8 @@ const OWN_COPY_FIRST_MS = 750;
 export class Admission {
   /** Sender → recent message timestamps, for the per-sender rate limit (§10.1 SPEC). */
   private readonly recentBySender = new Map<string, number[]>();
+  /** Sender → when they were last told to slow down: once a minute, not once a message (`tellsSlowDown`). */
+  private readonly toldSlowDown = new Map<string, number>();
   /** Chat → when it was last told a message of theirs was dropped. See `noticeDropped`. */
   private readonly lastDropNotice = new Map<string, number>();
   /**
@@ -281,6 +283,20 @@ export class Admission {
       }
     }
 
+    return true;
+  }
+
+  /**
+   * Whether a sender past the per-minute limit is told so this time: once a minute. Told for every message, a sender
+   * who kept writing had a reply, and a record of it, for each one, where an agent open to everyone answers anybody, and
+   * a WhatsApp number that answers many it does not know may be closed for it.
+   */
+  tellsSlowDown(envelope: MessageEnvelope): boolean {
+    const now = Date.now();
+    for (const [key, at] of this.toldSlowDown) if (now - at >= 60_000) this.toldSlowDown.delete(key);
+    const key = `${envelope.gatewayId}:${envelope.senderId}`;
+    if (this.toldSlowDown.has(key)) return false;
+    this.toldSlowDown.set(key, now);
     return true;
   }
 

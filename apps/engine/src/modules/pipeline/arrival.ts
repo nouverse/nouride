@@ -15,7 +15,7 @@ import { isSystemEvent, type PipelineDeps } from "./deps.ts";
 import type { Admission } from "./admission.ts";
 import type { Batcher } from "./batcher.ts";
 import type { ChatTypes } from "./chat-types.ts";
-import { tellTaken, type ChatSecrets } from "./chat-secrets.ts";
+import { type ChatSecrets, strangerTold, tellTaken } from "./chat-secrets.ts";
 import { isEdit } from "./edit-rules.ts";
 import { arriveEdit, type EditLedger } from "./edits.ts";
 import type { InboxDesk } from "./inbox-desk.ts";
@@ -137,7 +137,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, arrived: MessageEn
     parts.admission.resetJobWakeChain(envelope.gatewayId, envelope.chatId);
   }
   if (!parts.admission.admit(envelope)) return;
-  tellTaken(parts.deps, gateway, envelope, taken, parts.admission.strangerOf(envelope) !== undefined);
+  tellTaken(parts.deps, gateway, envelope, taken, strangerTold(parts.admission, envelope));
   if (!parts.inbox.intake(envelope)) return;
   /**
    * Blue ticks, here and not earlier.
