@@ -16,12 +16,27 @@ export interface FileWriter {
   close(): Promise<void>;
 }
 
-/** A file opened for writing from the start, or for appending to what is there — created with `mode` if it is new. */
+/**
+ * A file opened for writing from the start, or for appending to what is there — created with `mode` if it is new.
+ *
+ * A failure (a full disk, a folder gone, a file it may not open) rejects the write that met it and every one after, and
+ * nothing else: the stream's own `error` event is listened to here. Unheard, it was an uncaught exception, which the
+ * daemon answers by shutting down, and the stream it broke never closed, so `close` waited for good.
+ */
 export function openFileWriter(path: string, options: { append?: boolean; mode?: number } = {}): FileWriter {
   const file = createWriteStream(path, { flags: options.append ? "a" : "w", ...(options.mode !== undefined ? { mode: options.mode } : {}) });
+  let failed: Error | null = null;
+  file.on("error", (err) => {
+    failed = err;
+  });
   return {
-    write: (bytes) => new Promise<void>((resolve, reject) => file.write(bytes, (err) => (err ? reject(err) : resolve()))),
-    close: () => new Promise<void>((resolve) => file.close(() => resolve())),
+    write: (bytes) => (failed ? Promise.reject(failed) : new Promise<void>((resolve, reject) => file.write(bytes, (err) => (err ? reject(err) : failed ? reject(failed) : resolve())))),
+    close: () =>
+      new Promise<void>((resolve) => {
+        if (file.closed) return resolve();
+        file.once("close", () => resolve());
+        file.end();
+      }),
   };
 }
 

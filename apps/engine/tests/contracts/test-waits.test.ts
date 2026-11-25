@@ -57,8 +57,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   // 0 → 1 (0.8.1, `acp.test.ts`): a refusal written to a peer already gone shown not to reject unhandled.
   "packages/acp": 1,
   "packages/queue": 8,
-  // Each about time: a stream paced to lose a race, a prompt's turn, a deadline for a hang, an idle timeout outlasted.
-  "packages/runtime": 4,
+  // Each about time: a stream paced to lose a race, a prompt's turn, a deadline for a hang, an idle timeout outlasted;
+  // and a broken writer's error shown not to escape as an uncaught one (`file-stream.test.ts`).
+  "packages/runtime": 5,
   "packages/shared": 5,
   "packages/update": 4,
   // 0 → 1 (`fixtures/side-by-side.ts`): a stand-in download holds a step, so a burst's downloads overlap and how many run
