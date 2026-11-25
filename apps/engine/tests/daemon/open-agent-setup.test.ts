@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { AgentRegistry } from "@nouride/persona";
 import type { SqliteDb } from "@nouride/runtime";
 import { SecretStore } from "@nouride/secrets";
-import type { GlobalConfig } from "@nouride/shared";
+import { addLogSink, type GlobalConfig, type LogEntry } from "@nouride/shared";
 import { refusedByThisInstall } from "@/boot/preflight.ts";
 import { startOfLocalDay } from "@/commons/clock.ts";
 import { openAndMigrate } from "@/db/index.ts";
@@ -29,6 +29,10 @@ import { openOf } from "@/modules/web/control/agent-open.ts";
 const NORA = '[agent]\ndisplay_name = "Nora"\n';
 const LIMITS = { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 };
 const NOTES_FIRST = "nora has notes of its own, and once it is open it may say what they hold to anyone who asks. Read its notes first, then open it and say that you have.";
+
+/** Each time a pack's load called a key of it one nothing reads. */
+const unknownKeys: LogEntry[] = [];
+addLogSink((entry) => void (entry.message === "unknown pack config key ignored" && unknownKeys.push(entry)));
 
 let root: string;
 let config: GlobalConfig;
@@ -100,6 +104,17 @@ describe("opening an agent", () => {
     expect(await setup.openAgent({ agentId: "nora", limits: { maxDailyTokens: 50_000, maxDailyMessagesPerPerson: 5 }, actor: "admin" })).toEqual({ ok: true });
     expect(agents.get("nora")?.config.open).toEqual({ maxDailyTokens: 50_000, maxDailyMessagesPerPerson: 5 });
     expect(configOf("nora")).not.toContain("closed_reply");
+  });
+
+  test("the pack it writes loads without a word: no line of it is called a key nothing reads", async () => {
+    // Seen on a live install: `config check` and the log said `[open]` was an unknown key and ignored, of the very
+    // table that held the agent's limits. Every load of the pack is listened to: the open, and a start after it.
+    unknownKeys.length = 0;
+    const { setup } = await service();
+    expect(await setup.openAgent({ agentId: "nora", limits: { ...LIMITS, closedReply: "Closed for today." }, actor: "admin" })).toEqual({ ok: true });
+    const { agents } = await service();
+    expect(agents.get("nora")?.config.open).toEqual({ ...LIMITS, closedReply: "Closed for today." });
+    expect(unknownKeys.map((entry) => entry.data?.key)).toEqual([]);
   });
 
   test("a number the loader refuses opens nothing, and the file is as it was", async () => {
