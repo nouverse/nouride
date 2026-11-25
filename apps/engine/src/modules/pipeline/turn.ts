@@ -257,7 +257,7 @@ export class TurnRunner {
     const said = owed || (isSystemEvent(envelope) && !hasWords(result.text) ? "" : result.text);
     const notice = said.trim()
       ? null
-      : emptyTurnMessage(result.stopReason, result.toolCalls, controller.signal.aborted, result.approvalsRefused);
+      : emptyTurnMessage(result.stopReason, result.toolCalls, controller.signal.aborted, result.approvalsRefused, !isOpenAgent(agent));
     /**
      * This chat's `/effort` level, refused by its model (0.8.17): said under the answer that met it, once, and kept out of
      * the conversation, which holds the model's own words. Not under an answer nobody is sent, stopped or already said

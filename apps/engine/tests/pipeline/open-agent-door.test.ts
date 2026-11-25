@@ -13,6 +13,7 @@ import type { SqliteDb } from "@nouride/runtime";
 import type { MessageEnvelope } from "@nouride/shared";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
 import { pipelineBench, type BenchOptions } from "../pipeline-bench.ts";
+import { emptyTurnMessage } from "@/modules/pipeline/messages.ts";
 
 type BenchDeps = NonNullable<BenchOptions["deps"]>;
 
@@ -300,6 +301,21 @@ describe("a stranger has three commands", () => {
     await h.group({ senderId: OWNER, senderName: "Gading", text: "/new" }, { bot: "nora" });
     expect(h.said().nora!.at(-1)).toStartWith("New conversation started.");
     expect(h.sessions.load(group).messages).toEqual([]);
+  });
+});
+
+describe("what the daemon says for an open agent", () => {
+  test("an answer it did not manage names no command a stranger does not have; an ordinary agent's still points to /status", async () => {
+    const h = await install({ turns: ["", ""] });
+    await h.dm("nora", { text: "what are your opening hours?" });
+    expect(h.said().nora).toEqual(["I did not manage to produce an answer for that. Try rephrasing."]);
+    await h.dm("nouva", { senderId: OWNER, senderName: "Gading", text: "and you?" });
+    expect(h.said().nouva).toEqual(["I did not manage to produce an answer for that. Try rephrasing, or `/status` to check my state."]);
+    // A turn out of time says the same, with an approval or without.
+    for (const refused of [0, 1]) {
+      expect(emptyTurnMessage("stop", 3, true, refused, false)).toEndWith("Ask me again and I will pick it up.");
+      expect(emptyTurnMessage("stop", 3, true, refused)).toEndWith("Ask me again and I will pick it up, or `/status` to see where I am.");
+    }
   });
 });
 
