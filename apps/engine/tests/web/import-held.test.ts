@@ -150,7 +150,10 @@ describe("the count of what an export will hold", () => {
     await first;
     const later = old.transfer.plan(false);
     expect(later).not.toBe(first);
-    expect(await later).toEqual(await first);
+    // The same count of the install. The disk's free space is in the answer too and is the machine's, not the
+    // install's: another program writing between the two counts changed it, and this failed once beside another suite.
+    const counted = ({ freeBytes, ...install }: ExportPlan) => ({ install, free: typeof freeBytes });
+    expect(counted(await later)).toEqual(counted(await first));
   });
 
   test("an export begins without one, and says its size once what goes in is counted", async () => {
