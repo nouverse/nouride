@@ -34,6 +34,50 @@ What comes back from a scan is a **login**, not a token. A copy of `session_dir`
 useless; a copy *with* it is a working login. Lose the key and the next restart asks for a new scan.
 :::
 
+## A number for each agent
+
+A number belongs to one agent, as a Telegram bot does: a message to it goes to that agent, and people
+are let in for that number and no other. To give a second agent its own number, add a second
+connection, with its own name, from that agent's **Connections** page or from a terminal:
+
+```bash
+nouride gateway add --platform whatsapp --name shop --agent nora
+nouride restart --then "confirm whatsapp:shop connected"
+```
+
+```toml
+[gateways.whatsapp.main]
+enabled = true
+encryption_key = "whatsapp-main-key"
+agent = "nouva"
+
+[gateways.whatsapp.shop]
+enabled = true
+encryption_key = "whatsapp-shop-key"   # a key of its own, made for it when added from the dashboard or the command
+agent = "nora"
+```
+
+After the restart the new number's code is on its agent's Connections page. Scan it from the phone
+that holds *that* number. The first number is not asked to scan again, and each card says whether its
+number is linked or still waiting.
+
+One number's trouble is its own. A number that is logged out from its phone, or cut off from the
+network, stops or reconnects alone; `/health`, `nouride status` and the dashboard name it, and the
+other number goes on answering. Nouride sets no limit on how many numbers an install holds: each is
+one more connection kept open to WhatsApp.
+
+In a group that two of your numbers are in, a message that tags one number is that number's agent's
+to answer; one that tags nobody is answered once, by the agent that holds the install, not by each
+number.
+
+:::caution[A number that answers strangers]
+An agent that is [open to everyone](/en/docs/manual/access/#an-agent-open-to-everyone) answers anyone
+who writes to its number. WhatsApp may restrict or close a number that answers many people it does
+not know: Nouride is linked to the number the way WhatsApp Web is, not through the service WhatsApp
+sells to businesses. Use a number you can afford to lose, and see [error 463](#error-463-the-failure-that-reads-like-a-bug)
+for what a restriction looks like.
+:::
+
 ## The bridge
 
 ```

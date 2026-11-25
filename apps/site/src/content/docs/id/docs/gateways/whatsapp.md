@@ -35,6 +35,51 @@ berguna; salinan *dengan* key itu adalah login yang berfungsi. Kehilangan key be
 berikutnya minta scan ulang.
 :::
 
+## Satu nomor untuk tiap agent
+
+Satu nomor milik satu agent, seperti bot Telegram: pesan ke nomor itu masuk ke agent itu, dan orang
+diizinkan masuk untuk nomor itu saja, bukan nomor lain. Untuk memberi agent kedua nomornya sendiri,
+tambahkan koneksi kedua dengan namanya sendiri, dari halaman **Connections** agent itu atau dari
+terminal:
+
+```bash
+nouride gateway add --platform whatsapp --name shop --agent nora
+nouride restart --then "confirm whatsapp:shop connected"
+```
+
+```toml
+[gateways.whatsapp.main]
+enabled = true
+encryption_key = "whatsapp-main-key"
+agent = "nouva"
+
+[gateways.whatsapp.shop]
+enabled = true
+encryption_key = "whatsapp-shop-key"   # key-nya sendiri, dibuatkan saat ditambah dari dashboard atau perintah di atas
+agent = "nora"
+```
+
+Setelah restart, kode nomor baru itu ada di halaman Connections agent-nya. Pindai dari HP yang
+memegang nomor *itu*. Nomor pertama gak diminta scan ulang, dan tiap kartu bilang nomornya sudah
+tertaut atau masih menunggu.
+
+Masalah satu nomor urusannya sendiri. Nomor yang ter-logout dari HP-nya, atau putus dari jaringan,
+berhenti atau nyambung lagi sendirian; `/health`, `nouride status`, dan dashboard menyebut namanya,
+dan nomor yang lain tetap menjawab. Nouride gak membatasi berapa nomor yang dipegang satu instalasi:
+tiap nomor adalah satu koneksi lagi yang dijaga tetap terbuka ke WhatsApp.
+
+Di grup yang dimasuki dua nomor kamu, pesan yang men-tag satu nomor dijawab agent pemilik nomor itu;
+pesan yang gak men-tag siapa pun dijawab sekali, oleh agent yang memegang instalasi, bukan oleh tiap
+nomor.
+
+:::caution[Nomor yang menjawab orang asing]
+Agent yang [terbuka untuk semua orang](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang)
+menjawab siapa pun yang menulis ke nomornya. WhatsApp bisa membatasi atau menutup nomor yang menjawab
+banyak orang yang gak dikenalnya: Nouride tertaut ke nomor itu seperti WhatsApp Web, bukan lewat
+layanan yang dijual WhatsApp untuk bisnis. Pakai nomor yang kamu rela kehilangan, dan lihat
+[error 463](#error-463-kegagalan-yang-kelihatan-seperti-bug) untuk seperti apa pembatasan itu.
+:::
+
 ## Bridge-nya
 
 ```
