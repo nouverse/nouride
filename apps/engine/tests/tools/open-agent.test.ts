@@ -70,6 +70,11 @@ describe("an open agent's toolset", () => {
     expect({ search: fields("memory_search"), read: fields("memory_read") }).toEqual({ search: ["limit", "query"], read: ["document"] });
     expect(told("memory_search").description).toStartWith("Search the documents opened to everyone:");
     expect(told("memory_read").description).toBe("Open a document that `memory_search` found: one section of it, or the whole document.");
+    // The file reader too: an ordinary agent's is told of a path on disk and of `exec`, which an open one has no use for.
+    expect(fields("attachment_read")).toEqual(["question", "ref"]);
+    expect(told("attachment_read").description).toStartWith("Open a file somebody sent in this conversation, by its ref:");
+    for (const ofTheBox of ["exec", "path", "disk", "host"]) expect(JSON.stringify(told("attachment_read"))).not.toContain(ofTheBox);
+    expect(tools.get("attachment_read")!.definition.description).toContain("`exec`");
     // The tools' own words, for an agent that remembers: none of them is this agent's to be told.
     const sent = JSON.stringify([told("memory_search"), told("memory_read")]);
     for (const theirs of ["conversation", "people", "agents", "facts", "MEMORY.md", "nouva", "since", "until"]) expect(sent).not.toContain(theirs);

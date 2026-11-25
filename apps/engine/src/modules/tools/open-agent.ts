@@ -35,8 +35,9 @@ function documentAlone(definition: ToolDefinition): ToolDefinition {
 }
 
 /**
- * The two that read, as an open agent is told of them: the documents opened to everyone, and nothing of the
- * conversations, people and agents their own words name. Its model is sent these with every stranger's message.
+ * The three that read, as an open agent is told of them: the documents opened to everyone and the files of its own
+ * chat, and nothing of the conversations, people, agents, paths and other tools their own words name. Its model is
+ * sent these with every stranger's message.
  */
 const TOLD: Record<string, Pick<ToolDefinition, "description" | "parameters">> = {
   memory_search: {
@@ -46,6 +47,17 @@ const TOLD: Record<string, Pick<ToolDefinition, "description" | "parameters">> =
       type: "object",
       properties: { query: { type: "string", description: "Keywords for what to find, e.g. `price list` or `opening hours`, not a sentence." }, limit: { type: "number", description: "At most this many results (default 10, at most 30)." } },
       required: ["query"],
+    },
+  },
+  attachment_read: {
+    description:
+      "Open a file somebody sent in this conversation, by its ref: the text of a document, what a picture shows, what a voice note says. With no ref, it lists this conversation's files. Never describe a file you have not opened.",
+    parameters: {
+      type: "object",
+      properties: {
+        ref: { type: "string", description: "The file's ref, as shown in the conversation (looks like `f1a2b3c4d5`). Leave it out to list the files of this conversation." },
+        question: { type: "string", description: "What you need to know about a picture, e.g. \"what does the label say?\"." },
+      },
     },
   },
   memory_read: {

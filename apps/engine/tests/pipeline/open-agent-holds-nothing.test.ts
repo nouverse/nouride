@@ -10,11 +10,14 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { OPEN_TOOL_ITERATIONS } from "@nouride/shared";
+import { OPEN_TOOL_ITERATIONS, type Gateway, type Tool } from "@nouride/shared";
 import { TransientSecrets } from "@nouride/secrets";
 import { bootMemory, checkMemoryVault } from "@/boot/memory.ts";
+import { ChatAttachmentIndex } from "@/modules/attachments/chat-attachments.store.ts";
+import { AttachmentStore } from "@/modules/attachments/store.ts";
+import { ToolOutputSpill } from "@/modules/llm/spill.ts";
 import { RoomMessageStore } from "@/modules/chat-events/room-messages.store.ts";
 import type { Memory } from "@/modules/memory/index.ts";
 import { createBuiltinTools } from "@/modules/tools/registry.ts";
@@ -38,9 +41,11 @@ const PACK_TOOLS = '[tools]\nenabled = ["memory_write", "memory_search", "memory
  * Nouva is the orchestrator, an ordinary agent that keeps what it is told; Nora is open. A bot each. The owner is in
  * People, with notes, and on the install's list.
  */
-async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLlm?: string; seen?: string[]; fetch?: BenchOptions["fetch"]; full?: () => string | null } = {}) {
+async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLlm?: string; seen?: string[]; fetch?: BenchOptions["fetch"]; full?: () => string | null; files?: Uint8Array; tools?: [string, Tool][] } = {}) {
   let memory!: Memory;
   const bots = { nouva: new FakeGateway("telegram:nouva", "telegram"), nora: new FakeGateway("telegram:nora", "telegram") };
+  // A file sent to either bot is fetched as these bytes, and long results are kept to files as a daemon keeps them.
+  if (more.files) for (const bot of Object.values(bots)) (bot as Gateway).fetchAttachment = async () => more.files!;
   const bench = await pipelineBench({
     turns,
     ...(more.fetch ? { fetch: more.fetch } : {}),
@@ -66,20 +71,23 @@ async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLl
       writeFileSync(join(config.daemon.agentsDir, "skills", "server-deploy", "SKILL.md"), "---\nname: server-deploy\ndescription: How the family server is deployed over ssh.\n---\n\nRun the deploy script on the box.\n");
     },
     gateways: Object.values(bots),
-    deps: async ({ config, db, turns: turnLog, providers }) => {
+    deps: async ({ config, db, dataDir, turns: turnLog, providers }) => {
       const roomMessages = new RoomMessageStore(db);
       memory = await bootMemory(config, db, { turns: turnLog, roomMessages, providers, vaultFormat: await checkMemoryVault(config), publicAgent: (id) => id === "nora" });
       return {
         roomMessages,
         memory,
         heldSecrets: new TransientSecrets(),
+        // Told which agents nothing is kept of, as boot tells it (`boot/stores.ts`).
+        spill: new ToolOutputSpill(join(dataDir, "tool-output"), (id) => id === "nora"),
+        ...(more.files ? { attachmentIndex: new ChatAttachmentIndex(db), attachments: new AttachmentStore({ rootDir: join(dataDir, "attachments"), maxBytes: 1_000_000 }) } : {}),
         ...(more.full ? { full: more.full } : {}),
         ...(more.seen ? { reflection: { observe: async (turn: { agentId: string }) => void more.seen!.push(turn.agentId) } as never } : {}),
       };
     },
   });
   benches.push(bench);
-  bench.pipeline.setTools(createBuiltinTools({ security: bench.config.security, memory }));
+  bench.pipeline.setTools(new Map([...createBuiltinTools({ security: bench.config.security, memory }), ...(more.tools ?? [])]));
   bench.pipeline.attach();
   let sent = 0;
   const write = async (bot: keyof typeof bots, over: Parameters<typeof envelopeAt>[0]) => {
@@ -184,6 +192,72 @@ describe("what an open agent's model is sent", () => {
     expect(nouvas).toContain("This machine is short of room");
     expect(noras).toContain("when do you open?");
     for (const ofTheBox of ["nouva", "Nouva", "at work", "short of room", "garage", h.bench.dataDir, h.bench.agentsDir]) expect(noras).not.toContain(ofTheBox);
+  });
+
+  test("a file sent to it is told by its name and its ref: not where it is stored, and no tool it does not hold", async () => {
+    // Read by a second reader of the branch: the notice of a message's files gave each one's path on this server and
+    // said to open it with `read` or `exec`, to an open agent as to any other.
+    const h = await install([{ text: "noted" }, { text: "I will open it" }], { files: new TextEncoder().encode("%PDF-1.4 the price list") });
+    const pdf = { attachments: [{ type: "file" as const, mimeType: "application/pdf", filename: "price-list.pdf", url: "https://files.test/price-list.pdf" }] };
+    await h.asOwner("nouva", "keep this", pdf);
+    const usual = h.last().whole;
+    // The ordinary agent is told where the file is, and with which of its tools to open it.
+    expect(usual).toContain(join(h.bench.dataDir, "attachments"));
+    expect(usual).toContain("`exec` for anything else");
+
+    await h.write("nora", { text: "is this your price list?", ...pdf });
+    const { whole } = h.last();
+    expect(whole).toContain("1 file(s) came with this message. Open one with `attachment_read` and its ref before you say anything of what it holds.");
+    expect(whole).toMatch(/- price-list\.pdf · application\/pdf · [^\\]* · ref [0-9a-f]+/);
+    for (const ofTheBox of [h.bench.dataDir, "attachments/", "saved in your workspace", "`read`", "exec"]) expect(whole).not.toContain(ofTheBox);
+  });
+
+  test("a long answer of one of its tools is cut where it is too long: written to no file, and no path said", async () => {
+    // What a search hands back when it finds much: longer than a result may be.
+    const much = Array.from({ length: 9_000 }, (_, line) => `line ${line}: the shop sells green tea, black tea and oolong`).join("\n");
+    const search: Tool = { requiresApproval: false, definition: { name: "memory_search", description: "Search.", parameters: { type: "object", properties: { query: { type: "string" }, limit: { type: "number" } } } }, execute: async () => ({ content: much, isError: false }) };
+    const call = (id: string) => ({ toolCalls: [{ id, name: "memory_search", args: { query: "tea" } }] });
+    const h = await install([call("s1"), { text: "found" }, call("s2"), { text: "we sell tea" }], { tools: [["memory_search", search]] });
+    const kept = () => (existsSync(join(h.bench.dataDir, "tool-output")) ? readdirSync(join(h.bench.dataDir, "tool-output"), { recursive: true }).filter((name) => String(name).includes(".")).length : 0);
+    const result = () => String((h.bench.requests.at(-1) as { messages: { role: string; content: unknown }[] }).messages.findLast((message) => message.role === "tool")!.content);
+
+    await h.asOwner("nouva", "what tea do we sell?");
+    // The ordinary agent's is kept whole in a file, and it is told where, to search it with its own tools.
+    expect(result()).toContain(`Full output: ${join(h.bench.dataDir, "tool-output")}`);
+    expect(kept()).toBe(1);
+
+    await h.write("nora", { text: "what tea do you sell?" });
+    expect(result()).toContain("line 0: the shop sells green tea");
+    expect(result()).toEndWith("[Cut here: the rest is not kept anywhere. Ask for one part of it at a time.]");
+    expect(result()).not.toContain("Full output");
+    expect(result()).not.toContain(h.bench.dataDir);
+    // Nothing more was written: what a stranger's question brought back is in no file, and no folder was made for it.
+    expect(kept()).toBe(1);
+    expect(existsSync(join(h.bench.dataDir, "tool-output", "nora"))).toBe(false);
+  });
+
+  test("its older tool results, cleared from a long conversation, are written to no file either", async () => {
+    // A conversation's old results are cleared to make room, each kept whole in a file its marker names. An open
+    // agent's are cleared with nothing kept: the file would be a stranger's conversation on disk, named by a path.
+    const much = Array.from({ length: 9_000 }, (_, line) => `line ${line}: the shop sells green tea, black tea and oolong`).join("\n");
+    const search: Tool = { requiresApproval: false, definition: { name: "memory_search", description: "Search.", parameters: { type: "object", properties: { query: { type: "string" }, limit: { type: "number" } } } }, execute: async () => ({ content: much, isError: false }) };
+    const ROUNDS = 8;
+    const asked = (start: number) => Array.from({ length: ROUNDS }, (_, n) => [{ toolCalls: [{ id: `s${start + n}`, name: "memory_search", args: { query: "tea" } }] }, { text: `answer ${n}` }]).flat();
+    const h = await install([...asked(0), ...asked(100)], { tools: [["memory_search", search]] });
+    const files = () => (existsSync(join(h.bench.dataDir, "tool-output")) ? readdirSync(join(h.bench.dataDir, "tool-output"), { recursive: true }).filter((name) => String(name).includes(".")).length : 0);
+
+    for (let n = 0; n < ROUNDS; n += 1) await h.asOwner("nouva", `what tea do we sell? (${n})`);
+    const ordinary = files();
+    // The ordinary agent's long results are files, and its cleared ones are named by the files that hold them.
+    expect(ordinary).toBeGreaterThan(0);
+    expect(h.last().whole).toContain(join(h.bench.dataDir, "tool-output"));
+
+    for (let n = 0; n < ROUNDS; n += 1) await h.write("nora", { text: `what tea do you sell? (${n})` });
+    const { whole } = h.last();
+    // Its conversation was long enough for results to be cleared, as the ordinary agent's was; none is in a file.
+    expect((whole.match(/line 0: the shop sells green tea/g) ?? []).length).toBeLessThan(ROUNDS);
+    expect(files()).toBe(ordinary);
+    expect(whole).not.toContain(h.bench.dataDir);
   });
 
   test("in a group too, where an ordinary agent is shown what the one speaking brings: an open one is shown none of it", async () => {

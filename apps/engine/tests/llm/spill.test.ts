@@ -396,3 +396,30 @@ describe("sweeping both layouts", () => {
     expect(statFile(join(root, "nouva"))).toBeNull();
   });
 });
+
+describe("an agent nothing is kept of", () => {
+  // An agent open to everyone: a file would be a stranger's conversation on disk, named to its model by a path.
+  const open = () => new ToolOutputSpill(root, (agentId) => agentId === "nora");
+
+  test("a long result is an excerpt and no file, with no path in it; another agent's is kept as ever", async () => {
+    const of = (agentId: string) => open().keep({ agentId, sessionId: "s1", callId: "call_1", toolName: "memory_search", content: lines(5_000), maxTokens: 100 });
+    const noras = await of("nora");
+    expect(noras.path).toBeNull();
+    expect(noras.content).toContain("line 0");
+    expect(noras.content).not.toContain(root);
+    expect(noras.content).not.toContain("Full output");
+    expect(statFile(join(root, "nora"))).toBeNull();
+
+    const nouvas = await of("nouva");
+    expect(nouvas.content).toContain(`Full output: ${nouvas.path}`);
+    expect(listDir(join(root, "nouva", "s1"))).toHaveLength(1);
+  });
+
+  test("a result the context clears is cleared with nothing kept, by every way to the keeper", () => {
+    const spill = open();
+    expect(spill.keepCleared({ agentId: "nora", sessionId: "s1", callId: "call_2" }, lines(400))).toBeNull();
+    expect(spill.keeperFor({ agentId: "nora", sessionId: "s1" })({ role: "tool", content: "", toolCallId: "call_3" }, lines(400))).toBeNull();
+    expect(statFile(join(root, "nora"))).toBeNull();
+    expect(spill.keepCleared({ agentId: "nouva", sessionId: "s1", callId: "call_2" }, lines(400))?.path).toStartWith(join(root, "nouva", "s1"));
+  });
+});

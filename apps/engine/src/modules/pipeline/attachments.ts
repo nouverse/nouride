@@ -8,12 +8,14 @@
 
 import {
   imageMode,
+  isOpenAgent,
   nativeVision,
   type AudioRefPart,
   type ImageRefPart,
   type MessageEnvelope,
 } from "@nouride/shared";
 import { agentCommandsHaveOwnUsers, readFileBytes } from "@nouride/runtime";
+import { describeForAnOpenAgent } from "@/modules/attachments/open-notice.ts";
 import {
   describeStoredAttachments,
   isStored,
@@ -225,12 +227,16 @@ export class AttachmentIntake {
     };
     const attachments = envelope.attachments;
     if (!attachments || attachments.length === 0) return { notice: "", stored: [], media: [] };
+    // An agent open to everyone is told of a file by its name and its ref: no path of this server, and no tool it
+    // does not hold (`open-notice.ts`).
+    const open = this.open(agentId);
+    const describe: typeof describeStoredAttachments = open ? describeForAnOpenAgent : describeStoredAttachments;
 
     // No store configured is *not* a reason to go quiet. Returning "" here was the original bug
     // relocated: the sender's file would vanish with no reply and no error.
     if (!this.deps.attachments) {
       return {
-        notice: describeStoredAttachments(
+        notice: describe(
           attachments.map((attachment) => ({
             ...attachment,
             unavailable: "attachment storage is not configured on this daemon",
@@ -245,7 +251,7 @@ export class AttachmentIntake {
     const fetcher = gateway?.fetchAttachment?.bind(gateway);
     if (!fetcher) {
       return {
-        notice: describeStoredAttachments(
+        notice: describe(
           attachments.map((attachment) => ({
             ...attachment,
             unavailable: "this gateway cannot retrieve files",
@@ -295,9 +301,9 @@ export class AttachmentIntake {
     // A coding CLI opens a picture it is not shown at its path: a description would be a model call for what it reads.
     const described = native || takes ? all : await Promise.all(all.map((o) => this.readImage(o, agentId)));
     const images = native ? imageRefs(described, allRefs, this.deps.config.media.maxImageBytes, envelope.timestamp) : [];
-    const audio = await this.clips(described, allRefs, envelope, audioTarget ?? { agentId, profile: "", model: "" }, videos.tracks, takes);
+    const audio = await this.clips(described, allRefs, envelope, audioTarget ?? { agentId, profile: "", model: "" }, videos.tracks, takes, open);
     return {
-      notice: describeStoredAttachments(described, allRefs, {
+      notice: describe(described, allRefs, {
         native: images.length > 0,
         ownTools: takes !== null,
         extra: [...videos.lines, ...audio.lines],
@@ -393,6 +399,8 @@ export class AttachmentIntake {
     tracks: readonly Track[],
     /** What the agent's coding CLI takes, where one answers it: it hears what it said it does, not what its model does. */
     takes: CliTakes | null = null,
+    /** For an agent open to everyone: the service that put a voice note into words is not named. */
+    unnamed = false,
   ): Promise<{ parts: AudioRefPart[]; lines: string[] }> {
     const own: Track[] = outcomes
       .map((outcome, index) => ({ outcome, ref: refs[index] }))
@@ -436,7 +444,7 @@ export class AttachmentIntake {
       }
     }
 
-    return { parts, lines: voiceNoticeLines(notices, { ownerChat: this.isOwnerChat(envelope) }) };
+    return { parts, lines: voiceNoticeLines(notices, { ownerChat: this.isOwnerChat(envelope), unnamed }) };
   }
 
   /**
@@ -478,6 +486,11 @@ export class AttachmentIntake {
     const takes = agent ? ((await this.deps.externalAgents?.takes?.(agent)) ?? null) : null;
     const media = this.deps.config.media;
     return { takes, pictures: takes ? media.readImages && takes.image : nativeVision(media) };
+  }
+
+  /** Whether the agent is open to everyone. Where no agents are known there is none, as `shown` has it for a coding CLI's. */
+  private open(agentId: string): boolean {
+    return isOpenAgent((this.deps.registry as PipelineDeps["registry"] | undefined)?.get(agentId));
   }
 
   private limits(): { maxSeconds: number; maxBytes: number } {
@@ -539,7 +552,8 @@ export class AttachmentIntake {
       const prepared = await this.listen(target, track);
       const clip = prepared.ok ? ({ heard: true } as const) : await this.fallback(track, prepared.reason, target.agentId);
       if (prepared.ok) media.push({ type: "audio_ref", ref: `${file.ref}.sound`, localPath: prepared.localPath, format: prepared.format });
-      lines.push(...voiceNoticeLines([{ kind: "video", recordedBySender: file.recordedBySender === true, clip }], { ownerChat: false }));
+      // For an agent open to everyone the service that put the sound into words is not named.
+      lines.push(...voiceNoticeLines([{ kind: "video", recordedBySender: file.recordedBySender === true, clip }], { ownerChat: false, unnamed: this.open(target.agentId) }));
     }
     return { media, lines };
   }

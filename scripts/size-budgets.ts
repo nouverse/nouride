@@ -99,8 +99,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id, files as a set, buttons, presence, reconnect, a login's timeout with why",
   },
   "apps/engine/src/modules/pipeline/attachments.ts": {
-    lines: 409,
-    why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, so the note and the parts cannot disagree",
+    lines: 417,
+    why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, an open agent's own among them, so note and parts agree",
   },
   "scripts/build/core.ts": {
     lines: 432,

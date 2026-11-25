@@ -9,7 +9,7 @@
 
 import { ensureDir, join, readTextFileIfExists, setFileMode } from "@nouride/runtime";
 import { TransientSecrets } from "@nouride/secrets";
-import { addLogSink, type GlobalConfig, type LoadedAgent } from "@nouride/shared";
+import { addLogSink, isOpenAgent, type GlobalConfig, type LoadedAgent } from "@nouride/shared";
 import { VERSION } from "@/commons/version.ts";
 import { databaseEpoch } from "@/db/epoch.ts";
 import { AuditLog } from "@/commons/audit.store.ts";
@@ -228,7 +228,7 @@ export async function openStores(input: {
 
   // Where a tool result too big for the context goes. Beside the jobs' logs because it is the same kind of
   // thing — a file the daemon wrote and handed the agent a path to — and swept by the same pass.
-  const spill = new ToolOutputSpill(kept.toolOutput);
+  const spill = new ToolOutputSpill(kept.toolOutput, (agentId) => isOpenAgent(input.agent(agentId)));
   // Each conversation's work notes (0.7.26): read at every step of a turn, written by `notes` and `plan`, shown on the
   // dashboard, cleared by `/reset` — one store for all of them, so every write meets the same checks.
   const notes = new NotesStore(join(config.daemon.dataDir, "notes"));

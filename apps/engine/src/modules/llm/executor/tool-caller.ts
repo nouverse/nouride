@@ -27,7 +27,7 @@ import { coerceArguments } from "@/modules/tools/arguments.ts";
 import { inFoldedWords, openFolded, unfoldCall } from "@/modules/tools/fold.ts";
 import { logToolThrow } from "@/modules/tools/audited.ts";
 import { resultCharsFor } from "@/modules/llm/spill.ts";
-import { withinRoom } from "./turn-only.ts";
+import { keepsNothing, withinRoom } from "./turn-only.ts";
 import { compactResult } from "@/modules/llm/output-by-kind.ts";
 import { sendsShortenedArgument } from "@/modules/llm/context.ts";
 import { scratchpadFor } from "@nouride/persona";
@@ -251,7 +251,8 @@ export class ToolCaller {
       ...(req.privateDir ? { privateDir: req.privateDir, scratchpadDir: scratchpadFor(req.privateDir) } : {}),
       // Where a streaming tool puts an output too big to hold, so the spill below can name it instead
       // of writing it a second time. See `ToolContext.spoolPath`.
-      ...(this.deps.spill
+      // Not for an agent open to everyone: nothing of its conversations is written to a file (`keepsNothing`).
+      ...(this.deps.spill && !keepsNothing(agent)
         ? { spoolPath: this.deps.spill.pathFor({ agentId: agent.config.id, sessionId: req.sessionId, callId: call.id }) }
         : {}),
       ...(this.deps.spill ? { resultChars: resultCharsFor(maxResultTokens) } : {}),
@@ -458,7 +459,9 @@ export class ToolCaller {
        */
       if (!this.deps.spill) return result;
       // One person's own, for this turn: cut where it is too long, and written to no file a later turn could open.
-      if (result.turnOnly !== undefined) return withinRoom(result, resultCharsFor(maxResultTokens));
+      // An agent open to everyone's, the same cut: a file would be a stranger's words kept, named to a model by a path
+      // of this server, for tools that search a file which it does not hold.
+      if (result.turnOnly !== undefined || keepsNothing(agent)) return withinRoom(result, resultCharsFor(maxResultTokens), result.turnOnly !== undefined ? undefined : "");
       const spill = this.deps.spill;
       // Smaller by kind first, its whole text kept in this conversation's folder as a cleared one is.
       const scope = { agentId: agent.config.id, sessionId: req.sessionId, callId: call.id };

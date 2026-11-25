@@ -332,6 +332,23 @@ describe("something nothing can read", () => {
     expect(result.content).toContain("exec");
   });
 
+  test("for an agent whose words go to anyone, where it is on this server is not said, nor a tool it does not hold", async () => {
+    const result = await run(
+      {
+        hidesPaths: () => true,
+        find: () => file({ name: "clip.mp4", mimeType: "video/mp4", kind: "video" }),
+        open: async () => ({ bytes: new Uint8Array([0, 1]), path: "/data/clip.mp4" }),
+      },
+      { ref: "fabc123" },
+    );
+
+    expect(result.isError).toBe(false);
+    expect(result.content).toContain("is not something this tool can read (video/mp4).");
+    expect(result.content).not.toContain("/data/clip.mp4");
+    expect(result.content).not.toContain("exec");
+    expect(result.content).not.toContain("on disk");
+  });
+
   test("no vision call is spent on it", async () => {
     let described = 0;
     await run(

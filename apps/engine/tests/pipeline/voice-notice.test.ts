@@ -70,3 +70,17 @@ describe("the operator is told once a day, not per voice note", () => {
     expect(alerts.due("m", "wire_no_audio")).toBe(true);
   });
 });
+
+describe("a voice note put into words for an agent open to everyone", () => {
+  const clip = { kind: "voice" as const, durationSec: 7, clip: { heard: false as const, transcript: "berapa harga kopi?", by: "whisper-large-v3 on groq" } };
+
+  test("says it was transcribed, and not by which service: that is the install's own", () => {
+    const usual = text(voiceNoticeLines([clip], { ownerChat: false }));
+    expect(usual).toContain("so whisper-large-v3 on groq transcribed it.");
+    const open = text(voiceNoticeLines([clip], { ownerChat: false, unnamed: true }));
+    expect(open).toContain("could not be sent to you as sound, so it was transcribed for you. You have the words,");
+    expect(open).toContain("berapa harga kopi?");
+    expect(open).not.toContain("whisper");
+    expect(open).not.toContain("groq");
+  });
+});
