@@ -23,8 +23,12 @@ export function adminChatsOf(params: {
       .people.filter((person) => accountsOf(person).some((one) => one.platform === "web" && params.isAdmin({ gatewayId: LOCAL_GATEWAY_ID, senderId: one.account })))
       .flatMap((person) => {
         const lastFrom = params.turns.lastFrom(accountsOf(person).map((one) => one.account));
+        const connected = (gateway: Gateway | undefined, platform: string): gateway is Gateway => gateway?.platform === platform && gateway.status === "connected";
         for (const { platform, account } of morningRoute(person, lastFrom)) {
-          const gateway = [...params.gateways.values()].find((one) => one.platform === platform && one.status === "connected");
+          // The connection they last wrote on from that account, where it is up: with two WhatsApp numbers, the first
+          // connected one was the shop's as often as the household's, and a question about the household came from it.
+          const wroteOn = lastFrom.map((turn) => (turn.senderId === account ? params.gateways.get(turn.gatewayId) : undefined)).find((gateway) => connected(gateway, platform));
+          const gateway = wroteOn ?? [...params.gateways.values()].find((one) => connected(one, platform));
           if (gateway) return [{ gatewayId: gateway.id, chatId: account }];
         }
         return [];
