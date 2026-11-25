@@ -174,9 +174,8 @@ export function renderMemory({ ctx, toolNames }: HarnessView): string[] {
   if (toolNames.includes("exec") || harness.workspace) {
     lines.push("", "CHANGING YOUR OWN CONFIGURATION");
     lines.push(
-      "- A chat gateway plus an agent holding `exec` plus no way to stop strangers is refused at boot: that combination is a shell on this host for anyone who finds the bot.",
-      "- \"A way to stop strangers\" means `[security.access] mode` set to `pair` (the default: strangers get a code the operator approves) or `allowlist`. In `open` mode nothing stops them, whatever the allowlist holds.",
-      "- So before enabling a gateway for an agent with `exec`, check the mode is not `open`, and ask the person for their account id on that platform to put in `[security.access] allowlist`, so they are not asked to pair with their own bot. Do not enable it and find out afterwards.",
+      "- Who may write to the agents here is `[security.access] mode`: `pair` (the default: a stranger gets a code an admin approves) or `allowlist`. There is no `open` for the install. One agent can be opened to everyone, by an admin on its Access page in the dashboard; it then holds a few tools of Nouride's own and none of its pack's, and it is never the orchestrator or an agent on a coding CLI. You cannot open an agent, yourself included.",
+      "- So when you enable a gateway for an agent, ask the person for their account id on that platform to put in `[security.access] allowlist`, so they are not asked to pair with their own bot.",
       // Said before the "check it afterwards" rule, because it replaces the thing that made the check
       // necessary so often. A packaged install has no source to read, so the nesting, the type and the
       // companion setting were all guesses — and the guesses were wrong in ways that only surface at

@@ -19,7 +19,7 @@ openssl rand -hex 32 | nouride secret set wa-encryption-key --stdin
 enabled = true
 encryption_key = "wa-encryption-key"   # NAMA secret; nilainya 64 karakter heksadesimal
 agent = "nouva"
-# session_dir = "..."                 # opsional; kosong menyimpan login di <data_dir>/whatsapp
+# session_dir = "..."                 # opsional; kosong menyimpan login di <data_dir>/whatsapp-main
 ```
 
 Lewat dashboard gak ada key yang perlu dibuat: biarkan kolomnya kosong dan dashboard membuatkannya.
@@ -33,6 +33,51 @@ WhatsApp → Perangkat Tertaut → Tautkan Perangkat.
 Yang kembali dari pemindaian adalah **login**, bukan token. Salinan `session_dir` tanpa key itu gak
 berguna; salinan *dengan* key itu adalah login yang berfungsi. Kehilangan key berarti restart
 berikutnya minta scan ulang.
+:::
+
+## Satu nomor untuk tiap agent
+
+Satu nomor milik satu agent, seperti bot Telegram: pesan ke nomor itu masuk ke agent itu, dan orang
+diizinkan masuk untuk nomor itu saja, bukan nomor lain. Untuk memberi agent kedua nomornya sendiri,
+tambahkan koneksi kedua dengan namanya sendiri, dari halaman **Connections** agent itu atau dari
+terminal:
+
+```bash
+nouride gateway add --platform whatsapp --name shop --agent nora
+nouride restart --then "confirm whatsapp:shop connected"
+```
+
+```toml
+[gateways.whatsapp.main]
+enabled = true
+encryption_key = "whatsapp-main-key"
+agent = "nouva"
+
+[gateways.whatsapp.shop]
+enabled = true
+encryption_key = "whatsapp-shop-key"   # key-nya sendiri, dibuatkan saat ditambah dari dashboard atau perintah di atas
+agent = "nora"
+```
+
+Setelah restart, kode nomor baru itu ada di halaman Connections agent-nya. Pindai dari HP yang
+memegang nomor *itu*. Nomor pertama gak diminta scan ulang, dan tiap kartu bilang nomornya sudah
+tertaut atau masih menunggu.
+
+Masalah satu nomor urusannya sendiri. Nomor yang ter-logout dari HP-nya, atau putus dari jaringan,
+berhenti atau nyambung lagi sendirian; `/health`, `nouride status`, dan dashboard menyebut namanya,
+dan nomor yang lain tetap menjawab. Nouride gak membatasi berapa nomor yang dipegang satu instalasi:
+tiap nomor adalah satu koneksi lagi yang dijaga tetap terbuka ke WhatsApp.
+
+Di grup yang dimasuki dua nomor kamu, pesan yang men-tag satu nomor dijawab agent pemilik nomor itu;
+pesan yang gak men-tag siapa pun dijawab sekali, oleh agent yang memegang instalasi, bukan oleh tiap
+nomor.
+
+:::caution[Nomor yang menjawab orang asing]
+Agent yang [terbuka untuk semua orang](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang)
+menjawab siapa pun yang menulis ke nomornya. WhatsApp bisa membatasi atau menutup nomor yang menjawab
+banyak orang yang gak dikenalnya: Nouride tertaut ke nomor itu seperti WhatsApp Web, bukan lewat
+layanan yang dijual WhatsApp untuk bisnis. Pakai nomor yang kamu rela kehilangan, dan lihat
+[error 463](#error-463-kegagalan-yang-kelihatan-seperti-bug) untuk seperti apa pembatasan itu.
 :::
 
 ## Bridge-nya
@@ -49,12 +94,23 @@ protokol JSON per baris, lewat memori, karena bridge jalan di dalam daemon. Itu
 menjaga masalah WhatsApp tetap jadi masalah WhatsApp, dan protokolnya cukup kecil untuk dibaca sekali
 duduk.
 
-### Satu transport, satu nomor
+### Satu transport, satu bridge untuk tiap nomor
 
 Bridge dihosting di dalam daemon, dan setiap rilis membawanya. Gak ada executable kedua yang perlu
 dipasang dan gak ada apa pun di samping daemon yang perlu dijaga tetap jalan, jadi gak ada
-`bridge_transport` yang perlu diisi. Bridge menyimpan state koneksinya di module scope, jadi satu
-daemon menghosting satu koneksi WhatsApp; nomor kedua butuh daemon kedua. `bridge_transport = "ws"`,
+`bridge_transport` yang perlu diisi. Daemon membuka satu bridge untuk tiap koneksi WhatsApp di config:
+masing-masing punya socket, login, dan reconnect sendiri, jadi satu nomor yang ter-logout atau putus
+berhenti atau nyambung lagi sendirian. Sampai 0.8.48 satu daemon cuma memegang satu nomor WhatsApp, dan
+nomor kedua butuh daemon kedua.
+
+**Tiap nomor menyimpan login di foldernya sendiri**: `<data_dir>/whatsapp-<nama>` untuk koneksi bernama
+`<nama>`, kecuali tabelnya menyebut `session_dir`. Dua koneksi di satu folder ditolak saat start,
+dengan kedua namanya. Instalasi yang ditautkan sebelum 0.8.48 menyimpan loginnya di
+`<data_dir>/whatsapp`: start pertama menulis folder itu ke tabel koneksinya sebagai `session_dir`, gak
+ada yang dipindah, dan gak perlu scan ulang. `nouride config check` mengatakannya sebelum start
+melakukannya.
+
+`bridge_transport = "ws"`,
 yang menjangkau bridge di tempat lain, dihapus di 0.7.10 (gak pernah ada yang melayaninya), dan
 config yang menyebutnya ditolak saat start. Sejak 0.8.0 begitu juga `bridge_transport = "stdio"` beserta
 `bridge_command`-nya, yang menjalankan bridge sebagai executable kedua.

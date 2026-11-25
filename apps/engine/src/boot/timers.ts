@@ -35,6 +35,7 @@ import { startKnowledgeLook } from "./memory.ts";
 import { startMemoryPass } from "./memory-pass.ts";
 import { startMorning } from "./morning-lines.ts";
 import type { Stores } from "./stores.ts";
+import { isOpenAgent } from "@nouride/shared";
 
 type Timer = ReturnType<typeof setInterval>;
 
@@ -126,7 +127,19 @@ export function startUpkeep(
   input.knowledgeRoom.wait = () => new RoomWait(load, { what: "embedding the knowledge base", ceilingMs: 2 * 3_600_000, now: Date.now }).wait();
   const memoryPass = startMemoryPass({ config, registry: input.registry, providers: stores.providers, usage, turns, memory, db, load });
   // Each person's morning line, at the time they set (0.8.0): what happened while they were away.
-  const morningTimer = startMorning({ config: () => config, gateways: input.gateways, notifier, turns, cron, missions: input.missions, approvals: () => approvals, usage, pipeline: input.pipeline, state: stores.state });
+  const morningTimer = startMorning({
+    config: () => config,
+    gateways: input.gateways,
+    notifier,
+    turns,
+    cron,
+    missions: input.missions,
+    approvals: () => approvals,
+    usage,
+    pipeline: input.pipeline,
+    state: stores.state,
+    openOn: (gatewayId) => isOpenAgent(input.registry.get(config.gateways.find((gateway) => gateway.id === gatewayId)?.agent ?? "")),
+  });
   // The knowledge base's folder, looked at again on its own clock (`boot/memory.ts`).
   const knowledgeTimer = startKnowledgeLook(memory);
   return { timers: [retentionTimer, diskTimer, memoryPass.timer, morningTimer, knowledgeTimer, ...(loadTimer ? [loadTimer] : [])], load, memoryPass };

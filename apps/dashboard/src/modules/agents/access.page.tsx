@@ -12,6 +12,7 @@ import { api } from "@/commons/lib/api";
 import { AccessSummary } from "./components/AccessSummary";
 import { AgentAccessMode } from "./components/AgentAccessMode";
 import { ApprovalLevel } from "./components/ApprovalLevel";
+import { PublicConversations } from "./components/PublicConversations";
 import { SecondLook } from "./components/SecondLook";
 
 export default function AgentAccessPage({ agentId }: { agentId: string }) {
@@ -20,7 +21,9 @@ export default function AgentAccessPage({ agentId }: { agentId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Every answer to "who gets in" on one card, open to everyone among them. */}
       {agent ? <AgentAccessMode agent={agent} /> : null}
+      {agent ? <PublicConversations agent={agent} /> : null}
       {/* Beside the switch: both are "who gets in", and what waits there should not be below the fold. */}
       <AccessSummary agentId={agentId} />
       {agent ? <ApprovalLevel agent={agent} /> : null}

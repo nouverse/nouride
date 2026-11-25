@@ -6,6 +6,7 @@
  * to reach through `Pipeline` to get at it.
  */
 
+import type { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import type { ExternalBrains } from "./brain.ts";
 import type { NotesPort } from "@/modules/notes/store.ts";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
@@ -263,6 +264,11 @@ export interface PipelineDeps {
    * optional here rather than assumed present and guarded at every call site.
    */
   usage?: UsagePort;
+  /**
+   * What strangers have used of an agent open to everyone today (`open-door.ts`). Absent, a stranger is answered
+   * nothing: the count is what bounds them, and a process that cannot keep it does not answer on its owner's tokens.
+   */
+  openDoor?: Pick<OpenDoorStore, "take" | "tellClosed">;
   /**
    * Resolved credentials and the credentials directory, for a command this agent runs.
    *

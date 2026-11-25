@@ -11,7 +11,7 @@
  */
 
 import { privateWorkspace, type AgentRegistry, type ProjectSkills } from "@nouride/persona";
-import { createLogger, type Gateway, type GlobalConfig } from "@nouride/shared";
+import { createLogger, type Gateway, type GlobalConfig, isOpenAgent } from "@nouride/shared";
 import { VERSION } from "@/commons/version.ts";
 import type { DaemonContext } from "@/commons/context.ts";
 import { alertCooldownsState, spendAlertsState } from "@/commons/daemon-state.ts";
@@ -184,13 +184,19 @@ export function buildTurnParts(
     gateways,
     notifier,
     approvals: () => approvals,
-    voice: (agentId, gatewayId) => input.pipeline().voiceGatewayId(agentId, gatewayId),
+    voice: (agentId, gatewayId, chatId) => input.pipeline().voiceGatewayId(agentId, gatewayId, chatId),
     isAdmin: (who) => input.pipeline().isAdmin(who),
     askedIn: missions.askedIn,
     missionOf: missions.missionOf,
     similar: missions.similar,
     // A question only an admin answers, in each admin's own chat too (0.8.10).
-    adminChats: adminChatsOf({ config: () => config, gateways, turns, isAdmin: (who) => input.pipeline().isAdmin(who) }),
+    adminChats: adminChatsOf({
+      config: () => config,
+      gateways,
+      turns,
+      isAdmin: (who) => input.pipeline().isAdmin(who),
+      openOn: (gatewayId) => isOpenAgent(registry.get(config.gateways.find((gateway) => gateway.id === gatewayId)?.agent ?? "")),
+    }),
   });
   // A proposed job's card, with Turn on and Discard, and the `schedule` tool that posts it (0.8.0).
   // What a page holds open for an agent to change in place, and its changes held for the page: automations are the first kind.
@@ -248,7 +254,7 @@ export function buildTurnParts(
 type MachineStores = Pick<
   Stores,
   | "db" | "state" | "secrets" | "accounts" | "cron" | "watch" | "jobWakes" | "providers" | "sessions" | "turns" | "durable" | "chatEvents" | "rooms"
-  | "roomMessages" | "grants" | "toolGrants" | "attachments" | "attachmentIndex" | "access" | "jobs" | "spill" | "notes"
+  | "roomMessages" | "grants" | "toolGrants" | "attachments" | "attachmentIndex" | "access" | "openDoor" | "jobs" | "spill" | "notes"
   | "usage" | "autoApprove" | "childEnv" | "heldSecrets" | "ownSecrets" | "audit" | "credentialsDir"
 >;
 
@@ -344,6 +350,7 @@ export async function buildTurnMachine(
     attachments: stores.attachments,
     attachmentIndex: stores.attachmentIndex,
     access: stores.access,
+    openDoor: stores.openDoor,
     jobs,
     spill: stores.spill,
     notes: stores.notes,

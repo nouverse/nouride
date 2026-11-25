@@ -180,15 +180,16 @@ message sent mid-turn then waits for the turn.
 ### In a room
 
 The person who started the turn steers it the same way, as long as the message is for the agent: it
-names it (`@nouva …`, `nouva: …`) or replies to something it said. Anyone else who addresses a busy
-agent gets a short answer instead of silence, once per turn:
+names it (`@nouva …`, `nouva: …`), replies to something it said, or names nobody in a room where that
+agent answers what names nobody (the room's front desk). Anyone else who addresses a busy agent gets a
+short answer instead of silence, once per turn:
 
 > `⏳ Nouva is still working on "migrate the database" (4m so far): ask again once it's done.`
 
 It quotes the request the turn is working on, on one line and with every `@` taken out, so the reply
 wakes nobody. It adds when the turn is waiting on an approval, and it never suggests `/stop`, which
-pauses the agent in every chat. A message that does not address the agent, people talking among
-themselves in a room with one bot, gets nothing, as before.
+pauses the agent in every chat. Somebody else's message that does not address the agent, people
+talking among themselves in a room with one bot, gets nothing, as before.
 
 Another agent handing work to a busy one never steers it either, but its hand-over is kept (0.8.33).
 The room is told once:

@@ -116,7 +116,7 @@ Dua bagian yang kelihatannya butuh proses sendiri berjalan di dalam proses ini s
 
 | | |
 |---|---|
-| **Bridge WhatsApp** | Jalan di dalam daemon. Ia tetap bicara lewat JSON per baris, cuma pipanya berupa memori. Satu nomor WhatsApp per daemon |
+| **Bridge WhatsApp** | Jalan di dalam daemon. Ia tetap bicara lewat JSON per baris, cuma pipanya berupa memori. Satu bridge untuk tiap nomor WhatsApp yang dipegang daemon |
 | **Gateway LLM (nougate)** | Opsional. Dihubungi lewat HTTP, atau jalan di dalam daemon, mati sampai dinyalakan (`[nougate] in_process`, port 18256) |
 
 Proses kedua gak bisa berbagi runtime Bun, jadi ia membayar sekitar 36 MB lagi. Menjalankannya di

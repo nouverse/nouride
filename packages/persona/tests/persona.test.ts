@@ -512,15 +512,66 @@ describe("workspace roots", () => {
 });
 
 describe("[agent] access", () => {
-  test("absent stays absent; follow, pair and allowlist are read as written", () => {
+  const LIMITS = { max_daily_tokens: 200_000, max_daily_messages_per_person: 30 };
+
+  test("absent stays absent; follow, pair, allowlist and open are read as written", () => {
     expect(parseAgentConfig("solo", {}, { defaults: DEFAULTS }).access).toBeUndefined();
-    for (const access of ["follow", "pair", "allowlist"] as const) expect(parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS }).access).toBe(access);
+    // `open` is one agent's: the daemon then hands it a fixed list of tools, whatever its pack lists.
+    for (const access of ["follow", "pair", "allowlist", "open"] as const) expect(parseAgentConfig("solo", { agent: { access }, open: LIMITS }, { defaults: DEFAULTS }).access).toBe(access);
   });
 
-  test("anything else — open included, which the daemon refuses for an agent with exec — fails at load", () => {
-    for (const access of ["open", "paired", 1]) {
-      expect(() => parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS })).toThrow(/\[agent\] access must be one of follow, pair, allowlist/);
+  test("anything else fails at load, with the four it may be", () => {
+    for (const access of ["public", "paired", 1]) {
+      expect(() => parseAgentConfig("solo", { agent: { access } }, { defaults: DEFAULTS })).toThrow(/\[agent\] access must be one of follow, pair, allowlist, open/);
     }
+  });
+
+  test("open on a coding CLI fails at load, naming the field: the CLI brings tools the daemon cannot take away", () => {
+    const external = { cli: "codex" };
+    expect(() => parseAgentConfig("solo", { agent: { access: "open" }, open: LIMITS, external }, { defaults: DEFAULTS, knownClis: ["codex"] })).toThrow(
+      'agents/solo/config.toml [agent] access = "open": an agent on a coding CLI ([external]) is never open to everyone, since the CLI brings tools of its own that Nouride cannot take away. ' +
+        "Open an agent that answers on a model, or keep this one to the people you let in",
+    );
+    // Either half alone loads: an agent on a CLI kept to the people let in, and an open one on a model.
+    expect(parseAgentConfig("solo", { agent: { access: "pair" }, external }, { defaults: DEFAULTS, knownClis: ["codex"] }).external).toEqual({ cli: "codex" });
+    expect(parseAgentConfig("solo", { agent: { access: "open" }, open: LIMITS }, { defaults: DEFAULTS, knownClis: ["codex"] }).access).toBe("open");
+  });
+});
+
+describe("[open], what strangers may cost an agent open to everyone", () => {
+  const open = (table: unknown, access: string | undefined = "open") => parseAgentConfig("solo", { ...(access ? { agent: { access } } : {}), ...(table === undefined ? {} : { open: table }) }, { defaults: DEFAULTS });
+  const NEEDS =
+    'agents/solo/config.toml [agent] access = "open" needs [open] max_daily_tokens (the most tokens this agent may use in a day) and max_daily_messages_per_person (the most messages one person may send it in a day). ' +
+    "Neither has a default: an agent open to everyone spends its owner's tokens for anyone who finds it";
+
+  test("an open agent is read with both numbers, and its own closing sentence where it has one", () => {
+    expect(open({ max_daily_tokens: 200_000, max_daily_messages_per_person: 30 }).open).toEqual({ maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 });
+    expect(open({ max_daily_tokens: 1, max_daily_messages_per_person: 1, closed_reply: "  We are closed for today.  " }).open).toEqual({ maxDailyTokens: 1, maxDailyMessagesPerPerson: 1, closedReply: "We are closed for today." });
+  });
+
+  test("open with neither number, or with one, fails at load: neither has a default", () => {
+    expect(() => open(undefined)).toThrow(NEEDS);
+    expect(() => open({})).toThrow(NEEDS);
+    expect(() => open({ max_daily_tokens: 200_000 })).toThrow(NEEDS);
+    expect(() => open({ max_daily_messages_per_person: 30 })).toThrow(NEEDS);
+  });
+
+  test("a number that is not a whole one of 1 or more fails at load, naming it, whether or not the agent is open now", () => {
+    for (const access of ["open", "pair", undefined]) {
+      for (const bad of [0, -5, 1.5, "200000", true]) {
+        expect(() => open({ max_daily_tokens: bad, max_daily_messages_per_person: 30 }, access)).toThrow(`agents/solo/config.toml [open] max_daily_tokens must be a whole number of 1 or more, got ${JSON.stringify(bad)}`);
+        expect(() => open({ max_daily_tokens: 200_000, max_daily_messages_per_person: bad }, access)).toThrow(`agents/solo/config.toml [open] max_daily_messages_per_person must be a whole number of 1 or more, got ${JSON.stringify(bad)}`);
+      }
+    }
+    expect(() => open("yes")).toThrow("agents/solo/config.toml [open] must be a table");
+    expect(() => open({ max_daily_tokens: 1, max_daily_messages_per_person: 1, closed_reply: "  " })).toThrow("[open] closed_reply must be a sentence");
+    expect(() => open({ max_daily_tokens: 1, max_daily_messages_per_person: 1, closed_reply: 5 })).toThrow("[open] closed_reply must be a sentence");
+  });
+
+  test("a closed agent keeps its numbers for the next time, and one with half of them has none", () => {
+    expect(open({ max_daily_tokens: 200_000, max_daily_messages_per_person: 30 }, "pair")).toMatchObject({ access: "pair", open: { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 } });
+    expect(open({ max_daily_tokens: 200_000, max_daily_messages_per_person: 30 }, undefined).open).toEqual({ maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 });
+    expect(open({ max_daily_tokens: 200_000 }, "pair").open).toBeUndefined();
   });
 });
 

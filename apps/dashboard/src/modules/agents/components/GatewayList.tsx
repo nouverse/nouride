@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { defaultConnectionName } from "@/modules/agents/components/connection-name";
 import { waitingSaid } from "@/modules/agents/components/gateway-waiting";
+import { PLATFORMS, platformsToAdd, type Platform } from "@/modules/agents/components/gateway-platforms";
 import { Plus, Trash2 } from "lucide-react";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { api } from "@/commons/lib/api";
@@ -19,44 +20,6 @@ import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { ListLoading } from "@/commons/components/ui/Spinner";
-
-type Platform = "telegram" | "discord" | "whatsapp";
-
-const PLATFORMS: {
-  id: Platform;
-  label: string;
-  tokenLabel: string;
-  tokenHint: string;
-  note?: string;
-  pairs?: boolean;
-}[] = [
-  {
-    id: "telegram",
-    label: "Telegram",
-    tokenLabel: "Bot Token", // plain-words-ok: what BotFather calls it, and where the person finds it
-    tokenHint: "From @BotFather in Telegram (it looks like 123456:ABC-DEF…)",
-    // A group is all but dead on Telegram until this is done: with privacy mode on, the Bot API hands a
-    // bot that is not an admin only commands and replies to its own messages — not even a message that
-    // tags it (verified live; see the connect-time warning in the gateway). From a chat that looks like
-    // the bot being down, not unconfigured.
-    note: "In groups: disable privacy mode in @BotFather (/setprivacy → Disable, then remove and re-add the bot), or make the bot a group admin. Otherwise Telegram delivers only commands and replies to its own messages, not even a message that tags it.",
-  },
-  {
-    id: "discord",
-    label: "Discord",
-    tokenLabel: "Bot Token", // plain-words-ok: what the Discord Developer Portal calls it, and where the person finds it
-    tokenHint: "From the Discord Developer Portal.",
-    note: "In the Discord Developer Portal, turn on Message Content Intent for the bot.",
-  },
-  {
-    id: "whatsapp",
-    label: "WhatsApp",
-    tokenLabel: "Encryption Key (optional)",
-    tokenHint: "Leave it empty and one is made for you. The link to WhatsApp is kept encrypted, and survives restarts.",
-    note: "Works the way WhatsApp Web does. After saving, restart Nouride and scan the QR code.",
-    pairs: true,
-  },
-];
 
 export function GatewayList({ agentId }: { agentId: string }) {
   const queryClient = useQueryClient();
@@ -72,6 +35,8 @@ export function GatewayList({ agentId }: { agentId: string }) {
 
   const mine = (gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agentId);
   const pendingRestart = mine.some((gateway) => gateway.enabled && gateway.status === null);
+  // Nothing is offered until the agent's own connections are known: a moment of all three would offer what it has.
+  const toAdd = gateways.data ? platformsToAdd(mine) : [];
   // What a connection with no override of its own inherits. Served by the daemon rather than repeated
   // here, so the field cannot advertise a default the engine no longer has.
   const groupContextDefault = gateways.data?.groupContextDefault ?? 20;
@@ -83,14 +48,14 @@ export function GatewayList({ agentId }: { agentId: string }) {
           The chat apps this agent answers on. A message that comes in on one goes straight to it.
         </p>
 
-        <DropdownMenu
+        {toAdd.length > 0 && <DropdownMenu
           trigger={<><Plus size={16} /> Add Connection</>}
           triggerClassName="btn btn-primary btn-sm rounded-xl gap-2 shadow-xs active:scale-95 transition-all"
           width={208}
           menuClassName="bg-base-100/95 backdrop-blur-xl rounded-2xl border border-base-content/10 p-2 shadow-xl"
         >
           {(close) =>
-            PLATFORMS.map((platform) => (
+            toAdd.map((platform) => (
               <li key={platform.id}>
                 <button
                   type="button"
@@ -105,7 +70,7 @@ export function GatewayList({ agentId }: { agentId: string }) {
               </li>
             ))
           }
-        </DropdownMenu>
+        </DropdownMenu>}
       </div>
 
       {/* A connection is opened at boot: one added or changed since is saved, and not connected until a restart. */}
@@ -167,7 +132,8 @@ function GatewayCard({
   const remove = useMutation({
     mutationFn: () => api.deleteGateway(gateway.id),
     onSuccess: (answer) => {
-      saved(answer, `Connection ${gateway.id} removed`);
+      const phone = answer.stillOnThePhone ? "The phone that held this number may still list it under Linked devices: remove it there too." : undefined;
+      saved(answer, `Connection ${gateway.id} removed`, phone);
       onChanged();
     },
   });
@@ -277,7 +243,7 @@ function GatewayCard({
 
       {platform?.pairs && gateway.enabled && !editing && (
         <div className="mt-5 pt-5 border-t border-base-content/[0.08]">
-          <WhatsAppPairing gatewayId={gateway.id} />
+          <WhatsAppPairing gatewayId={gateway.id} agentId={agentId} />
         </div>
       )}
 

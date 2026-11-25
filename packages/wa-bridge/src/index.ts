@@ -10,12 +10,13 @@
  * `packages/wa-bridge/README.md` says why the GPL-3.0 `libsignal` Baileys depends on no longer
  * reaches it.
  *
- * This file wires the bridge and is what the engine imports. The rest is on its seams:
+ * This file makes a bridge and is what the engine imports: one bridge for each WhatsApp number a daemon holds
+ * (`openBridge`), each with its own connection, its own channel and its own login. The rest is on its seams:
  *
  * - `handler.ts` carries out the engine's commands, one protocol line at a time, through a `Link` to the connection;
  * - `connection.ts` keeps one Baileys socket open, reconnects it, and forwards what arrives on it;
  * - `message.ts` reads a message — its text, quote, mentions and media — without a socket;
- * - `say.ts` is how the bridge speaks: protocol events up, notes to stderr.
+ * - `say.ts` is how a bridge speaks: protocol events up its own channel, notes to stderr.
  *
  * Two things it is careful about:
  *
@@ -28,20 +29,22 @@
  * the reason it is encrypted rather than plain.
  */
 
-import { currentSocket, isLinked, logout, phoneForLid, start, stop } from "./connection.ts";
+import { Connection } from "./connection.ts";
 import { Handler } from "./handler.ts";
+import type { BridgeIo } from "./io.ts";
+import { speaker } from "./say.ts";
 
 /**
- * stdout belongs to the protocol, so nothing else may write to it.
+ * `console` is the whole process's, and so is this redirect: the one thing here that is not a bridge's own.
  *
  * `libsignal-node`, deep inside Baileys, calls `console.log('Closing session:', …)` and dumps a whole
- * session record — straight into the middle of this process's JSON stream. The engine logged sixteen
- * "unparseable line from the bridge" warnings per occurrence, and a frame that happened to be split
- * by one of those writes would have been corrupted rather than merely noisy: an `ack` lost that way
- * is a reply that hangs for thirty seconds and is then dropped.
+ * session record. When the bridge was its own process that went straight into the middle of its JSON
+ * stream: the engine logged sixteen "unparseable line from the bridge" warnings per occurrence, and a
+ * frame split by one of those writes would have been corrupted rather than merely noisy. Inside the
+ * daemon it would land in the daemon's own output as it is.
  *
- * Redirected rather than tolerated. A dependency cannot be asked not to print, and the protocol
- * cannot afford to share the channel.
+ * Redirected rather than tolerated. A dependency cannot be asked not to print, and a library that
+ * prints cannot say which number it printed for: every bridge's dependency writes through here.
  */
 for (const level of ["log", "info", "warn", "error", "debug", "trace"] as const) {
   console[level] = (...args: unknown[]) => {
@@ -55,43 +58,35 @@ for (const level of ["log", "info", "warn", "error", "debug", "trace"] as const)
   };
 }
 
-/** The bridge's one handler, over the bridge's one connection — and the environment, for a bridge run on its own. */
-const handler = new Handler(
-  { currentSocket, isLinked, start, stop, logout, phoneForLid },
-  {
-    sessionDir: process.env.NOURIDE_WA_SESSION_DIR ?? "",
-    sessionKey: process.env.NOURIDE_WA_SESSION_KEY ?? "",
-  },
-);
-
-/**
- * Supply what the environment would have carried, for a bridge running inside another process.
- *
- * The in-process host calls this; without it the environment is read. The session
- * directory still arrives over the protocol in `hello` and still wins over this — the engine holds
- * the config — so this is really about the key.
- */
-export function configure(input: { sessionDir?: string; encryptionKey: string }): void {
-  handler.configure(input);
+/** One WhatsApp number's bridge, as its host holds it. */
+export interface Bridge {
+  /**
+   * Feed one protocol line in, one at a time.
+   *
+   * Commands are handled one at a time by the caller, and that is load-bearing: `send` awaits the
+   * network, and processing the next line concurrently would let two replies to the same chat race
+   * into the wrong order.
+   */
+  handleLine(line: string): Promise<void>;
+  /**
+   * Tear the connection down without ending the host.
+   *
+   * The daemon may drop a WhatsApp gateway and keep running, so ending a bridge cannot mean ending the
+   * process — and a socket left open would fight the next bridge of the same number for its credentials.
+   */
+  stop(): void;
 }
 
 /**
- * Feed one protocol line in. The engine's in-process host calls this, one line at a time.
+ * A bridge for one number: its own connection, its own handler, speaking on the channel given here.
  *
- * Commands are handled one at a time by the caller, and that is load-bearing: `send` awaits the
- * network, and processing the next line concurrently would let two replies to the same chat race
- * into the wrong order.
+ * `name` is the connection's, for the notes it writes. The key is handed over directly, never through the
+ * environment (`handler.ts` says why); the session's folder still arrives over the protocol in `hello` and wins over
+ * the one given here, since the engine holds the config.
  */
-export async function handleLine(line: string): Promise<void> {
-  await handler.handleLine(line);
-}
-
-/**
- * Tear the connection down without ending the host.
- *
- * The daemon may drop a WhatsApp gateway and keep running, so ending the bridge cannot mean ending the
- * process — and a socket left open would fight the next bridge for the same credentials.
- */
-export function stopBridge(): void {
-  stop();
+export function openBridge(input: { name: string; sessionDir?: string; encryptionKey: string; io: BridgeIo }): Bridge {
+  const say = speaker(input.io, input.name);
+  const connection = new Connection(say);
+  const handler = new Handler(connection, { sessionDir: input.sessionDir ?? "", sessionKey: input.encryptionKey }, say);
+  return { handleLine: (line) => handler.handleLine(line), stop: () => connection.stop() };
 }

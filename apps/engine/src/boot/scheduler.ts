@@ -24,7 +24,7 @@ export function buildScheduler(params: {
   notifier: Pick<Notifier, "ask" | "settle">;
   pipeline: {
     cronExecutors(): CronExecutors;
-    voiceGatewayId(agentId: string, gatewayId: string): string;
+    voiceGatewayId(agentId: string, gatewayId: string, chatId?: string): string;
     isAdmin(who: { gatewayId: string; senderId: string }): boolean;
   };
   missions: {
@@ -41,7 +41,7 @@ export function buildScheduler(params: {
   const stepAsks: StepAsks = new StepAsks({
     store: params.cron,
     notifier: params.notifier,
-    voice: (agentId, gatewayId) => pipeline.voiceGatewayId(agentId, gatewayId),
+    voice: (agentId, gatewayId, chatId) => pipeline.voiceGatewayId(agentId, gatewayId, chatId),
     isAdmin: (who) => pipeline.isAdmin(who),
     answer: (runId, go, by, via) => scheduler.answerRun(runId, go, by, via),
     when: (at) => {

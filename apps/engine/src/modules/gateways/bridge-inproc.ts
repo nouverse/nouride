@@ -34,31 +34,24 @@ import type { BridgeChannel, BridgeContext } from "@nouride/gateways";
 const log = createLogger("gateway.whatsapp.inproc");
 
 /**
- * One in-process bridge per daemon.
+ * A bridge for each WhatsApp connection, and never two for one.
  *
- * `packages/wa-bridge` keeps its connection state at module scope — the socket, the auth handle, the
- * reconnect timer — so a second bridge in the same module graph would silently share all of it and
- * the two WhatsApp accounts would fight over one socket. Refused at open rather than allowed to
- * misbehave: a gateway that reports itself configured and then answers for the wrong number is the
- * failure invariant 5 exists to prevent.
+ * `packages/wa-bridge` kept its connection state at module scope — the socket, the auth handle, the
+ * reconnect timer — so it was one WhatsApp number for each daemon, refused here at a second. Each bridge
+ * holds its own now (`openBridge`), with a channel of its own, so a daemon hosts one for each number.
  *
- * So it is one WhatsApp number per daemon: a second connection needs a second daemon. There is no
- * in-binary way round module scope.
+ * What is still refused is a second bridge for the *same* connection while the first is open: two sockets
+ * on one login write the same credentials and WhatsApp closes both. The adapter closes one before it opens
+ * the next; this is the line that says so if it ever does not.
  */
-let hosted: string | null = null;
-
-/** Where the bridge writes once its channel is closed: nowhere, and `exit` stops nothing. */
-const INERT = { write: (): void => {}, exit: (): void => {} };
+const hosted = new Set<string>();
 
 export async function openInProcess(
   instance: string,
   context: BridgeContext,
 ): Promise<BridgeChannel> {
-  if (hosted) {
-    throw new Error(
-      `[gateways.whatsapp.${instance}] cannot start: the WhatsApp bridge in this daemon is already ` +
-        `${hosted}'s (one WhatsApp number per daemon, so a second one needs a second daemon)`,
-    );
+  if (hosted.has(instance)) {
+    throw new Error(`[gateways.whatsapp.${instance}] cannot start: this connection's WhatsApp bridge is already open in this daemon`);
   }
 
   /**
@@ -69,10 +62,10 @@ export async function openInProcess(
    * reading somebody will actually need: nothing depends on the package by name, so `bun install`
    * never links it — a build links it for its own run (`withPluginsResolvable`) and removes the link.
    */
-  let bridge: typeof import("nouride-wa-bridge");
+  let plugin: typeof import("nouride-wa-bridge");
   let io: typeof import("nouride-wa-bridge/io");
   try {
-    bridge = await import("nouride-wa-bridge");
+    plugin = await import("nouride-wa-bridge");
     io = await import("nouride-wa-bridge/io");
   } catch (err) {
     throw new Error(
@@ -83,17 +76,7 @@ export async function openInProcess(
     );
   }
 
-  /**
-   * The session key, handed over directly rather than through the environment.
-   *
-   * A bridge run as its own process was given it in its `env`, which was safe because that child was
-   * the bridge and nothing else. Doing the same here would put it in the *daemon's* environment, and every
-   * command the agent runs through `exec` inherits that — a WhatsApp session key one `printenv`
-   * away from the model. This keeps it inside the bridge module.
-   */
-  bridge.configure({ sessionDir: context.sessionDir, encryptionKey: context.encryptionKey });
-
-  hosted = instance;
+  hosted.add(instance);
 
   /**
    * Events out of the bridge, queued for the adapter to iterate.
@@ -113,37 +96,46 @@ export async function openInProcess(
   const finish = (): void => {
     if (done) return;
     done = true;
-    hosted = null;
-    /**
-     * Inert, not the default. Restoring the default hands the bridge module back its own
-     * `exit`, which is `process.exit` — and the adapter's own disconnect queues a `shutdown` just
-     * before closing, so that command ran after this and took the whole daemon down with code 0, on
-     * every WhatsApp reconnect. Nothing queued runs after this point anyway (see `writeLine`).
-     */
-    detach();
-    io.attach(INERT);
+    hosted.delete(instance);
     // The socket first, then the waiter: a reconnect firing between the two would open a connection
     // nobody owns. Same ordering the `shutdown` command uses.
     try {
-      bridge.stopBridge();
+      bridge.stop();
     } catch (err) {
-      log.warn("bridge teardown failed", { error: String(err) });
+      log.warn("bridge teardown failed", { instance, error: String(err) });
     }
     wake?.();
     resolveClosed();
   };
 
-  const detach = io.attach({
-    write: (line) => {
-      if (done) return;
-      pending.push(line);
-      wake?.();
-    },
-    exit: (code) => {
-      // Never `process.exit` here. The bridge decides it is finished; the daemon that hosts it has
-      // six other gateways and a dashboard that are not finished at all.
-      log.info("bridge asked to exit", { instance, code });
-      finish();
+  /**
+   * This bridge's own channel, and the session key with it: handed over directly, never through the
+   * environment. A bridge run as its own process was given the key in its `env`, which was safe because
+   * that child was the bridge and nothing else. Here it would be the *daemon's* environment, which every
+   * command an agent runs through `exec` inherits — a WhatsApp session key one `printenv` away from the
+   * model.
+   *
+   * Once the channel is closed a line goes nowhere and `exit` stops nothing: the adapter's own disconnect
+   * queues a `shutdown` just before it closes, and an exit that still reached a process's own took the
+   * whole daemon down with code 0 on every WhatsApp reconnect.
+   */
+  const bridge = plugin.openBridge({
+    name: `whatsapp:${instance}`,
+    sessionDir: context.sessionDir,
+    encryptionKey: context.encryptionKey,
+    io: {
+      write: (line) => {
+        if (done) return;
+        pending.push(line);
+        wake?.();
+      },
+      exit: (code) => {
+        // Never `process.exit` here. The bridge decides it is finished; the daemon that hosts it has
+        // other gateways and a dashboard that are not finished at all.
+        if (done) return;
+        log.info("bridge asked to exit", { instance, code });
+        finish();
+      },
     },
   });
 
@@ -161,8 +153,8 @@ export async function openInProcess(
     writeLine: (line: string) => {
       if (done) return;
       queue = queue.then(async () => {
-        // A command queued before `close` arrives after `finish` tore the bridge down: running it
-        // would act on whichever channel is attached by then — the next one, after a reconnect.
+        // A command queued before `close` arrives after `finish` tore the bridge down: there is
+        // nothing left for it to act on.
         if (done) return;
         try {
           await bridge.handleLine(line);

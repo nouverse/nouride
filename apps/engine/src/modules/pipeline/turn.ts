@@ -16,7 +16,7 @@
  */
 
 import { capStoredTurns } from "@/modules/llm/context.ts";
-import { createLogger, LLMError, toUserMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ChatMessage } from "@nouride/shared";
+import { createLogger, isOpenAgent, LLMError, toUserMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ChatMessage } from "@nouride/shared";
 import type { TurnResult } from "@/modules/llm/executor/types.ts";
 import { settleNotes } from "@/modules/tools/builtins/plan.ts";
 import { HookRegistry, ModelOverrides } from "@/modules/hooks/registry.ts";
@@ -35,6 +35,7 @@ import { hasWords, writtenBesideCalls } from "@/commons/silence.ts";
 import { Preamble } from "./preamble.ts";
 import { nudgeBaseMs, replyNote, watchTurn } from "./budget-nudges.ts";
 import { outcomeOf, type TurnShape } from "./turn-shape.ts";
+import { closedSentence, tellsClosedNow } from "./open-door.ts";
 import { beginTurn, close, tell, type TurnState } from "./turn-state.ts";
 import { turnBrain } from "./turn-brain.ts";
 import { compose, equip, turnRequest } from "./turn-request.ts";
@@ -105,8 +106,14 @@ export class TurnRunner {
     if (budget.action !== "refuse") return false;
     log.warn("daily cost cap reached, refusing the turn", { agent_id: turn.agent.config.id });
     void this.ctx.deps.notifier?.alert("cost_cap", budget.message);
-    await this.ctx.voice.reply(turn.envelope, budget.message);
-    close(turn, { status: "failed", reply: budget.message, error: "daily cost cap reached" });
+    // The cap, what was spent and the setting that raises it are the install's own: an open agent's words go to
+    // whoever writes, so they are told what they are told when its own day is used. Its admin has the alert above.
+    const open = isOpenAgent(turn.agent);
+    const said = open ? closedSentence(turn.agent) : budget.message;
+    // To an open agent's people once a day each (`tellsClosedNow`); the rest of their messages are left unanswered.
+    const tellNow = !open || tellsClosedNow(this.ctx.deps, turn.agent, turn.envelope);
+    if (tellNow) await this.ctx.voice.reply(turn.envelope, said);
+    close(turn, { status: "failed", reply: tellNow ? said : "", error: "daily cost cap reached" });
     tell(turn, { toolCalls: 0, worked: 0, tokens: 0, failed: true, error: budget.message, interrupted: false, readOutside: false });
     this.ctx.releaseTurn(turn.turnKey);
     turn.clock.stop();
@@ -148,7 +155,7 @@ export class TurnRunner {
     // the same rule the answer follows. Posting it on the inbound one put Nexa's "2 steps · waiting
     // for you" under Nouva.
     const voiceGateway =
-      this.ctx.deps.gateways.get(this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId)) ?? turn.gateway;
+      this.ctx.deps.gateways.get(this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId)) ?? turn.gateway;
     turn.voiceGateway = voiceGateway;
     const progress = (turn.progress =
       this.ctx.deps.config.llm.streaming.progressInChat &&
@@ -253,7 +260,7 @@ export class TurnRunner {
     const said = owed || (isSystemEvent(envelope) && !hasWords(result.text) ? "" : result.text);
     const notice = said.trim()
       ? null
-      : emptyTurnMessage(result.stopReason, result.toolCalls, controller.signal.aborted, result.approvalsRefused);
+      : emptyTurnMessage(result.stopReason, result.toolCalls, controller.signal.aborted, result.approvalsRefused, !isOpenAgent(agent));
     /**
      * This chat's `/effort` level, refused by its model (0.8.17): said under the answer that met it, once, and kept out of
      * the conversation, which holds the model's own words. Not under an answer nobody is sent, stopped or already said
@@ -400,8 +407,9 @@ export class TurnRunner {
      * teach except that it did not work, and writing down a half-finished procedure is precisely
      * how a shared skill pool poisons itself.
      */
-    // Not a mission's turn: its work is remembered once, from its report, when it ends.
-    if (!shape) void this.ctx.deps.reflection?.observe({
+    // Not a mission's turn: its work is remembered once, from its report, when it ends. Nor a turn of an agent open to
+    // everyone: what a stranger had it do is not a way of working any agent here should learn.
+    if (!shape && !isOpenAgent(agent)) void this.ctx.deps.reflection?.observe({
       agentId: agent.config.id,
       gatewayId: envelope.gatewayId,
       chatId: envelope.chatId,

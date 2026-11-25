@@ -9,6 +9,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { digestFile, makeTempDir, openFileWriter } from "../src/file-stream.ts";
+import { sleep } from "./wait.ts";
 import { verifyEd25519 } from "../src/crypto.ts";
 
 let dir = "";
@@ -33,6 +34,26 @@ describe("files a piece at a time", () => {
     const fresh = openFileWriter(path);
     await fresh.close();
     expect(statSync(path).size).toBe(0);
+  });
+
+  test("a writer that cannot write rejects its writes and still closes: nothing escapes as an uncaught error", async () => {
+    dir = mkdtempSync(join(tmpdir(), "nr-stream-"));
+    const uncaught: unknown[] = [];
+    const hear = (err: unknown) => void uncaught.push(err);
+    process.on("uncaughtException", hear);
+    try {
+      // A folder that is not there: the open fails after the call returns, as a full disk's write does.
+      const broken = openFileWriter(join(dir, "no-such-folder", "part"));
+      const wrote = await broken.write(new TextEncoder().encode("bytes")).then(() => "written", (err: Error) => err.message);
+      expect(wrote).toContain("ENOENT");
+      expect(await broken.write(new TextEncoder().encode("more")).then(() => "written", () => "refused")).toBe("refused");
+      // Closed, though it never opened: a caller waiting on it is not held for good.
+      await broken.close();
+      await sleep(20);
+      expect(uncaught).toEqual([]);
+    } finally {
+      process.off("uncaughtException", hear);
+    }
   });
 
   test("a temporary directory is new, inside its parent, with the prefix", () => {

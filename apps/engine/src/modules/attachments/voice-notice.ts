@@ -72,7 +72,7 @@ const FIX_FOR_OPERATOR: Record<UnheardReason, string | null> = {
  * `ownerChat` adds the operator's fix to what the model says — only there, because advice about a
  * config file is noise to anybody else, and in a group it tells strangers how the daemon is set up.
  */
-export function voiceNoticeLines(clips: readonly NoticeClip[], options: { ownerChat: boolean }): string[] {
+export function voiceNoticeLines(clips: readonly NoticeClip[], options: { ownerChat: boolean; unnamed?: boolean }): string[] {
   const lines: string[] = [];
   for (const item of clips) {
     const what = `${WHAT[item.kind]}${lengthOf(item.durationSec)}`;
@@ -94,7 +94,8 @@ export function voiceNoticeLines(clips: readonly NoticeClip[], options: { ownerC
     if ("transcript" in item.clip) {
       lines.push(
         ``,
-        `${what} could not be sent to you as sound, so ${item.clip.by} transcribed it. You have the words,`,
+        // For an agent open to everyone the service is not named: which one this install uses is the install's own.
+        `${what} could not be sent to you as sound, so ${options.unnamed ? "it was transcribed for you" : `${item.clip.by} transcribed it`}. You have the words,`,
         `not the voice: a machine transcript mishears names and numbers, so check anything that matters with`,
         `the sender. ${whose}`,
         `<<<transcript`,

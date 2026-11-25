@@ -54,10 +54,10 @@ export async function atWork(
   agent: LoadedAgent,
   envelope: MessageEnvelope,
   turn: ActiveTurn,
-  o: { addressed: boolean; fromPerson: boolean; handed?: { from: string; hops: number } },
+  o: { addressed: boolean; routed?: boolean; fromPerson: boolean; handed?: { from: string; hops: number } },
 ): Promise<void> {
   const id = agent.config.id;
-  const outcome = whileBusy(turn, envelope, { addressed: o.addressed, fromPerson: o.fromPerson, steer: ctx.deps.config.queue.steer, handedOver: o.handed !== undefined });
+  const outcome = whileBusy(turn, envelope, { addressed: o.addressed, ...(o.routed ? { routed: true } : {}), fromPerson: o.fromPerson, steer: ctx.deps.config.queue.steer, handedOver: o.handed !== undefined });
   const parked = ctx.deps.approvals
     .pending()
     .some((request) => request.agentId === id && request.gateway === envelope.gatewayId && request.chatId === envelope.chatId);

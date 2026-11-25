@@ -11,10 +11,8 @@ import {
   GROUP_CONTEXT_MAX,
   toolIterationsRefusal,
   turnSecondsRefusal,
-  type AccessMode,
 } from "@nouride/shared";
 import { upsertTomlTable } from "@/modules/config/edit.ts";
-import { assertGatewayExecPosture } from "@/modules/config/global/index.ts";
 import { editConfigFile } from "./file.ts";
 import type { SaveResult, SettingsDeps } from "./types.ts";
 
@@ -34,36 +32,19 @@ const log = createLogger("settings");
  *
  * Turning pairing **off** means `allowlist`, not `deny`: senders already approved keep talking (the
  * store answers `approved` before the mode is consulted), and unknown ones are dropped in silence —
- * no code, no reply, nothing queued. That is the anti-spam posture. `open` is the one direction that
- * can be refused, because it is the one that boot itself refuses: an open daemon whose agents hold
- * `exec` is a remote shell, and writing that config from the dashboard would leave a daemon that
- * cannot be started again.
+ * no code, no reply, nothing queued. That is the anti-spam posture. `open` is not one of the two: an
+ * install is never open to everyone. One agent may be, from its own Access page, with a few tools of
+ * the daemon's own (`setup/open-agent.ts`), and the refusal here says so.
  */
-export async function setAccessMode(deps: SettingsDeps, params: {
-  mode: string;
-  /** Ids of active agents holding `exec`, for the same guard boot applies. */
-  agentsWithExec?: readonly string[];
-  actor?: string;
-}): Promise<SaveResult> {
-  const mode = params.mode.trim() as AccessMode;
-  if (mode !== "open" && mode !== "allowlist" && mode !== "pair") {
-    return { ok: false, error: `unknown access mode "${params.mode}": use open, allowlist or pair` };
+export async function setAccessMode(deps: SettingsDeps, params: { mode: string; actor?: string }): Promise<SaveResult> {
+  const mode = params.mode.trim();
+  if (mode === "open") {
+    return { ok: false, error: 'access mode "open" is gone: an install is never open to everyone. Open one agent on its Access page in the dashboard instead; for the install, use pair or allowlist' };
   }
+  if (mode !== "allowlist" && mode !== "pair") return { ok: false, error: `unknown access mode "${params.mode}": use pair or allowlist` };
 
   const previous = deps.config.security.access.mode;
   if (mode === previous) return { ok: true, restartRequired: false };
-
-  try {
-    assertGatewayExecPosture({
-      gatewaysEnabled: deps.config.gateways.some((gateway) => gateway.enabled),
-      agentsWithExec: [...(params.agentsWithExec ?? [])],
-      accessMode: mode,
-    });
-  } catch (error) {
-    // The boot guard's own words, minus the "refusing to start" framing — nothing is starting here.
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: message.replace(/^refusing to start: /, "") };
-  }
 
   const saved = await editConfigFile(deps, (source) => upsertTomlTable(source, "security.access", { mode }));
   if (!saved.ok) return saved;

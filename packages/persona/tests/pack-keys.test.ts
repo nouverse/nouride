@@ -47,6 +47,12 @@ describe("a pack key nothing reads", () => {
     ).toEqual([]);
   });
 
+  test("an agent open to everyone: its two limits and its closing sentence are read, and a misspelling among them is named", () => {
+    const open = { max_daily_tokens: 200_000, max_daily_messages_per_person: 30, closed_reply: "Closed for today." };
+    expect(unknownPackKeys({ agent: { access: "open" }, open })).toEqual([]);
+    expect(unknownPackKeys({ agent: { access: "open" }, open: { ...open, max_daily_token: 1 } })).toEqual(["[open] max_daily_token"]);
+  });
+
   test("is warned about when the agent loads, with its file, and the agent loads", async () => {
     await writeTextFile(join(agentsDir, "nox", "IDENTITY.md"), "# Nox\n");
     await writeTextFile(join(agentsDir, "nox", "config.toml"), '[llm]\nmodle = "m-2"\ntemperature = 0.2\n');

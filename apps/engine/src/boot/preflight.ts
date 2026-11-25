@@ -11,7 +11,7 @@
  * like a config problem from the chat, it looks like the tool being broken.
  */
 
-import { externalOrchestratorRefusal } from "@/modules/setup/agent-access.ts";
+import { externalOrchestratorRefusal, openOrchestratorRefusal } from "@/modules/setup/agent-access.ts";
 import { resourceLimitsAvailable } from "@nouride/runtime";
 import { secretBindingWarnings } from "@nouride/policy";
 import { createLogger, type GlobalConfig, type LoadedAgent } from "@nouride/shared";
@@ -19,7 +19,7 @@ import { envNamesFor } from "@nouride/secrets";
 import { skillsDirFor } from "@nouride/persona";
 import { assertCredentialsUnreadable } from "@nouride/persona";
 import type { AgentRegistry } from "@nouride/persona";
-import { assertGatewayExecPosture, reportConfigAdvisories } from "@/modules/config/global/index.ts";
+import { reportConfigAdvisories } from "@/modules/config/global/index.ts";
 import { openAdvisories, type Advise } from "./advisories.ts";
 import { lintConfig } from "@/modules/config/schema.ts";
 import type { ProviderRegistry } from "@/modules/llm/providers.ts";
@@ -39,6 +39,24 @@ export function refusingExternalOrchestrator(config: GlobalConfig): (agent: Load
     agent.config.external && config.daemon.orchestrator === agent.config.id
       ? `agents/${agent.config.id}/config.toml [external]: ${externalOrchestratorRefusal(agent.config.id)}`
       : null;
+}
+
+/**
+ * The registry's `refuse` for an orchestrator made open to everyone: a save of its pack is put back, saying why, as one
+ * that makes it external is. The two are asked one after the other (`refusedByThisInstall`).
+ */
+function refusingOpenOrchestrator(config: GlobalConfig): (agent: LoadedAgent) => string | null {
+  return (agent) =>
+    agent.config.access === "open" && config.daemon.orchestrator === agent.config.id
+      ? `agents/${agent.config.id}/config.toml [agent] access = "open": ${openOrchestratorRefusal(agent.config.id)}`
+      : null;
+}
+
+/** What this install cannot take of a pack that loads: both of the orchestrator's refusals, as the registry's `refuse`. */
+export function refusedByThisInstall(config: GlobalConfig): (agent: LoadedAgent) => string | null {
+  const external = refusingExternalOrchestrator(config);
+  const open = refusingOpenOrchestrator(config);
+  return (agent) => external(agent) ?? open(agent);
 }
 
 export function runPreflightChecks(deps: {
@@ -63,15 +81,6 @@ export function runPreflightChecks(deps: {
     workspaceDirs: [config.daemon.workspaceDir],
   });
 
-  // Checked here rather than in `parseConfig`: it needs the loaded agents to know who holds `exec`.
-  assertGatewayExecPosture({
-    gatewaysEnabled: config.gateways.some((g) => g.enabled),
-    agentsWithExec: registry
-      .active()
-      .filter((agent) => agent.config.tools.enabled.includes("exec"))
-      .map((agent) => agent.config.id),
-    accessMode: config.security.access.mode,
-  });
 
   // Bad, every boot: a setting the daemon cannot use. A deliberate default (no spend cap) at info. The rest once, while
   // it is new (`advisories.ts`) — `nouride doctor` and the dashboard's Overview list the whole set the last boot said.
@@ -95,6 +104,14 @@ export function runPreflightChecks(deps: {
       hint: externalOrchestratorRefusal(orchestrator.config.id),
     });
     delete config.daemon.orchestrator;
+  }
+  // The same hand edit, of `access`: the orchestrator stays what it is and is not open for this run. Dropping its role
+  // instead would leave the install's own agent answering strangers, with the daemon's four tools in place of its own.
+  if (orchestrator?.config.access === "open") {
+    advise(`agents/${orchestrator.config.id}/config.toml [agent] access = "open" is not taken: ${orchestrator.config.id} is the orchestrator, and follows the install's access for this run`, {
+      hint: openOrchestratorRefusal(orchestrator.config.id),
+    });
+    orchestrator.config.access = "follow";
   }
 
   // A secret bound to a bare interpreter: every command by another name.

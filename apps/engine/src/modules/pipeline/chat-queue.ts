@@ -16,7 +16,8 @@ import type { InboundRouter } from "./inbound.ts";
 import { commandForAnotherBot } from "./command-for-another.ts";
 import { jobOfCompletionWake } from "./job-wakes.ts";
 import { answerGroupCommand } from "./room-mention.ts";
-import { conversationSlots } from "./fair-share.ts";
+import { conversationSlots, strangerSlots } from "./fair-share.ts";
+import { strangerCommand } from "./open-door.ts";
 
 const log = createLogger("pipeline");
 
@@ -25,7 +26,7 @@ export function chatQueue(parts: {
   hooks: HookRegistry;
   turnContext: Pick<TurnContext, "returned">;
   inbound: Pick<InboundRouter, "handle">;
-  admission: Pick<Admission, "noticeDropped">;
+  admission: Pick<Admission, "noticeDropped" | "strangerOf">;
   voice: Pick<Voice, "reply">;
   /** The inbox, built after the queue it puts messages back into — read when a message is taken or dropped. */
   inbox: () => Pick<InboxDesk, "track" | "dropped">;
@@ -77,7 +78,10 @@ export function chatQueue(parts: {
     // Everything here is cheap and touches no session, so running it beside a turn is safe.
     urgent: (envelope) => {
       const command = parseCommand(envelope.text.trim());
-      return command !== null && hooks.has(command.command);
+      if (command === null || !hooks.has(command.command)) return false;
+      // Not a stranger's command the model answers (`/start`, the opening of a chat): that is a turn, and waits its turn
+      // within the strangers' share. Fifty new visitors' `/start`s ran at once, past the share and the ceiling both.
+      return !(admission.strangerOf(envelope) && strangerCommand(command.command, envelope.chatType !== "dm")?.handled === false);
     },
     /**
      * One turn at a time in a one-to-one chat; several in a room.
@@ -96,6 +100,8 @@ export function chatQueue(parts: {
      */
     maxConcurrentPerKey: (envelope) => conversationSlots(envelope, deps),
     maxConcurrentTotal: deps.config.queue.maxConcurrentTurns,
+    // Strangers let in only by an open agent hold half the ceiling together, whoever they are (`fair-share.ts`).
+    share: (envelope) => (admission.strangerOf(envelope) ? { name: "strangers", most: strangerSlots(deps.config.queue.maxConcurrentTurns) } : null),
     maxQueueDepth: deps.config.queue.maxQueueDepth,
     queueTimeoutMs: deps.config.queue.queueTimeoutMs,
     /**
@@ -111,7 +117,8 @@ export function chatQueue(parts: {
       return parts.inbox().track(envelope, async () => {
         // A command for another of our bots, by the tag in front of it: that bot's own copy answers it.
         if (commandForAnotherBot({ hooks, tags: botTags }, envelope)) return;
-        if (!(await answerGroupCommand(groupCommand, envelope))) await inbound.handle(envelope);
+        // Not a stranger's on an open agent's connection: a command of theirs is held to their three (`open-door.ts`).
+        if (admission.strangerOf(envelope) || !(await answerGroupCommand(groupCommand, envelope))) await inbound.handle(envelope);
       });
     },
     onDropped: (envelope, reason) => {

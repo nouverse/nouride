@@ -86,7 +86,7 @@ test("an external agent's row of /status carries its CLI's model: the pack's, an
   const app = new Hono();
   const token = "control-token-for-tests-0000000000";
   mountControlRoutes(app, {
-    ctx: { config: { daemon: {}, llm: { defaults: {} }, security: {}, delegate: {}, missions: { perAgent: 1 } }, gateways: new Map(), startedAt: Date.now(), status: "ready", providerErrors: new Map() } as unknown as DaemonContext,
+    ctx: { config: { daemon: {}, gateways: [], llm: { defaults: {} }, security: {}, delegate: {}, missions: { perAgent: 1 } }, gateways: new Map(), startedAt: Date.now(), status: "ready", providerErrors: new Map() } as unknown as DaemonContext,
     token,
     registry: { all: () => [agent("nix", { cli: "claude-code" }), agent("kuro", { cli: "codex", model: "gpt-5.6-luna" })], status: () => "running", loadFailures: () => [], enabled: () => [] } as unknown as AgentRegistry,
     pipeline: anything,

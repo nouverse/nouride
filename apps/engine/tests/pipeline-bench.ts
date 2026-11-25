@@ -14,17 +14,19 @@
  * `timestamp: Date.now()`.
  */
 
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { removePath, type SqliteDb } from "@nouride/runtime";
 import { AgentRegistry } from "@nouride/persona";
 import { SecretStore } from "@nouride/secrets";
-import type { Gateway, GlobalConfig } from "@nouride/shared";
+import { isOpenAgent, type Gateway, type GlobalConfig } from "@nouride/shared";
 import { durableStores } from "@/boot/durable.ts";
 import { pausedAgentsState } from "@/commons/daemon-state.ts";
 import type { Machine } from "@/commons/machine.ts";
 import { DaemonStateStore } from "@/commons/daemon-state.store.ts";
 import { openAndMigrate } from "@/db/index.ts";
 import { AccessStore } from "@/modules/access/access.store.ts";
+import { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import { parseConfig } from "@/modules/config/global/index.ts";
 import { EventStore } from "@/modules/events/events.store.ts";
 import { EventedTurnStore } from "@/modules/events/turn-events.store.ts";
@@ -121,30 +123,49 @@ interface Install {
   db: SqliteDb;
   dataDir: string;
   agentsDir: string;
+  /** Whether the bench's door stands open: no `[security.access]` was given. */
+  everyoneIn: boolean;
 }
 
 export async function pipelineBench(options: BenchOptions = {}): Promise<Bench> {
   const agentsDir = tempDir("agents");
-  const dataDir = tempDir("data");
+  // The data folder inside a folder of the bench's own, as an install's is inside `.nouride`: the knowledge base is
+  // kept beside the data (`knowledgeDirOf`), and with the data folder straight in the system's temp directory every
+  // bench that booted memory shared one `knowledge` folder there, where one test's kept documents piled up run after
+  // run and were found by another's search.
+  const installDir = tempDir("install");
+  const dataDir = join(installDir, "data");
+  mkdirSync(dataDir, { recursive: true });
   for (const agent of options.agents ?? ["nouva"]) {
     const spec = typeof agent === "string" ? { id: agent } : agent;
     await writeAgentPack(agentsDir, { soul: "Be brief.", configToml: options.agentToml ?? '[llm]\nprovider = "test"\n', ...spec });
   }
   const config = parseConfig({ ...BASE_CONFIG, ...options.config });
-  if ((options.config?.security as { access?: unknown } | undefined)?.access === undefined) config.security.access.mode = "open";
   config.daemon.agentsDir = agentsDir;
   isolateInstallPaths(config, dataDir);
   const opened = await openAndMigrate(join(dataDir, "test.db"));
   const db = options.db ? options.db(opened) : opened;
   await options.configure?.(config, db);
 
-  const bench = await boot({ config, db, dataDir, agentsDir }, options);
+  const gated = (options.config?.security as { access?: unknown } | undefined)?.access !== undefined;
+  const bench = await boot({ config, db, dataDir, agentsDir, everyoneIn: !gated }, options);
   bench.dispose = () => {
     opened.close();
     removePath(agentsDir);
-    removePath(dataDir);
+    removePath(installDir);
   };
   return bench;
+}
+
+/**
+ * The access store with its door standing open: every sender is let in at arrival, with no code. Asked whether a
+ * sender is let in by name (`allowlist`, which `Admission.admitsByName` asks as), it answers as the store does, so who
+ * may use an admin's command is still the list's to say. What the install's own `open` was, before `open` became one
+ * agent's.
+ */
+function everyoneIn(store: AccessStore): AccessStore {
+  const check: AccessStore["check"] = (params) => (params.mode === "allowlist" ? store.check(params) : { action: "allow" });
+  return Object.assign(Object.create(store) as AccessStore, { check });
 }
 
 /** One process over `install`: everything boot makes per process, made now. */
@@ -171,15 +192,21 @@ async function boot(install: Install, options: RebootOptions): Promise<Bench> {
   // As boot has it: one event stream, which the turn store writes through and whose transaction the durable stores share.
   const events = new EventStore(db, Date.now, { strict: true });
   const turns = new EventedTurnStore(db, events);
+  // As boot has it (`boot/stores.ts`): a turn of an agent open to everyone is marked as one, for good.
+  turns.publicWhen((agentId) => isOpenAgent(registry.get(agentId)));
   const durable = durableStores(db, events);
   const sessions = new SessionStore(db);
-  const access = new AccessStore({ db, ...config.security.access });
+  // Everyone is let in unless the test gives `[security.access]`: a test that is not about the door runs behind one
+  // that stands open, and a test about it says who is let in.
+  const store = new AccessStore({ db, ...config.security.access });
+  const access = install.everyoneIn ? everyoneIn(store) : store;
   const made: Made = { db, config, dataDir, agentsDir, gateways, registry, providers, sessions, turns, events, journal: durable.journal, inbox: durable.inbox, durable, access };
   const given = typeof options.deps === "function" ? await options.deps(made) : options.deps;
   const pipeline = new Pipeline({
     config,
     machine: BENCH_MACHINE,
     access,
+    openDoor: new OpenDoorStore(db),
     registry,
     providers,
     sessions,

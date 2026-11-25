@@ -166,4 +166,32 @@ describe("each admin's own chat", () => {
     });
     expect(chats()).toEqual([{ gatewayId: "telegram:main", chatId: "814" }]);
   });
+
+  test("on the connection they last wrote on from that account, where it is up: not the first of its platform", () => {
+    // Two WhatsApp numbers: the shop's is first and connected, and the admin writes on the household's.
+    const connected = (id: string): Gateway => ({ id, platform: "whatsapp", status: "connected" }) as unknown as Gateway;
+    const gateways = new Map([["whatsapp:shop", connected("whatsapp:shop")], ["whatsapp:home", connected("whatsapp:home")]]);
+    const admin: Person = { key: "gading", name: "Gading", ids: ["web:usr_admin", "whatsapp:628111@s.whatsapp.net"] } as Person;
+    const wroteOnHome = [{ gatewayId: "whatsapp:home", senderId: "628111@s.whatsapp.net" }];
+    const chats = (lastFrom: { gatewayId: string; senderId: string }[]) =>
+      adminChatsOf({ config: () => ({ people: [admin] }), gateways, turns: { lastFrom: () => lastFrom }, isAdmin: (who) => who.senderId === "usr_admin" })();
+    expect(chats(wroteOnHome)).toEqual([{ gatewayId: "whatsapp:home", chatId: "628111@s.whatsapp.net" }]);
+    // That one down: the first that is up, as before.
+    (gateways.get("whatsapp:home") as { status: string }).status = "disconnected";
+    expect(chats(wroteOnHome)).toEqual([{ gatewayId: "whatsapp:shop", chatId: "628111@s.whatsapp.net" }]);
+  });
+
+  test("never on the number of an agent open to everyone: not where they last wrote, not as the first up", () => {
+    // The admin tried the shop's open agent from their own WhatsApp: that is where they last wrote.
+    const connected = (id: string): Gateway => ({ id, platform: "whatsapp", status: "connected" }) as unknown as Gateway;
+    const gateways = new Map([["whatsapp:shop", connected("whatsapp:shop")], ["whatsapp:home", connected("whatsapp:home")]]);
+    const admin: Person = { key: "gading", name: "Gading", ids: ["web:usr_admin", "whatsapp:628111@s.whatsapp.net", "telegram:814"] } as Person;
+    const lastFrom = [{ gatewayId: "whatsapp:shop", senderId: "628111@s.whatsapp.net" }];
+    const chats = () => adminChatsOf({ config: () => ({ people: [admin] }), gateways, turns: { lastFrom: () => lastFrom }, isAdmin: (who) => who.senderId === "usr_admin", openOn: (id) => id === "whatsapp:shop" })();
+    expect(chats()).toEqual([{ gatewayId: "whatsapp:home", chatId: "628111@s.whatsapp.net" }]);
+    // The household's number down: no WhatsApp at all, and the next of their accounts that has a connection.
+    (gateways.get("whatsapp:home") as { status: string }).status = "disconnected";
+    gateways.set("telegram:main", { id: "telegram:main", platform: "telegram", status: "connected" } as unknown as Gateway);
+    expect(chats()).toEqual([{ gatewayId: "telegram:main", chatId: "814" }]);
+  });
 });

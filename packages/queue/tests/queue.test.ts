@@ -605,3 +605,67 @@ describe("find", () => {
     expect(queue.find((j) => j.n === 2)).toBeUndefined();
   });
 });
+
+describe("a share of the ceiling", () => {
+  /** Handlers that each wait to be let go, by their item's chat and number, and the order they began in. */
+  function gated() {
+    const waiting = new Map<string, () => void>();
+    const began: string[] = [];
+    return {
+      began,
+      let: (id: string) => waiting.get(id)?.(),
+      handler: async (j: Job) => {
+        const id = `${j.chat}#${j.n}`;
+        began.push(id);
+        await new Promise<void>((resolve) => waiting.set(id, resolve));
+      },
+    };
+  }
+  /** Chats named `s…` are one kind of sender, at most two at once, of a ceiling of four. */
+  const strangers = (j: Job) => (j.chat.startsWith("s") ? { name: "strangers", most: 2 } : null);
+
+  test("items of one share hold at most its part of the ceiling, and the rest of it is everyone else's", async () => {
+    const work = gated();
+    const queue = new KeyedQueue<Job>({ key: (j) => j.chat, maxConcurrentTotal: 4, share: strangers, handler: work.handler });
+    for (let n = 1; n <= 5; n++) queue.push({ chat: `s${n}`, n });
+    queue.push({ chat: "home", n: 1 });
+    queue.push({ chat: "work", n: 1 });
+    await tick();
+    // Five of them arrived first, and two run: the household's two took the slots the others would have.
+    expect(work.began).toEqual(["s1#1", "s2#2", "home#1", "work#1"]);
+    expect(queue.stats()).toMatchObject({ running: 4, waiting: 3 });
+    // A slot of the share freed goes to the share's next, the one that waited longest.
+    work.let("s1#1");
+    await tick();
+    expect(work.began.at(-1)).toBe("s3#3");
+    // A slot of the household's freed is not the share's to take.
+    work.let("home#1");
+    await tick();
+    expect(work.began).toHaveLength(5);
+    for (const id of ["s2#2", "s3#3", "work#1"]) work.let(id);
+    await tick();
+    for (const id of ["s4#4", "s5#5"]) work.let(id);
+    await queue.idle();
+    expect(work.began).toHaveLength(7);
+  });
+
+  test("an item held by its share keeps its place in its key: what came after it there does not go first", async () => {
+    const work = gated();
+    const queue = new KeyedQueue<Job>({ key: (j) => (j.chat === "home" ? "room" : j.chat.startsWith("s-room") ? "room" : j.chat), maxConcurrentTotal: 4, share: strangers, handler: work.handler });
+    queue.push({ chat: "s1", n: 1 });
+    queue.push({ chat: "s2", n: 2 });
+    // One room, a stranger's message and then a household's, one at a time in it.
+    queue.push({ chat: "s-room", n: 3 });
+    queue.push({ chat: "home", n: 4 });
+    await tick();
+    expect(work.began).toEqual(["s1#1", "s2#2"]);
+    work.let("s1#1");
+    await tick();
+    expect(work.began).toEqual(["s1#1", "s2#2", "s-room#3"]);
+    for (const id of ["s2#2", "s-room#3"]) work.let(id);
+    await tick();
+    expect(work.began.at(-1)).toBe("home#4");
+    work.let("home#4");
+    await queue.idle();
+  });
+});

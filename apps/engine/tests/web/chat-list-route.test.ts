@@ -72,7 +72,7 @@ async function mount(options: { untagged?: (chatId: string) => string | null; ow
     },
     ctx: {
       gateways: new Map([["telegram:nouva", { platform: "telegram" }], ["telegram:nestor", { platform: "telegram" }]]),
-      config: { people: [{ key: "gading", name: "Gading", ids: ["telegram:814"] }] },
+      config: { people: [{ key: "gading", name: "Gading", ids: ["telegram:814"] }], gateways: [] },
     },
   };
   const app = new Hono<{ Variables: { principal: unknown } }>();

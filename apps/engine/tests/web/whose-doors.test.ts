@@ -126,7 +126,7 @@ async function house() {
     logs: { query: () => [{ seq: 1, message: "gaji bulan ini" }], oldestSeq: () => 1, latestSeq: () => 1 },
     logStore: { query: () => [{ id: 1, message: "gaji bulan ini" }], count: () => 1, components: () => [], span: () => ({ oldest: 1, newest: 1 }) },
     local: { id: LOCAL, platform: "web", dispatch: (request: unknown) => (dispatched.push(request), { messageId: "m", chatId: "x" }) },
-    ctx: { config: { people: PEOPLE, daemon: {}, retention: { logDays: 3 } }, gateways: new Map([["telegram:nouva", { platform: "telegram" }]]) },
+    ctx: { config: { people: PEOPLE, daemon: {}, retention: { logDays: 3 }, gateways: [] }, gateways: new Map([["telegram:nouva", { platform: "telegram" }]]) },
     sessions,
     turns,
     rooms,

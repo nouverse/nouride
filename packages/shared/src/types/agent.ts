@@ -325,11 +325,32 @@ export function approvalLevelRefusal(value: unknown): string {
 
 /**
  * Whether this agent's connections take new senders: `pair` gives a stranger a pairing code, `allowlist`
- * drops them, `follow` (and absent) defers to `[security.access] mode`. Not `open` — that is refused
- * daemon-wide for any agent with `exec`, and a per-agent way round it would be a hole in that guard.
+ * drops them, `follow` (and absent) defers to `[security.access] mode`, and `open` lets anyone who finds one of its
+ * connections talk to it. `open` is one agent's and safe for one reason: an open agent holds none of its pack's tools,
+ * only the daemon's fixed list, which reaches nothing of the computer (`tools/open-agent.ts`). The install's own
+ * `open` was refused beside any agent with `exec`, so a bot for the public cost every agent its shell.
  */
-export type AgentAccess = "follow" | "pair" | "allowlist";
-export const AGENT_ACCESS: readonly AgentAccess[] = ["follow", "pair", "allowlist"];
+export type AgentAccess = "follow" | "pair" | "allowlist" | "open";
+export const AGENT_ACCESS: readonly AgentAccess[] = ["follow", "pair", "allowlist", "open"];
+
+/**
+ * What strangers may cost an agent open to everyone, in a day of the operator's own: `[open]` in its pack. Both
+ * numbers are the admin's and neither has a default: an agent that spends its owner's tokens for anyone is not opened
+ * by accident, and a number chosen here would be invented.
+ */
+export interface OpenLimits {
+  /** The agent's tokens in a day, in and out, whoever it answered. Past it, it is closed to strangers until the next day. */
+  maxDailyTokens: number;
+  /** One person's messages to it in a day. Past it, they are told once and left unanswered until the next day. */
+  maxDailyMessagesPerPerson: number;
+  /** What a stranger is told once the day's tokens are spent, in the admin's words. Absent: the daemon's sentence. */
+  closedReply?: string;
+}
+
+/** Whether an agent is open to everyone. One place, since the tools, memory and the pipeline each rest on it. */
+export function isOpenAgent(agent: { config: { access?: AgentAccess } } | undefined): boolean {
+  return agent?.config.access === "open";
+}
 
 export function isAgentAccess(value: unknown): value is AgentAccess {
   return typeof value === "string" && (AGENT_ACCESS as readonly string[]).includes(value);
@@ -403,6 +424,8 @@ export interface AgentConfig {
   look?: AgentLook;
   /** Whether a stranger messaging this agent's connections is paired or dropped. See `AgentAccess`. */
   access?: AgentAccess;
+  /** `[open]`: the two limits on what strangers may cost it. There whenever `access` is `open`; kept while it is not. */
+  open?: OpenLimits;
 
   /**
    * How much this agent asks, for everyone who talks to it. Absent or `per-person` defers.

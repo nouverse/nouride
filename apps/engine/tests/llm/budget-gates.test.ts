@@ -18,7 +18,7 @@ function over(spent: number) {
   const config = structuredClone(DEFAULT_CONFIG);
   config.llm.limits.maxDailyTokens = 1_000;
   const usage = {
-    since: () => ({ usd: 0, unpricedRequests: 0, includedRequests: 0, requests: 3, inputTokens: spent, outputTokens: 0, cachedInputTokens: 0, cacheCreationInputTokens: 0 }),
+    since: () => ({ usd: 0, unpricedRequests: 0, includedRequests: 0, estimatedRequests: 0, requests: 3, inputTokens: spent, outputTokens: 0, cachedInputTokens: 0, cacheCreationInputTokens: 0 }),
     record: () => {},
   };
   return { config, usage };

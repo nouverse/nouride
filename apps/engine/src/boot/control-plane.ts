@@ -35,6 +35,7 @@ import type { LogBuffer } from "@/commons/log-buffer.ts";
 import type { LogsPort } from "@/commons/logs.store.ts";
 import type { Notifier } from "@/commons/notify.ts";
 import type { AccessPort } from "@/modules/access/access.store.ts";
+import type { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import type { CronScheduler } from "@/modules/cron/scheduler.ts";
 import type { CronPort } from "@/modules/cron/cron.store.ts";
 import type { LocalGateway } from "@/modules/gateways/local.ts";
@@ -126,6 +127,8 @@ export async function startControlPlane(deps: {
   grants: GrantsPort;
   toolGrants: ToolGrantsPort;
   access: AccessPort;
+  /** What strangers used of an open agent today, for its page (`web/control/agent-open.ts`). */
+  openDoor: Pick<OpenDoorStore, "today" | "names">;
   /** What is remembered about people — the Memory routes (`nouride memory`). */
   memory: Memory;
   /** Memory's nightly pass: run on demand, reported on, and the model call forgetting someone needs. */
@@ -388,6 +391,7 @@ export async function startControlPlane(deps: {
               grants,
               toolGrants,
               access,
+              openDoor: deps.openDoor,
               autoApprove,
               memory,
               memoryPass,

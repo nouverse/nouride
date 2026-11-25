@@ -63,7 +63,8 @@ export const settingsApi = {
 
   deleteGateway: (id: string) =>
     // `restartRequired` unless the daemon could take the connection down itself.
-    request<{ ok: true; restartRequired?: boolean }>(`${control}/gateways/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    // `stillOnThePhone` where the number's phone was not told: it may still list the device.
+    request<{ ok: true; restartRequired?: boolean; stillOnThePhone?: boolean }>(`${control}/gateways/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   pairing: (id: string) =>
     request<{ status: string; linked: boolean; qr: string | null; at?: number }>(

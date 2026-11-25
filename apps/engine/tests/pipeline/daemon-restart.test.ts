@@ -88,9 +88,8 @@ describe("/daemon-restart", () => {
 
   test("from an admin who was paired rather than listed, too", async () => {
     const b = await bench();
-    const decision = b.access.check({ gatewayId: "telegram:main", senderId: "friend", chatId: "77", mode: "pair", staticAllowlist: [] });
-    if (decision.action !== "pair") throw new Error("expected a pairing code");
-    b.access.approveByCode(decision.code, "test");
+    // Approved in the access store, as a pairing code's approval leaves them: not a line of the config file.
+    expect(b.access.allowMany("telegram:main", [{ senderId: "friend" }], "test")).toMatchObject({ added: 1 });
 
     expect((await b.send({ senderId: "friend", chatId: "77", text: "/daemon-restart now" })).join("\n")).toContain("Restarting now");
     await restarted(b.restarts);

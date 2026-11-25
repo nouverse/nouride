@@ -75,6 +75,7 @@ import { registerAgentRoutes } from "./routes/agents.ts";
 import { registerAgentDeleteRoutes } from "./routes/agent-delete.ts";
 import { registerTransferRoutes } from "./routes/transfer.ts";
 import { registerAgentToolRoutes } from "./routes/agent-tools.ts";
+import { registerAgentPublicRoutes } from "./routes/agent-public.ts";
 import { registerExternalAgentRoutes } from "./routes/external-agents.ts";
 import { registerUpdateRoutes } from "./routes/update.ts";
 import { registerApplianceRoutes } from "./routes/appliance.ts";
@@ -173,6 +174,8 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerAgentDeleteRoutes(control, deps);
   registerTransferRoutes(control, deps);
   registerAgentToolRoutes(control, deps);
+  // Before `registerAgentRoutes` too: `/agents/:id/public` is not one of its actions.
+  registerAgentPublicRoutes(control, deps);
   registerExternalAgentRoutes(control, deps);
   registerAgentRoutes(control, deps);
 

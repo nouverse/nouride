@@ -10,8 +10,12 @@ newline-delimited JSON, declared twice by hand: `src/protocol.ts` here,
 carries a version so a drift is a rejected connection rather than a mystery at runtime.
 
 Every Nouride edition compiles this into the daemon and runs it in the daemon's own process. There is no
-second executable, nothing to spawn and nothing to connect to: one WhatsApp number per daemon. `stdio`
-spawned an executable the tarball used to ship beside the daemon, and went on 2026-09-16 — since 0.8.0 a
+second executable, nothing to spawn and nothing to connect to. The daemon opens a bridge for each WhatsApp
+connection it holds (`openBridge` in `src/index.ts`): each has its own socket, its own login, its own reconnect
+timer and its own channel for the protocol, so one number's trouble is its own. What is one for the whole
+process is the redirect of `console`, since a library deep inside Baileys writes there and cannot say for
+which number. Until 0.8.48 the connection's state was the module's, and it was one WhatsApp number per daemon.
+`stdio` spawned an executable the tarball used to ship beside the daemon, and went on 2026-09-16 — since 0.8.0 a
 config still naming it, or its `bridge_command`, is refused at load. `ws` dialled a bridge running somewhere else,
 which nothing here ever served (the standalone build spoke stdin and stdout only); it went in 0.7.10,
 with that build, and a config naming it is refused at load.

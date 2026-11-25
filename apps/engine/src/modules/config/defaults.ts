@@ -109,8 +109,8 @@ export const DEFAULT_CONFIG: GlobalConfig = {
       cooldownReply: "Please slow down.",
     },
     access: {
-      // Pair by default. The old behaviour was `open` whenever the allowlist was empty — which is what
-      // a fresh install has — so anyone who found the bot could run the agent's tools.
+      // Pair by default: a stranger gets a code an admin approves. An install is never open to everyone; one agent
+      // may be (`[agent] access`), with a few tools of the daemon's own.
       mode: "pair",
       allowlist: [],
       codeTtlMs: 15 * 60_000,

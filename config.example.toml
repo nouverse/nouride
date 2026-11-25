@@ -523,7 +523,8 @@ port = 18254                        # $PORT overrides this
 # [gateways.whatsapp.main]
 # enabled = false
 # encryption_key = "wa-encryption-key"   # secret NAME; the value is 64 hex chars
-# session_dir = "/var/lib/wa"          # optional; unset keeps the login in <data_dir>/whatsapp
+# session_dir = "/var/lib/wa"          # optional; unset keeps the login in <data_dir>/whatsapp-main,
+#                                      # a folder named for the connection: each number has its own
 #
 # WhatsApp has no bot token. Linking is a QR scan from the phone holding the number,
 # once — the dashboard shows the code under Gateways. What comes back is a login, so
@@ -534,8 +535,9 @@ port = 18254                        # $PORT overrides this
 #
 # The daemon never talks to Baileys directly — only to the bridge, over a
 # newline-delimited JSON protocol. Every release carries that bridge in its own
-# process, so there is nothing to install or spawn, and one WhatsApp number per
-# daemon. `bridge_transport` has one value left, "inproc", and needs no line;
+# process, so there is nothing to install or spawn, and the daemon opens one for
+# each WhatsApp connection named here: a second number is a second table, with a
+# name and an encryption_key of its own. `bridge_transport` has one value left, "inproc", and needs no line;
 # "ws" went in 0.7.10 and is refused. See §6 of docs/ARCHITECTURE.md.
 
 # ── LLM ──────────────────────────────────────────────────────────────────────

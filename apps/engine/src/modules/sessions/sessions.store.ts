@@ -83,6 +83,13 @@ export interface SessionListOptions {
   notGateway?: string;
   /** Only one connection's conversations: an agent's newest in the dashboard, past a busy bot's chats elsewhere. */
   gateway?: string;
+  /** Only these connections' conversations: an open agent's with the public, on the connections it owns. None given is none. */
+  gateways?: readonly string[];
+  /**
+   * Leave out each of these agents' conversations on these connections of its own: an open agent's with the public,
+   * which have a place of their own. Another agent's conversation on such a connection is a known person's, and stays.
+   */
+  notPublic?: readonly { agentId: string; gateways: readonly string[] }[];
   /** Only the conversations one of these opened (`opened_by`): a reader's own. None given is none of them. */
   openedBy?: readonly string[];
   /** Only the conversations none of these opened, or nobody did: the ones nobody in People is known for. */
@@ -364,6 +371,18 @@ export class SessionStore {
     if (options.gateway) {
       clauses.push("s.gateway = ?");
       params.push(options.gateway);
+    }
+    if (options.gateways) {
+      if (options.gateways.length === 0) clauses.push("0");
+      else {
+        clauses.push(`s.gateway IN (${options.gateways.map(() => "?").join(", ")})`);
+        params.push(...options.gateways);
+      }
+    }
+    for (const open of options.notPublic ?? []) {
+      if (open.gateways.length === 0) continue;
+      clauses.push(`NOT (s.agent_id = ? AND s.gateway IN (${open.gateways.map(() => "?").join(", ")}))`);
+      params.push(open.agentId, ...open.gateways);
     }
     if (options.notOpenedBy && options.notOpenedBy.length > 0) {
       clauses.push(`(s.opened_by IS NULL OR s.opened_by NOT IN (${options.notOpenedBy.map(() => "?").join(", ")}))`);

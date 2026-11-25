@@ -46,8 +46,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   // 216 → 217 for an asked agent's step line that is not written where its own answer is said (`ask-shown.test.ts`):
   // one holds its answer past the line's own timer, to show the line did not go out while it worked.
   // 217 → 219 for a run that waits for a draft's notice before it goes on (`cron-step-waits.test.ts`): two show the
-  // run said nothing more, and did not end, while the notice was still on its way.
-  "apps/engine": 219,
+  // run said nothing more, and did not end, while the notice was still on its way. 219 → 220 for a weighed file's time
+  // to arrive (`attachment-store.test.ts`): one paces a stand-in download past the deadline a file of no weight is given.
+  "apps/engine": 220,
   "apps/dashboard": 37,
   // 11 → 12 for a connection that goes on trying slowly once its tries run out (`resilience.test.ts`): one shows a drop
   // its fast tries mend is said to nobody, which no condition can show. The test that lost its end in `dead` gave one up.
@@ -56,10 +57,14 @@ const FIXED_SLEEPS: Record<string, number> = {
   // 0 → 1 (0.8.1, `acp.test.ts`): a refusal written to a peer already gone shown not to reject unhandled.
   "packages/acp": 1,
   "packages/queue": 8,
-  // Each about time: a stream paced to lose a race, a prompt's turn, a deadline for a hang, an idle timeout outlasted.
-  "packages/runtime": 4,
+  // Each about time: a stream paced to lose a race, a prompt's turn, a deadline for a hang, an idle timeout outlasted;
+  // and a broken writer's error shown not to escape as an uncaught one (`file-stream.test.ts`).
+  "packages/runtime": 5,
   "packages/shared": 5,
   "packages/update": 4,
+  // 0 → 1 (`fixtures/side-by-side.ts`): a stand-in download holds a step, so a burst's downloads overlap and how many run
+  // at once can be counted.
+  "packages/wa-bridge": 1,
 };
 
 function members(): string[] {

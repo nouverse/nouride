@@ -133,6 +133,49 @@ export interface FallbackPair {
   model: string;
 }
 
+/** An agent and being open to everyone: whether it may be, on what terms, and today's use while it is. */
+export interface AgentOpen {
+  /** Why it can never be opened, or null when it can: it is the orchestrator, or a coding CLI answers it. */
+  never: "orchestrator" | "cli" | null;
+  /** Whether its notes hold anything: opening it then takes a second yes, since it may say what they hold. */
+  notes: boolean;
+  /** The connections it owns, which is where strangers would reach it. */
+  connections: string[];
+  /**
+   * The knowledge collections it would answer strangers from, by name: those for everyone that name it or no agent.
+   * Absent from a daemon before 0.8.48.
+   */
+  collections?: string[];
+  /** Its two limits and its own closing sentence, as its pack holds them; null while it has none. */
+  limits: { maxDailyTokens: number; maxDailyMessagesPerPerson: number; closedReply: string | null } | null;
+  /**
+   * While it is open, today in the operator's own day: the tokens it used, with `estimated` true where part of that is
+   * the daemon's own count for a provider that reported none; the people who wrote to it; and their answered messages.
+   */
+  today?: { tokens: number; estimated: boolean; people: number; messages: number };
+}
+
+/** One conversation an agent open to everyone had on a connection of its own: a row of its page. */
+export interface PublicConversation {
+  sessionId: string;
+  gatewayId: string;
+  chatId: string;
+  kind: "private" | "group";
+  /** Who began it: their id on the chat app, what it called them where that was kept, and whether they are blocked. */
+  sender: { id: string; name: string | null; blocked: boolean } | null;
+  /** The first thing asked in it. */
+  title: string;
+  updatedAt: number;
+}
+
+/** What `GET /agents/:id/public` answers: its conversations with the public, newest first, a page at a time. */
+export interface AgentPublic {
+  conversations: PublicConversation[];
+  total: number;
+  /** The cursor for the next page, or absent on the last. */
+  nextBefore?: number;
+}
+
 export interface AgentSummary {
   id: string;
   /** When the daemon first saw it, ms (0.8.1): the order agents were made in. Null or absent from older daemons. */
@@ -174,7 +217,9 @@ export interface AgentSummary {
   /** What the pack says. `per-person` means each person's own setting decides. */
   approvals: "per-person" | "careful" | "balanced" | "trusted";
   /** Whether its connections take new senders; `follow` defers to the daemon. Absent from an older daemon. */
-  access?: "follow" | "pair" | "allowlist";
+  access?: "follow" | "pair" | "allowlist" | "open";
+  /** What its page needs to open it to everyone, and what strangers used of it today. Absent from an older daemon. */
+  open?: AgentOpen;
   /** Whether, as the orchestrator, it installs the programs every agent runs (0.8.0). Absent before. */
   sharedTools?: boolean;
   /** Its second look (0.8.0): the pack's own `model_guard` or null, and the daemon's. Absent before. */

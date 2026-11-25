@@ -63,8 +63,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the missions' wiring: every port of the service bound to the daemon's parts, in the one place to read what a mission reaches: learning, a coding CLI's leftovers, its report and brief sent as files",
   },
   "apps/engine/src/modules/tools/registry.ts": {
-    lines: 455,
-    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, what its prompt is told; two lines give send_file memory's lookup of a kept file",
+    lines: 458,
+    why: "the built-in tools and one agent's toolset made of them: what it is offered, how each is gated and masked, what its prompt is told; three lines hand an open agent the daemon's list instead",
   },
   "apps/engine/src/modules/tools/builtins/exec.ts": {
     lines: 429,
@@ -79,8 +79,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the approval gate: one table and the requests in flight, asked, queued per chat, answered once and kept across a restart, over one set of maps every step reads and writes",
   },
   "apps/engine/src/modules/turns/turns.store.ts": {
-    lines: 463,
-    why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, and the queries that use it, a restart's two marks among them",
+    lines: 468,
+    why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, the queries that use it, and its marks: a restart's, and public",
   },
   "apps/engine/src/modules/missions/missions.ts": {
     lines: 606,
@@ -98,21 +98,25 @@ export const BUDGET: Record<string, Budget> = {
     lines: 438,
     why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id, files as a set, buttons, presence, reconnect, a login's timeout with why",
   },
+  "apps/engine/src/modules/pipeline/inbound.ts": {
+    lines: 402,
+    why: "whether a message gets a turn and whose, every decision that costs nothing and their order: who could answer in the room (by what each connection sees), the door, the claim, commands",
+  },
   "apps/engine/src/modules/pipeline/attachments.ts": {
-    lines: 409,
-    why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, so the note and the parts cannot disagree",
+    lines: 417,
+    why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, an open agent's own among them, so note and parts agree",
   },
   "scripts/build/core.ts": {
     lines: 432,
     why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",
   },
   "scripts/check-sql.ts": {
-    lines: 498,
-    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and the list of constant clauses and registry names it lets through; the plan half is the seam",
+    lines: 499,
+    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and its lists of what is let through, one more store that scans once; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 422,
-    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
+    lines: 450,
+    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) every bridge event's handler reads and writes, what it declares, and the logout's word waited for",
   },
 };
 

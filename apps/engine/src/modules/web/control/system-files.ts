@@ -36,8 +36,9 @@ const OWN_SECRETS = [
   /^data\/\.control-token$/,
   /^data\/secrets\./,
   /^data\/cli-accounts\.json$/,
-  // A chat app's session: whoever holds it is that account.
-  /^data\/whatsapp(\/|$)/,
+  // A chat app's session: whoever holds it is that account. The folder an install's one login was kept in, and the
+  // one named for each connection since a daemon holds several (`config/global/paths.ts`).
+  /^data\/whatsapp(-[^/]+)?(\/|$)/,
 ];
 
 /** A file's name that says a key, a password or a token is kept in it, whatever folder it is in. */

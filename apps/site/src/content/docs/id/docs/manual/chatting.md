@@ -189,15 +189,16 @@ tetap di tempatnya sendiri, dan kartu agent mengutipnya di atas kalimat yang men
 ### Di room
 
 Orang yang memulai giliran itu bisa mengarahkannya dengan cara yang sama, asal pesannya memang untuk
-agent tersebut: menyebut namanya (`@nouva …`, `nouva: …`) atau membalas sesuatu yang ia katakan.
+agent tersebut: menyebut namanya (`@nouva …`, `nouva: …`), membalas sesuatu yang ia katakan, atau tanpa
+menyebut siapa pun di room tempat agent itu yang menjawab pesan tanpa sebutan (front desk room itu).
 Orang lain yang menyapa agent yang sedang sibuk dapat jawaban singkat, bukan diam, sekali per giliran:
 
 > ⏳ Nouva is still working on "migrate the database" (4m so far): ask again once it's done.
 
 Yang dikutip adalah permintaan yang sedang dikerjakan giliran itu, satu baris dan tanpa `@`, jadi
 balasannya gak membangunkan siapa pun. Ia menyebut kalau giliran itu sedang menunggu approval, dan gak
-pernah menyarankan `/stop`, yang menjeda agent di semua chat. Pesan yang gak menyapa agent, orang-orang
-yang ngobrol sendiri di room dengan satu bot, gak dapat apa-apa, seperti sebelumnya.
+pernah menyarankan `/stop`, yang menjeda agent di semua chat. Pesan orang lain yang gak menyapa agent,
+orang-orang yang ngobrol sendiri di room dengan satu bot, gak dapat apa-apa, seperti sebelumnya.
 
 Agent lain yang menyerahkan pekerjaan ke agent yang sibuk juga gak pernah mengarahkannya, tapi serah
 terimanya disimpan (0.8.33). Room dikabari sekali:

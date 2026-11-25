@@ -33,8 +33,14 @@ import { untilAborted } from "@/commons/abort.ts";
 
 const log = createLogger("attachments");
 
-/** How long one file may take to arrive, from asking for it to its last byte. */
+/** How long one file may take to arrive, from asking for it to its last byte: this, and more for a large one. */
 const DOWNLOAD_DEADLINE_MS = 30_000;
+/**
+ * A further second for each this many bytes the platform says a file weighs: a megabyte a second, a slow home link's
+ * pace, chosen and not measured. A WhatsApp file used to be downloaded by its bridge as it came, with no deadline; it is
+ * now fetched for the turn (`held.ts`), and a large video on a slow link ran out of the thirty seconds a photo needs.
+ */
+const BYTES_A_SECOND = 1_000_000;
 
 /** Bytes past the cap are never written: a download stops at it, and what it wrote is removed. */
 export interface StoreOptions {
@@ -155,7 +161,7 @@ export class AttachmentStore {
      * its requests are torn down rather than abandoned, and held here as well: an adapter that dropped it must not
      * hold a chat's queue behind a download that never ends.
      */
-    const deadlineMs = this.options.deadlineMs ?? DOWNLOAD_DEADLINE_MS;
+    const deadlineMs = (this.options.deadlineMs ?? DOWNLOAD_DEADLINE_MS) + Math.ceil(((attachment.size ?? 0) / BYTES_A_SECOND) * 1000);
     const signal = AbortSignal.timeout(deadlineMs);
     const late = `took longer than ${deadlineMs % 1000 === 0 ? `${deadlineMs / 1000}s` : `${deadlineMs}ms`} to download`;
 

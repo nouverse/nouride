@@ -480,7 +480,7 @@ export class TurnContext extends ActiveTurns {
       // `read`" and the sandbox refuses the path — a pointer the agent can see and cannot follow,
       // which is the failure mode the job-log root was added to fix. This agent's, for this
       // conversation, and nobody else's: see `ToolOutputSpill.rootFor`.
-      ...(this.deps.spill ? [this.deps.spill.rootFor({ agentId: agent.config.id, sessionId })] : []),
+      ...(this.deps.spill?.rootsFor({ agentId: agent.config.id, sessionId }) ?? []),
       // Its work notes, and what was set aside from them: the notes name the archive's path (`notes/tail.ts`).
       ...(this.deps.notes ? [this.deps.notes.folderOf(agent.config.id)] : []),
       skillsDirFor(this.deps.config.daemon.agentsDir),
@@ -525,7 +525,8 @@ export class TurnContext extends ActiveTurns {
         chatId: envelope.chatId,
         chatType: envelope.chatType,
       });
-      return recall.profiles.length || recall.shared.length || recall.recent.length || recall.knowledge?.length || recall.own ? recall : undefined;
+      // What waits to be summarized counts too: alone, it was dropped, and with it what other chats said today.
+      return recall.profiles.length || recall.shared.length || recall.recent.length || recall.waiting.length || recall.knowledge?.length || recall.own ? recall : undefined;
     } catch (err) {
       log.warn("could not read memory for this turn, answering without recall", { agent_id: agentId, error: String(err) });
       return undefined;

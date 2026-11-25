@@ -51,7 +51,7 @@ export interface ApprovalPromptsDeps {
   /** The gate — built after this is, so read when a press or a settlement comes. */
   approvals: () => { get(id: string): ApprovalRequest | null; resolve(id: string, decision: ApprovalDecision, by: Answerer): boolean };
   /** The connection an agent speaks on in a chat: where its prompt goes, and so where a press on it comes from. */
-  voice: (agentId: string, gatewayId: string) => string;
+  voice: (agentId: string, gatewayId: string, chatId?: string) => string;
   /** An admin by People: in a room, who besides the person who asked may answer. */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
   /**
@@ -122,7 +122,7 @@ export class ApprovalPrompts {
       ...(notice.kept ? { kept_across_restart: true } : {}),
     });
     const where = this.where(notice.request);
-    const target = { gatewayId: this.deps.voice(notice.request.agentId, where.gatewayId), chatId: where.chatId };
+    const target = { gatewayId: this.deps.voice(notice.request.agentId, where.gatewayId, where.chatId), chatId: where.chatId };
     const mission = this.deps.missionOf?.(notice.request) ?? null;
     // Only where *Always* could be offered: a command that always asks — a hardline one — is not covered by a kind either.
     const similar = mission && notice.grantable ? (this.deps.similar?.kindOf(notice.request) ?? null) : null;
@@ -210,7 +210,7 @@ export class ApprovalPrompts {
     const copy = { ...shown, elsewhere: true };
     for (const chat of this.deps.adminChats()) {
       if (chat.chatId === asked.chatId && platform(chat.gatewayId) === platform(asked.gatewayId)) continue;
-      const voice = this.deps.voice(request.agentId, chat.gatewayId);
+      const voice = this.deps.voice(request.agentId, chat.gatewayId, chat.chatId);
       const ask = (gatewayId: string) => this.deps.notifier.ask({ gatewayId, chatId: chat.chatId }, (carried) => approvalPrompt(copy, { buttons: carried }), buttons);
       let on = voice;
       let sent = await ask(voice);
@@ -238,7 +238,7 @@ export class ApprovalPrompts {
     // Where it was asked: its conversation, on the connection that raised it or the one its prompt went through — the
     // scope `/approve` keeps, so a request is never answered from a chat that did not see it.
     const where = this.where(request);
-    const asker = this.deps.voice(request.agentId, where.gatewayId);
+    const asker = this.deps.voice(request.agentId, where.gatewayId, where.chatId);
     // Or its copy in an admin's own chat (0.8.10): put there to be answered, by the same rule for who may.
     const copied = this.copies.get(request.id)?.some((one) => one.chatId === press.chatId && one.gatewayId === press.gatewayId) === true;
     if (!copied && (where.chatId !== press.chatId || (press.gatewayId !== where.gatewayId && press.gatewayId !== asker))) {

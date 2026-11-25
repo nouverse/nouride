@@ -58,6 +58,11 @@ write, say so in the change and do the manual check — do not leave it implied.
 - **The five ways a test passes for the wrong reason** — the guard never reached, the loop never going round twice,
   the first branch shadowing the one under test, the property true anyway, the fixture holding what the path that
   runs never writes — are in `nouride-contributing`. Check each new test against them.
+- **A rule about a room is tested with message ids of both kinds**: the platform's own, and each bot's own
+  (`idsPerConnection`, a Telegram basic group), where the daemon's hand-over travels under an id nothing sent holds.
+  A guard that asked the record of sent messages who wrote one passed every test and let a tag through in a real
+  group (0.8.48). And a tool's gate is tested through a call the executor carries, not by calling the gate: a tool
+  an agent does not hold is answered before its gate is asked.
 - **A mutation sweep** for a whole area whose tests were never reviewed one by one: mutate each decision (flip a
   condition, drop a statement, change a boundary), run the area's tests, and every mutant that survives is a missing
   test. The root helper (`packages/isolation/root`) has its sweep written down: `bun run mutate:helper` after any

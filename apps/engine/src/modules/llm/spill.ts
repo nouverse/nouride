@@ -93,7 +93,15 @@ export class ToolOutputSpill {
    *
    * Same as `JobsPort`: a directory handed to the sandbox should exist before anything asks about it.
    */
-  constructor(private readonly dir: string) {
+  constructor(
+    private readonly dir: string,
+    /**
+     * The agents nothing of whose conversations is written here: an agent open to everyone. What a stranger sent it
+     * would be on disk past the conversation, and its marker names a path of this server to a model whose words go to
+     * whoever asks. Asked at each write, in the one place every way to a file goes through.
+     */
+    private readonly keepsNothingFor: (agentId: string) => boolean = () => false,
+  ) {
     ensureDir(dir);
   }
 
@@ -116,6 +124,14 @@ export class ToolOutputSpill {
     const dir = join(this.dir, safeSegment(scope.agentId), safeSegment(rootSessionOf(scope.sessionId)));
     ensureDir(dir);
     return dir;
+  }
+
+  /**
+   * The folder a turn's tools may read, as the roots a sandbox is given: none for an agent nothing is kept of, for
+   * which no folder is made either. One for each stranger's conversation would be theirs to multiply.
+   */
+  rootsFor(scope: SpillScope): string[] {
+    return this.keepsNothingFor(scope.agentId) ? [] : [this.rootFor(scope)];
   }
 
   /** Where one call's full output goes. Only a path; nothing is created until someone writes it. */
@@ -141,6 +157,8 @@ export class ToolOutputSpill {
     if (request.content.length <= budgetChars) {
       return { content: request.content, path: null };
     }
+    // The excerpt alone, for an agent nothing is kept of.
+    if (this.keepsNothingFor(request.agentId)) return { content: render(request, budgetChars, null), path: null };
 
     let path: string | null = null;
     try {
@@ -183,6 +201,8 @@ export class ToolOutputSpill {
    * Never throws — a write that fails is a warning, and the caller keeps the old marker rather than losing the turn.
    */
   keepCleared(scope: SpillScope & { callId: string }, content: string): KeptToolOutput | null {
+    // Cleared with nothing kept, and the old marker: no file, and no path in what the model reads.
+    if (this.keepsNothingFor(scope.agentId)) return null;
     const spilled = this.spilledIn(content);
     if (spilled) return spilled;
     const lines = content.split("\n").length;

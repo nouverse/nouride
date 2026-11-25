@@ -1,6 +1,9 @@
 import { join, loadTomlIfExists, readTextFileIfExists } from "@nouride/runtime";
-import { holdLines, plural, type GlobalConfig } from "@nouride/shared";
-import { assertGatewayExecPosture, defaultConfigPath, noteOf, type ConfigNote } from "@/modules/config/global/index.ts";
+import { holdLines, isOpenAgent, plural, type GlobalConfig } from "@nouride/shared";
+import { defaultConfigPath, noteOf, type ConfigNote } from "@/modules/config/global/index.ts";
+import { holdsOpenMode, OPEN_MODE_NOTE } from "@/boot/open-mode.ts";
+import { sharedLoginNote } from "@/boot/whatsapp-login.ts";
+import { openAgentChecks, unusedWhileOpen, type OpenAgentFacts } from "./open-agents.ts";
 import { profilesBehind } from "@/modules/config/known-endpoints.ts";
 import { commandSecretLookup } from "@/boot/secret-store.ts";
 import { assertUpgradeFloor, loadConfigPastTheFloor } from "@/boot/upgrade-floor.ts";
@@ -54,16 +57,6 @@ async function loadForCheck(target: string | undefined) {
     knownProviders: Object.keys(config.providers),
     knownGateways: config.gateways.map((g) => g.id),
   });
-  // The posture check needs the loaded agents to know who holds `exec`, which is why it cannot live
-  // in `parseConfig` and why this command loads them too.
-  assertGatewayExecPosture({
-    gatewaysEnabled: config.gateways.some((g) => g.enabled),
-    agentsWithExec: registry
-      .active()
-      .filter((agent) => agent.config.tools.enabled.includes("exec"))
-      .map((agent) => agent.config.id),
-    accessMode: config.security.access.mode,
-  });
   return { config, source, notes, registry };
 }
 
@@ -85,12 +78,19 @@ function providersLine(providers: GlobalConfig["providers"]): string {
 }
 
 /** What the next start writes into a profile on a known endpoint (`boot/endpoint-keys.ts`), said before it does. */
-async function broughtForward(source: string): Promise<ConfigNote[]> {
-  const text = await readTextFileIfExists(source);
-  return profilesBehind(text ?? "").map((behind) => ({
-    message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join(", ")} at the next start`,
-    ...(behind.why ? { hint: behind.why } : {}),
-  }));
+async function broughtForward(source: string, config: GlobalConfig): Promise<ConfigNote[]> {
+  const text = (await readTextFileIfExists(source)) ?? "";
+  const login = sharedLoginNote(config, text);
+  return [
+    // An install's one WhatsApp login, from before each connection kept its own folder (`boot/whatsapp-login.ts`).
+    ...(login ? [login] : []),
+    ...profilesBehind(text).map((behind) => ({
+      message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join(", ")} at the next start`,
+      ...(behind.why ? { hint: behind.why } : {}),
+    })),
+    // An install open to everyone, from before one agent could be: what the next start does with it (`boot/open-mode.ts`).
+    ...(holdsOpenMode(text) ? [OPEN_MODE_NOTE] : []),
+  ];
 }
 
 /** Whether a pack that did not load is one the daemon would run: `[agent] enabled` unless it says `false` — or does not parse. */
@@ -163,8 +163,20 @@ async function configCheck(target: string | undefined): Promise<void> {
   // is about whether the daemon comes up.
   const secretSet = await commandSecretLookup({ dataDir: config.daemon.dataDir, configPath: source ?? defaultConfigPath() });
   const lints = lintConfig(config, secretSet ? { secretSet } : {});
-  const said = [...notes, ...(source ? await broughtForward(source) : []), ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
-  if (failures.length > 0 || lints.length > 0 || said.length > 0) say("");
+  const said = [...notes, ...(source ? await broughtForward(source, config) : []), ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
+  // The agents open to everyone, as the packs have them: who a stranger reaches, and within which numbers.
+  const open = registry.enabled().filter((agent) => isOpenAgent(agent)).map((agent): OpenAgentFacts => ({
+    id: agent.config.id,
+    connections: config.gateways.filter((gateway) => gateway.enabled && gateway.agent === agent.config.id).map((gateway) => gateway.id),
+    limits: agent.config.open ?? null,
+    packTools: agent.config.tools.enabled,
+  }));
+  const opened = openAgentChecks(open);
+  if (failures.length > 0 || lints.length > 0 || said.length > 0 || opened.length > 0) say("");
+  for (const check of opened) {
+    say(`${check.level === "ok" ? `${DIM}·${RESET}` : `${YELLOW}!${RESET}`} ${check.message}`);
+    if (check.hint) say(`${DIM}  ${check.hint}${RESET}`);
+  }
   for (const failure of failed) say(`${RED}✗${RESET} agent ${failure.id} will not load: ${failure.error}`);
   for (const failure of parked) say(`${YELLOW}!${RESET} agent ${failure.id} is disabled, and would not load: ${failure.error}`);
   for (const note of said) {
@@ -193,6 +205,7 @@ async function configCheck(target: string | undefined): Promise<void> {
     disabledFailed: parked.map(({ id, error }) => ({ id, error })),
     lints,
     notes: said,
+    open: open.map((agent) => ({ id: agent.id, connections: agent.connections, limits: agent.limits, unusedTools: unusedWhileOpen(agent.packTools) })),
     ...(verdict ? { error: verdict } : {}),
   });
 }

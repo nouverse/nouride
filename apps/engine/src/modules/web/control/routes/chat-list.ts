@@ -16,6 +16,7 @@ import { personWhoOpened } from "@/modules/sessions/sessions.store.ts";
 import type { TurnRecord } from "@/modules/turns/turns.store.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { isMine, readerAs, readerOf, Spoke, whoseAsked, type Reader } from "../whose.ts";
+import { openAgentsOn } from "../agent-open.ts";
 
 /** A preview is one line of a list: longer than any row is wide, and nothing past it is ever drawn. */
 const LINE = 160;
@@ -168,10 +169,13 @@ function tagsOn(deps: ControlDeps, platform: string): { tags?: Record<string, st
 /** The groups on chat apps: the Groups page's rooms (one per chat on its platform), with each agent's conversation there. */
 function groupsOf(deps: ControlDeps, running: Set<string>): ChatListGroup[] {
   const platformOf = (gatewayId: string) => deps.ctx.gateways.get(gatewayId)?.platform ?? gatewayId.split(":")[0] ?? gatewayId;
-  const recent: Session[] = deps.sessions?.list({ limit: SESSIONS_READ, notGateway: MISSION_GATEWAY_ID }) ?? [];
+  // Not a group where only an open agent is: anyone may add its bot to a group of their own, and those are on its
+  // page. A group one of the household's other agents is in too is the household's.
+  const open = new Set(openAgentsOn(deps).map((one) => one.agentId));
+  const recent: Session[] = deps.sessions?.list({ limit: SESSIONS_READ, notGateway: MISSION_GATEWAY_ID, notPublic: openAgentsOn(deps) }) ?? [];
   return deps.pipeline
     .knownRooms()
-    .filter((group) => !group.dashboard)
+    .filter((group) => !group.dashboard && !(group.agents.length > 0 && group.agents.every((agentId) => open.has(agentId))))
     .map((group) => {
       const sessions = recent.filter((session) => session.chatId === group.chatId && session.sessionType === "main" && platformOf(session.gatewayId) === group.platform);
       // Every connection of ours there, all on the group's platform: what `inRoom` reads the group across.

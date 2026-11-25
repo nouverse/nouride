@@ -51,7 +51,7 @@ const SLOW: Record<string, string[]> = {
     "a CLI that does not offer it is never sent one: the next prompt, once the running one ends",
     "past the hold, sent while the command still runs",
   ],
-  "packages/gateways/tests/whatsapp-decisions.test.ts": ["asks the bridge to log out, gives it its grace period, then stops"],
+  "packages/gateways/tests/whatsapp-decisions.test.ts": ["a logout the bridge never confirms is not said to have happened: the phone may still list the number"],
 };
 
 describe("a test measured at three seconds or more on CI has a timeout of its own, the suite's", () => {

@@ -73,9 +73,13 @@ function readableSession(value: unknown): boolean {
   return Buffer.isBuffer(value) || value instanceof Uint8Array;
 }
 
+/** Where a login's notes go when nobody says: stderr, bare. A connection passes its own, which says which number. */
+const toStderr = (line: string): void => void process.stderr.write(`${line}\n`);
+
 export async function useEncryptedAuthState(
   dir: string,
   keyHex: string,
+  note: (line: string) => void = toStderr,
 ): Promise<EncryptedAuthState> {
   const key = parseKey(keyHex);
   ensureDir(dir, 0o700);
@@ -89,7 +93,7 @@ export async function useEncryptedAuthState(
       if (code === "ENOENT") return null;
       // A key change or a corrupt file is worth saying out loud. Returning null would look like a
       // fresh install and silently ask for a new QR scan, hiding the real cause.
-      process.stderr.write(`session file ${name} unreadable: ${String(err)}\n`);
+      note(`session file ${name} unreadable: ${String(err)}`);
       return null;
     }
   };
@@ -116,7 +120,7 @@ export async function useEncryptedAuthState(
             // Here, at the store, because Baileys reaches `loadSession` from places the signal layer
             // does not wrap — `validateSession` is one (`readableSession`).
             if (type === "session" && value && !readableSession(value)) {
-              process.stderr.write(`session file ${type}-${id} is not a session this backend reads, so it is read as absent and a new one is negotiated\n`);
+              note(`session file ${type}-${id} is not a session this backend reads, so it is read as absent and a new one is negotiated`);
               value = null;
             }
             // Baileys stores this one as a protobuf and expects it back as one.

@@ -10,16 +10,10 @@ import type { LocalTurnRequest } from "@/modules/gateways/local.ts";
 import { SYSTEM_SENDER } from "@/modules/pipeline/deps.ts";
 import { personFor } from "@/modules/pipeline/known-rooms.ts";
 import { personWhoOpened } from "@/modules/sessions/sessions.store.ts";
-import { jsonBody, parseAttachments } from "../payloads.ts";
+import { clampNumber, jsonBody, parseAttachments } from "../payloads.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { kindOf, mayOpen, readerOf, whoseAsked } from "../whose.ts";
-
-/** A query parameter read as a number, with a default for absent and for nonsense. */
-function clampNumber(raw: string | undefined, fallback: number, min: number, max: number): number {
-  const value = Number(raw);
-  if (!raw || !Number.isFinite(value)) return fallback;
-  return Math.max(min, Math.min(Math.floor(value), max));
-}
+import { openAgentsOn } from "../agent-open.ts";
 
 /**
  * Why nobody answered a local message, as far as the daemon can tell. An agent addressed by name and paused is the
@@ -149,6 +143,8 @@ export function registerConversationRoutes(control: ControlApp, deps: ControlDep
     // it could be deleted from the chat list by mistake, taking a running mission with it.
     const options = {
       notGateway: MISSION_GATEWAY_ID,
+      // Nor an open agent's with the public: nobody's own, and listed on that agent's page (`agent-public.ts`).
+      notPublic: openAgentsOn(deps),
       ...(agent ? { agentId: agent } : {}),
       ...(query ? { query } : {}),
       ...(before > 0 ? { before } : {}),

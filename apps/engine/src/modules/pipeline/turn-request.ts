@@ -4,7 +4,7 @@
  * Phases of `TurnRunner.runTurn` (`turn.ts`), in the order it runs them.
  */
 
-import { newId, type ChatMessage, type LLMProvider } from "@nouride/shared";
+import { isOpenAgent, newId, type ChatMessage, type LLMProvider } from "@nouride/shared";
 import type { ModelOverrides } from "@/modules/hooks/registry.ts";
 import type { TurnRequest, Unattended } from "@/modules/llm/executor/types.ts";
 import type { Recall } from "@/modules/memory/index.ts";
@@ -138,15 +138,17 @@ export async function compose(
   const events = rooms.eventsBefore(agent, envelope, history, session.startedAt);
   // And what its own missions told this chat in that window, under its name: read by the person, and by it only here.
   const told = rooms.missionNoticesBefore(agent, envelope, history, session.startedAt);
+  // Who wrote, by `[[people]]` name; for an agent open to everyone by what the chat app calls them (`room-memory.ts`).
+  const people = isOpenAgent(agent) ? [] : ctx.deps.config.people;
   const question = composeQuestion({
     text,
     overheard,
     events: [events, told].filter(Boolean).join("\n\n"),
     hasAttachments: Boolean(attachmentNotice),
-    ...(envelope.chatType === "dm" ? {} : { speaker: speakerName(ctx.deps.config.people, envelope) }),
+    ...(envelope.chatType === "dm" ? {} : { speaker: speakerName(people, envelope) }),
     // A thread's first question carries what the thread was started from; after that it is in the history (0.7.24).
     ...(envelope.threadOpener && history.length === 0
-      ? { opener: threadOpenerNote({ name: speakerName(ctx.deps.config.people, { gatewayId: envelope.gatewayId, ...envelope.threadOpener }), ...envelope.threadOpener }) }
+      ? { opener: threadOpenerNote({ name: speakerName(people, { gatewayId: envelope.gatewayId, ...envelope.threadOpener }), ...envelope.threadOpener }) }
       : {}),
     // An edit of a message already answered is asked as one, so the agent can say what changes (`edit-rules.ts`).
     ...(isEdit(envelope) ? { edit: editedQuestionNote(envelope) } : {}),
@@ -220,7 +222,9 @@ export function turnRequest(
     // sent the caption alone and the model answered confidently about a screenshot it had never
     // seen — worse than an error, because nothing in the reply shows it happened.
     userMessage: ask.asked,
-    reminders: [
+    // An open agent's words go to anyone who asks, so nothing of the household is put beside the message it reads: not
+    // who else is at work here and in which folder, not how full the box is, not a page of the dashboard.
+    reminders: isOpenAgent(agent) ? [] : [
       ...turnReminders(turn.text, toolset.definitions, { running: ctx.helpersRunning(agent.config.id, envelope), now: Date.now() }, ctx.loadNow(agent)),
       // The other agents of this chat, and what else is at work on the box (`work-now.ts`).
       ...workNotes(sourcesFrom(ctx, agent, envelope, reader), now),

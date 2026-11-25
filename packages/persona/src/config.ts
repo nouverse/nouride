@@ -8,12 +8,11 @@
  */
 
 import { assertSecretName, looksLikeCredential } from "@nouride/secrets";
+import { accessOf } from "./access.ts";
 import { externalOf } from "./external.ts";
 import { lookOf } from "./look.ts";
 import { fallbacksOf } from "./fallbacks.ts";
 import {
-  AGENT_ACCESS,
-  isAgentAccess,
   isAgentApprovalLevel,
   isLlmEffort,
   LLM_EFFORTS,
@@ -107,6 +106,7 @@ export interface RawAgentConfig {
   workspace?: { roots?: unknown; skill_roots?: unknown };
   mcp_servers?: unknown;
   external?: unknown;
+  open?: unknown;
   look?: unknown;
   jobs?: { quiet_after_minutes?: unknown };
   delegate?: { max_background?: unknown };
@@ -290,17 +290,9 @@ export function parseAgentConfig(
             return agent.approvals;
           })(),
         }),
-    // `[agent] access` — the same shape as `approvals` above: absent stays absent, a bad value fails at load.
-    ...(agent.access === undefined
-      ? {}
-      : {
-          access: (() => {
-            if (!isAgentAccess(agent.access)) {
-              throw new ConfigError(`${where} [agent] access must be one of ${AGENT_ACCESS.join(", ")}, got ${JSON.stringify(agent.access)}`);
-            }
-            return agent.access;
-          })(),
-        }),
+    // `[agent] access` and `[open]`: absent stays absent, a bad value fails at load, and so does `open` on a coding CLI
+    // or with no limits.
+    ...accessOf({ access: agent.access, open: raw?.open }, raw?.external !== undefined, where),
     llm: {
       provider,
       model: str(llm.model, `${where} [llm] model`) ?? defaults.model,

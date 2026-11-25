@@ -12,6 +12,7 @@
 
 import {
   createLogger,
+  isOpenAgent,
   type ChatType,
   type GatewayInstanceConfig,
   type GatewayName,
@@ -29,6 +30,7 @@ import {
 } from "@/modules/router/agent-mentions.ts";
 import { HookRegistry, parseCommand } from "@/modules/hooks/registry.ts";
 import { withQuotedContext } from "./messages.ts";
+import { heldToOpenAgent, strangerAsleep, strangerCommand, turnedAway } from "./open-door.ts";
 import { requireMentionHere } from "./room-mention.ts";
 import { isSystemEvent } from "./deps.ts";
 import type { Admission } from "./admission.ts";
@@ -115,6 +117,9 @@ export class InboundRouter {
     for (const other of this.ctx.deps.config.gateways) {
       if (!other.enabled || other.platform !== envelope.gateway) continue;
       if (other.id === instance?.id) continue;
+      // Not one the platform says is not in this room (`Gateway.sees`): a second WhatsApp number not in the group was
+      // counted, the message went to the front desk, and its answer, through that number, was lost.
+      if (this.ctx.deps.gateways.get(other.id)?.sees?.(envelope.chatId) === false) continue;
       if (other.agent) candidates.add(other.agent);
     }
 
@@ -139,7 +144,10 @@ export class InboundRouter {
     // The group's own `/mention`, then this connection's setting, then the daemon's — which a room made in the dashboard
     // is not held to: its members decide, below (`room-mention.ts`).
     const here = requireMentionHere(this.ctx.deps, envelope);
-    const groupsRequireMention = here.requireMention;
+    // An agent open to everyone answers a group only when it is addressed, whatever its connection says: answering every
+    // message of any group its bot is added to would spend its day on talk nobody addressed to it. A room that names it
+    // with `/mention` has it answer the people let in by name; a stranger's message is held to this before it is routed.
+    const groupsRequireMention = here.requireMention || isOpenAgent(instance?.agent ? this.ctx.deps.registry.get(instance.agent) : undefined);
     const members = this.ctx.roomAgents(envelope);
     // The agent the room named with `/mention <agent>`. In a room with a member list, only while it is one of them: a
     // room made in the dashboard keeps its members' rule. One removed or switched off since is no agent to the router,
@@ -198,6 +206,12 @@ export class InboundRouter {
     // its asker is already at work on what it says.
     const wrote = this.ctx.voice.wroteInbound(envelope);
     if (wrote?.said) return void log.debug("an agent's words that were only said: routed to nobody", { chat_id: envelope.chatId, from: wrote.agentId });
+    // An agent open to everyone asks and tags nobody: what a stranger has it say must not be another agent's work to do.
+    // Here for both roads a tag travels by: a platform's own copy to the other bots, and the daemon's hand-over.
+    // The hand-over names its author itself: where ids are each connection's own (`idsPerConnection`) it travels under an
+    // id of the daemon's, which no record of what was sent holds, and asked that record alone the tag went through.
+    const author = wrote?.agentId ?? envelope.fromAgent;
+    if (author && isOpenAgent(this.ctx.deps.registry.get(author))) return void log.debug("an open agent's words: routed to nobody", { chat_id: envelope.chatId, from: author });
     const enriched: MessageEnvelope = wrote ? { ...envelope, fromAgent: wrote.agentId } : envelope;
 
     // How deep the agent-to-agent chain is here. The platform carries no field for it, so it cannot
@@ -216,7 +230,9 @@ export class InboundRouter {
     // chain that stays exhausted after the operator joins in is a chain that has stopped working.
     // A person joining in is what a fresh budget is *for*: without this, two agents that used their
     // four exchanges this morning would be mute for the rest of the day.
-    if (verdict.kind === "human") this.ctx.voice.outbound.setHops(envelope.gateway, envelope.chatId, 0);
+    // Not a stranger let in only by an open agent: the count is the room's, read by every agent in it, and a busy
+    // public group would have kept two of the household's agents talking for as long as visitors wrote.
+    if (verdict.kind === "human" && !this.admission.strangerOf(envelope)) this.ctx.voice.outbound.setHops(envelope.gateway, envelope.chatId, 0);
 
     if (verdict.kind === "foreign_bot") {
       log.debug("ignoring a message from a bot that is not ours", { chat_id: envelope.chatId });
@@ -232,6 +248,9 @@ export class InboundRouter {
     // Worse since authorship became platform-wide: every connection now recognises the message as
     // ours, so every one of them reached this branch and posted its own copy. It is handled after
     // routing and after the claim, where exactly one connection is left holding it.
+
+    // A stranger on an open agent's connection is that agent's alone, whatever their message names (`open-door.ts`).
+    if (await heldToOpenAgent(this.admission, envelope, (agent) => this.admit(agent, envelope, verdict, { addressees: 1, addressed: true }))) return;
 
     // A human replied to something an agent said. No mention, no name — the platform gives a message
     // id, and that is enough to send it back to whoever wrote it. Without this the message reaches
@@ -407,7 +426,7 @@ export class InboundRouter {
     if (forNobody && envelope.chatType !== "dm") {
       // The desk's own bot's copy says it; the others, which only stand by for it, quietly. Where ids are per connection
       // only that copy goes on at all (`admit`), so the rest need not wait.
-      const own = this.ctx.voice.voiceGatewayId(decision.agent.config.id, envelope.gatewayId) === envelope.gatewayId;
+      const own = this.ctx.voice.voiceGatewayId(decision.agent.config.id, envelope.gatewayId, envelope.chatId) === envelope.gatewayId;
       if (own || !envelope.idsPerConnection) {
         await new Promise<void>((resolve) => setTimeout(resolve, FRONT_DESK_WAIT_MS));
         if (this.admission.routedElsewhere(envelope, decision.agent.config.id)) {
@@ -526,7 +545,7 @@ export class InboundRouter {
 
     const shared = mentioned.filter(
       (agent) =>
-        this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) === envelope.gatewayId,
+        this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId) === envelope.gatewayId,
     );
     // The routed agent is always in, whether or not it shares the connection: routing already said
     // this message is for it, and a filter that could drop it would silence the one certain answer.
@@ -606,7 +625,7 @@ export class InboundRouter {
      */
     if (
       envelope.idsPerConnection &&
-      this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) !== envelope.gatewayId
+      this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId) !== envelope.gatewayId
     ) {
       log.debug("left to the agent's own connection", {
         agent_id: agent.config.id,
@@ -617,7 +636,7 @@ export class InboundRouter {
     }
 
     // The agent's own bot's copy first, so its conversation in a room is one, kept under its own connection.
-    if (!how.claimed) await this.admission.ownCopyFirst(envelope, agent.config.id, this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) === envelope.gatewayId);
+    if (!how.claimed) await this.admission.ownCopyFirst(envelope, agent.config.id, this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId) === envelope.gatewayId);
 
     // Before anything with a side effect — a hook, a turn, a session write. Every copy of this message
     // reaches here; only the first one carries on.
@@ -671,6 +690,7 @@ export class InboundRouter {
 
     // A message a turn handed back was counted when it came in; it is not the sender writing again.
     if (!how.claimed && !this.admission.withinRateLimit(envelope)) {
+      if (!this.admission.tellsSlowDown(envelope)) return; // told once a minute, not once a message
       const cooldown = this.ctx.deps.config.security.rateLimit.cooldownReply;
       await this.ctx.voice.reply(envelope, cooldown);
       // Same reason as the notice above: "you are sending these too fast" is not useful advice if the
@@ -688,10 +708,12 @@ export class InboundRouter {
 
     // An edit is words, never a command (`edits.ts`): arrival stops one that reads as a command, and so does this.
     const command = isEdit(envelope) ? null : parseCommand(text);
+    const stranger = this.admission.strangerOf(envelope) !== undefined;
     // What the turn is asked: the message, or the words a command that falls through hands the agent instead.
     let asked = text;
     if (command && this.hooks.has(command.command)) {
-      const result = await this.hooks.run(command.command, command.args, agent, envelope);
+      // A sender let in only because the agent is open has three commands, and the rest do nothing (`open-door.ts`).
+      const result = (stranger ? strangerCommand(command.command, envelope.chatType !== "dm") : null) ?? (await this.hooks.run(command.command, command.args, agent, envelope));
       if (!result.handled && result.prompt) asked = result.prompt;
       if (result.reply) {
         await this.ctx.voice.reply(envelope, result.reply);
@@ -730,7 +752,8 @@ export class InboundRouter {
       }
       log.info("agent asleep, not answering", { agent_id: agent.config.id, chat_id: envelope.chatId });
       const notice = this.ctx.asleep.notice({ id: agent.config.id, displayName: agent.config.displayName }, envelope);
-      if (notice) await this.ctx.voice.reply(envelope, notice, agent.config.id);
+      // A stranger is not told of a command they do not have.
+      if (notice) await this.ctx.voice.reply(envelope, stranger ? strangerAsleep(agent.config.displayName) : notice, agent.config.id);
       this.ctx.deps.chatEvents?.record({
         gatewayId: envelope.gatewayId,
         chatId: envelope.chatId,
@@ -743,6 +766,11 @@ export class InboundRouter {
       });
       return;
     }
+
+    // What strangers may cost an open agent is bounded, and counted here, before anything is begun or read by a turn
+    // at work: past either limit they are told once a day and nothing is spent on them (`open-door.ts`).
+    // Once: a message a turn handed back unread (`claimed`) was counted as it first came, with what it was merged with.
+    if (stranger && !how.claimed && (await turnedAway(this.ctx.deps, agent, envelope, (text) => this.ctx.voice.reply(envelope, text, agent.config.id)))) return;
 
     /**
      * Already working here. Said out loud, and nothing queued behind it.
@@ -772,7 +800,8 @@ export class InboundRouter {
      */
     const working = this.ctx.turnIn(agent.config.id, envelope.chatId, envelope.gatewayId);
     if (working) {
-      await atWork(this.ctx, agent, envelope, working, { addressed, fromPerson: verdict.kind === "human", ...(verdict.kind === "agent" ? { handed: verdict } : {}) });
+      // Routed here, whether or not it addressed the agent: every message `admit` is handed was routed to it.
+      await atWork(this.ctx, agent, envelope, working, { addressed, routed: true, fromPerson: verdict.kind === "human", ...(verdict.kind === "agent" ? { handed: verdict } : {}) });
       return;
     }
 

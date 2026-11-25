@@ -848,10 +848,11 @@ describe("changing its own configuration", () => {
     ).text;
 
     expect(prompt).toContain("CHANGING YOUR OWN CONFIGURATION");
-    expect(prompt).toContain("`[security.access] mode` set to `pair`");
-    // The allowlist is not what stops a stranger in `open` mode — it said it was, and an agent believed it.
-    expect(prompt).toContain("In `open` mode nothing stops them, whatever the allowlist holds.");
-    expect(prompt).not.toContain("sender_allowlist");
+    expect(prompt).toContain("Who may write to the agents here is `[security.access] mode`: `pair` (the default: a stranger gets a code an admin approves) or `allowlist`.");
+    // No install is open to everyone, and an agent that edits config must not write it or think it can open one: it
+    // said `open` was a mode, and an agent with a shell is the one that would have set it.
+    expect(prompt).toMatch(/There is no `open` for the install\. One agent can be opened to everyone, by an admin on its Access page in the dashboard.*You cannot open an agent, yourself included\./);
+    expect(prompt).not.toMatch(/In `open` mode|sender_allowlist/);
   });
 
   test("it is told to ask for the id first, not to discover the problem afterwards", () => {

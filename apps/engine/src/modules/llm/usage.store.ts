@@ -120,6 +120,8 @@ export interface DailySpend {
   unpricedRequests: number;
   /** Requests through a subscription (`billing = "included"`): no cost per token, so `usd` is not missing them. */
   includedRequests: number;
+  /** Requests whose tokens the daemon counted itself, the provider having reported none: the token sums hold an estimate. */
+  estimatedRequests: number;
   requests: number;
 }
 
@@ -240,6 +242,7 @@ export class UsageStore {
         written: number | null;
         unpriced: number;
         included: number;
+        estimated: number;
         requests: number;
       }>(
         `SELECT COALESCE(SUM(estimated_cost_usd), 0) AS usd,
@@ -249,6 +252,7 @@ export class UsageStore {
                 COALESCE(SUM(cache_creation_input_tokens), 0) AS written,
                 SUM(CASE WHEN estimated_cost_usd IS NULL THEN 1 ELSE 0 END) AS unpriced,
                 SUM(CASE WHEN basis = 'included' THEN 1 ELSE 0 END) AS included,
+                SUM(CASE WHEN estimated = 1 THEN 1 ELSE 0 END) AS estimated,
                 COUNT(*) AS requests
            FROM llm_usage
           WHERE timestamp >= ? AND basis IS NOT 'cli'${byAgent}`,
@@ -263,6 +267,7 @@ export class UsageStore {
       cacheCreationInputTokens: row?.written ?? 0,
       unpricedRequests: row?.unpriced ?? 0,
       includedRequests: row?.included ?? 0,
+      estimatedRequests: row?.estimated ?? 0,
       requests: row?.requests ?? 0,
     };
   }

@@ -104,6 +104,11 @@ mengatakannya serta menyediakan tombolnya.
 Itu mode `pair`, default-nya. `nouride access approve <kode>`, atau halaman Access di dashboard. Pindah ke `allowlist`
 setelah orang-orang yang kamu inginkan masuk: `nouride access mode allowlist`.
 
+**Bisakah sebuah bot menjawab siapa saja, tanpa kode?**
+Satu agent bisa, sejak 0.8.48: buka ia untuk semua orang di halaman Access-nya, dengan dua batas harian. Ia lalu
+menjawab dari dokumen yang kamu buka untuk semua orang, tanpa satu pun tool miliknya, dan gak tahu apa-apa tentang kamu.
+[Agent yang terbuka untuk semua orang →](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang)
+
 **Kenapa ia terus bertanya soal `terraform destroy`?**
 Membongkar infrastruktur ada di daftar tetap: di `careful` ia bertanya setiap kali dan gak pernah bisa jadi izin
 permanen. Membuat dan mengubah (`terraform apply`) bertanya sekali, seperti perintah baru lainnya, dan bagian

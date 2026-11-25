@@ -121,7 +121,11 @@ export interface PackSecrets {
 }
 
 export type SaveResult<Field extends string = string> =
-  | { ok: true; restartRequired: boolean }
+  /**
+   * `stillOnThePhone`: a number removed whose phone was not told, since it was not linked at the time or could not be
+   * reached: the phone may still list it under Linked devices, and is the place to remove it.
+   */
+  | { ok: true; restartRequired: boolean; stillOnThePhone?: true }
   /**
    * `conflict`: refused because what it was made against changed meanwhile — a 409, not a 400. `probe`: because the
    * model it would use did not answer a test call (semantic search's embedding model), which the dashboard says in its

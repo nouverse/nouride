@@ -11,7 +11,7 @@
  * nothing anyone said.
  */
 
-import { readTextFileIfExists } from "@nouride/runtime";
+import { readTextFileIfExists, readTextFileSync, statFile } from "@nouride/runtime";
 import { WITHIN_THE_SECOND_MS } from "./episode.ts";
 import type { Vault } from "./vault.ts";
 import { writeSide } from "./write.ts";
@@ -54,6 +54,12 @@ export async function recordDeleted(vault: Vault, episodes: readonly { chat: str
 /** The last moment a deleted conversation in this chat reached, or null when none was deleted. */
 export async function deletedUpTo(vault: Vault, chat: string): Promise<number | null> {
   const at = parse(await readTextFileIfExists(vault.deleted))[chat];
+  return at ? Date.parse(at) : null;
+}
+
+/** The same, read now: for a reading of the conversations not cut yet that must not show what was deleted (`live.ts`). */
+export function deletedUpToNow(vault: Vault, chat: string): number | null {
+  const at = parse(statFile(vault.deleted) ? readTextFileSync(vault.deleted) : null)[chat];
   return at ? Date.parse(at) : null;
 }
 

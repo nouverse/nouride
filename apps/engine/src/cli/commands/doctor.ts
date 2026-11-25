@@ -1,4 +1,5 @@
 import type { ExternalClisResponse, McpResponse, SkillCatalogResponse, StatusResponse } from "@nouride/cli-kit";
+import { openAgentChecks, openFromStatus } from "./open-agents.ts";
 import { cliPartsChecks, cliVersionChecks, BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, say, hasFlag } from "@nouride/cli-kit";
 import { formatBytes, type GlobalConfig } from "@nouride/shared";
 import { MCP_SCHEMA_WARN_BYTES } from "@/modules/tools/mcp.ts";
@@ -6,7 +7,7 @@ import { lintConfig } from "@/modules/config/schema.ts";
 import { connect } from "@/cli/connect.ts";
 import { startHint } from "@/service/hints.ts";
 import { loadConfig } from "@/cli/load-config.ts";
-import { atOnceChecks, commandsCheck, credentialChecks, databaseCheck, diskCheck, guardedFiles, guessedWindows, healthIssues, helperChecks, memoryCheck, modeChecks, packagesCheck, packFailureCheck, passBacklogCheck, plainCopiesCheck, secretStoreChecks, sshReuseCheck } from "@/cli/commands/doctor-checks.ts";
+import { atOnceChecks, commandsCheck, credentialChecks, databaseCheck, diskCheck, guardedFiles, guessedWindows, healthIssues, helperChecks, memoryCheck, modeChecks, packagesCheck, packFailureCheck, passBacklogCheck, plainCopiesCheck, secretStoreChecks, skillToolsCheck, sshReuseCheck } from "@/cli/commands/doctor-checks.ts";
 import { EDITION } from "@/commons/build.ts";
 import { installDirFor } from "@/modules/update/facts.ts";
 import { localPackageSetup, resolveSystemPackages } from "@/modules/system-packages/index.ts";
@@ -271,6 +272,8 @@ export async function doctor(args: string[] = []): Promise<void> {
   }
 
   for (const check of guessedWindows(running)) add(check.level, check.message, check.hint);
+  // Who answers anyone, on which connections and within which numbers: nothing under `nouride access` says it.
+  for (const check of openAgentChecks(openFromStatus(running))) add(check.level, check.message, check.hint);
 
   if (status.gateways.length === 0) {
     add(
@@ -328,25 +331,10 @@ export async function doctor(args: string[] = []): Promise<void> {
     );
   }
 
-  /**
-   * A skill an agent carries but cannot actually run.
-   *
-   * The tool axis, and it is per agent rather than per host: two agents on one daemon can disagree
-   * about this while agreeing about every binary. `warn` and not `ok`, unlike the unread advisory —
-   * this one is a task that *will* fail partway through, not a cost.
-   */
+  // A skill an agent carries but cannot run: the tool axis, per agent (`skillToolsCheck`).
   for (const skill of catalog?.skills ?? []) {
-    const short = (skill.agents ?? []).filter((a) => a.enabled && (a.missingTools ?? []).length > 0);
-    if (short.length === 0) continue;
-    // Only what is actually missing, per agent. Listing every tool the skill names would say "nox
-    // does not have exec, web_search" about an agent that has exec — a sentence that sends somebody
-    // to check the wrong thing.
-    const gaps = [...new Set(short.flatMap((a) => a.missingTools as string[]))].sort();
-    add(
-      "warn",
-      `skill "${skill.name}" needs ${gaps.join(", ")}, which ${short.map((a) => a.id).join(", ")} do not have`,
-      `Add the tool to that agent's \`[tools] enabled\`, or switch the skill off for it: \`nouride skills off ${skill.name} <agent>\`.`,
-    );
+    const short = skillToolsCheck(skill);
+    if (short) add(short.level, short.message, short.hint);
   }
 
   /**

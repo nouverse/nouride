@@ -19,7 +19,7 @@ export interface ProposalCardsDeps {
   store: CronPort;
   notifier: Pick<Notifier, "ask" | "settle">;
   /** The connection an agent speaks on in a chat: where its card goes, and so where a press on it comes from. */
-  voice: (agentId: string, gatewayId: string) => string;
+  voice: (agentId: string, gatewayId: string, chatId?: string) => string;
   /** An admin by People: in a room, who besides the person it was proposed for may answer. */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
   /** Whether a job's owner is this sender, by People: whose yes a change to that job takes. */
@@ -56,7 +56,7 @@ export class ProposalCards {
   async post(job: Job): Promise<boolean> {
     const proposal = job.proposal;
     if (!proposal) return false;
-    const target = { gatewayId: this.deps.voice(proposal.by, proposal.gatewayId), chatId: proposal.chatId };
+    const target = { gatewayId: this.deps.voice(proposal.by, proposal.gatewayId, proposal.chatId), chatId: proposal.chatId };
     const results = this.deps.results(job) ?? undefined;
     const sent = await this.deps.notifier.ask(target, (buttons) => proposalCard(job, this.deps.when(job), { buttons, results }), proposalButtons(job.id));
     if (!sent) {
@@ -93,7 +93,7 @@ export class ProposalCards {
     // An agent's bot posting `/schedule on` ran as a hook: one agent could record its bot as who asked, then answer
     // for it — a job turned on with no person there.
     if (who.bot) return { refused: "Only a person answers a proposal." };
-    const voice = this.deps.voice(proposal.by, proposal.gatewayId);
+    const voice = this.deps.voice(proposal.by, proposal.gatewayId, proposal.chatId);
     if (who.chatId !== proposal.chatId || (who.gatewayId !== proposal.gatewayId && who.gatewayId !== voice)) {
       return { refused: "That proposal was not made here." };
     }

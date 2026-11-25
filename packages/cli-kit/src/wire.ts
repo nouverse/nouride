@@ -69,6 +69,10 @@ export interface StatusResponse {
     contextWindow?: { tokens: number; source: "pack" | "gateway" | "table" | "default" };
     tools: string[];
     approvals: string;
+    /** Whether its connections take new senders; `open` is open to everyone. Absent from an older daemon. */
+    access?: string;
+    /** What being open to everyone holds for it: where it is reached, its limits, today's use while it is open. Absent from an older daemon. */
+    open?: { connections: string[]; limits: { maxDailyTokens: number; maxDailyMessagesPerPerson: number } | null; today?: { tokens: number; people: number } };
     /** What the pack pins, or null when it follows the daemon default. */
     maxToolIterations: number | null;
     /** The same, for the wall clock, in seconds. */

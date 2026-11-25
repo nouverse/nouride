@@ -11,7 +11,32 @@ import { CheckCircle2, Loader2, QrCode } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { TextLoading } from "@/commons/components/ui/Skeleton";
 
-export function WhatsAppPairing({ gatewayId }: { gatewayId: string }) {
+/**
+ * Beside a WhatsApp number of an agent that is open to everyone. Said and not refused: it is the owner's number and
+ * the owner's choice, and what WhatsApp does with a number that answers many strangers is WhatsApp's to decide.
+ */
+function OpenNumberNote() {
+  return (
+    <p role="note" data-open-number-note className="border-warning/30 bg-warning/10 text-base-content/85 rounded-xl border p-3 text-xs leading-relaxed">
+      This agent answers anyone who writes to it. WhatsApp may restrict or close a number that answers many people it does not know: Nouride is linked to this number the way WhatsApp Web is, not
+      through the service WhatsApp sells to businesses. A number you can afford to lose is the safer one to use here.
+    </p>
+  );
+}
+
+/** One number's link: its state by its own id, and above it what a number of an agent open to everyone should know. */
+export function WhatsAppPairing({ gatewayId, agentId }: { gatewayId: string; agentId: string }) {
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const answersAnyone = status.data?.agents.find((agent) => agent.id === agentId)?.access === "open";
+  return (
+    <div className="space-y-4">
+      {answersAnyone ? <OpenNumberNote /> : null}
+      <PairingState gatewayId={gatewayId} />
+    </div>
+  );
+}
+
+function PairingState({ gatewayId }: { gatewayId: string }) {
   const pairing = useQuery({
     queryKey: ["pairing", gatewayId],
     queryFn: () => api.pairing(gatewayId),

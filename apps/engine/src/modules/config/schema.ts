@@ -54,7 +54,7 @@ export const CONFIG_ENUMS = {
    */
   "security.approvals": ["careful", "balanced", "trusted"],
   "security.exec.landlock": ["off", "auto", "require"],
-  "security.access.mode": ["open", "allowlist", "pair"],
+  "security.access.mode": ["allowlist", "pair"],
   // The search tool's own list, so a service it gains is accepted here without a second edit.
   "security.web.search_kind": SEARCH_KINDS,
   "daemon.log_level": ["debug", "info", "warn", "error"],

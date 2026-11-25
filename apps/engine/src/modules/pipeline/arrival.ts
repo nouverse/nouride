@@ -15,7 +15,7 @@ import { isSystemEvent, type PipelineDeps } from "./deps.ts";
 import type { Admission } from "./admission.ts";
 import type { Batcher } from "./batcher.ts";
 import type { ChatTypes } from "./chat-types.ts";
-import { tellTaken, type ChatSecrets } from "./chat-secrets.ts";
+import { type ChatSecrets, strangerTold, tellTaken } from "./chat-secrets.ts";
 import { isEdit } from "./edit-rules.ts";
 import { arriveEdit, type EditLedger } from "./edits.ts";
 import type { InboxDesk } from "./inbox-desk.ts";
@@ -42,7 +42,14 @@ export interface ArrivalParts {
 }
 
 /** One message from `gateway`, from arrival to the queue — or to where it stops. */
-export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageEnvelope): void {
+export function arrive(parts: ArrivalParts, gateway: Gateway, arrived: MessageEnvelope): void {
+  // One of the install's own accounts is no person, whatever the platform marked: with two WhatsApp numbers in a group,
+  // each is handed the other's messages as a person's, and was asked to pair, or answered as a person with no limit on
+  // how often. Known as an agent's, it is held to the rules between agents, and an open agent's words reach nobody.
+  // Not where the connection tells the daemon's own sends apart (`Gateway.tellsOwnSends`): what it did not mark was
+  // typed by a person on that account's phone, and ignored as a bot's they went unanswered.
+  const ours = !arrived.senderIsBot && !isSystemEvent(arrived) && gateway.tellsOwnSends !== true && parts.turnContext.voice.agentForSender(arrived.gateway, arrived.senderId, arrived.senderAlso) !== undefined;
+  const envelope = ours ? { ...arrived, senderIsBot: true } : arrived;
   // Before anything keeps or reads it — the room's record, the inbox, a steer, a turn — and before the edit's own path,
   // which keeps one as well. The person is told once they are let in (`chat-secrets.ts`).
   const taken = parts.secrets?.take(envelope) ?? [];
@@ -132,7 +139,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageE
     parts.admission.resetJobWakeChain(envelope.gatewayId, envelope.chatId);
   }
   if (!parts.admission.admit(envelope)) return;
-  tellTaken(parts.deps, gateway, envelope, taken);
+  tellTaken(parts.deps, gateway, envelope, taken, strangerTold(parts.admission, envelope));
   if (!parts.inbox.intake(envelope)) return;
   /**
    * Blue ticks, here and not earlier.
@@ -148,6 +155,7 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageE
   // Read by the turn already at work in this one-to-one chat, at its next step — `steering.ts` — or, past what one
   // turn reads, left to wait for it with its sender told so (`steer-accept.ts`).
   const isCommand = (text: string) => parts.hooks.has(parseCommand(text)?.command ?? "");
-  if (parts.deps.config.queue.steer && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
+  // Not a stranger's on an open agent's connection: each message of theirs is counted where its turn is begun (`open-door.ts`).
+  if (parts.deps.config.queue.steer && !parts.admission.strangerOf(envelope) && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
   parts.batcher.accept(envelope);
 }

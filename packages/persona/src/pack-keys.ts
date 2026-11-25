@@ -28,6 +28,8 @@ const PACK_KEYS: Readonly<Record<string, readonly string[] | "open">> = {
   // Refused by the parser, naming the install's library — listed so it is refused once rather than also warned about.
   mcp_servers: "open",
   external: ["cli", "profile", "model", "permissions", "move_at"],
+  // An agent open to everyone: what strangers may cost it in a day, which the dashboard writes as it opens one.
+  open: ["max_daily_tokens", "max_daily_messages_per_person", "closed_reply"],
   look: ["fur", "pattern", "outfit", "outfit_color", "hat", "accessory", "eyes"],
   jobs: ["quiet_after_minutes"],
   delegate: ["max_background"],

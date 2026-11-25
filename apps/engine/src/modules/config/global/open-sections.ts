@@ -192,7 +192,7 @@ function parseGatewayInstance(
   const transport = requireString(value.bridge_transport, `${where} bridge_transport`);
   if (transport === "ws" || transport === "stdio") {
     throw new ConfigError(
-      `${where} bridge_transport = "${transport}" is gone: the bridge runs in this process, one WhatsApp number per daemon. ` +
+      `${where} bridge_transport = "${transport}" is gone: the bridge runs in this process. ` +
         `Remove bridge_transport${transport === "ws" ? " and bridge_url" : ""} from this table.`,
     );
   }

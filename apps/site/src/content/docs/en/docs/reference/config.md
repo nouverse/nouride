@@ -149,7 +149,7 @@ members = 0                         # per guild
 [gateways.whatsapp.main]
 enabled = false
 encryption_key = "wa-encryption-key"
-# session_dir = "..."               # optional; unset: <data_dir>/whatsapp
+# session_dir = "..."               # optional; unset: <data_dir>/whatsapp-<name>, a folder for each number
 ```
 
 None are defined by default, so a fresh install brings up the dashboard and nothing else rather than
@@ -172,14 +172,15 @@ what is one, so this stops a runaway rather than drawing a boundary. At most 214
 ## `[security.access]`
 
 ```toml
-mode = "pair"                       # pair | allowlist | open
+mode = "pair"                       # pair | allowlist
 allowlist = []
 ```
 
-:::caution
-The daemon **refuses to start** when a chat gateway is enabled, an agent holds `exec` and `mode` is
-`"open"`, whatever `allowlist` holds, since `open` lets everyone in before the list is read. That
-combination is a remote shell for anyone who finds the bot. `pair`, the default, is enough to avoid it.
+:::note
+No install is open to everyone. Until 0.8.48 `mode` took `"open"` too; a file that still says it is
+read as `"pair"`, and the next start writes that after letting in everyone an agent had already
+answered. One agent can be opened instead, in its own `config.toml`:
+[an agent open to everyone](/en/docs/manual/access/#an-agent-open-to-everyone).
 :::
 
 `[security] sender_allowlist`, the allowlist's old name, is refused since 0.8.0, naming `allowlist`.

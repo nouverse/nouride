@@ -194,7 +194,9 @@ nouride gateway rename <lama> <baru> [--apply]     # daemon harus BERHENTI
 `gateway restart` ikut aturan yang sama dengan `nouride restart`: me-restart gateway tempat sebuah
 percakapan masuk berarti mengakhirinya, jadi tindak lanjutnya dibuat duluan. `gateway add` tanpa flag
 mencetak sisanya (`--token-secret`, `--session-dir`, `--disabled`); gateway barunya tersambung pada
-restart berikutnya.
+restart berikutnya. Nomor WhatsApp gak butuh token (`--platform whatsapp --name shop --agent nora`):
+kode yang dipindai ada di halaman Connections agent-nya setelah ia jalan, dan nomor kedua ditambah
+dengan cara yang sama.
 
 `rename` menulis ulang config sekaligus database yang sedang dibuka daemon, itu sebabnya ia menolak
 jalan selama daemon hidup, dan sebabnya ia satu-satunya perintah gateway yang gak lewat control API.
@@ -352,7 +354,7 @@ nouride access allow --from <file|-> --gateway <koneksi> [--dry-run]   # satu da
 nouride access approved --find <id atau nama>    # satu di antara banyak: daftarnya memuat 500 terbaru
 nouride access deny|block <gateway:sender>       # tidak selama sehari · tidak sampai di-unblock
 nouride access revoke|reset|unblock <gateway:sender>
-nouride access mode [open|allowlist|pair]      # lihat atau ganti, tanpa restart
+nouride access mode [allowlist|pair]           # lihat atau ganti, tanpa restart
 
 nouride people
 nouride people set <key|platform:akun> --name <nama> [--note <catatan>]

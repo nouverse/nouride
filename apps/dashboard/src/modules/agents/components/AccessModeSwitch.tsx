@@ -8,13 +8,14 @@
  * The question it asks is the one an operator actually has — "can strangers still reach my bots?" —
  * so it is a switch with two positions, not a picker with three. On is `pair`: a stranger gets a code
  * and waits for approval. Off is `allowlist`: a stranger is dropped at the gate, before the router,
- * the queue or any model call, while everyone already paired keeps talking. `open` is not a position;
- * it is a posture boot warns about, surfaced here as a warning when it is in force.
+ * the queue or any model call, while everyone already paired keeps talking. Open to everyone is not a
+ * position of this switch: no install is. One agent may be, from its own Access page (`OpenToEveryone`),
+ * and the card says where.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Lock, Shield } from "lucide-react";
+import { Lock, Shield } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
@@ -33,7 +34,7 @@ export function AccessModeSwitch() {
 
   const saved = useSaved();
   const setMode = useMutation({
-    mutationFn: (mode: "open" | "allowlist" | "pair") => api.setAccessMode(mode),
+    mutationFn: (mode: "allowlist" | "pair") => api.setAccessMode(mode),
     onSuccess: (answer, mode) => {
       saved(answer, `Access mode: ${mode}`);
       return queryClient.invalidateQueries({ queryKey: ["access"] });
@@ -44,9 +45,7 @@ export function AccessModeSwitch() {
   // one: the per-agent Access page is where that condition is explained.
   if (access.error || !access.data) return null;
 
-  const mode = access.data.mode;
-  // `open` reads as on: it admits new senders too, just without asking anyone first.
-  const pairingOn = mode !== "allowlist";
+  const pairingOn = access.data.mode !== "allowlist";
   // Older daemons do not report this field; assume they can edit rather than showing a dead switch.
   const editable = access.data.editable !== false;
   const writable = canWrite(me.data ?? null);
@@ -66,7 +65,7 @@ export function AccessModeSwitch() {
               ? "A stranger who messages any bot gets a pairing code and waits for approval on the Access page."
               : "Locked. Only senders you already approved are answered; anyone else is dropped before it reaches an agent."}
           </p>
-          <p className="text-base-content/65 text-xs mt-1">Each agent follows this unless its Access page says otherwise.</p>
+          <p className="text-base-content/65 text-xs mt-1">Each agent follows this unless its Access page says otherwise. To let anyone write to one agent with no code, open that agent to everyone there.</p>
           {pending > 0 && (
             <p className="text-warning text-xs mt-1.5 font-medium">
               {pending} sender{pending === 1 ? "" : "s"} waiting:{" "}
@@ -92,16 +91,6 @@ export function AccessModeSwitch() {
           />
         </label>
       </div>
-
-      {mode === "open" && (
-        <div role="alert" className="alert alert-warning alert-soft text-sm">
-          <AlertTriangle size={16} />
-          <span>
-            Access mode is <b>open</b>: every sender is admitted with no pairing at all. Turning the switch on requires
-            pairing instead.
-          </span>
-        </div>
-      )}
 
       <ErrorNote error={setMode.error} />
     </div>

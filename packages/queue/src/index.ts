@@ -36,6 +36,15 @@ export interface QueueOptions<T> {
    */
   maxConcurrentTotal?: number;
   /**
+   * A part of the ceiling that some items hold together, whatever their keys: at most `most` of them run at once, and
+   * the rest wait in their own key's order. Null for an item of no share.
+   *
+   * Keys are the fairness this queue keeps, and one key per sender is no fairness between kinds of sender: fifty keys of
+   * one kind arriving together took every slot under the ceiling, and every other key waited behind them, past its
+   * timeout. A share bounds a kind, and leaves the rest of the ceiling to everyone else.
+   */
+  share?: (item: T) => { name: string; most: number } | null;
+  /**
    * Items that must never wait behind anything.
    *
    * They run the moment they arrive, outside both limits and outside their key's ordering. That is a
@@ -92,6 +101,8 @@ export class KeyedQueue<T> {
   private idleWaiters: (() => void)[] = [];
   /** Handlers running across every key. One counter, so the ceiling and `stats()` cannot disagree. */
   private runningTotal = 0;
+  /** Of `runningTotal`, the items running by the share they hold (`share`). */
+  private readonly runningByShare = new Map<string, number>();
   /** Of `runningTotal`, the work that is not an item — `runOutside` — and what waits outside for a slot, oldest first. */
   private outside = 0;
   private readonly slotWaiters: (() => void)[] = [];
@@ -305,9 +316,16 @@ export class KeyedQueue<T> {
       this.cleanup(key, state);
       return;
     }
+    // Its share full, it goes back to the front of its key, in its place: a slot of the share freed pumps every key.
+    const share = this.options.share?.(next.item) ?? null;
+    if (share && (this.runningByShare.get(share.name) ?? 0) >= share.most) {
+      state.waiting.unshift(next);
+      return;
+    }
 
     state.running += 1;
     this.runningTotal += 1;
+    if (share) this.runningByShare.set(share.name, (this.runningByShare.get(share.name) ?? 0) + 1);
     try {
       await this.options.handler(next.item);
     } catch (err) {
@@ -317,6 +335,11 @@ export class KeyedQueue<T> {
       this.options.onError?.(next.item, err);
     } finally {
       state.running -= 1;
+      if (share) {
+        const left = (this.runningByShare.get(share.name) ?? 1) - 1;
+        if (left > 0) this.runningByShare.set(share.name, left);
+        else this.runningByShare.delete(share.name);
+      }
       if (state.waiting.length === 0) this.cleanup(key, state);
       // A stall here looks exactly like the daemon ignoring a chat — see `free`.
       this.free(false);

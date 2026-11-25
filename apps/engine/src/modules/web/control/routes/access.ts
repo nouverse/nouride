@@ -119,15 +119,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
     const body = ((await jsonBody(c)) ?? {}) as Record<string, unknown>;
     const mode = String(body.mode ?? "").trim();
 
-    const result = await deps.settings.setAccessMode({
-      mode,
-      // The same set boot checks: only an agent that can run commands makes `open` dangerous.
-      agentsWithExec: deps.registry
-        .active()
-        .filter((agent) => agent.config.tools.enabled.includes("exec"))
-        .map((agent) => agent.config.id),
-      actor: principal.actor,
-    });
+    const result = await deps.settings.setAccessMode({ mode, actor: principal.actor });
     if (!result.ok) return c.json({ error: result.error, plain: NOT_SAVED }, 400);
     return c.json({ ok: true, mode: deps.ctx.config.security.access.mode } satisfies { ok: true; mode: AccessMode });
   });

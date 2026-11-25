@@ -398,12 +398,23 @@ describe("logging out", () => {
     expect(gateway.status).toBe("disconnected");
   });
 
-  // Three seconds of grace, waited out: its own timeout, the suite's.
-  test("asks the bridge to log out, gives it its grace period, then stops", async () => {
+  test("asks the bridge to log out, and says it happened once the bridge says WhatsApp took it", async () => {
     const { gateway, fake } = await connected();
     const started = Date.now();
-    expect(await gateway.logoutAndStop()).toEqual({ loggedOut: true });
-    expect(Date.now() - started).toBeGreaterThanOrEqual(2_900);
+    const asked = gateway.logoutAndStop();
+    await eventually(() => fake.written.some((c) => c.type === "logout"), 2_000, "the logout to be asked");
+    fake.push({ type: "session_expired" });
+    expect(await asked).toEqual({ loggedOut: true });
+    // As soon as it was told, not after a fixed wait.
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(fake.written.map((c) => c.type)).toEqual(["hello", "logout", "shutdown"]);
+    expect(gateway.status).toBe("disconnected");
+  });
+
+  // Ten seconds of waiting for a word that never comes: its own timeout, the suite's.
+  test("a logout the bridge never confirms is not said to have happened: the phone may still list the number", async () => {
+    const { gateway, fake } = await connected();
+    expect(await gateway.logoutAndStop()).toEqual({ loggedOut: false, reason: "WhatsApp did not confirm the logout in time" });
     expect(fake.written.map((c) => c.type)).toEqual(["hello", "logout", "shutdown"]);
     expect(gateway.status).toBe("disconnected");
   }, 30_000);

@@ -5,7 +5,7 @@
  * to no file, where a later turn's `read` would find it.
  */
 
-import { cutAtWord, type ChatMessage, type ToolResult } from "@nouride/shared";
+import { cutAtWord, isOpenAgent, type AgentAccess, type ChatMessage, type ToolResult } from "@nouride/shared";
 
 /** A tool's result as the turn's next request carries it: with what the run noticed said under it, and its mark when it is the turn's alone. */
 export function resultMessage(result: ToolResult, callId: string, nudge: string | null): ChatMessage {
@@ -26,10 +26,19 @@ export function keptOf(message: ChatMessage): ChatMessage {
 }
 
 /**
+ * Whether nothing of an agent's conversations is written to a file for a later turn to open: a long result's whole
+ * text, a result the context cleared. True for an agent open to everyone: what a stranger sent it would be kept on
+ * disk past the conversation, and named to its model by a path of this server.
+ */
+export function keepsNothing(agent: { config: { access?: AgentAccess } }): boolean {
+  return isOpenAgent(agent);
+}
+
+/**
  * A result that is the turn's alone, within the room a result has: one too long is cut, where another would be written
  * to a file with an excerpt left. Said in the result, so the agent asks for less instead of taking the cut for the end.
  */
-export function withinRoom(result: ToolResult, chars: number): ToolResult {
+export function withinRoom(result: ToolResult, chars: number, why = ", since this is one person's own"): ToolResult {
   if (chars <= 0 || result.content.length <= chars) return result;
-  return { ...result, content: `${cutAtWord(result.content, chars)}\n\n[Cut here: the rest is not kept anywhere, since this is one person's own. Ask for one part of it at a time.]` };
+  return { ...result, content: `${cutAtWord(result.content, chars)}\n\n[Cut here: the rest is not kept anywhere${why}. Ask for one part of it at a time.]` };
 }

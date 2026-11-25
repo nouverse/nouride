@@ -15,9 +15,9 @@ mock.module("@whiskeysockets/baileys", () => ({
   default: (config: Parameters<typeof real>[0]) => real({ ...config, waWebSocketUrl: serverUrl }),
 }));
 
-const io = await import("../../src/io.ts");
-io.attach({ write: () => {}, exit: () => {} });
-const connection = await import("../../src/connection.ts");
+const { Connection } = await import("../../src/connection.ts");
+const { speaker } = await import("../../src/say.ts");
+const connection = new Connection(speaker({ write: () => {}, exit: () => {} }, ""));
 
 await connection.start(dir, "a".repeat(64));
 const ws = connection.currentSocket()!.ws;

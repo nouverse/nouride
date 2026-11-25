@@ -73,6 +73,8 @@ export async function bootMemory(
     builtinSkillsDir?: string;
     /** The audit log, where a conversation's opened documents are read from when it is filed (0.8.23). */
     audit?: Pick<AuditLog, "documentsOpened">;
+    /** Whether an agent is open to everyone, as its pack says now: memory then reads for it as nobody. */
+    publicAgent?: (agentId: string) => boolean;
   },
 ): Promise<Memory> {
   const { turns, roomMessages, providers, usage, vaultFormat } = with_;
@@ -104,6 +106,7 @@ export async function bootMemory(
       ...(with_.audit ? { documentsOpenedBetween: with_.audit.documentsOpened.bind(with_.audit) } : {}),
     },
     speakersIn: (gatewayId, chatId) => [...new Set(roomMessages.forChat(gatewayId, chatId, RECENT_SPEAKERS).map((message) => message.senderId))],
+    ...(with_.publicAgent ? { publicAgent: with_.publicAgent } : {}),
     embed: embedder({ providers, usage, config }),
     // Without boot's answers (a test's memory), nobody is an admin: a folder with no settings is searched by nobody.
     knowledge: {

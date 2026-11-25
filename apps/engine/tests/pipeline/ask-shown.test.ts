@@ -18,7 +18,8 @@ import { LocalGateway } from "@/modules/gateways/local.ts";
 import { JobStore } from "@/modules/jobs/jobs.store.ts";
 import { OutboundRegistry } from "@nouride/persona";
 import { worthSaying } from "@/modules/pipeline/peer-shown.ts";
-import { SHOWN_IN_THE_ROOM } from "@/modules/pipeline/peer-turn.ts";
+import { ROOM_LANGUAGE, SHOWN_IN_THE_ROOM } from "@/modules/pipeline/peer-turn.ts";
+import { RoomMessageStore } from "@/modules/chat-events/room-messages.store.ts";
 import { RoomStore } from "@/modules/rooms/rooms.store.ts";
 import { peersFrom } from "@/modules/tools/builtins/ask-agent.ts";
 import { SHOWN_TO_THE_ROOM } from "@/modules/tools/handoff.ts";
@@ -99,7 +100,7 @@ async function daemon(options: { answer: (who: string, body: Body) => Said | Pro
       jobs = new JobStore({ db, logDir: join(dataDir, "jobs"), maxConcurrentPerAgent: 4, maxMs: () => config.security.jobMaxMs });
       rooms = new RoomStore(db);
       // A step line written as soon as there is a step, for the tests that read one while its turn works.
-      return { jobs, rooms, ...(options.progressMs ? { progressIntervalMs: options.progressMs } : {}) };
+      return { jobs, rooms, roomMessages: new RoomMessageStore(db), ...(options.progressMs ? { progressIntervalMs: options.progressMs } : {}) };
     },
   });
   benches.push(bench);
@@ -158,6 +159,10 @@ describe("an agent asked in a room it is a member of", () => {
     const brief = lastUser(d.requestsOf("nox")[0]!.body);
     expect(brief).toContain(SHOWN_IN_THE_ROOM);
     expect(brief).toContain("in the language they\nare speaking there, not the language of this brief");
+    // The brief is in English, and the agent asked reads nothing else of the room: the words of the person this is for,
+    // as they said them there, show which language its answer is in.
+    expect(brief).toContain(`${ROOM_LANGUAGE} "`);
+    expect(brief).toContain("kenapa build-nya gagal?\"");
     expect(brief).toContain("tag nobody");
     expect(brief).not.toContain("Nobody else reads it");
     expect(brief).toContain(TASK);
@@ -229,6 +234,8 @@ describe("where it is not the room's to read", () => {
     const brief = lastUser(d.requestsOf("nera")[0]!.body);
     expect(brief).toContain("Nobody else reads it");
     expect(brief).not.toContain(SHOWN_IN_THE_ROOM);
+    // Its answer goes back to the agent that asked, which speaks to the people: nothing of theirs is quoted to it.
+    expect(brief).not.toContain(ROOM_LANGUAGE);
     expect(toolResults(d.requestsOf("nouva")[1]!.body)[0]).not.toContain("already read this");
   });
 

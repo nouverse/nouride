@@ -34,15 +34,15 @@ describe("the engine's plugin declarations", () => {
   }, 60_000);
 
   test("a function the plugin does not export is caught", () => {
-    const texts = drifted(BRIDGE, "export function stopBridge(): void;", "export function stopBridge(): void;\n  export function vanished(): void;");
+    const texts = drifted(BRIDGE, "  export function openBridge(", "  export function vanished(): void;\n  export function openBridge(");
     const { problems } = checkSeams(texts, only("nouride-wa-bridge"));
     expect(problems.join("\n")).toContain("`vanished`");
   });
 
   test("an argument the engine leaves out and the plugin needs is caught", () => {
-    const texts = drifted(BRIDGE, "configure(input: { sessionDir?: string; encryptionKey: string })", "configure(input: { sessionDir?: string })");
+    const texts = drifted(BRIDGE, "openBridge(input: { name: string; sessionDir?: string; encryptionKey: string;", "openBridge(input: { name: string; sessionDir?: string;");
     const { problems } = checkSeams(texts, only("nouride-wa-bridge"));
-    expect(problems.join("\n")).toContain("`configure`");
+    expect(problems.join("\n")).toContain("`openBridge`");
   });
 
   test("a field the engine reads and the plugin does not give is caught", () => {
@@ -58,13 +58,13 @@ describe("the engine's plugin declarations", () => {
   });
 
   test("a plugin export the check cannot type — its module did not compile here — is not read as agreeing", () => {
-    const texts = drifted("packages/wa-bridge/src/index.ts", "export function stopBridge(", 'export { stopBridge } from "./not-here.ts";\nfunction stopBridgeGone(');
+    const texts = drifted("packages/wa-bridge/src/index.ts", "export function openBridge(", 'export { openBridge } from "./not-here.ts";\nfunction openBridgeGone(');
     const { problems } = checkSeams(texts, only("nouride-wa-bridge"));
-    expect(problems.join("\n")).toContain("`stopBridge`\n      is `any` here");
+    expect(problems.join("\n")).toContain("`openBridge`\n      is `any` here");
   });
 
   test("and neither is an import in the plugin that does not resolve — what it brings is `any` all the way down", () => {
-    const texts = drifted("packages/wa-bridge/src/io.ts", "export function exit(", 'import type { Gone } from "./not-here.ts";\nexport type Kept = Gone;\nexport function exit(');
+    const texts = drifted("packages/wa-bridge/src/io.ts", "export class BridgeExit ", 'import type { Gone } from "./not-here.ts";\nexport type Kept = Gone;\nexport class BridgeExit ');
     const { problems } = checkSeams(texts, only("nouride-wa-bridge"));
     expect(problems.join("\n")).toContain("packages/wa-bridge/src/io.ts: `./not-here.ts` does not resolve");
   });

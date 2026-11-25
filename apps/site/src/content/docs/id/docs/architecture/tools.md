@@ -149,11 +149,13 @@ akses.
 
 [Model izin lengkapnya →](/id/docs/manual/approvals/)
 
-## Daemon menolak start dalam satu konfigurasi
+## Orang asing gak pernah sampai ke shell
 
-**Gateway aktif, sebuah agent memegang `exec`, `[security.access] mode = "open"`, dan allowlist
-pengirim kosong.** Kombinasi itu adalah remote shell bagi siapa pun yang menemukan bot-nya, jadi ia jadi
-kegagalan boot alih-alih peringatan di log yang gak dibaca siapa pun.
+Gateway chat, sebuah agent yang memegang `exec`, dan gak ada apa pun di antara agent itu dan siapa pun
+yang menemukan bot-nya adalah remote shell. Sampai 0.8.48 itu konfigurasi yang membuat daemon menolak
+start. Sekarang ia gak bisa ditulis: gak ada instalasi yang membolehkan semua orang masuk, dan satu
+agent yang boleh [terbuka untuk semua orang](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang)
+memegang empat tool milik Nouride sendiri dan gak satu pun dari pack-nya, termasuk `exec`.
 
 ## Batas untuk satu panggilan
 

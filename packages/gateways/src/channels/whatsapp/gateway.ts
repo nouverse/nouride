@@ -13,7 +13,7 @@
  * directory is not being persisted, which is the failure this is built to avoid.
  */
 
-import { join, randomUuid, tempDir, writeBytesSync } from "@nouride/runtime";
+import { join, randomUuid, removePath, tempDir, writeBytesSync } from "@nouride/runtime";
 import {
   BRIDGE_PROTOCOL_VERSION,
   contained,
@@ -27,6 +27,8 @@ import { parseMarkdown } from "../../commons/markdown.ts";
 import { chunkRendered, sendsText } from "../../commons/text.ts";
 import { BaseGateway, type GatewayIdentity, deliverInParts, UndeliverableError } from "../../commons/resilience.ts";
 import { whatsappEnvelope, whatsappSenderId } from "./envelope.ts";
+import { fetchWhatsAppFile } from "./media.ts";
+import { NumberItself } from "./number.ts";
 import { toWhatsAppText } from "./format.ts";
 
 /**
@@ -88,15 +90,20 @@ export interface WhatsAppGatewayOptions extends GatewayIdentity {
 }
 
 /**
- * How long to let the bridge act on `logout` before the process is stopped.
+ * How long to wait for the bridge to say the logout reached WhatsApp (`session_expired`) before the process is stopped.
  *
  * It has one round trip to make to WhatsApp and a few files to delete. Long enough for that on a
  * slow link, short enough that a delete does not feel hung.
  */
-const LOGOUT_GRACE_MS = 3_000;
+const LOGOUT_GRACE_MS = 10_000;
 
 /** How long a `send` waits for its ack before giving up. */
 const ACK_TIMEOUT_MS = 30_000;
+/**
+ * A held file's download: a large one takes longer than a command's ack, and the engine's own deadline bounds it. A
+ * backstop past that deadline, which grows by a second a declared megabyte: so does this, or it cut a large file first.
+ */
+const FETCH_TIMEOUT_MS = 120_000;
 
 /**
  * How long a send waits for the number to finish linking.
@@ -157,6 +164,8 @@ export class WhatsAppGateway extends BaseGateway {
   private unlinkedSince: number | null = null;
   /** Set when WhatsApp says this session is finished, so the close that follows is not a hiccup. */
   private expired = false;
+  /** Set while `logoutAndStop` waits for the bridge to say the logout reached WhatsApp. */
+  private loggedOutSeen: (() => void) | null = null;
   /**
    * Chats WhatsApp has refused to deliver to, and why.
    *
@@ -188,6 +197,24 @@ export class WhatsAppGateway extends BaseGateway {
   /** The pending pairing code, if the bridge is waiting to be linked. */
   pairingCode(): { qr: string; at: number } | null {
     return this.qrCode;
+  }
+
+  /** Its own addresses and the groups it is in (`number.ts`): with two numbers, which messages are whose and where. */
+  private readonly itself = new NumberItself();
+
+  get selfId(): string | undefined {
+    return this.itself.phone;
+  }
+
+  ownsAddress(id: string): boolean {
+    return this.itself.owns(id);
+  }
+
+  /** The bridge says which messages another of the daemon's numbers sent (`sentHere`): the rest are people's. */
+  readonly tellsOwnSends = true;
+
+  sees(chatId: string): boolean | undefined {
+    return this.itself.sees(chatId);
   }
 
   /** Whether the session directory already holds working credentials. */
@@ -392,33 +419,9 @@ export class WhatsAppGateway extends BaseGateway {
     if (this.channel) this.send_({ type: "typing", chatId });
   }
 
-  /**
-   * Fetch an inbound attachment's bytes for WhatsApp.
-   *
-   * `wa-bridge` downloads media to a local file on disk before emitting the message event,
-   * so `attachment.url` is already a path on disk. `fetch("file://...")` reads the local file.
-   */
+  /** A file its bridge holds until asked, or a path or a link as it is (`media.ts`). */
   override async fetchAttachment(attachment: Attachment): Promise<Uint8Array | null> {
-    if (attachment.buffer) return attachment.buffer;
-    if (!attachment.url) return null;
-
-    try {
-      const url =
-        attachment.url.startsWith("http://") || attachment.url.startsWith("https://")
-          ? attachment.url
-          : attachment.url.startsWith("file://")
-            ? attachment.url
-            : `file://${attachment.url}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        this.log.warn("whatsapp attachment download failed", { status: response.status, url });
-        return null;
-      }
-      return new Uint8Array(await response.arrayBuffer());
-    } catch (err) {
-      this.log.warn("whatsapp attachment fetch failed", { url: attachment.url, err: String(err) });
-      return null;
-    }
+    return fetchWhatsAppFile(attachment, (ref) => this.request((id) => ({ type: "fetch_media", id, ref }), FETCH_TIMEOUT_MS + Math.ceil((attachment.size ?? 0) / 1_000_000) * 1000), this.log);
   }
 
   /**
@@ -481,15 +484,26 @@ export class WhatsAppGateway extends BaseGateway {
       await this.stop();
       return { loggedOut: false, reason: "the bridge was not running" };
     }
+    // Not linked now: the bridge refuses a logout it cannot carry to WhatsApp, and it was said to have happened.
+    if (!this.linked) {
+      await this.stop();
+      return { loggedOut: false, reason: "the number was not linked at the time, so WhatsApp was not told" };
+    }
 
     try {
+      // No ack to wait on — `logout` carries no id, by design: the bridge tears its socket down as part of handling it.
+      // What it says once WhatsApp took the logout is `session_expired`: waited for, and the logout is said to have
+      // happened only when it came. A fixed grace said so of a logout still queued behind a command, which was then
+      // dropped as the bridge stopped, and the phone went on listing the device with nothing saying so.
+      const told = new Promise<boolean>((resolve) => {
+        this.loggedOutSeen = () => resolve(true);
+        setTimeout(() => resolve(false), LOGOUT_GRACE_MS);
+      });
       this.send_({ type: "logout" });
-      // No ack to wait on — `logout` carries no id, by design: the bridge tears its socket down as
-      // part of handling it, so an acknowledgement would race the teardown. A short grace period is
-      // the honest alternative to a promise that cannot be kept.
-      await new Promise((resolve) => setTimeout(resolve, LOGOUT_GRACE_MS));
+      const loggedOut = await told;
+      this.loggedOutSeen = null;
       await this.stop();
-      return { loggedOut: true };
+      return loggedOut ? { loggedOut: true } : { loggedOut: false, reason: "WhatsApp did not confirm the logout in time" };
     } catch (err) {
       // Stopped regardless. Leaving the bridge running after a delete is worse than an unclean
       // logout: it holds the memory and can write the session files back.
@@ -505,7 +519,7 @@ export class WhatsAppGateway extends BaseGateway {
   }
 
   /** A command that expects an ack, resolved by id. */
-  private request(build: (id: string) => BridgeCommand): Promise<string> {
+  private request(build: (id: string) => BridgeCommand, within = ACK_TIMEOUT_MS): Promise<string> {
     const id = `c${++this.nextId}`;
     const command = build(id);
     // Logged at info, not debug: an outbound message that vanishes leaves nothing else behind, and
@@ -520,9 +534,9 @@ export class WhatsAppGateway extends BaseGateway {
       const timer = setTimeout(
         contained(this.log, "could not time out a command the WhatsApp bridge did not acknowledge", () => {
           this.pending.delete(id);
-          reject(new Error(`the WhatsApp bridge did not acknowledge within ${ACK_TIMEOUT_MS}ms`));
+          reject(new Error(`the WhatsApp bridge did not acknowledge within ${within}ms`));
         }, { id }),
-        ACK_TIMEOUT_MS,
+        within,
       );
 
       this.pending.set(id, { resolve, reject, timer });
@@ -581,6 +595,7 @@ export class WhatsAppGateway extends BaseGateway {
           return;
         }
         this.linked = true;
+        this.itself.isAlso([event.jid]);
         this.everLinked = true;
         this.unlinkedSince = null;
         this.expired = false;
@@ -625,6 +640,7 @@ export class WhatsAppGateway extends BaseGateway {
         return;
 
       case "session_expired":
+        this.loggedOutSeen?.();
         this.linked = false;
         this.expired = true;
         this.qrCode = null;
@@ -633,9 +649,28 @@ export class WhatsAppGateway extends BaseGateway {
         return;
 
       case "message": {
+        this.itself.isAlso(event.selfIds ?? []);
         if (event.chatTitle) this.rememberTitle(event.chatId, event.chatTitle);
         const envelope = whatsappEnvelope(event, { gatewayId: this.id, agentId: this.options.agentId });
         if (envelope) this.emitMessage(envelope);
+        return;
+      }
+
+      // A held file, fetched: its path is the answer the `fetch_media` waits on.
+      case "media": {
+        const entry = this.pending.get(event.id);
+        // Answered after its wait was given up: nobody will read the file, so it goes now. Nothing else sweeps there.
+        if (!entry) {
+          try {
+            removePath(event.path);
+          } catch (err) {
+            this.log.warn("a file fetched too late could not be removed", { error: String(err) });
+          }
+          return;
+        }
+        clearTimeout(entry.timer);
+        this.pending.delete(event.id);
+        entry.resolve(event.path);
         return;
       }
 
@@ -653,6 +688,11 @@ export class WhatsAppGateway extends BaseGateway {
         entry.resolve(event.id);
         return;
       }
+
+      case "groups":
+        this.itself.isIn(event.ids);
+        this.log.debug("the groups this number is in", { groups: event.ids.length });
+        return;
 
       case "delivery_refused": {
         const { reason, terminal } = explainRefusal(event.code);

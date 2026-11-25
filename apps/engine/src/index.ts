@@ -41,7 +41,7 @@ import { AgentsSeen } from "@/commons/agents-seen.ts";
 import { bootMemory } from "@/boot/memory.ts";
 import { machineFor, reportCommandIsolation } from "@/boot/commands-cgroup.ts";
 import { VaultFormatError } from "@/modules/memory/format.ts";
-import { refusingExternalOrchestrator, runPreflightChecks } from "@/boot/preflight.ts";
+import { refusedByThisInstall, runPreflightChecks } from "@/boot/preflight.ts";
 import { oauthReady, resolveOauthSupport } from "@/modules/users/oidc.ts";
 import { resolveMultiUserSupport } from "@/modules/users/multi-user.ts";
 import { resolveLinkedPlugins } from "@/boot/linked-plugins.ts";
@@ -53,8 +53,7 @@ import { SkillsWatch } from "@/boot/skills-watch.ts";
 import { startControlPlane } from "@/boot/control-plane.ts";
 import { maskOutbound } from "@/commons/egress.ts";
 import { bootGatewaySwitch } from "@/boot/gateway-switch.ts";
-import { keepRouterGatewayOn } from "@/boot/router-gateway.ts";
-import { bringEndpointKeysForward } from "@/boot/endpoint-keys.ts";
+import { bringConfigForward } from "@/boot/config-forward.ts";
 import { EDITION, GATEWAY_CARRIED } from "@/commons/build.ts";
 import { installShutdown } from "@/boot/shutdown.ts";
 import { startExternalAgents } from "@/boot/external-agents.ts";
@@ -105,10 +104,8 @@ export async function runDaemon(): Promise<void> {
   // (`boot/upgrade-floor.ts`).
   await assertUpgradeFloor(config.daemon.dataDir);
   const lock = takeDataDirLock(config.daemon.dataDir);
-  // Holding the lock, so no second daemon writes beside it: a Router install's gateway kept on (`boot/router-gateway.ts`).
-  if (source) await keepRouterGatewayOn({ configPath: source, config, carried: GATEWAY_CARRIED, edition: EDITION });
-  // And a profile on a known endpoint given what it needs, before any client is built from it (`boot/endpoint-keys.ts`).
-  if (source) await bringEndpointKeysForward({ configPath: source, config });
+  // Holding the lock, so no second daemon writes beside it: what an older install's file is given once (`boot/config-forward.ts`).
+  if (source) await bringConfigForward({ configPath: source, config, carried: GATEWAY_CARRIED, edition: EDITION });
   ensureDir(config.daemon.agentsDir);
   // The skill pool, so a fresh install has the directory a human is told to drop skills into. Created
   // rather than left to `skill_create`: an empty directory answers "where do these go", and a missing
@@ -158,7 +155,7 @@ export async function runDaemon(): Promise<void> {
     skillsOffGlobally: () => config.skills.off,
     // Kept in the database, so `/stop` holds through a restart.
     pauses: pausedAgentsState(state),
-    refuse: refusingExternalOrchestrator(config),
+    refuse: refusedByThisInstall(config),
   });
   // Each agent's user and folders; an agent loaded later, when it loads. Not waited on: the first start hands every
   // agent's folders over — on the live box some 450,000 files — and the gateways connect meanwhile; a command that
@@ -268,6 +265,7 @@ export async function runDaemon(): Promise<void> {
     knowledge: { admins: () => adminKeys(config.people, (id) => knowledgeAt.roleOf?.(id)), room: knowledgeAt.room },
     ...(builtinSkillsDir ? { builtinSkillsDir } : {}),
     audit,
+    publicAgent: (agentId) => registry.get(agentId)?.config.access === "open",
   });
 
   // Starting the timers, the snapshots first (`boot/timers.ts`): the first copy of a run is of what the boot found.
@@ -346,7 +344,7 @@ export async function runDaemon(): Promise<void> {
    * and there is nothing further that depends on it — the rows were already corrected above.
    */
   // The approvals it kept, first, so a turn taken up below finds its question already back in front of the person.
-  askKeptApprovals({ approvals, ...keptApprovals, notifier, chatEvents, voice: (agentId, gatewayId) => pipeline.voiceGatewayId(agentId, gatewayId) });
+  askKeptApprovals({ approvals, ...keptApprovals, notifier, chatEvents, voice: (agentId, gatewayId, chatId) => pipeline.voiceGatewayId(agentId, gatewayId, chatId) });
   // Then what else the restart owes: reports, undelivered replies, the inbox — `boot/durable.ts`.
   void resumeAfterBoot({ recovered: recoveredTurns, orphaned: orphanedTurns.conversations, stores: durable, startedAt, pipeline, turns, notifier, chatEvents, keptFor: (turn) => approvals.keptFor(turn) });
   // After the inbox it reopened, so a message from before the restart is ahead of these.
@@ -372,7 +370,7 @@ export async function runDaemon(): Promise<void> {
     initialAdminPassword,
     gateway: nougate,
     ctx, db, config, configSource: source, secrets, registry, providers, pipeline, approvals,
-    grants, toolGrants, access, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
+    grants, toolGrants, access, openDoor: stores.openDoor, memory, memoryPass, jobs, notifier, audit, logs, logStore, mcp, reach, projectSkills, skillRoots,
     builtinSkillsDir, autoApprove, sessions, notes, missions: missions.missions, externalAgents, turns, events, chatEvents, roomMessages, attachmentIndex, rooms, usage, uploads, cron, scheduler, proposals: proposals.cards, localGateway,
     supervisorInfo, reflection, mcpCatalog, skillsCatalog, mcpLogins, agentsSeen, state, agentAccounts: agentUsers,
     builtinTools: tools,

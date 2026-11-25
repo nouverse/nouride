@@ -162,6 +162,18 @@ describe("sent back as it is", () => {
     expect(new Uint8Array(sent[0]!.buffer!)).toEqual(PHOTO);
   });
 
+  test("by its id written without the section's number too: a file is the whole document", async () => {
+    const { keep, send, sent, ctx } = await home();
+    await keep({ collection: "Car", title: TITLE, file: "brv-qr.jpg", content: LINE });
+    const whole = ITEM.replace(/#\d+$/, "");
+    expect(whole).not.toBe(ITEM);
+    expect(await send.execute({ document: whole }, ctx(GADING_DM))).toMatchObject({ isError: false, content: `Sent \`brv-qr.jpg\` (76B), the file kept as "${TITLE}", to this conversation.` });
+    expect(sent.map((file) => file.filename)).toEqual(["brv-qr.jpg"]);
+    // Written so, it is no more anyone's to read than with its number.
+    expect(await send.execute({ document: whole }, ctx(SAM_DM))).toMatchObject({ isError: true, content: `no document "${whole}" that this chat may read` });
+    expect(sent).toHaveLength(1);
+  });
+
   test("with any agent of the install, in a direct chat with its person", async () => {
     const { keep, send, sent, ctx } = await home();
     await keep({ collection: "Car", title: TITLE, file: "brv-qr.jpg", content: LINE });

@@ -30,7 +30,7 @@ export async function access(client: Client, args: string[]): Promise<void> {
   }
 
   /**
-   * `nouride access mode [open|allowlist|pair]` — the same switch the dashboard has.
+   * `nouride access mode [allowlist|pair]` — the same switch the dashboard has.
    *
    * With no argument it says what is in force rather than changing anything: the destructive reading
    * of a bare `nouride access mode` would be "set it to nothing", and there is no such mode.
@@ -38,7 +38,7 @@ export async function access(client: Client, args: string[]): Promise<void> {
   if (action === "mode") {
     if (!target) {
       const { mode } = await client.get<{ mode: string }>("/access");
-      say(`${BOLD}${mode}${RESET} ${DIM}· nouride access mode <open|allowlist|pair>${RESET}`);
+      say(`${BOLD}${mode}${RESET} ${DIM}· nouride access mode <allowlist|pair>${RESET}`);
       return;
     }
     const result = await client.post<AckResponse>("/access/mode", { mode: target });
@@ -105,7 +105,7 @@ export async function access(client: Client, args: string[]): Promise<void> {
   say(`${DIM}nouride access allow <gateway:sender> [--name "<name>"]${RESET}`);
   say(`${DIM}nouride access allow --from <file> --gateway <connection> [--dry-run]${RESET}`);
   say(`${DIM}nouride access deny|block|revoke|reset|unblock <gateway:sender>${RESET}`);
-  say(`${DIM}nouride access mode [open|allowlist|pair]${RESET}`);
+  say(`${DIM}nouride access mode [allowlist|pair]${RESET}`);
 }
 
 const MARK: Record<SenderRow["status"], string> = {

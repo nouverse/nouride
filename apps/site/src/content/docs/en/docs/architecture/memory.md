@@ -63,6 +63,12 @@ or `/reset` in it, and the nightly pass, which cuts every chat active since its 
 idle timer. A stretch that crosses midnight is split per day, and one too long for a single model call
 is split at turn boundaries.
 
+Before it is cut, a chat's talk of the last day is read where it is (since 0.8.48): in a person's direct
+chat, the agent is told of the conversations they had in other chats since those were last cut, back to
+yesterday at the furthest, finds them with `memory_search`, and opens them with `memory_read`, under the
+same rule a cut episode is read by; where recall is off, for the person or the install, they are not read.
+Asked in a direct chat what was decided in a group an hour ago, it no longer has to be asked there.
+
 Episodes are built from the daemon's turn log and the room's message log, not from the conversation's
 context, so compaction and `/new` lose nothing. A group chat with several bots is one episode naming
 all of them. An episode needs at least one agent turn: people talking among themselves is not memory,

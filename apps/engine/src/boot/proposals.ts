@@ -44,13 +44,13 @@ export function buildProposals(params: {
   /** Where a change to the automation a person has open on its page is held for that page (`modules/live-edit`). */
   liveEdits?: Pick<LiveEdits, "propose">;
   /** The pipeline's voice, admins and the chats an agent can reach — read when a card is posted or answered. */
-  pipeline: () => { voiceGatewayId(agentId: string, gatewayId: string): string; isAdmin(who: { gatewayId: string; senderId: string }): boolean; messageSender(): Pick<SendMessageOptions, "targets"> };
+  pipeline: () => { voiceGatewayId(agentId: string, gatewayId: string, chatId?: string): string; isAdmin(who: { gatewayId: string; senderId: string }): boolean; messageSender(): Pick<SendMessageOptions, "targets"> };
 }): { cards: ProposalCards; tool: Tool } {
   const chats = (agentId: string) => params.pipeline().messageSender().targets({ agentId });
   const cards = new ProposalCards({
     store: params.cron,
     notifier: params.notifier,
-    voice: (agentId, gatewayId) => params.pipeline().voiceGatewayId(agentId, gatewayId),
+    voice: (agentId, gatewayId, chatId) => params.pipeline().voiceGatewayId(agentId, gatewayId, chatId),
     isAdmin: (who) => params.pipeline().isAdmin(who),
     isOwner: (who, owner) => senderIsOwner(params.people(), who, owner),
     when: (job) => describeTrigger(job.trigger, params.timezone()),

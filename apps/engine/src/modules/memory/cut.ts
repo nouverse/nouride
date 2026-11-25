@@ -49,7 +49,7 @@ export interface Entry {
  * no person said — a scheduled job's prompt has no sender here, so it is never a participant.
  */
 export interface ChatSource {
-  exchangesBetween(gatewayId: string, chatId: string, after: number, until: number): { agentId: string; senderId?: string; prompt: string; reply: string; startedAt: number; endedAt: number }[];
+  exchangesBetween(gatewayId: string, chatId: string, after: number, until: number): { agentId: string; senderId?: string; prompt: string; reply: string; startedAt: number; endedAt: number; public?: boolean }[];
   roomMessagesBetween(gatewayId: string, chatId: string, after: number, until: number): { senderId: string; senderName?: string; text: string; at: number }[];
   isRoom(gatewayId: string, chatId: string): boolean;
   /**

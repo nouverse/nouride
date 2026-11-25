@@ -19,9 +19,9 @@ mock.module("@whiskeysockets/baileys", () => ({
   },
 }));
 
-const io = await import("../../src/io.ts");
-io.attach({ write: () => {}, exit: () => {} });
-const connection = await import("../../src/connection.ts");
+const { Connection } = await import("../../src/connection.ts");
+const { speaker } = await import("../../src/say.ts");
+const connection = new Connection(speaker({ write: () => {}, exit: () => {} }, ""));
 
 const dir = process.argv[2]!;
 const key = "a".repeat(64);

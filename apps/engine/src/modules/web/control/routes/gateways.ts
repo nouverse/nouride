@@ -63,7 +63,7 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
 
     const result = await deps.settings.removeGateway(c.req.param("id"), principal.actor);
-    return result.ok ? c.json(result satisfies { ok: true; restartRequired?: boolean }) : c.json({ error: result.error, plain: NOT_CHANGED }, 400);
+    return result.ok ? c.json(result satisfies { ok: true; restartRequired?: boolean; stillOnThePhone?: boolean }) : c.json({ error: result.error, plain: NOT_CHANGED }, 400);
   });
 
   /**

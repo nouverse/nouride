@@ -115,10 +115,17 @@ describe("the conversations from before", () => {
     const { db, dir, sessions, turns } = await stores(before);
     const local = { agentId: "nouva", gatewayId: "web:dashboard", chatId: "web-1" };
     const job = { agentId: "nouva", gatewayId: "telegram:nouva", chatId: "cron:cron_1" };
-    turns.begin({ sessionId: sessionIdFor(DM), ...DM, senderId: SYSTEM_SENDER, prompt: "a wake-up" });
-    turns.begin({ sessionId: sessionIdFor(DM), ...DM, senderId: "814", prompt: "halo" });
-    turns.begin({ sessionId: sessionIdFor(local), ...local, senderId: "usr_1", prompt: "is the disk full?" });
-    turns.begin({ sessionId: sessionIdFor(job), ...job, senderId: "814", prompt: "the job", cause: { via: "schedule", job: "cron_1" } as never });
+    // Turns as the release before wrote them, by hand: today's store writes columns a later migration adds.
+    const began = [
+      [DM, SYSTEM_SENDER, "a wake-up", null],
+      [DM, "814", "halo", null],
+      [local, "usr_1", "is the disk full?", null],
+      [job, "814", "the job", JSON.stringify({ via: "schedule", job: "cron_1" })],
+    ] as const;
+    for (const [n, [where, senderId, prompt, cause]] of began.entries()) {
+      db.prepare("INSERT INTO turn_records (id, session_id, agent_id, gateway_id, chat_id, sender_id, status, prompt, reply, started_at, cause, seq) VALUES (?, ?, ?, ?, ?, ?, 'running', ?, '', ?, ?, ?)").run(`turn_${n}`, sessionIdFor(where), where.agentId, where.gatewayId, where.chatId, senderId, prompt, 1_000 + n, cause, n + 1);
+    }
+    expect(turns).toBeDefined();
     // Rows as the release before wrote them: no `opened_by` to write yet.
     for (const where of [DM, local, job]) {
       db.prepare("INSERT INTO sessions (id, agent_id, chat_id, gateway, created_at, started_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, 1)").run(sessionIdFor(where), where.agentId, where.chatId, where.gatewayId);

@@ -9,12 +9,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { parseConfig } from "@/modules/config/global/index.ts";
 import { LocalGateway } from "@/modules/gateways/local.ts";
-import { conversationSlots, roomSlots } from "@/modules/pipeline/fair-share.ts";
+import { conversationSlots, roomSlots, strangerSlots } from "@/modules/pipeline/fair-share.ts";
 import { RoomStore } from "@/modules/rooms/rooms.store.ts";
 import { pipelineBench, type Bench } from "../pipeline-bench.ts";
 import { eventually } from "../wait.ts";
 
 describe("the decision", () => {
+  test("strangers of open agents hold at most half the ceiling together, at least one, and with no ceiling no part of it", () => {
+    expect([8, 4, 3, 2, 1].map(strangerSlots)).toEqual([4, 2, 1, 1, 1]);
+    expect(strangerSlots(0)).toBe(Number.POSITIVE_INFINITY);
+  });
+
   test("a room holds its agents' turns and one message on its way to a busy one, never more than half the ceiling", () => {
     expect(roomSlots(1, 8)).toBe(2);
     expect(roomSlots(2, 8)).toBe(3);

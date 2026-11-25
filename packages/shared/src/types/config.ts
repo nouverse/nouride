@@ -1,6 +1,6 @@
 /** Daemon configuration — §20 SPEC. Mirrors config.example.toml one-to-one. */
 
-import type { ApprovalLevel, ExternalCliConfig, FallbackPair } from "./agent.ts";
+import type { AgentAccess, ApprovalLevel, ExternalCliConfig, FallbackPair } from "./agent.ts";
 import type { LogLevel } from "../logger.ts";
 import type { GatewayName } from "./envelope.ts";
 import type { LlmEffort, ProviderKind } from "./llm.ts";
@@ -196,14 +196,15 @@ export interface WebPolicySection {
 }
 
 /**
- * How a stranger becomes someone the daemon will act for.
+ * How a stranger becomes someone the daemon will act for, as a door is asked it.
  *
- * `pair` is the default because the other two are each wrong for a different reason: `open` means
- * anyone who finds the bot can run the agent's tools, and `allowlist` is correct but adding a person
- * requires editing a file and restarting.
+ * `pair` is an install's default: `allowlist` is correct but adding a person requires editing a file and restarting.
+ * `open` is no install's: it is one agent's (`AgentAccess`), which then holds a few tools of the daemon's own, and it
+ * is here as the door's word for a connection such an agent owns. A config file that still says it for the whole
+ * install is read as `pair`, and brought forward at the next start (`boot/open-mode.ts`).
  */
 export type AccessMode =
-  /** Anyone may talk to it. Only sane for a daemon with no chat gateway. */
+  /** Anyone may talk to it: a connection an agent open to everyone owns. */
   | "open"
   /** Only ids in `allowlist`. Anyone else is dropped in silence — no reply, no error. */
   | "allowlist"
@@ -211,7 +212,7 @@ export type AccessMode =
   | "pair";
 
 export interface AccessSection {
-  mode: AccessMode;
+  mode: Exclude<AccessMode, "open">;
   /**
    * Pre-approved senders, honoured in every mode.
    *
@@ -832,6 +833,22 @@ export function toolIterationsRefusal(value: unknown, where: string): string | n
 export function resolveToolIterations(perAgent: number | undefined, daemon: number): number {
   const chosen = perAgent ?? daemon;
   return Math.min(TOOL_ITERATIONS_MAX, Math.max(TOOL_ITERATIONS_MIN, chosen));
+}
+
+/**
+ * The most tool round-trips one message to an agent open to everyone may take, whatever its pack or the daemon says.
+ * The daemon's bound on what one stranger's message costs, and no setting: a search, the document it names, a second
+ * search with other words, that document, and a file sent is five, and the sixth is room for one of them refused.
+ * Measured on one small model, three kinds of ask, each twice: a question took one (a search), a file asked for took
+ * two (a search, the file sent), and four where a send was refused and the document read before the second. Six
+ * leaves room for that, and is still a judgment: one model is not every model.
+ */
+export const OPEN_TOOL_ITERATIONS = 6;
+
+/** A turn's tool round-trips for this agent: its own setting or the daemon's, and never past the bound of an open one. */
+export function toolIterationsFor(agent: { config: { access?: AgentAccess; llm: { maxToolIterations?: number } } }, daemon: number): number {
+  const chosen = resolveToolIterations(agent.config.llm.maxToolIterations, daemon);
+  return agent.config.access === "open" ? Math.min(chosen, OPEN_TOOL_ITERATIONS) : chosen;
 }
 
 /**

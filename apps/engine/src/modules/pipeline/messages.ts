@@ -300,7 +300,10 @@ export function emptyTurnMessage(
   toolCalls: number,
   aborted: boolean,
   approvalsRefused: number,
+  /** Whether whoever reads it may have `/status`: never said by an agent open to everyone, whose strangers do not. */
+  status = true,
 ): string {
+  const where = status ? ", or `/status` to see where I am." : ".";
   if (aborted) {
     /**
      * An approval is named only when one was actually refused.
@@ -313,9 +316,9 @@ export function emptyTurnMessage(
      */
     return approvalsRefused > 0
       ? "I ran out of time on that one and stopped part-way, and an approval I was waiting on expired " +
-          "with it. Ask me again and I will pick it up, or `/status` to see where I am."
+          `with it. Ask me again and I will pick it up${where}`
       : "I ran out of time on that one and stopped part-way. It was still working, not stuck on you. " +
-          "Ask me again and I will pick it up, or `/status` to see where I am.";
+          `Ask me again and I will pick it up${where}`;
   }
   if (stopReason === "length") {
     return "I ran out of room before I could answer. Try asking for a smaller piece of it.";
@@ -326,7 +329,7 @@ export function emptyTurnMessage(
       "yours. Ask me what I found and I will summarize it."
     );
   }
-  return "I did not manage to produce an answer for that. Try rephrasing, or `/status` to check my state.";
+  return `I did not manage to produce an answer for that. Try rephrasing${status ? ", or `/status` to check my state." : "."}`;
 }
 
 /**

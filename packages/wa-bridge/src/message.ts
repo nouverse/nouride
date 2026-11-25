@@ -136,6 +136,14 @@ export function mediaKind(message: WAMessage): { kind: string; mimeType: string;
   return null;
 }
 
+/** What a message's file says it weighs, in bytes, where it says. */
+export function mediaSize(message: WAMessage): number | undefined {
+  const content = contentOf(message);
+  const media = content?.imageMessage ?? content?.videoMessage ?? content?.audioMessage ?? content?.documentMessage;
+  const length = Number(media?.fileLength ?? NaN);
+  return Number.isFinite(length) && length >= 0 ? length : undefined;
+}
+
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",

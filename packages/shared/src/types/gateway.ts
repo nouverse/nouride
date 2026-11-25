@@ -166,6 +166,23 @@ export interface Gateway {
   readonly selfId?: string | undefined;
 
   /**
+   * Whether an address is this connection's own account, by any name the platform gives it — where one account has
+   * more than one, as a WhatsApp number has its phone address and a hidden one. Optional: `selfId` answers it where an
+   * account has one name.
+   *
+   * With two numbers in one daemon, a group both are in hands each the other's messages as a person's. Without this the
+   * other number was a stranger: asked to pair, or, let in, answered as a person with no limit on how often.
+   */
+  ownsAddress?(id: string): boolean;
+
+  /**
+   * Whether this connection marks what the daemon itself sent from another of the install's accounts as a bot's
+   * (`senderIsBot`), so that a message it did not mark, from one of those accounts, was typed by a person on that
+   * account's phone. Where it does not, such a message is taken for the daemon's by its address alone.
+   */
+  readonly tellsOwnSends?: boolean;
+
+  /**
    * What the agent is told about writing for this platform — one line of its prompt: how markdown is sent, how wide
    * the screen is, a length the platform splits at. The adapter knows its platform; the engine said it for each
    * platform by name until 0.7.11, and keeps a line only for a connection that says nothing (the dashboard's).

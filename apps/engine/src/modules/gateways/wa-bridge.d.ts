@@ -30,17 +30,19 @@
  */
 
 declare module "nouride-wa-bridge" {
-  /** One protocol line in. Serialised by the caller — `send` awaits the network. */
-  export function handleLine(line: string): Promise<void>;
-  /** Drop the connection without ending the host process. */
-  export function stopBridge(): void;
+  /** One WhatsApp number's bridge, as its host holds it. */
+  export interface Bridge {
+    /** One protocol line in. Serialised by the caller — `send` awaits the network. */
+    handleLine(line: string): Promise<void>;
+    /** Drop the connection without ending the host process. */
+    stop(): void;
+  }
   /**
-   * What the environment carries for a spawned bridge, handed over directly instead.
-   *
-   * In-process, `process.env` is the daemon's own, and every command the agent runs through `exec`
-   * inherits it — a WhatsApp session key one `printenv` away from the model.
+   * A bridge for one number, speaking on the channel given here, with the key its session is encrypted under handed
+   * over directly: `process.env` is the daemon's own, and every command an agent runs through `exec` inherits it — a
+   * WhatsApp session key one `printenv` away from the model.
    */
-  export function configure(input: { sessionDir?: string; encryptionKey: string }): void;
+  export function openBridge(input: { name: string; sessionDir?: string; encryptionKey: string; io: import("nouride-wa-bridge/io").BridgeIo }): Bridge;
 }
 
 declare module "nouride-wa-bridge/io" {
@@ -48,9 +50,7 @@ declare module "nouride-wa-bridge/io" {
     write(line: string): void;
     exit(code: number): void;
   }
-  /** Point the bridge somewhere other than stdio. Returns the function that restores the default. */
-  export function attach(io: BridgeIo): () => void;
-  /** Thrown by the bridge's `exit` in-process, so a deliberate stop is not read as a crash. */
+  /** Thrown after a bridge's `exit`, so a deliberate stop is not read as a crash. */
   export class BridgeExit extends Error {
     constructor(code: number);
     readonly code: number;

@@ -9,7 +9,7 @@
  */
 
 import { agentCommandsHaveOwnUsers } from "@nouride/runtime";
-import { createLogger, imageMode, type ToolContext } from "@nouride/shared";
+import { createLogger, imageMode, isOpenAgent, type ToolContext } from "@nouride/shared";
 import type { ChatAttachment } from "@/modules/attachments/chat-attachments.store.ts";
 import { readImage as askVisionModel } from "@/modules/attachments/vision.ts";
 import type { AttachmentReadOptions, OpenedAttachment } from "@/modules/tools/builtins/attachment.ts";
@@ -58,6 +58,7 @@ export function attachmentReadOptions(params: {
   };
 
   return {
+    hidesPaths: (ctx) => isOpenAgent(deps.registry.get(ctx.agentId)),
     // A derived ref opens the video it was taken from — the notice lists frames by their own refs,
     // and a model asking for one is asking to look at that video again.
     find: (ctx, ref) => index.find(ref, scope(ctx)) ?? (DERIVED.test(ref) ? index.find(ref.replace(DERIVED, "$1"), scope(ctx)) : null),

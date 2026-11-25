@@ -10,7 +10,7 @@
  * `claim` are after routing — see the notes on each.
  */
 
-import { createLogger, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
+import { createLogger, isOpenAgent, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
 import type { AccessMode } from "@nouride/shared";
 import type { DropReason } from "@nouride/queue";
 import { pairMessage } from "@/modules/access/access.store.ts";
@@ -35,6 +35,8 @@ const OWN_COPY_FIRST_MS = 750;
 export class Admission {
   /** Sender → recent message timestamps, for the per-sender rate limit (§10.1 SPEC). */
   private readonly recentBySender = new Map<string, number[]>();
+  /** Sender → when they were last told to slow down: once a minute, not once a message (`tellsSlowDown`). */
+  private readonly toldSlowDown = new Map<string, number>();
   /** Chat → when it was last told a message of theirs was dropped. See `noticeDropped`. */
   private readonly lastDropNotice = new Map<string, number>();
   /**
@@ -113,7 +115,7 @@ export class Admission {
    *
    * Before routing, because a stranger never reaches routing — but the same evidence routing reads.
    */
-  private addressedHere(envelope: MessageEnvelope): boolean {
+  addressedHere(envelope: MessageEnvelope): boolean {
     if (envelope.chatType === "dm" || envelope.mentionsSelf) return true;
     const owner = this.deps.config.gateways.find((gateway) => gateway.id === envelope.gatewayId)?.agent;
     const own = owner ? this.deps.registry.get(owner) : undefined;
@@ -125,14 +127,39 @@ export class Admission {
 
   /**
    * The access mode for a message on this connection: its owner's `[agent] access` when that says
-   * `pair` or `allowlist`, the daemon's otherwise. The owner because admission runs before routing and
+   * `pair`, `allowlist` or `open`, the daemon's otherwise. The owner because admission runs before routing and
    * the connection's configured agent is the only one known here — the one whose Access settings a
    * pairing request answers to. A connection with no owner, or one whose owner follows, takes the global.
+   * So `open` is an agent's on the connections it owns, and on no connection several agents share.
    */
   private modeFor(gatewayId: string, global: AccessMode): AccessMode {
+    const owner = this.ownerOf(gatewayId);
+    const own = owner?.config.access;
+    // Switched off, an open agent lets nobody new in: its own switch is what an admin reaches for when its bot is
+    // abused, the connection stays up all the same, and a pack that is off is still the connection's owner.
+    if (own === "open" && !owner?.config.enabled) return "allowlist";
+    return own === "pair" || own === "allowlist" || own === "open" ? own : global;
+  }
+
+  private ownerOf(gatewayId: string): LoadedAgent | undefined {
     const owner = this.deps.config.gateways.find((gateway) => gateway.id === gatewayId)?.agent;
-    const own = owner ? this.deps.registry.get(owner)?.config.access : undefined;
-    return own === "pair" || own === "allowlist" ? own : global;
+    return owner ? this.deps.registry.get(owner) : undefined;
+  }
+
+  /**
+   * The open agent this sender is let in for, when its being open is the only reason they are: no name on a list, no
+   * pairing, no sign-in. Nothing for a sender let in on their own standing, who has here what they have anywhere.
+   *
+   * Asked after `admit`, by what must hold for a stranger and for nobody else: whose their message is (`inbound.ts`).
+   * A bot's message is never one: an agent's own words are routed by the rules between agents, where a reply that tags
+   * nobody ends the exchange.
+   */
+  strangerOf(envelope: MessageEnvelope): LoadedAgent | undefined {
+    // Nor is the daemon's own word: a job's result or a turn taken up again arrives on this connection for the agent it
+    // names, and taken for a stranger's it was handed to the open agent, with what the job had found.
+    if (envelope.senderIsBot || isSystemEvent(envelope)) return undefined;
+    const owner = this.ownerOf(envelope.gatewayId);
+    return isOpenAgent(owner) && !this.admitsByName(envelope) ? owner : undefined;
   }
 
   /**
@@ -180,9 +207,10 @@ export class Admission {
       senderId: envelope.senderId,
       ...(envelope.senderName ? { senderName: envelope.senderName } : {}),
       chatId: envelope.chatId,
+      mode,
       // A stranger is paired only by the connection they spoke to. The rest of a room's connections are
       // handed the same message and answer it as the allowlist would: no code, no request, no alert.
-      mode: mode === "pair" && !this.addressedHere(envelope) ? "allowlist" : mode,
+      ...(mode === "pair" && !this.addressedHere(envelope) ? { quiet: true } : {}),
       staticAllowlist,
       ...(envelope.senderAlso ? { alsoKnownAs: envelope.senderAlso } : {}),
     });
@@ -255,6 +283,20 @@ export class Admission {
       }
     }
 
+    return true;
+  }
+
+  /**
+   * Whether a sender past the per-minute limit is told so this time: once a minute. Told for every message, a sender
+   * who kept writing had a reply, and a record of it, for each one, where an agent open to everyone answers anybody, and
+   * a WhatsApp number that answers many it does not know may be closed for it.
+   */
+  tellsSlowDown(envelope: MessageEnvelope): boolean {
+    const now = Date.now();
+    for (const [key, at] of this.toldSlowDown) if (now - at >= 60_000) this.toldSlowDown.delete(key);
+    const key = `${envelope.gatewayId}:${envelope.senderId}`;
+    if (this.toldSlowDown.has(key)) return false;
+    this.toldSlowDown.set(key, now);
     return true;
   }
 

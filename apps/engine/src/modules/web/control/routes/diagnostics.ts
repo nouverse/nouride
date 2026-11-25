@@ -12,6 +12,7 @@ import { groupAdvisories, readAdvisories } from "@/boot/advisories.ts";
 import type { AdvisoryLine, AgentSummary, RetentionScope, StatusPayload } from "@nouride/wire";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
+import { openOf } from "../agent-open.ts";
 import { contextWindowFor } from "@/modules/llm/executor/context-window.ts";
 import { helperTrouble } from "@/modules/llm/helper-trouble.ts";
 import { cachedShare, cacheWarnings, usdPerMillion } from "@/modules/llm/cache-routes.ts";
@@ -196,6 +197,7 @@ export function registerDiagnosticRoutes(control: ControlApp, deps: ControlDeps)
         approvals: agent.config.approvals ?? "per-person",
         // The same for whether its connections take new senders: `follow` defers to `[security.access]`.
         access: agent.config.access ?? "follow",
+        open: openOf(deps, agent),
         // Whether it installs the programs every agent runs, as the orchestrator (0.8.0). On unless off; counts only there.
         sharedTools: agent.config.sharedTools !== false,
         // The second look (0.8.0): this pack's own `model_guard`, null when it follows the daemon's — and the daemon's.

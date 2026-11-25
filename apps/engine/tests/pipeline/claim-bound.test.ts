@@ -54,6 +54,21 @@ describe("the rate-limit table", () => {
   });
 });
 
+describe("telling a sender to slow down", () => {
+  afterEach(() => setSystemTime());
+
+  test("once a minute, not once a message; another sender is told their own", () => {
+    const admission = new Admission({ config: { security: { rateLimit: { messagesPerMinute: 1 } } } } as unknown as PipelineDeps);
+    const from = (senderId: string) => ({ ...message("m"), senderId }) as MessageEnvelope;
+    setSystemTime(new Date("2026-10-17T10:00:00Z"));
+    expect([admission.tellsSlowDown(from("555")), admission.tellsSlowDown(from("555")), admission.tellsSlowDown(from("777"))]).toEqual([true, false, true]);
+    setSystemTime(new Date("2026-10-17T10:00:59Z"));
+    expect(admission.tellsSlowDown(from("555"))).toBe(false);
+    setSystemTime(new Date("2026-10-17T10:01:00.500Z"));
+    expect(admission.tellsSlowDown(from("555"))).toBe(true);
+  });
+});
+
 /**
  * The daemon's own events — a mission's turn, a job's end, an answered approval, a restart's resume — are all
  * `nouride:system` on one connection (0.8.1). Counted as a sender, a few at once shared one budget; checked against a

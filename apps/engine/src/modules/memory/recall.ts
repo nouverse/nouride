@@ -104,6 +104,8 @@ export function recallFor(input: {
   recall?: boolean;
   /** `[memory] private_in_groups`; absent is on, the default. */
   privateInGroups?: boolean;
+  /** Other chats' talk not cut yet (`live.ts`), named first among what waits: read only where this chat's recall is on. */
+  elsewhere?: () => Recall["waiting"];
 }): Recall {
   const { index, audience } = input;
   const today = localTime(input.now ?? Date.now(), input.timeZone).day;
@@ -173,7 +175,7 @@ export function recallFor(input: {
 
   const waiting =
     chatOn && input.recent > 0
-      ? index
+      ? (input.elsewhere?.() ?? []).concat(index
           .episodes({ scope: scopeOf(audience), statuses: ["raw"] }, input.recent)
           .filter((episode) => episode.preview)
           .map((episode) => ({
@@ -183,7 +185,7 @@ export function recallFor(input: {
             agents: episode.agents,
             preview: episode.preview!,
             theirs: episode.agents.length > 0 && !episode.agents.includes(input.agentId),
-          }))
+          })))
       : [];
 
   // `facts` are those of the people here whose facts go into prompts at all, so a speaker left out of them, or one the

@@ -28,7 +28,7 @@ import {
   createLogger,
   messageText,
   oneLine,
-  resolveToolIterations,
+  toolIterationsFor,
   type ChatMessage,
   type AudioRefPart,
   type ImageRefPart,
@@ -149,10 +149,8 @@ export class TurnExecutor {
        * number until a restart nobody knew to do.
        */
       const keepCleared = this.deps.spill?.keeperFor({ agentId: agent.config.id, sessionId: req.sessionId });
-      const maxIterations = resolveToolIterations(
-        req.agent.config.llm.maxToolIterations,
-        this.deps.llm.limits.maxToolIterations,
-      );
+      // An agent open to everyone is held to the daemon's own bound on one message, whatever its pack says.
+      const maxIterations = toolIterationsFor(req.agent, this.deps.llm.limits.maxToolIterations);
       /** What each model request carried, said just before it is made (`context-line.ts`) — at the scale last measured. */
       const lineOf = requestLines();
       const sayRequest = (messages: ChatMessage[]): void => {

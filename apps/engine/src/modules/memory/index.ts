@@ -37,10 +37,12 @@ import { archiveSize } from "./maintain.ts";
 import { identityOf, personOf } from "./people.ts";
 import { noteOwnFact, type FactReach, type OwnFactChange } from "./own-fact.ts";
 export type { FactReach } from "./own-fact.ts";
+import { nobody, PUBLIC_KEEPS_NOTHING, publicAudience, publicRecall, withoutPublic } from "./public.ts";
 import { recallFor, type Recall } from "./recall.ts";
 import { cutActive, cutChat, runPass, type ActivitySource, type PassReport, type RunDeps } from "./run.ts";
+import { asWaiting, LIVE_ID, liveEpisodes, liveHits } from "./live.ts";
 import { saveConversation, type SaveRequest } from "./saved.ts";
-import { searchMemory, type SearchHit } from "./search.ts";
+import { LIMIT_DEFAULT as SEARCH_LIMIT, searchMemory, type SearchHit } from "./search.ts";
 import { catchUp, parseVectorKey, rankingModel, rankingVectors, vectorKey, type CatchUpReport, type Embedder, type Semantic } from "./semantic.ts";
 import { vaultAt } from "./vault.ts";
 import { idsOf } from "@/modules/people/match.ts";
@@ -111,6 +113,8 @@ export interface MemoryDeps {
   source: ActivitySource;
   /** Who has been speaking in a group lately, by sender id — whose profiles its prompt carries. */
   speakersIn?: (gatewayId: string, chatId: string) => string[];
+  /** Whether an agent is open to everyone: its reads are then made as nobody, whoever is asking (`public.ts`). */
+  publicAgent?: (agentId: string) => boolean;
   vectors?: MemoryVectorPort;
   embed?: (semantic: MemorySemanticSection, texts: string[]) => Promise<number[][] | null>;
   now?: () => number;
@@ -123,7 +127,8 @@ export function createMemory(deps: MemoryDeps) {
   const vault = vaultAt(config.memory.dir);
   const now = deps.now ?? Date.now;
   const timeZone = () => config.daemon.timezone;
-  const runDeps = (): RunDeps => ({ vault, index, analytics, state, source: deps.source, config, timeZone: timeZone(), now });
+  // What is cut into episodes and filed: every chat's log but an open agent's own exchanges (`public.ts`).
+  const runDeps = (): RunDeps => ({ vault, index, analytics, state, source: withoutPublic(deps.source, (agentId) => deps.publicAgent?.(agentId) === true), config, timeZone: timeZone(), now });
 
   /** The catch-up in flight, if one is: the pass and a person pressing Embed now both start one. */
   let catchingUp: Promise<CatchUpReport | null> | null = null;
@@ -173,8 +178,22 @@ export function createMemory(deps: MemoryDeps) {
     return current && deps.vectors ? { vectors: deps.vectors, embedder: current, embedderFor } : null;
   }
 
+  const isPublic = (speaker: Pick<Speaker, "agentId">) => deps.publicAgent?.(speaker.agentId) === true;
+  /** Other chats' talk since their last cut that this speaker may see (`live.ts`): none for an agent open to everyone. */
+  const live = (speaker: Speaker): Episode[] => {
+    if (isPublic(speaker)) return [];
+    try {
+      return liveEpisodes({ source: runDeps().source, index, vault, people: config.people, timeZone: timeZone() }, situate(speaker).audience, now(), memoryChatKey(speaker.gatewayId, speaker.chatId));
+    } catch (err) {
+      // A turn answers with what memory holds: what other chats said is a part of recall, never the whole of it.
+      log.warn("other chats' talk could not be read", { error: String(err) });
+      return [];
+    }
+  };
+
   /** Who is asking, and what the chat they ask from may see. */
   function situate(speaker: Speaker): { identity: string; person: { key: string; name: string } | null; audience: Audience } {
+    if (isPublic(speaker)) return { identity: nobody(speaker.agentId), person: null, audience: publicAudience(speaker.agentId) };
     const sender = { gatewayId: speaker.gatewayId, senderId: speaker.senderId };
     const identity = identityOf(config.people, sender);
     const entry = personOf(config.people, sender);
@@ -242,8 +261,13 @@ export function createMemory(deps: MemoryDeps) {
     // ─── in a chat ───
 
     recall(speaker: Speaker): Recall {
+      // What every chat is given whoever asks (the shared knowledge) is a household's too: an open agent gets the names
+      // of the collections it may search, and nothing else.
+      if (isPublic(speaker)) return publicRecall(knowledge.usable(who(speaker)).map((collection) => ({ name: collection.settings.name, description: collection.settings.description })));
       const semantic = semanticNow();
-      const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, privateInGroups: config.memory.privateInGroups, timeZone: timeZone(), now: now(), ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
+      // What other chats it may see said since they were last cut (`live.ts`), under recall's own switches.
+      const elsewhere = () => live(speaker).map((episode) => asWaiting(episode, speaker.agentId, timeZone()));
+      const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, privateInGroups: config.memory.privateInGroups, timeZone: timeZone(), now: now(), elsewhere, ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
       // The collections it may search here, by name: never their documents. Those that went with the one speaking are
       // said with what else is theirs, apart from what the group's prompt caches.
       const named = (collection: Collection) => ({ name: collection.settings.name, description: collection.settings.description, ...(collection.settings.about.length ? { about: namesOf(collection.settings.about) } : {}) });
@@ -262,7 +286,10 @@ export function createMemory(deps: MemoryDeps) {
         { index, people: config.people, now, timeZone: timeZone(), ...(semantic ? { semantic } : {}), ...(deps.knowledge ? { knowledge: deps.knowledge.store } : {}) },
         { audience: situate(speaker).audience, ...asked, knowledge: scopes, brings: config.memory.privateInGroups },
       );
-      return kind === "knowledge" ? hits.filter((hit) => hit.kind === "section") : hits;
+      // An open agent's search is of the collections alone, whatever else the index would have matched.
+      if (kind === "knowledge" || isPublic(speaker)) return hits.filter((hit) => hit.kind === "section");
+      // Ahead of the index's: what other chats said since their last cut, which the index does not hold yet.
+      return [...liveHits(live(speaker), asked), ...hits].slice(0, Math.max(hits.length, asked.limit ?? SEARCH_LIMIT));
     },
 
     /** A knowledge section, or (`#all`) its whole document, if this agent may search its collection here. */
@@ -284,7 +311,7 @@ export function createMemory(deps: MemoryDeps) {
 
     /** One episode, if this chat may see it — its transcript while kept, else its summary. */
     async read(speaker: Speaker, id: string): Promise<Episode | { refused: string }> {
-      const episode = await readEpisode(vault, id);
+      const episode = id.startsWith(LIVE_ID) ? live(speaker).find((one) => one.id === id) : await readEpisode(vault, id);
       if (!episode || !canSeeEpisode(episode, situate(speaker).audience)) return { refused: `no conversation "${id}" that this chat may see` };
       return episode;
     },
@@ -310,6 +337,7 @@ export function createMemory(deps: MemoryDeps) {
 
     /** Keep, correct or drop something about the speaker, now — `memory_write` with about=person (`own-fact.ts`). */
     async noteAboutSpeaker(speaker: Speaker, change: OwnFactChange): Promise<{ status: "written" | "unchanged"; reach: FactReach } | { refused: string }> {
+      if (isPublic(speaker)) return { refused: PUBLIC_KEEPS_NOTHING };
       return await noteOwnFact({ vault, index, state, now }, { ...situate(speaker), brings: config.memory.privateInGroups }, change);
     },
 
@@ -387,10 +415,17 @@ export function createMemory(deps: MemoryDeps) {
     knowledge: {
       ...knowledge.surface,
       usable: (speaker: Speaker): Collection[] => knowledge.usable(who(speaker)),
+      /**
+       * What an agent would answer strangers from were it open to everyone, by name: read as its turns then read
+       * (`publicAudience`), whether or not it is open now. The Open form lists them: a collection already for everyone,
+       * with no agents named, became the public's the moment the first agent was opened, and nothing said so.
+       */
+      openTo: (agentId: string): string[] => knowledge.usable({ agentId, audience: publicAudience(agentId) }).map((collection) => collection.settings.name),
       /** A kept document's own file, for `send_file` to send where it is asked from: only what this chat may read. */
       fileOf: (speaker: Speaker, item: string) => knowledge.fileOf(who(speaker), item),
       /** A document kept from this chat (`memory_write` about knowledge): saved, or waiting for an admin's yes. */
       keep: (speaker: Speaker, request: Omit<KeepRequest, "from"> & { name?: string; where: string }): Promise<KeepResult> => {
+        if (isPublic(speaker)) return Promise.resolve({ refused: PUBLIC_KEEPS_NOTHING });
         // Who, as People knows them: in a one-to-one chat a platform's display name is not given to a turn (it is not
         // verified), and the admin asked to approve read "Someone".
         const { name, where, ...rest } = request;

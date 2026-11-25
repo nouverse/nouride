@@ -21,11 +21,15 @@
 import {
   join,
   openDatabase,
+  parseToml,
   readTextFileSync,
+  renamePath,
   statFile,
 } from "@nouride/runtime";
 import { plural } from "@nouride/shared";
+import type { GlobalConfig } from "@nouride/shared";
 import { configProblem } from "@/modules/config/global/index.ts";
+import { ownLoginDir } from "@/modules/config/global/paths.ts";
 import { editDaemonConfig, editPackFile } from "@/modules/config/config-file.ts";
 import {
   applyRename,
@@ -40,6 +44,40 @@ import { UPGRADE_FLOOR } from "@/commons/upgrade-floor.ts";
 import { BOLD, DIM, GREEN, RED, RESET, YELLOW, emit, fail, say, usageError, hasFlag } from "@nouride/cli-kit";
 import { loadConfig } from "@/cli/load-config.ts";
 import { runningDaemon } from "@/cli/daemon-lock.ts";
+
+/**
+ * A WhatsApp connection's login, where it is in the folder named for the connection: it goes with the name, or the
+ * renamed connection would look in a new, empty folder and ask for a scan again. Null where its table names a
+ * `session_dir` itself, which the rename leaves as it is, and where no login is kept there yet.
+ */
+function loginToMove(config: GlobalConfig, file: string, from: string, to: string): { from: string; to: string } | null {
+  const [platform, name] = from.split(":");
+  const [toPlatform, toName] = to.split(":");
+  if (platform !== "whatsapp" || toPlatform !== "whatsapp" || !name || !toName) return null;
+  let named: unknown;
+  try {
+    named = parseToml<{ gateways?: { whatsapp?: Record<string, { session_dir?: unknown }> } }>(file).gateways?.whatsapp?.[name]?.session_dir;
+  } catch {
+    return null;
+  }
+  const kept = ownLoginDir(config.daemon.dataDir, name);
+  if (named !== undefined || statFile(kept)?.isDirectory !== true) return null;
+  return { from: kept, to: ownLoginDir(config.daemon.dataDir, toName) };
+}
+
+/**
+ * The login moved to the new name's folder, with the config's table and never ahead of it: a table still on the old
+ * name reads the old folder. Answers what to say when it was not moved, or null.
+ */
+function moveLogin(login: { from: string; to: string }, configWritten: boolean): string | null {
+  try {
+    if (!configWritten) throw new Error("left where it is, since config.toml still names the old connection");
+    renamePath(login.from, login.to);
+    return null;
+  } catch (err) {
+    return `the WhatsApp login in ${login.from}: ${err instanceof Error ? err.message : String(err)} (move it to ${login.to} once the config names the new connection, or the number asks for a scan again)`;
+  }
+}
 
 export async function gatewayRename(args: string[]): Promise<void> {
   const [from, to] = args.filter((arg) => !arg.startsWith("--"));
@@ -116,7 +154,14 @@ export async function gatewayRename(args: string[]): Promise<void> {
     throw err;
   }
 
+  const login = loginToMove(config, readTextFileSync(source), from, to);
+  if (login && statFile(login.to)) {
+    db.close();
+    fail(`Nothing was renamed: ${plan.from}'s WhatsApp login would move to ${login.to}, and something is already there.`, "Move or remove that folder first: it is not a connection's in this config.");
+  }
+
   report(plan, source, packs.packs, memory, vault.root);
+  if (login) say(`${DIM}  its WhatsApp login moves with it: ${login.from} → ${login.to}${RESET}`);
   // What the lines are printed from — not `configAfter`, the whole rewritten file.
   const answer = {
     from: plan.from,
@@ -128,6 +173,7 @@ export async function gatewayRename(args: string[]): Promise<void> {
     configLines: plan.configLines,
     packs: packs.packs.map((pack) => ({ id: pack.id, file: pack.file, lines: pack.lines })),
     vault: { dir: vault.root, files: memory.counts },
+    ...(login ? { login } : {}),
   };
   emit({ ...answer, applied: false });
 
@@ -190,6 +236,8 @@ export async function gatewayRename(args: string[]): Promise<void> {
     });
     if (!written.ok) unwritten.push(`${pack.file}: ${written.error}`);
   }
+  const left = login ? moveLogin(login, saved.ok) : null;
+  if (left) unwritten.push(left);
   try {
     await applyVaultRename(memory);
   } catch (err) {
@@ -211,9 +259,9 @@ export async function gatewayRename(args: string[]): Promise<void> {
   if (memory.files.length > 0) say(`${DIM}  ${memory.files.length} memory ${plural(memory.files.length, "file")} updated${RESET}`);
   say(`${DIM}  Start it again: systemctl start nouride${RESET}`);
   if (plan.from.startsWith("whatsapp:")) {
-    // Named because the answer is reassuring and not obvious: the pairing lives in a directory named
-    // by `session_dir`, not by the instance id, so the link survives.
-    say(`${DIM}  The WhatsApp pairing is keyed by session_dir, not by the id, so no re-link is needed.${RESET}`);
+    // Named because the answer is reassuring and not obvious: the pairing is a folder, the one `session_dir` names or
+    // the one named for the connection, which went with it above. Either way the link survives.
+    say(`${DIM}  ${login ? `Its WhatsApp login moved with it (${login.to})` : "The WhatsApp pairing is keyed by session_dir, not by the id"}, so no re-link is needed.${RESET}`);
   }
 }
 

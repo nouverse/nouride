@@ -98,6 +98,8 @@ export async function household(
     source?: (logs: ActivitySource) => ActivitySource;
     /** The knowledge base's wait for room on the box, before each batch of embeddings (0.8.20). */
     knowledgeRoom?: () => Promise<unknown>;
+    /** The agents that are open to everyone: memory reads for them as nobody. */
+    publicAgent?: (agentId: string) => boolean;
   } = {},
 ): Promise<Household> {
   const dir = tempDir("memory");
@@ -146,6 +148,7 @@ export async function household(
     speakersIn: (gatewayId, chatId) => [...new Set(messages.filter((m) => m.gatewayId === gatewayId && m.chatId === chatId).map((m) => m.senderId))],
     ...(options.embed ? { embed: async (semantic: { provider: string; model: string; dimensions: number }, texts: string[]) => options.embed!(texts, semantic) } : {}),
     now: () => clock.now,
+    ...(options.publicAgent ? { publicAgent: options.publicAgent } : {}),
     knowledge: { root: join(dir, "knowledge"), store: new KnowledgeStore(db), admins: () => ["gading"], ...(options.knowledgeRoom ? { room: { wait: options.knowledgeRoom } } : {}) },
   });
 

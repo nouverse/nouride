@@ -52,7 +52,7 @@ export interface StepAsksDeps {
   store: Pick<CronPort, "get" | "waitingRun">;
   notifier: Pick<Notifier, "ask" | "settle">;
   /** The connection an agent speaks on in a chat: where its card goes, and so where a press on it comes from. */
-  voice: (agentId: string, gatewayId: string) => string;
+  voice: (agentId: string, gatewayId: string, chatId?: string) => string;
   /** An admin by People: in a room, who besides the person who turned the job on may answer. */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
   /** The run taken up again with the answer, or why not: the scheduler's. */
@@ -75,7 +75,7 @@ export class StepAsks {
   async ask(job: Job, runId: string, step: Extract<JobStep, { kind: "approval" }>, shown: string, until: number): Promise<RunState["card"] | undefined> {
     if (job.delivery.mode === "none") return undefined;
     const target = deliveryTarget(job);
-    const where = { gatewayId: this.deps.voice(job.agentId, target.gatewayId), chatId: target.chatId };
+    const where = { gatewayId: this.deps.voice(job.agentId, target.gatewayId, target.chatId), chatId: target.chatId };
     const sent = await this.deps.notifier.ask(where, (buttons) => askCard(job, step.ask, shown, this.deps.when(until), buttons), askButtons(runId));
     if (!sent) {
       log.warn("a step's question was not delivered: it is answered from the dashboard", { job: job.id, run: runId, gateway_id: where.gatewayId });

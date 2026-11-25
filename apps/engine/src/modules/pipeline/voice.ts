@@ -76,7 +76,7 @@ export class Voice {
    * turn a wrong name into a message that never arrives.
    */
   voiceFor(agentId: string, envelope: MessageEnvelope): { id: string; gateway: Gateway } {
-    const id = this.voiceGatewayId(agentId, envelope.gatewayId);
+    const id = this.voiceGatewayId(agentId, envelope.gatewayId, envelope.chatId);
     return { id, gateway: this.deps.gateways.get(id)! };
   }
 
@@ -93,7 +93,7 @@ export class Voice {
    * config says which channels a bot is in — so a send may still fail, and each caller decides what to
    * do about that.
    */
-  voiceGatewayId(agentId: string, inboundGatewayId: string): string {
+  voiceGatewayId(agentId: string, inboundGatewayId: string, chatId?: string): string {
     const inbound = this.deps.config.gateways.find((g) => g.id === inboundGatewayId);
     if (!inbound) return inboundGatewayId;
 
@@ -104,6 +104,9 @@ export class Voice {
 
     const gateway = this.deps.gateways.get(owned.id);
     if (!gateway || gateway.status !== "connected") return inboundGatewayId;
+    // Not into a room its own account is known not to be in (`Gateway.sees`): a WhatsApp send there is taken and lost,
+    // with no refusal to fall back on.
+    if (chatId !== undefined && gateway.sees?.(chatId) === false) return inboundGatewayId;
     return owned.id;
   }
 
@@ -134,7 +137,7 @@ export class Voice {
    * account id catches exactly that race, for the one-bot-per-agent case.
    */
   wroteInbound(envelope: MessageEnvelope): { agentId: string; said: boolean } | undefined {
-    const agentId = this.outbound.authorOf(envelope.gateway, envelope.chatId, envelope.id) ?? (envelope.senderIsBot ? this.agentForSender(envelope.gateway, envelope.senderId) : undefined);
+    const agentId = this.outbound.authorOf(envelope.gateway, envelope.chatId, envelope.id) ?? (envelope.senderIsBot ? this.agentForSender(envelope.gateway, envelope.senderId, envelope.senderAlso) : undefined);
     return agentId ? { agentId, said: this.outbound.isSaid(envelope.gateway, envelope.chatId, envelope.id, agentId, Date.now()) } : undefined;
   }
 
@@ -155,10 +158,18 @@ export class Voice {
    * message-id registry to say *which* of them wrote it, and this is never consulted in place of
    * that, only when it comes back empty.
    */
-  agentForSender(platform: GatewayName, senderId: string): string | undefined {
+  agentForSender(platform: GatewayName, senderId: string, also: readonly string[] = []): string | undefined {
     for (const instance of this.deps.config.gateways) {
-      if (!instance.enabled || instance.platform !== platform || !instance.agent) continue;
-      if (this.deps.gateways.get(instance.id)?.selfId === senderId) return instance.agent;
+      if (!instance.enabled || instance.platform !== platform) continue;
+      const gateway = this.deps.gateways.get(instance.id);
+      // By any of the sender's addresses, and any of the account's: a WhatsApp number is its phone address and a hidden one.
+      if (![senderId, ...also].some((id) => gateway?.selfId === id || gateway?.ownsAddress?.(id) === true)) continue;
+      // A connection with no agent of its own is answered by the one that holds the install, as the router sends it: its
+      // words are that agent's. Skipped, a number upgraded with no agent named was a person to the install's other one.
+      // Only where the connection tells the daemon's own sends apart (`tellsOwnSends`): a bot several agents speak through
+      // is told which by the record of what was sent, and before that record exists its message stays a bot nobody named.
+      const agent = instance.agent ?? (gateway?.tellsOwnSends === true ? this.deps.config.daemon.orchestrator : undefined);
+      if (agent) return agent;
     }
     return undefined;
   }
@@ -321,7 +332,7 @@ export class Voice {
 
     // The gateway the reply actually went out on — may differ from the inbound one when the agent
     // has its own connection.
-    const outboundGatewayId = this.voiceGatewayId(fromAgent, envelope.gatewayId);
+    const outboundGatewayId = this.voiceGatewayId(fromAgent, envelope.gatewayId, envelope.chatId);
 
     for (const id of ids) {
       // Keyed by the connection it actually went out on, not the one that triggered it: a human

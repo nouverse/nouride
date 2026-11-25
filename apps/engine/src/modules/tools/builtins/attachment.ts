@@ -38,6 +38,11 @@ const log = createLogger("tools.attachment");
 export type OpenedAttachment = { bytes: Uint8Array; path?: string } | { error: string };
 
 export interface AttachmentReadOptions {
+  /**
+   * Whether where a file is on disk is kept out of what this tool answers: true for an agent open to everyone, whose
+   * words go to whoever asks and which holds no tool that opens a path.
+   */
+  hidesPaths?: (ctx: ToolContext) => boolean;
   /** One file, already scoped to the caller's conversation. */
   find: (ctx: ToolContext, ref: string) => ChatAttachment | null;
   /** This conversation's files, newest first. */
@@ -107,6 +112,12 @@ const LIST_LIMIT = 20;
  * whole thing.
  */
 const TEXT_LIMIT = 20_000;
+
+/** Where a file this tool cannot turn into anything is, said to an agent that may be told and has a tool for it. */
+function onDisk(path: string | undefined, hidden: boolean): string {
+  if (hidden) return "";
+  return path ? ` It is on disk at \`${path}\`. Try \`exec\` if a program on this host can handle it.` : ` No local copy is available.`;
+}
 
 export function createAttachmentReadTool(options: AttachmentReadOptions): Tool {
   return {
@@ -320,9 +331,7 @@ export function createAttachmentReadTool(options: AttachmentReadOptions): Tool {
       return {
         content:
           `${describeFile(file)} is not something this tool can read (${file.mimeType}).` +
-          (opened.path
-            ? ` It is on disk at \`${opened.path}\`. Try \`exec\` if a program on this host can handle it.`
-            : ` No local copy is available.`) +
+          onDisk(opened.path, options.hidesPaths?.(ctx) === true) +
           (watchedLines.length > 0 ? `\n${watchedLines.join("\n").trim()}` : ""),
         isError: false,
       };

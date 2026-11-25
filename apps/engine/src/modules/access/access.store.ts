@@ -143,6 +143,12 @@ export class AccessStore {
     senderName?: string | undefined;
     chatId: string;
     mode: "open" | "allowlist" | "pair";
+    /**
+     * `pair`, asked by a connection the message was not for: no code is offered and no request kept, as on the
+     * allowlist. A platform hands a room's message to every bot in it, and a stranger is paired only by the one they
+     * spoke to. Its own word rather than `allowlist`, which is also how "is this sender let in by name" is asked.
+     */
+    quiet?: boolean;
     staticAllowlist: readonly string[];
     /**
      * The sender's other ids on this connection (`MessageEnvelope.senderAlso`): each is asked about as the sender
@@ -182,6 +188,7 @@ export class AccessStore {
       // Exactly what was asked for: not on the list, no reply at all.
       return { action: "ignore", reason: "not on the configured allowlist" };
     }
+    if (params.quiet) return { action: "ignore", reason: "a stranger, on a connection their message was not for: no code is offered here" };
 
     // Pair mode, unknown sender. Reuse a live code so someone who writes three times gets one code
     // rather than three pending requests the operator has to sort out.

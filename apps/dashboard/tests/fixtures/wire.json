@@ -1387,6 +1387,15 @@
         ],
         "approvals": "per-person",
         "access": "follow",
+        "open": {
+          "never": null,
+          "notes": false,
+          "connections": [],
+          "collections": [
+            "House"
+          ],
+          "limits": null
+        },
         "sharedTools": true,
         "secondLook": {
           "own": null,

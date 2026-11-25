@@ -17,7 +17,7 @@
 import { createLogger, type Gateway, type MessageEnvelope, type TakenSecret } from "@nouride/shared";
 import { parseCommand } from "@/modules/hooks/registry.ts";
 import type { ArrivalParts } from "./arrival.ts";
-import { tellTaken } from "./chat-secrets.ts";
+import { strangerTold, tellTaken } from "./chat-secrets.ts";
 import { recentEdit, reviseWaiting, sameWords } from "./edit-rules.ts";
 import { redrawSteer, steerOnArrival } from "./steer-accept.ts";
 
@@ -63,7 +63,7 @@ export function arriveEdit(parts: ArrivalParts, gateway: Gateway, envelope: Mess
   parts.admission.resetJobWakeChain(envelope.gatewayId, envelope.chatId);
   if (!parts.admission.admit(envelope)) return;
   // What `arrive` took out of the edit before any of that, said to the person now they are let in (`chat-secrets.ts`).
-  tellTaken(parts.deps, gateway, envelope, taken);
+  tellTaken(parts.deps, gateway, envelope, taken, strangerTold(parts.admission, envelope));
   const isCommand = (text: string) => parts.hooks.has(parseCommand(text)?.command ?? "");
   // Words, never a command: `/approve` written into an old message must not answer what is waiting now.
   if (isCommand(envelope.text)) return void log.info("an edit that now reads as a command, not run", about);
@@ -95,6 +95,6 @@ export function arriveEdit(parts: ArrivalParts, gateway: Gateway, envelope: Mess
   log.info(answering ? "an edit of a message a turn is at work on" : "an edit of a message already answered", about);
   // A one-to-one chat's turn at work reads it at its next step, as it would a message sent now; anywhere else it is
   // routed as a message, and the agent it is for reads it in its turn or answers it in one of its own (`inbound.ts`).
-  if (parts.deps.config.queue.steer && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
+  if (parts.deps.config.queue.steer && !parts.admission.strangerOf(envelope) && steerOnArrival(parts.turnContext, envelope, { isCommand, gateway })) return;
   parts.batcher.accept(envelope);
 }

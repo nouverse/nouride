@@ -19,6 +19,7 @@ import {
   safeFilename,
 } from "@/modules/attachments/store.ts";
 import { tempDir } from "../helpers.ts";
+import { sleep } from "../wait.ts";
 
 let root: string;
 
@@ -251,6 +252,16 @@ describe("a download, written as it arrives (G9)", () => {
     expect(Date.now() - started).toBeLessThan(2_000);
     expect(seen.cancelled).toBe(true);
     expect(filesUnder(root)).toEqual([]);
+  });
+
+  test("a large file the platform says the weight of is given a second more for each megabyte", async () => {
+    // Half a megabyte declared: half a second more than the 100 ms a file of no stated weight is given.
+    const weighed = { ...image, size: 500_000 };
+    const slow = (ms: number) => async () => (await sleep(ms), new Uint8Array([0xff, 0xd8, 0xff, 0xe0]));
+    const store = new AttachmentStore({ rootDir: root, maxBytes: 1_000_000, deadlineMs: 100 });
+    expect(isStored(await store.store(SCOPE, weighed, slow(300), 0))).toBe(true);
+    const unweighed = await store.store(SCOPE, image, slow(300), 0);
+    expect(isStored(unweighed) ? null : unweighed.unavailable).toBe("took longer than 100ms to download");
   });
 
   test("the deadline is the adapter's too, and an adapter that never answers still cannot hold the chat", async () => {
@@ -493,6 +504,16 @@ describe("retention sweeping", () => {
     expect(result.freedBytes).toBe(100);
     expect(existsSync(old.localPath)).toBe(false);
     expect(existsSync(recent.localPath)).toBe(true);
+  });
+
+  test("a file a stranger sent an agent open to everyone goes at the same age: it is kept by day, whoever sent it and whichever agent it was for", async () => {
+    // An open agent takes files from anyone, so its folder is the one that would only ever grow. It has no window of
+    // its own to forget: the sweep is of days, across every agent and chat.
+    const strangers = { ...SCOPE, agentId: "nora", gatewayId: "telegram:nora", chatId: "7001" };
+    const old = await seed("2026-08-01", strangers);
+    const recent = await seed("2026-08-10", strangers);
+    expect(storeAt("2026-08-11").sweep(7)).toEqual({ removed: 1, freedBytes: 100 });
+    expect({ old: existsSync(old.localPath), recent: existsSync(recent.localPath) }).toEqual({ old: false, recent: true });
   });
 
   test("the cutoff is exclusive at exactly the boundary", async () => {

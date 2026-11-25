@@ -309,7 +309,9 @@ describe("a database at the schema before the mark", () => {
 
     const turns = turnStore(db);
     expect(providerResumesOwed(turns, now).map((turn) => turn.id)).toEqual(["turn_promised"]);
-    // And a turn closed from here on is found by its mark.
+    // And a turn closed from here on is found by its mark: begun by this release's store, on the schema this release
+    // starts on, as a start migrates the whole way before any turn is begun.
+    await migrate(db, {}, MIGRATIONS);
     const marked = turns.begin({ sessionId: "ses_nouva:telegram:nouva:815", agentId: "nouva", gatewayId: "telegram:nouva", chatId: "815", prompt: "run the tests" });
     turns.finish(marked, { status: "failed", reply: "No answer from the model. I will come back to this.", error: "503", retryPromised: true });
     expect(providerResumesOwed(turns, Date.now()).map((turn) => turn.id).sort()).toEqual(["turn_promised", marked].sort());

@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureDir, removePath, writeTextFile } from "@nouride/runtime";
@@ -140,9 +140,45 @@ describe("[[people]] key", () => {
 
 describe("[gateways.whatsapp] session_dir", () => {
   const WA = '[gateways.whatsapp.main]\nenabled = false\nencryption_key = "wa_key"\n';
-  test("unset, the login lives under data_dir — with the rest of the state, in the volume a container mounts", async () => {
+  const folderOf = (config: { gateways: { id: string; sessionDir?: string }[] }, id: string) => config.gateways.find((gateway) => gateway.id === id)?.sessionDir;
+  const SHOP = '[gateways.whatsapp.shop]\nenabled = false\nencryption_key = "wa_shop_key"\n';
+
+  test("unset, the login lives under data_dir, with the rest of the state and in the volume a container mounts: a folder named for the connection", async () => {
     const { config } = await load(WA);
-    expect(config.gateways.find((g) => g.id === "whatsapp:main")?.sessionDir).toBe(join(config.daemon.dataDir, "whatsapp"));
+    expect(folderOf(config, "whatsapp:main")).toBe(join(config.daemon.dataDir, "whatsapp-main"));
+  });
+
+  test("two connections that name none each get their own, and neither is inside the other's or the old shared one", async () => {
+    const { config } = await load(WA + SHOP);
+    expect([folderOf(config, "whatsapp:main"), folderOf(config, "whatsapp:shop")]).toEqual([join(config.daemon.dataDir, "whatsapp-main"), join(config.daemon.dataDir, "whatsapp-shop")]);
+    // One that names the folder an install's one login was kept in, beside one that names none.
+    const kept = (await load(`${WA}session_dir = ".nouride/data/whatsapp"\n${SHOP}`)).config;
+    expect([folderOf(kept, "whatsapp:main"), folderOf(kept, "whatsapp:shop")]).toEqual([join(kept.daemon.dataDir, "whatsapp"), join(kept.daemon.dataDir, "whatsapp-shop")]);
+  });
+
+  test("one folder by two names is one folder: by its case, or through a link to it", async () => {
+    // Read by a second reader of the branch: compared as written, `Shop` and `shop` were two folders, which a Mac's disk
+    // takes for one, and so was a link and the folder it points at.
+    await expect(load(`${WA}session_dir = "/var/lib/WA"\n${SHOP}session_dir = "/var/lib/wa"\n`)).rejects.toThrow("keep their login in one folder");
+    const base = mkdtempSync(join(tmpdir(), "wa-link-"));
+    mkdirSync(join(base, "real"));
+    symlinkSync(join(base, "real"), join(base, "link"));
+    await expect(load(`${WA}session_dir = "${join(base, "real")}"\n${SHOP}session_dir = "${join(base, "link")}"\n`)).rejects.toThrow("keep their login in one folder");
+    rmSync(base, { recursive: true, force: true });
+  });
+
+  test("two that name one folder are refused at load, with both names; and so is one folder inside another", async () => {
+    await expect(load(`${WA}session_dir = "/var/lib/wa"\n${SHOP}session_dir = "/var/lib/wa"\n`)).rejects.toThrow(
+      "[gateways.whatsapp.main] and [gateways.whatsapp.shop] keep their login in one folder (/var/lib/wa). Each WhatsApp number needs its own: give one of them another session_dir, or remove the line and it gets a folder named for it.",
+    );
+    // Named one way and reached another: the same folder once both are whole paths.
+    await expect(load(`${WA}session_dir = "./logins/../logins/wa"\n${SHOP}session_dir = "logins/wa"\n`)).rejects.toThrow("keep their login in one folder");
+    await expect(load(`${WA}session_dir = "/var/lib/wa"\n${SHOP}session_dir = "/var/lib/wa/shop"\n`)).rejects.toThrow(
+      "[gateways.whatsapp.main] and [gateways.whatsapp.shop] keep their logins one inside the other (/var/lib/wa and /var/lib/wa/shop), so removing one connection would delete the other's.",
+    );
+    // A folder whose name only begins like another's is its own.
+    const { config } = await load(`${WA}session_dir = "/var/lib/wa"\n${SHOP}session_dir = "/var/lib/wa-shop"\n`);
+    expect(folderOf(config, "whatsapp:shop")).toBe("/var/lib/wa-shop");
   });
 
   test("set, it is used as written, resolved against the install", async () => {

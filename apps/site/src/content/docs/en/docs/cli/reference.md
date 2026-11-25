@@ -189,6 +189,8 @@ nouride gateway rename <old> <new> [--apply]     # daemon must be STOPPED
 `gateway restart` follows the same rule as `nouride restart`: restarting the gateway a conversation
 arrived on ends it, so the follow-up is created first. `gateway add` with no flags prints the rest
 (`--token-secret`, `--session-dir`, `--disabled`); the new gateway connects on the next restart.
+A WhatsApp number takes no token (`--platform whatsapp --name shop --agent nora`): its code to scan is
+on the agent's Connections page once it has started, and a second number is added the same way.
 
 `rename` rewrites both the config and the database the daemon has open, which is why it refuses to
 run while the daemon is up, and why it is the one gateway command that does not go through the
@@ -343,7 +345,7 @@ nouride access allow --from <file|-> --gateway <connection> [--dry-run]   # a wh
 nouride access approved --find <id or name>      # one among many: the list holds the newest 500
 nouride access deny|block <gateway:sender>       # no for a day · no until unblocked
 nouride access revoke|reset|unblock <gateway:sender>
-nouride access mode [open|allowlist|pair]      # show or switch, no restart
+nouride access mode [allowlist|pair]           # show or switch, no restart
 
 nouride people
 nouride people set <key|platform:account> --name <name> [--note <note>]
