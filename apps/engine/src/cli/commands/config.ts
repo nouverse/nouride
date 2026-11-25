@@ -2,6 +2,7 @@ import { join, loadTomlIfExists, readTextFileIfExists } from "@nouride/runtime";
 import { holdLines, isOpenAgent, plural, type GlobalConfig } from "@nouride/shared";
 import { defaultConfigPath, noteOf, type ConfigNote } from "@/modules/config/global/index.ts";
 import { holdsOpenMode, OPEN_MODE_NOTE } from "@/boot/open-mode.ts";
+import { sharedLoginNote } from "@/boot/whatsapp-login.ts";
 import { openAgentChecks, unusedWhileOpen, type OpenAgentFacts } from "./open-agents.ts";
 import { profilesBehind } from "@/modules/config/known-endpoints.ts";
 import { commandSecretLookup } from "@/boot/secret-store.ts";
@@ -77,9 +78,12 @@ function providersLine(providers: GlobalConfig["providers"]): string {
 }
 
 /** What the next start writes into a profile on a known endpoint (`boot/endpoint-keys.ts`), said before it does. */
-async function broughtForward(source: string): Promise<ConfigNote[]> {
+async function broughtForward(source: string, config: GlobalConfig): Promise<ConfigNote[]> {
   const text = (await readTextFileIfExists(source)) ?? "";
+  const login = sharedLoginNote(config, text);
   return [
+    // An install's one WhatsApp login, from before each connection kept its own folder (`boot/whatsapp-login.ts`).
+    ...(login ? [login] : []),
     ...profilesBehind(text).map((behind) => ({
       message: `[providers.${behind.profile}] will be given ${Object.entries(behind.set).map(([key, value]) => `${key} = ${JSON.stringify(value)}`).join(", ")} at the next start`,
       ...(behind.why ? { hint: behind.why } : {}),
@@ -159,7 +163,7 @@ async function configCheck(target: string | undefined): Promise<void> {
   // is about whether the daemon comes up.
   const secretSet = await commandSecretLookup({ dataDir: config.daemon.dataDir, configPath: source ?? defaultConfigPath() });
   const lints = lintConfig(config, secretSet ? { secretSet } : {});
-  const said = [...notes, ...(source ? await broughtForward(source) : []), ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
+  const said = [...notes, ...(source ? await broughtForward(source, config) : []), ...held.map((line) => ({ ...noteOf(line), agent: line.agent_id }))];
   // The agents open to everyone, as the packs have them: who a stranger reaches, and within which numbers.
   const open = registry.enabled().filter((agent) => isOpenAgent(agent)).map((agent): OpenAgentFacts => ({
     id: agent.config.id,

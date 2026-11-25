@@ -8,7 +8,7 @@
  */
 
 import { basename, dirname, expandHome, isAbsolute, join, realPath, resolve } from "@nouride/runtime";
-import { type GlobalConfig } from "@nouride/shared";
+import { ConfigError, type GlobalConfig } from "@nouride/shared";
 
 
 /**
@@ -98,6 +98,43 @@ export function absolutizePaths(config: GlobalConfig, cwd: string): void {
     // Unset, a WhatsApp login lives with the rest of the state — backed up with it, and inside the
     // one volume a container mounts. It used to be `./data/whatsapp` from wherever the daemon ran:
     // outside `.nouride` natively, and an unwritable `/app/data` in the image.
-    else if (gateway.platform === "whatsapp") gateway.sessionDir = join(config.daemon.dataDir, "whatsapp");
+    else if (gateway.platform === "whatsapp") gateway.sessionDir = ownLoginDir(config.daemon.dataDir, gateway.name);
+  }
+}
+
+/**
+ * Where the one WhatsApp login of an install was kept while a daemon held one number: `whatsapp` in the data folder,
+ * whatever the connection was called. An install that has one keeps it there (`boot/whatsapp-login.ts`).
+ */
+export function sharedLoginDir(dataDir: string): string {
+  return join(dataDir, "whatsapp");
+}
+
+/**
+ * A WhatsApp connection's own folder when its table names none: beside the old shared one and never inside it, so
+ * removing one connection's login cannot take another's with it.
+ */
+export function ownLoginDir(dataDir: string, name: string): string {
+  return join(dataDir, `whatsapp-${name}`);
+}
+
+/**
+ * Each WhatsApp number keeps its own login: two connections on one folder would be two sockets writing one set of
+ * credentials, and WhatsApp closes both. Nor one folder inside another, which removing the outer connection deletes.
+ * Asked once every folder is absolute, with both connections named.
+ */
+export function assertOwnLogins(config: GlobalConfig): void {
+  const numbers = config.gateways.filter((gateway) => gateway.platform === "whatsapp" && gateway.sessionDir);
+  for (const [at, one] of numbers.entries()) {
+    for (const other of numbers.slice(at + 1)) {
+      const [a, b] = [one.sessionDir!, other.sessionDir!];
+      const tables = `[gateways.whatsapp.${one.name}] and [gateways.whatsapp.${other.name}]`;
+      if (a === b) {
+        throw new ConfigError(`${tables} keep their login in one folder (${a}). Each WhatsApp number needs its own: give one of them another session_dir, or remove the line and it gets a folder named for it.`);
+      }
+      if (a.startsWith(`${b}/`) || b.startsWith(`${a}/`)) {
+        throw new ConfigError(`${tables} keep their logins one inside the other (${a} and ${b}), so removing one connection would delete the other's. Give one of them a session_dir outside the other's.`);
+      }
+    }
   }
 }

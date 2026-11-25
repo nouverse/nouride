@@ -211,7 +211,7 @@ describe("saving a WhatsApp gateway", () => {
   test("writes no session_dir: the login lives under data_dir unless one is given", async () => {
     await settings.saveGateway({ platform: "whatsapp", name: "main", enabled: true, actor: "test" });
     expect(read()).not.toMatch(/^session_dir = /m);
-    expect(settings.gateways().find((g) => g.id === "whatsapp:main")?.sessionDir).toMatch(/[\\/]whatsapp$/);
+    expect(settings.gateways().find((g) => g.id === "whatsapp:main")?.sessionDir).toMatch(/[\\/]whatsapp-main$/);
     await settings.saveGateway({ platform: "whatsapp", name: "main", enabled: true, sessionDir: "/var/lib/wa", actor: "test" });
     expect(read()).toContain('session_dir = "/var/lib/wa"');
     // And what the running daemon holds matches the file, never the string "undefined".

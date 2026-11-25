@@ -152,7 +152,7 @@ members = 0                         # per guild
 [gateways.whatsapp.main]
 enabled = false
 encryption_key = "wa-encryption-key"
-# session_dir = "..."               # opsional; kosong: <data_dir>/whatsapp
+# session_dir = "..."               # opsional; kosong: <data_dir>/whatsapp-<nama>, satu folder tiap nomor
 ```
 
 Gak ada yang didefinisikan secara default, jadi instalasi baru menyalakan dashboard dan gak lebih,

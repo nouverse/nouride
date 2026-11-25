@@ -174,7 +174,7 @@ export { attachmentTypeFor } from "./commons/attachments.ts";
 export type { DiscordAttachmentLike } from "./channels/discord/attachments.ts";
 export type { TelegramMediaMessage } from "./channels/telegram/attachments.ts";
 
-/** Filled by the config loader (`<data_dir>/whatsapp` when unset), so absent means it was bypassed. */
+/** Filled by the config loader (a folder named for the connection under `<data_dir>` when unset), so absent means it was bypassed. */
 function requireSessionDir(instance: GatewayInstanceConfig): string {
   if (!instance.sessionDir) {
     throw new Error(`[gateways.whatsapp.${instance.name}] has no session_dir: build instances through the config loader, which defaults it`);

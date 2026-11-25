@@ -149,7 +149,7 @@ members = 0                         # per guild
 [gateways.whatsapp.main]
 enabled = false
 encryption_key = "wa-encryption-key"
-# session_dir = "..."               # optional; unset: <data_dir>/whatsapp
+# session_dir = "..."               # optional; unset: <data_dir>/whatsapp-<name>, a folder for each number
 ```
 
 None are defined by default, so a fresh install brings up the dashboard and nothing else rather than

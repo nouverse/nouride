@@ -19,7 +19,7 @@ openssl rand -hex 32 | nouride secret set wa-encryption-key --stdin
 enabled = true
 encryption_key = "wa-encryption-key"   # the secret NAME; the value is 64 hex characters
 agent = "nouva"
-# session_dir = "..."                 # optional; unset keeps the login in <data_dir>/whatsapp
+# session_dir = "..."                 # optional; unset keeps the login in <data_dir>/whatsapp-main
 ```
 
 From the dashboard there is no key to generate: leave the field blank and it makes one.
@@ -47,12 +47,21 @@ The engine never talks to Baileys, the WhatsApp library, directly. It talks to t
 newline-delimited JSON protocol, in memory, because the bridge runs inside the daemon. That keeps a WhatsApp problem a WhatsApp problem, and the protocol is small enough to read in
 one sitting.
 
-### One transport, one number
+### One transport, a bridge for each number
 
 The bridge is hosted inside the daemon, and every release carries it. There is no second executable
 to install and nothing beside the daemon to keep running, so there is no `bridge_transport` to set.
-The bridge keeps its connection state at module scope, so one daemon hosts one WhatsApp connection; a
-second number needs a second daemon. `bridge_transport = "ws"`, which reached a bridge somewhere else,
+The daemon opens a bridge for each WhatsApp connection in the config: each has its own socket, its own
+login and its own reconnect, so one number that is logged out or cut off stops or reconnects alone.
+Until 0.8.48 a daemon held one WhatsApp number, and a second needed a second daemon.
+
+**Each number keeps its login in a folder of its own**: `<data_dir>/whatsapp-<name>` for a connection
+named `<name>`, unless its table names a `session_dir`. Two connections on one folder are refused at
+start, with both names. An install linked before 0.8.48 has its login in `<data_dir>/whatsapp`: the
+first start writes that folder into the connection's table as `session_dir`, nothing is moved, and
+no new scan is needed. `nouride config check` says so before the start does it.
+
+`bridge_transport = "ws"`, which reached a bridge somewhere else,
 went in 0.7.10 (nothing ever served one), and a config naming it is refused at start. So, since 0.8.0, is
 `bridge_transport = "stdio"` with its `bridge_command`, which ran the bridge as a second executable.
 

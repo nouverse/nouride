@@ -18,7 +18,7 @@
 import { hostTimeZone, loadTomlIfExists, parseToml, resolve, statFile } from "@nouride/runtime";
 import { ConfigError, holding, quietly, type GlobalConfig, type LogEntry } from "@nouride/shared";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
-import { absolutePath, absolutizePaths, defaultConfigPath, executableRoot, INSTALL_ROOT, installRootFor } from "./paths.ts";
+import { absolutePath, absolutizePaths, assertOwnLogins, defaultConfigPath, executableRoot, INSTALL_ROOT, installRootFor } from "./paths.ts";
 import { parseExternalClis } from "./external-clis.ts";
 import { parseGateways, parseProviders } from "./open-sections.ts";
 import { isPlainObject, mergeConfig } from "./merge.ts";
@@ -163,6 +163,7 @@ function configFrom(raw: Record<string, unknown>, source: string | null, cwd: st
   applyEnvOverrides(config, options);
   validate(config);
   absolutizePaths(config, installRootFor(source, cwd));
+  assertOwnLogins(config);
   return config;
 }
 

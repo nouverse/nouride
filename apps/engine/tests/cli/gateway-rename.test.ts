@@ -14,6 +14,7 @@ import { dirname, join } from "node:path";
 import { openDatabase } from "@nouride/runtime";
 import { openRecorded } from "@/boot/last-run.ts";
 import { VERSION } from "@/commons/version.ts";
+import { readConfigText } from "@/modules/config/global/index.ts";
 import { runCli } from "../cli-harness.ts";
 
 let root: string;
@@ -137,6 +138,54 @@ test("--apply moves the database, the config, the pack and the vault — and the
   const check = await cli("config", "check");
   expect(check.out).toContain("this configuration would start");
   expect(check.code).toBe(0);
+}, 30_000);
+
+const NUMBER = (more = "") => `\n[gateways.whatsapp.main]\nenabled = false\nencryption_key = "whatsapp-main-key"\n${more}`;
+/** Where the loader has a connection keep its login, read from the file as the next start reads it. */
+const loginOf = (id: string) => readConfigText(readFileSync(configPath, "utf8"), configPath).gateways.find((gateway) => gateway.id === id)?.sessionDir;
+
+test("a WhatsApp login kept in the folder named for its connection moves with the name, so the number stays linked", async () => {
+  put(configPath, CONFIG({ data, agents, memory }) + NUMBER());
+  const [before, after] = [join(data, "whatsapp-main"), join(data, "whatsapp-shop")];
+  put(join(before, "creds.enc"), "encrypted-login-bytes");
+  expect(loginOf("whatsapp:main")).toBe(before);
+
+  const dry = await cli("gateway", "rename", "whatsapp:main", "whatsapp:shop");
+  expect(dry.out).toContain(`its WhatsApp login moves with it: ${before} → ${after}`);
+  expect([existsSync(before), existsSync(after)]).toEqual([true, false]);
+
+  const done = await cli("gateway", "rename", "whatsapp:main", "whatsapp:shop", "--apply");
+  expect(done.code).toBe(0);
+  expect(done.out).toContain(`Its WhatsApp login moved with it (${after}), so no re-link is needed.`);
+  // The folder the renamed connection reads is the one its login is now in.
+  expect(loginOf("whatsapp:shop")).toBe(after);
+  expect([existsSync(before), readFileSync(join(after, "creds.enc"), "utf8")]).toEqual([false, "encrypted-login-bytes"]);
+}, 30_000);
+
+test("a login whose folder the connection's table names stays where it is", async () => {
+  const kept = join(root, "wa-login");
+  put(configPath, CONFIG({ data, agents, memory }) + NUMBER(`session_dir = "${kept}"\n`));
+  put(join(kept, "creds.enc"), "encrypted-login-bytes");
+  // A folder that only looks like the connection's own is not touched either.
+  put(join(data, "whatsapp-main", "creds.enc"), "another login, of no connection here");
+  const done = await cli("gateway", "rename", "whatsapp:main", "whatsapp:shop", "--apply");
+  expect(done.code).toBe(0);
+  expect(done.out).not.toContain("moves with it");
+  expect(done.out).toContain("The WhatsApp pairing is keyed by session_dir, not by the id, so no re-link is needed.");
+  expect(loginOf("whatsapp:shop")).toBe(kept);
+  expect([existsSync(join(kept, "creds.enc")), existsSync(join(data, "whatsapp-main", "creds.enc")), existsSync(join(data, "whatsapp-shop"))]).toEqual([true, true, false]);
+}, 30_000);
+
+test("refused when the new name's folder is already there: nothing is renamed, and neither login is touched", async () => {
+  put(configPath, CONFIG({ data, agents, memory }) + NUMBER());
+  put(join(data, "whatsapp-main", "creds.enc"), "the connection's login");
+  put(join(data, "whatsapp-shop", "creds.enc"), "what was there");
+  const before = readFileSync(configPath, "utf8");
+  const refused = await cli("gateway", "rename", "whatsapp:main", "whatsapp:shop", "--apply");
+  expect(refused.code).toBe(1);
+  expect(refused.out).toContain(`Nothing was renamed: whatsapp:main's WhatsApp login would move to ${join(data, "whatsapp-shop")}, and something is already there.`);
+  expect(readFileSync(configPath, "utf8")).toBe(before);
+  expect([readFileSync(join(data, "whatsapp-main", "creds.enc"), "utf8"), readFileSync(join(data, "whatsapp-shop", "creds.enc"), "utf8")]).toEqual(["the connection's login", "what was there"]);
 }, 30_000);
 
 test("a database from before the floor is refused, with the way across", async () => {
