@@ -31,6 +31,11 @@ let facts: ScriptFacts;
 let ranFor: string[];
 let asleep: boolean;
 let held: boolean;
+/**
+ * The daemon's limit for a command, as a try reads it. Ten seconds for a script that is to finish: it met 400 ms once in
+ * a full run on a busy machine and was said to have timed out. The test of the limit itself sets it low.
+ */
+let commandTimeoutMs: number;
 let audit: AuditLog;
 
 beforeEach(async () => {
@@ -43,6 +48,7 @@ beforeEach(async () => {
   ranFor = [];
   asleep = false;
   held = false;
+  commandTimeoutMs = 10_000;
   // A try's own hands: the sandbox a job's command of that agent runs in, here a folder of the test's.
   const executors = { commandSandbox: (job: { agentId: string }) => (ranFor.push(job.agentId), { cwd: dir, env: { PATH: process.env.PATH ?? "", TMPDIR: join(dir, "scratch") } }), asleep: () => asleep, held: () => held };
   audit = new AuditLog(db);
@@ -53,7 +59,7 @@ beforeEach(async () => {
     audit,
     users: new UserStore({ db }),
     files: {},
-    cron: { store, scheduler: {}, timezone: "Asia/Jakarta", scripts: facts, tryCommand: (agentId: string, command: CommandRuns, input: string | undefined) => tryCommand(executors, { commandTimeoutMs: 400 }, agentId, command, input) },
+    cron: { store, scheduler: {}, timezone: "Asia/Jakarta", scripts: facts, tryCommand: (agentId: string, command: CommandRuns, input: string | undefined) => tryCommand(executors, { commandTimeoutMs }, agentId, command, input) },
     registry: { get: (id: string) => (id === "nouva" ? { dir: "/packs/nouva", config: {} } : undefined), reload: async () => {} },
   } as unknown as ControlDeps);
 });
@@ -215,6 +221,7 @@ describe("a step tried alone", () => {
 
   test("a try is not waited for past its limit: the daemon's for a command, a step's own, and never more than a minute", async () => {
     // The daemon's limit here is 400 ms.
+    commandTimeoutMs = 400;
     expect((await tryIt(script("sleep 3; echo late"))).body.tried).toMatchObject({ status: "failed", said: "timed out after 400ms" });
     expect(tryLimit(undefined, 600_000)).toBe(TRY_MAX_MS);
     expect(tryLimit(5_000, 600_000)).toBe(5_000);
