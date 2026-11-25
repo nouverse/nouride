@@ -57,16 +57,18 @@ export class OpenDoorStore {
   }
 
   /**
-   * Whether this person is still to be told today that there is nothing left to answer them with, marked as told: once
-   * a day, as the agent's own day is said. For the install's own cap, which the door does not count by. Only a sender the
-   * door has counted (a stranger) is marked; anyone else (a person of the household) is told each time, and is not made
-   * one of the people the agent's page counts.
+   * A message the door let in that the install's own cap then refused, and whether this person is still to be told today
+   * that there is nothing left to answer them with, marked as told: once a day, as the agent's own day is said. Only a
+   * sender the door has counted (a stranger) is marked; anyone else (a person of the household) is told each time, and
+   * is not made one of the people the agent's page counts. The refused `messages` are taken off what the page says was
+   * answered: counted as the door let them in, they were said answered though nothing was.
    */
-  tellClosed(input: { agentId: string; gatewayId: string; senderId: string; also?: readonly string[]; day: number }): boolean {
+  tellClosed(input: { agentId: string; gatewayId: string; senderId: string; also?: readonly string[]; day: number; messages?: number }): boolean {
     const { agentId, gatewayId, senderId, day } = input;
     return this.db.transaction((): boolean => {
       const theirs = this.peek(agentId, day, gatewayId, senderId);
       if (!theirs) return true;
+      this.db.prepare("UPDATE open_door SET answered = MAX(answered - ?, 0) WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(Math.max(1, input.messages ?? 1), agentId, day, gatewayId, senderId);
       const told = theirs.told_closed || (input.also ?? []).some((other) => other !== senderId && this.peek(agentId, day, gatewayId, other)?.told_closed);
       if (!told) this.toldClosed(agentId, day, gatewayId, senderId);
       return !told;

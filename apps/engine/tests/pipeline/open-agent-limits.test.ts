@@ -11,6 +11,7 @@
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 import { join } from "node:path";
 import { removePath, type SqliteDb } from "@nouride/runtime";
+import { startOfLocalDay } from "@/commons/clock.ts";
 import { openAndMigrate } from "@/db/index.ts";
 import { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import { UsageStore } from "@/modules/llm/usage.store.ts";
@@ -262,6 +263,9 @@ describe("the install's own cap on a day, reached", () => {
     await h.write("stranger-3");
     await h.write("stranger-3");
     expect({ said: h.said().length, requests: h.requests() }).toEqual({ said: told, requests: 2 });
+    // The agent's page: three people wrote, and two of their messages were answered. Counted as the door let them in,
+    // the three refused were said answered too.
+    expect(new OpenDoorStore(h.bench.db).today("nora", startOfLocalDay(Date.now(), "Asia/Jakarta"))).toEqual({ people: 3, messages: 2 });
 
     // The admin is told the figures, and an ordinary agent's own chat is told them as ever.
     expect(h.alerts.map((alert) => alert.key)).toContain("cost_cap");
@@ -340,7 +344,8 @@ describe("the count itself", () => {
     expect([ask("62811@s.whatsapp.net", ["77665544@lid"]), ask("77665544@lid", ["62811@s.whatsapp.net"])]).toEqual([true, false]);
     // A person of the household, whom the door never counted: told each time, and not made one of the people who wrote.
     expect([ask("owner-1"), ask("owner-1")]).toEqual([true, true]);
-    expect(door.today("nora", DAY)).toEqual({ people: 2, messages: 3 });
+    // Each ask is a message the install's cap refused: none of the three is one the page says was answered.
+    expect(door.today("nora", DAY)).toEqual({ people: 2, messages: 0 });
   });
 
   test("tokens the daemon counted itself, for a provider that reported none, close the agent as reported ones do", async () => {

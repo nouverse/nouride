@@ -108,9 +108,9 @@ function strangerMay(
  * install's own cap refuses its turn: once a day each, as the agent's own day is said, and marked as told. Said under
  * every message, it was the one notice to strangers with no bound.
  */
-export function tellsClosedNow(deps: Pick<PipelineDeps, "openDoor" | "config">, agent: LoadedAgent, envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderAlso">, now: number = Date.now()): boolean {
+export function tellsClosedNow(deps: Pick<PipelineDeps, "openDoor" | "config">, agent: LoadedAgent, envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderAlso" | "mergedIds">, now: number = Date.now()): boolean {
   if (!deps.openDoor) return true;
-  return deps.openDoor.tellClosed({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: envelope.senderId, also: envelope.senderAlso ?? [], day: startOfLocalDay(now, deps.config.daemon.timezone) });
+  return deps.openDoor.tellClosed({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: envelope.senderId, also: envelope.senderAlso ?? [], day: startOfLocalDay(now, deps.config.daemon.timezone), messages: 1 + (envelope.mergedIds?.length ?? 0) });
 }
 
 /** A stranger's message asked of the door, and they told what it says when it turns them away. True when it did. */
