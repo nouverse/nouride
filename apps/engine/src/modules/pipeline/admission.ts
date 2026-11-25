@@ -131,7 +131,11 @@ export class Admission {
    * So `open` is an agent's on the connections it owns, and on no connection several agents share.
    */
   private modeFor(gatewayId: string, global: AccessMode): AccessMode {
-    const own = this.ownerOf(gatewayId)?.config.access;
+    const owner = this.ownerOf(gatewayId);
+    const own = owner?.config.access;
+    // Switched off, an open agent lets nobody new in: its own switch is what an admin reaches for when its bot is
+    // abused, the connection stays up all the same, and a pack that is off is still the connection's owner.
+    if (own === "open" && !owner?.config.enabled) return "allowlist";
     return own === "pair" || own === "allowlist" || own === "open" ? own : global;
   }
 

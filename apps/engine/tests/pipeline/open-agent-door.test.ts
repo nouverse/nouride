@@ -34,7 +34,7 @@ const conversationsOf = (db: SqliteDb, agent: string): string[] =>
  * Nouva is the orchestrator and pairs strangers; Nora is open. Each has its own Telegram bot, unless `bots` says
  * Nora's alone. The owner is on the install's list; nobody else is known.
  */
-async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps } = {}) {
+async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; noraOff?: boolean; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps } = {}) {
   const bots = options.bots ?? ["nouva", "nora"];
   const connections = Object.fromEntries(bots.map((id) => [id, new FakeGateway(`telegram:${id}`, "telegram")]));
   // As Telegram is: no bot is handed another bot's message, so a tag between agents is the daemon's to hand over.
@@ -43,7 +43,7 @@ async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[];
     turns: (options.turns ?? ["answer 1", "answer 2", "answer 3"]).map((text) => ({ text })),
     agents: [
       { id: "nouva", configToml: '[agent]\ndisplay_name = "Nouva"\n\n[llm]\nprovider = "test"\n' },
-      { id: "nora", configToml: `[agent]\ndisplay_name = "Nora"\naccess = "open"\n\n[open]\nmax_daily_tokens = ${options.maxDailyTokens ?? 1_000_000}\nmax_daily_messages_per_person = ${options.maxDailyMessages ?? 100}\n${options.closedReply ? `closed_reply = "${options.closedReply}"\n` : ""}\n[llm]\nprovider = "test"\n` },
+      { id: "nora", configToml: `[agent]\ndisplay_name = "Nora"\n${options.noraOff ? "enabled = false\n" : ""}access = "open"\n\n[open]\nmax_daily_tokens = ${options.maxDailyTokens ?? 1_000_000}\nmax_daily_messages_per_person = ${options.maxDailyMessages ?? 100}\n${options.closedReply ? `closed_reply = "${options.closedReply}"\n` : ""}\n[llm]\nprovider = "test"\n` },
     ],
     config: {
       daemon: { orchestrator: "nouva" },
@@ -92,6 +92,17 @@ describe("who is let in", () => {
     // Asked to pair there, as anybody new is: a code is waiting for an admin, and no turn was begun.
     expect({ onNouva: h.access.get("telegram:nouva", STRANGER)?.status, onNora: h.access.get("telegram:nora", STRANGER) }).toEqual({ onNouva: "pending", onNora: null });
     expect(conversationsOf(h.db, "nouva")).toEqual([]);
+  });
+
+  test("an open agent that is switched off lets nobody new in: no answer, no code, and nothing counted", async () => {
+    // What an admin reaches for when the bot is abused: the agent's own switch. Its connection stays up, and the door
+    // read the agent whether it was on or off, so strangers went on being answered.
+    const h = await install({ noraOff: true });
+    await h.dm("nora", { text: "what are your opening hours?" });
+    await h.group({ text: "nora, are you there?" }, { bot: "nora" });
+    expect(h.requests).toHaveLength(0);
+    expect(h.said().nora).toEqual([]);
+    expect({ onNora: h.access.get("telegram:nora", STRANGER), conversations: conversationsOf(h.db, "nora") }).toEqual({ onNora: null, conversations: [] });
   });
 
   test("a block keeps a sender out of the open agent too", async () => {
