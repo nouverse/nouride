@@ -61,6 +61,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   "packages/runtime": 4,
   "packages/shared": 5,
   "packages/update": 4,
+  // 0 → 1 (`fixtures/side-by-side.ts`): a stand-in download holds a step, so a burst's downloads overlap and how many run
+  // at once can be counted.
+  "packages/wa-bridge": 1,
 };
 
 function members(): string[] {

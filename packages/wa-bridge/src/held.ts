@@ -11,7 +11,7 @@
  */
 
 import { ensureDir, join, listDir, openAesGcm, readBytesSync, removePath, renamePath, sealAesGcm, writeBytesSync } from "@nouride/runtime";
-import { BufferJSON, type WAMessage } from "@whiskeysockets/baileys";
+import { proto, type WAMessage } from "@whiskeysockets/baileys";
 
 /** The newest this many. A message is a few kilobytes: five hundred is a couple of megabytes on disk at most. */
 export const HELD_MAX = 500;
@@ -27,6 +27,14 @@ export interface Held {
   mimeType: string;
   fileName?: string;
 }
+
+/**
+ * The message as WhatsApp's own wire form, base64: a message is a protobuf object, and as JSON its bytes (the key that
+ * opens the file) became text, which a plain download accepts and the request to the sender's phone to send an aged file
+ * again does not: it hashed the text, not the key.
+ */
+const wire = (message: WAMessage): string => Buffer.from(proto.WebMessageInfo.encode(message as proto.IWebMessageInfo).finish()).toString("base64");
+const fromWire = (text: string): WAMessage => proto.WebMessageInfo.decode(Buffer.from(text, "base64")) as WAMessage;
 
 /** A ref names a file: kept to what a file name may hold, as the login's files are. */
 const fileOf = (dir: string, ref: string): string => join(dir, `${ref.replace(/[^0-9A-Za-z._-]/g, "_")}.enc`);
@@ -46,12 +54,14 @@ export class HeldFiles {
     ensureDir(this.dir, 0o700);
     const found: [string, Held][] = [];
     for (const { name, isFile } of listDir(this.dir)) {
+      // A write a crash or a full disk cut off: never read, and nothing else would remove it.
+      if (isFile && name.endsWith(".tmp")) removePath(join(this.dir, name));
       if (!isFile || !name.endsWith(".enc")) continue;
       const path = join(this.dir, name);
       try {
-        const one = JSON.parse(new TextDecoder().decode(openAesGcm(this.key, readBytesSync(path))), BufferJSON.reviver) as Held & { ref: string };
+        const one = JSON.parse(new TextDecoder().decode(openAesGcm(this.key, readBytesSync(path)))) as Omit<Held, "message"> & { ref: string; message: string };
         if (this.now() - one.at > HELD_FOR_MS) removePath(path);
-        else found.push([one.ref, { message: one.message, at: one.at, mimeType: one.mimeType, ...(one.fileName ? { fileName: one.fileName } : {}) }]);
+        else found.push([one.ref, { message: fromWire(one.message), at: one.at, mimeType: one.mimeType, ...(one.fileName ? { fileName: one.fileName } : {}) }]);
       } catch (err) {
         // Another login's key, or a half-written file: nothing anybody can fetch, so it goes.
         this.note("a held file could not be read back, and is let go", { file: name, error: String(err) });
@@ -69,7 +79,7 @@ export class HeldFiles {
       ensureDir(this.dir, 0o700);
       const path = fileOf(this.dir, ref);
       // Written aside and renamed, as the login is: a crash mid-write leaves no half-file to be read back.
-      writeBytesSync(`${path}.tmp`, sealAesGcm(this.key, new TextEncoder().encode(JSON.stringify({ ref, ...one }, BufferJSON.replacer))), 0o600);
+      writeBytesSync(`${path}.tmp`, sealAesGcm(this.key, new TextEncoder().encode(JSON.stringify({ ref, ...one, message: wire(one.message) }))), 0o600);
       renamePath(`${path}.tmp`, path);
     } catch (err) {
       // Held in memory still: only a restart loses it, as before this was kept on disk.

@@ -17,7 +17,7 @@ import makeWASocket, {
   type WASocket,
 } from "@whiskeysockets/baileys";
 import { proto } from "@whiskeysockets/baileys";
-import { ensureDir, join, proxyAgentFor, writeBytesSync } from "@nouride/runtime";
+import { ensureDir, join, listDir, openFileWriter, proxyAgentFor, removePath, statFile } from "@nouride/runtime";
 import { parseKey, useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
 import { HeldFiles, type Held } from "./held.ts";
 import { sentHere } from "./sent-here.ts";
@@ -78,6 +78,14 @@ function makeLogger(level: string, note: Speaker["note"]) {
 /** Capped exponential backoff. A close that fails instantly must not become a tight loop. */
 const BACKOFF_MAX_MS = 30_000;
 
+/**
+ * Downloads at once, for one number. A burst of videos fetched all together held each whole in a small box's memory at
+ * the same moment; the rest wait their turn here, each written to disk as it arrives.
+ */
+const DOWNLOADS_AT_ONCE = 2;
+/** A file in the number's media folder older than this was fetched for a turn that has long read it, or never will. */
+const MEDIA_LEFT_FOR_MS = 24 * 60 * 60 * 1000;
+
 /** After this many failures in a row, it stops being transient and the engine should know. */
 const GIVE_UP_AFTER = 8;
 export class Connection {
@@ -109,6 +117,9 @@ export class Connection {
   private attempt = 0;
   /** Baileys' logger, kept off stdout (`makeLogger`); a download asked of the sender's phone again uses it too. */
   private readonly logger = makeLogger(process.env.NOURIDE_WA_LOG_LEVEL ?? "warn", (message, detail) => this.say.note(message, detail));
+  /** Downloads running now (`DOWNLOADS_AT_ONCE`), and those waiting for one to end. */
+  private downloading = 0;
+  private readonly waitingToDownload: (() => void)[] = [];
   /** The files of messages handed up and not yet asked for, by ref (`held.ts`): kept in this number's own folder. */
   private held: HeldFiles | null = null;
   /** Groups' subjects, for the `message` event's `chatTitle` — across reconnects: a group keeps its name. */
@@ -179,10 +190,17 @@ export class Connection {
     this.linked = false;
   }
 
-  /** Where downloaded media lands, so the engine gets a path rather than bytes on the pipe. */
+  /**
+   * Where downloaded media lands, so the engine gets a path rather than bytes on the pipe. What a day-old fetch left there
+   * goes: one answered after the daemon stopped waiting for it, with nobody to read and remove it.
+   */
   private ensureMediaDir(): string {
     const dir = join(this.sessionDir, "media");
     ensureDir(dir, 0o700);
+    for (const { name, isFile } of listDir(dir)) {
+      const at = isFile ? statFile(join(dir, name))?.mtimeMs : undefined;
+      if (at !== undefined && Date.now() - at > MEDIA_LEFT_FOR_MS) removePath(join(dir, name));
+    }
     return dir;
   }
 
@@ -532,12 +550,28 @@ export class Connection {
   async fetchMedia(ref: string): Promise<string> {
     const entry = this.held?.get(ref);
     if (!entry) throw new Error("that file is no longer held: ask the sender to send it again");
-    const socket = this.socket;
-    const bytes = (await downloadMediaMessage(entry.message, "buffer", {}, socket ? { reuploadRequest: (message) => socket.updateMediaMessage(message), logger: this.logger as never } : undefined)) as Buffer;
+    if (this.downloading >= DOWNLOADS_AT_ONCE) await new Promise<void>((resolve) => this.waitingToDownload.push(resolve));
+    this.downloading += 1;
     const dir = this.mediaDir || this.ensureMediaDir();
     const path = join(dir, `${crypto.randomUUID()}.${extensionFor(entry.mimeType, entry.fileName)}`);
-    writeBytesSync(path, bytes, 0o600);
-    return path;
+    try {
+      const socket = this.socket;
+      const stream = await downloadMediaMessage(entry.message, "stream", {}, socket ? { reuploadRequest: (message) => socket.updateMediaMessage(message), logger: this.logger as never } : undefined);
+      // Written as it arrives, never held whole.
+      const file = openFileWriter(path, { mode: 0o600 });
+      try {
+        for await (const chunk of stream as AsyncIterable<Uint8Array>) await file.write(chunk);
+      } finally {
+        await file.close();
+      }
+      return path;
+    } catch (err) {
+      removePath(path);
+      throw err;
+    } finally {
+      this.downloading -= 1;
+      this.waitingToDownload.shift()?.();
+    }
   }
 
   /** One incoming message up to the engine, its media held to be asked for — or a person's edit of one. */

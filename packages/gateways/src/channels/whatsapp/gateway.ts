@@ -99,7 +99,10 @@ const LOGOUT_GRACE_MS = 10_000;
 
 /** How long a `send` waits for its ack before giving up. */
 const ACK_TIMEOUT_MS = 30_000;
-/** A held file's download: a large one takes longer than a command's ack, and the engine's own deadline bounds it. */
+/**
+ * A held file's download: a large one takes longer than a command's ack, and the engine's own deadline bounds it. A
+ * backstop past that deadline, which grows by a second a declared megabyte: so does this, or it cut a large file first.
+ */
 const FETCH_TIMEOUT_MS = 120_000;
 
 /**
@@ -418,7 +421,7 @@ export class WhatsAppGateway extends BaseGateway {
 
   /** A file its bridge holds until asked, or a path or a link as it is (`media.ts`). */
   override async fetchAttachment(attachment: Attachment): Promise<Uint8Array | null> {
-    return fetchWhatsAppFile(attachment, (ref) => this.request((id) => ({ type: "fetch_media", id, ref }), FETCH_TIMEOUT_MS), this.log);
+    return fetchWhatsAppFile(attachment, (ref) => this.request((id) => ({ type: "fetch_media", id, ref }), FETCH_TIMEOUT_MS + Math.ceil((attachment.size ?? 0) / 1_000_000) * 1000), this.log);
   }
 
   /**

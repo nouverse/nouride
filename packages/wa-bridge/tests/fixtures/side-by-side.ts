@@ -12,10 +12,11 @@
  */
 
 import { mock } from "bun:test";
-import { chmodSync, existsSync, readdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as baileys from "@whiskeysockets/baileys";
 import { idToSend } from "../../src/sent-here.ts";
+import { sleep } from "../wait.ts";
 
 interface StandIn {
   listeners: Map<string, (payload: unknown) => void>;
@@ -28,6 +29,8 @@ interface StandIn {
 const sockets: StandIn[] = [];
 /** Where a step holds the network's answer for the version, as a slow network does: open until it is let go. */
 let versionHeld: Promise<void> | null = null;
+/** Downloads running at once, and the most there were. */
+const downloads = { live: 0, most: 0 };
 /** The groups a socket's number is in, where a step says; elsewhere the ask is never answered, as a slow network's. */
 let groupsOfNumber: Record<string, unknown> | null = null;
 mock.module("@whiskeysockets/baileys", () => ({
@@ -36,8 +39,16 @@ mock.module("@whiskeysockets/baileys", () => ({
     if (versionHeld) await versionHeld;
     return { version: [2, 3000, 1], isLatest: true };
   },
-  // A photo's bytes, as Baileys would have fetched them.
-  downloadMediaMessage: async () => Buffer.from("a photo's bytes"),
+  // A photo's bytes, as Baileys would have fetched them: a stream of them, a step apart, counted while they run.
+  downloadMediaMessage: async () =>
+    (async function* () {
+      downloads.live += 1;
+      downloads.most = Math.max(downloads.most, downloads.live);
+      await sleep(20);
+      yield Buffer.from("a photo's ");
+      yield Buffer.from("bytes");
+      downloads.live -= 1;
+    })(),
   default: (config: { auth: unknown }) => {
     const listeners = new Map<string, (payload: unknown) => void>();
     const standIn: StandIn = { listeners, auth: config.auth, ended: false, loggedOut: false, fire: (name, payload) => listeners.get(name)?.(payload) };
@@ -95,7 +106,13 @@ sockets.length = 0;
 
 const shop = number();
 const home = number();
+// A file a fetch left in the media folder two days ago, nobody to read it, and one of today's.
+mkdirSync(join(shopDir, "media"), { recursive: true });
+writeFileSync(join(shopDir, "media", "left.jpg"), "old");
+utimesSync(join(shopDir, "media", "left.jpg"), new Date(Date.now() - 2 * 86_400_000), new Date(Date.now() - 2 * 86_400_000));
+writeFileSync(join(shopDir, "media", "today.jpg"), "new");
 await shop.connection.start(shopDir, key);
+seen.leftFilesSwept = { old: existsSync(join(shopDir, "media", "left.jpg")), today: existsSync(join(shopDir, "media", "today.jpg")) };
 await home.connection.start(homeDir, key);
 const [shopFirst, homeSocket] = [sockets[0]!, sockets[1]!];
 Object.assign(seen, { ownLogins: shopFirst.auth !== homeSocket.auth, socketsAtStart: sockets.length });
@@ -157,6 +174,13 @@ const keptIn = async (of: typeof shop, folder: string) => {
 };
 const shopsSockets = sockets.length;
 seen.aPhotoEach = { shops: await keptIn(shop, shopDir), homes: await keptIn(home, homeDir) };
+// A burst of five photos fetched together: two downloads at a time, each written whole.
+for (let n = 0; n < 5; n++) newestOn(shopFirst.auth).fire("messages.upsert", { ...photo, messages: [{ ...photo.messages[0]!, key: { ...photo.messages[0]!.key, id: `m-burst-${n}` } }] });
+await came(() => shop.events.filter((event) => event.type === "message").length === 5);
+const refs = shop.events.splice(0).flatMap((event) => (event.type === "message" && event.media?.held ? [event.media.held] : []));
+downloads.most = 0;
+const burst = await Promise.all(refs.map((ref) => shop.connection.fetchMedia(ref)));
+seen.aBurst = { fetched: burst.length, atOnce: downloads.most, whole: burst.every((path) => readFileSync(path, "utf8") === "a photo's bytes") };
 // The two restarted connections opened sockets of their own: put away, so the count below is the run's own.
 sockets.length = shopsSockets;
 shop.waited();

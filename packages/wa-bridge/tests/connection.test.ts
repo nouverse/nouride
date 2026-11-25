@@ -67,6 +67,10 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
       shops: { before: "", where: "the shop's folder", again: "fetched twice, to a file of its own", afterRestart: "fetched", onDisk: 1 },
       homes: { before: "", where: "the home's folder", again: "fetched twice, to a file of its own", afterRestart: "fetched", onDisk: 1 },
     },
+    // What a fetch left in the media folder a day ago goes at start; today's stays.
+    leftFilesSwept: { old: false, today: true },
+    // Five photos fetched together: two downloads at a time, each file written whole as its bytes arrived.
+    aBurst: { fetched: 5, atOnce: 2, whole: true },
     // Both told to restart in the same moment: each reconnects, on a timer and a count of tries of its own.
     bothAtOnce: { bothReconnected: true, aSocketEach: true, shopWaited: ["try 1 in 1000 ms"], homeWaited: ["try 1 in 1000 ms"] },
     // One is refused by WhatsApp: it says so and stops, its login kept; the other is as it was.

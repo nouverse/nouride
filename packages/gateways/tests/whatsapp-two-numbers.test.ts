@@ -7,7 +7,7 @@
  * The bridges are stand-ins that speak the protocol, as in `whatsapp.test.ts`.
  */
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -212,6 +212,21 @@ describe("a file a message carried", () => {
     // An answer for a fetch nothing is waiting on any more: its wait ran out, and the daemon moved on.
     shop.fake.push({ type: "media", id: "c-given-up", path: late });
     await eventually(() => !existsSync(late), 2_000, "the late file to be removed");
+  });
+
+  test("a large one is waited for past the bridge's usual wait, a second more for each megabyte it weighs", async () => {
+    const shop = await number("shop", "nora");
+    shop.linkedAs("628222@s.whatsapp.net");
+    const waits: number[] = [];
+    const timers = spyOn(globalThis, "setTimeout");
+    timers.mockImplementation(((_fn: () => void, ms?: number) => (waits.push(ms ?? 0), 0 as unknown as ReturnType<typeof setTimeout>)) as unknown as typeof setTimeout);
+    try {
+      void shop.gateway.fetchAttachment({ type: "video", mimeType: "video/mp4", url: "wa-held:big", size: 200_000_000 });
+      void shop.gateway.fetchAttachment({ type: "image", mimeType: "image/jpeg", url: "wa-held:small" });
+    } finally {
+      timers.mockRestore();
+    }
+    expect(waits).toEqual([320_000, 120_000]);
   });
 
   test("one the bridge no longer holds is none to have: null, said in the log", async () => {

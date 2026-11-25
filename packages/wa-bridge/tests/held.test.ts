@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { proto } from "@whiskeysockets/baileys";
 import { HELD_FOR_MS, HELD_MAX, HeldFiles } from "../src/held.ts";
 
 let dir: string;
@@ -16,7 +17,8 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 const KEY = new Uint8Array(32).fill(7);
-const message = (id: string) => ({ key: { remoteJid: "628111@s.whatsapp.net", id, fromMe: false }, message: { imageMessage: { mimetype: "image/jpeg", mediaKey: new Uint8Array([1, 2, 3, 250]) } } }) as never;
+/** A message as Baileys hands it up: WhatsApp's protobuf object, whose JSON turns its bytes into text. */
+const message = (id: string) => proto.WebMessageInfo.fromObject({ key: { remoteJid: "628111@s.whatsapp.net", id, fromMe: false }, message: { imageMessage: { mimetype: "image/jpeg", mediaKey: new Uint8Array([1, 2, 3, 250]) } } }) as never;
 const files = () => (existsSync(dir) ? readdirSync(dir).filter((name) => name.endsWith(".enc")) : []);
 
 test("held, then read back by a new start on the same folder: the message whole, its key's bytes too", () => {
@@ -34,7 +36,10 @@ test("held, then read back by a new start on the same folder: the message whole,
   second.load();
   const back = second.get("m1-abc");
   expect(back).toMatchObject({ at: 1_000_000, mimeType: "image/jpeg", fileName: "a.jpg" });
-  expect(Buffer.from((back!.message as { message: { imageMessage: { mediaKey: Uint8Array } } }).message.imageMessage.mediaKey)).toEqual(Buffer.from([1, 2, 3, 250]));
+  // Its key read back as bytes, not as text: the request to the sender's phone for an aged file hashes those bytes.
+  const key = (back!.message as { message: { imageMessage: { mediaKey: unknown } } }).message.imageMessage.mediaKey;
+  expect(key instanceof Uint8Array).toBe(true);
+  expect(Buffer.from(key as Uint8Array)).toEqual(Buffer.from([1, 2, 3, 250]));
   // Asked for again, it is there again.
   expect(second.get("m1-abc")).toBeDefined();
   expect(notes).toEqual([]);
@@ -77,6 +82,7 @@ test("a file another login's key wrote, or a half-written one, is said and let g
   held.hold("good", { message: message("good"), at: now, mimeType: "image/jpeg" });
   new HeldFiles(dir, new Uint8Array(32).fill(9), () => {}, () => now).hold("other", { message: message("other"), at: now, mimeType: "image/jpeg" });
   writeFileSync(join(dir, "half.enc"), "not a sealed file");
+  writeFileSync(join(dir, "cut.enc.tmp"), "a write a crash cut off");
   const notes: string[] = [];
   const restarted = new HeldFiles(dir, KEY, (said) => void notes.push(said), () => now);
   restarted.load();
@@ -84,4 +90,5 @@ test("a file another login's key wrote, or a half-written one, is said and let g
   expect(restarted.get("other")).toBeUndefined();
   expect(notes).toEqual(["a held file could not be read back, and is let go", "a held file could not be read back, and is let go"]);
   expect(files()).toEqual(["good.enc"]);
+  expect(existsSync(join(dir, "cut.enc.tmp"))).toBe(false);
 });
