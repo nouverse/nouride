@@ -17,10 +17,10 @@ import makeWASocket, {
   type WASocket,
 } from "@whiskeysockets/baileys";
 import { proto } from "@whiskeysockets/baileys";
-import { ensureDir, join, listDir, openFileWriter, proxyAgentFor, removePath, statFile } from "@nouride/runtime";
+import { ensureDir, join, listDir, openFileWriter, proxyAgentFor, readTextFileSync, removePath, statFile, writeBytesSync, type FileWriter } from "@nouride/runtime";
 import { parseKey, useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
 import { HeldFiles, type Held } from "./held.ts";
-import { sentHere } from "./sent-here.ts";
+import { idToSend, sentBefore, sentHere } from "./sent-here.ts";
 import { editEvent, extensionFor, incoming, incomingEdit, mediaSize, messageEvent, selfIdsOf } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION } from "./protocol.ts";
 import type { Speaker } from "./say.ts";
@@ -117,6 +117,8 @@ export class Connection {
   private attempt = 0;
   /** Baileys' logger, kept off stdout (`makeLogger`); a download asked of the sender's phone again uses it too. */
   private readonly logger = makeLogger(process.env.NOURIDE_WA_LOG_LEVEL ?? "warn", (message, detail) => this.say.note(message, detail));
+  /** This number's own record of the ids it sent (`sent-here.ts`), appended to as it sends. */
+  private sentLog: FileWriter | null = null;
   /** Downloads running now (`DOWNLOADS_AT_ONCE`), and those waiting for one to end. */
   private downloading = 0;
   private readonly waitingToDownload: (() => void)[] = [];
@@ -154,6 +156,7 @@ export class Connection {
     if (!this.held || this.sessionDir !== dir) {
       this.held = new HeldFiles(join(dir, "held"), parseKey(key), (message, detail) => this.say.note(message, detail));
       this.held.load();
+      this.keepSentIn(dir);
     }
     this.sessionDir = dir;
     this.sessionKey = key;
@@ -534,6 +537,28 @@ export class Connection {
     if (!value) return null;
     const digits = value.replace(/[^0-9]/g, "");
     return digits ? `${digits}@s.whatsapp.net` : null;
+  }
+
+  /** What this number sent before, read back into the daemon's record and kept to its time; then appended to. */
+  private keepSentIn(dir: string): void {
+    const path = join(dir, "sent-ids");
+    try {
+      ensureDir(dir, 0o700);
+      const kept = sentBefore(statFile(path) ? readTextFileSync(path) : "");
+      writeBytesSync(path, new TextEncoder().encode(kept), 0o600);
+      void this.sentLog?.close();
+      this.sentLog = openFileWriter(path, { append: true, mode: 0o600 });
+    } catch (err) {
+      // Known in memory still: only a restart forgets them, as before this was kept.
+      this.say.note("the record of what this number sent could not be kept", { error: String(err) });
+    }
+  }
+
+  /** A new message's id, chosen and written down before it is sent: in the daemon's record, and in this number's own. */
+  idToSend(): string {
+    const id = idToSend();
+    this.sentLog?.write(new TextEncoder().encode(`${Date.now()} ${id}\n`)).catch((err: unknown) => this.say.note("a sent id could not be written down", { error: String(err) }));
+    return id;
   }
 
   /** A file held for the daemon to ask for (`held.ts`). */

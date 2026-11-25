@@ -307,4 +307,13 @@ describe("a number with no agent of its own", () => {
     await h.pipeline.idle();
     expect({ said: h.said(), requests: h.requests.length, onShop: h.access.get(h.owned.nora, HOME_PHONE) }).toEqual({ said: { nouva: [], nora: ["answer 1"] }, requests: 1, onShop: null });
   }, ROOM);
+
+  test("where the connection cannot tell its own sends apart, a bot with no agent is nobody named: not credited to the front desk", async () => {
+    const h = await install("telegram", { nora: "pair", homeAgentless: true });
+    h.connections.nouva.selfId = "home-bot";
+    for (const agent of ["nouva", "nora"] as const) h.connections[agent].sees = (chatId) => (chatId === GROUP ? true : undefined);
+    h.connections.nora.receive(envelopeAt({ id: "home-2", timestamp: Date.now(), gateway: "telegram", gatewayId: h.owned.nora, chatType: "group", chatId: GROUP, senderId: "home-bot", senderName: "Home", senderIsBot: true, mentionsSelf: true, mentions: ["nora"], text: "nora, please send the price list" }));
+    await h.pipeline.idle();
+    expect({ said: h.said(), requests: h.requests.length }).toEqual({ said: { nouva: [], nora: [] }, requests: 0 });
+  }, ROOM);
 });

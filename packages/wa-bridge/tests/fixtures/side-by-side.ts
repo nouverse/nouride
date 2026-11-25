@@ -15,7 +15,6 @@ import { mock } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as baileys from "@whiskeysockets/baileys";
-import { idToSend } from "../../src/sent-here.ts";
 import { sleep } from "../wait.ts";
 
 interface StandIn {
@@ -129,10 +128,12 @@ await heard(shop);
 seen.aMessage = { shop: shop.said(), home: home.said() };
 // The daemon's own words from another of its numbers, by the id it chose before sending (`sent-here.ts`), and a
 // person's, from the same address: only the first is marked.
-const ownId = idToSend();
+const ownId = shop.connection.idToSend();
 shopFirst.fire("messages.upsert", { type: "notify", messages: [{ key: { remoteJid: "628222@s.whatsapp.net", id: ownId, fromMe: false }, message: { conversation: "from the other number" }, messageTimestamp: 3, pushName: "Nora" }] });
 shopFirst.fire("messages.upsert", { type: "notify", messages: [{ key: { remoteJid: "628222@s.whatsapp.net", id: "typed-on-the-phone", fromMe: false }, message: { conversation: "typed on its phone" }, messageTimestamp: 4, pushName: "Nora" }] });
 await came(() => shop.events.filter((event) => event.type === "message").length === 2);
+// Written down in the number's own folder too, for the next start to read back.
+seen.ownSendKept = await came(() => existsSync(join(shopDir, "sent-ids")) && readFileSync(join(shopDir, "sent-ids"), "utf8").includes(` ${ownId}\n`));
 seen.ownWords = shop.events.splice(0).filter((event) => event.type === "message").map((event) => `${event.text}:${(event as { sentHere?: boolean }).sentHere === true}`);
 
 // ── each saves its own credentials

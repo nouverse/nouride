@@ -14,7 +14,7 @@ import { Handler, withTimeout, type Link, type Sock } from "../src/handler.ts";
 import { BRIDGE_PROTOCOL_VERSION, type BridgeEvent } from "../src/protocol.ts";
 import { speaker, type Speaker } from "../src/say.ts";
 import { eventually } from "./wait.ts";
-import { sentHere } from "../src/sent-here.ts";
+import { idToSend, sentHere } from "../src/sent-here.ts";
 
 const CHAT = "100000000000001@lid";
 
@@ -56,6 +56,7 @@ function fakeLink(options: { linked?: boolean; socket?: boolean; fail?: Error; f
     logout: async () => void calls.push({ op: "logout", args: [] }),
     phoneForLid: () => "628111111111@s.whatsapp.net",
     fetchMedia: async (ref) => (calls.push({ op: "fetchMedia", args: [ref] }), options.fetch ? await options.fetch(ref) : `/tmp/wa-media/${ref}.jpg`),
+    idToSend: () => idToSend(),
   };
   return { link, calls };
 }

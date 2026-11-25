@@ -166,7 +166,9 @@ export class Voice {
       if (![senderId, ...also].some((id) => gateway?.selfId === id || gateway?.ownsAddress?.(id) === true)) continue;
       // A connection with no agent of its own is answered by the one that holds the install, as the router sends it: its
       // words are that agent's. Skipped, a number upgraded with no agent named was a person to the install's other one.
-      const agent = instance.agent ?? this.deps.config.daemon.orchestrator;
+      // Only where the connection tells the daemon's own sends apart (`tellsOwnSends`): a bot several agents speak through
+      // is told which by the record of what was sent, and before that record exists its message stays a bot nobody named.
+      const agent = instance.agent ?? (gateway?.tellsOwnSends === true ? this.deps.config.daemon.orchestrator : undefined);
       if (agent) return agent;
     }
     return undefined;

@@ -9,7 +9,9 @@
  * other number's copy arriving first. Every number of an install runs in the daemon's one process.
  *
  * Bounded: the newest `SENT_MAX`, each for `SENT_FOR_MS`, long enough for a copy WhatsApp holds while a number is
- * offline. Lost on a restart, as the copies a restart waits for are few.
+ * offline. Each number also writes its own sends down in its folder (`Connection.idToSend`), read back at start: a copy
+ * handed over after a restart is still known, where unknown it was a person's, and an open agent's words reached an
+ * agent of the household.
  */
 
 import { generateMessageIDV2 } from "@whiskeysockets/baileys";
@@ -19,15 +21,32 @@ const SENT_FOR_MS = 24 * 60 * 60 * 1000;
 
 const sent = new Map<string, number>();
 
+function remember(id: string, at: number, now: number): void {
+  sent.set(id, at);
+  for (const [one, when] of sent) {
+    if (sent.size <= SENT_MAX && now - when <= SENT_FOR_MS) break;
+    sent.delete(one);
+  }
+}
+
 /** A new message's id, chosen here and written down before it is sent. */
 export function idToSend(now: number = Date.now()): string {
   const id = generateMessageIDV2();
-  sent.set(id, now);
-  for (const [one, at] of sent) {
-    if (sent.size <= SENT_MAX && now - at <= SENT_FOR_MS) break;
-    sent.delete(one);
-  }
+  remember(id, now, now);
   return id;
+}
+
+/** A number's own record of what it sent, one `<ms> <id>` a line, read back: the lines still in their time. */
+export function sentBefore(lines: string, now: number = Date.now()): string {
+  const kept: string[] = [];
+  for (const line of lines.split("\n")) {
+    const [at, id] = line.trim().split(" ");
+    const when = Number(at);
+    if (!id || !Number.isFinite(when) || now - when > SENT_FOR_MS) continue;
+    remember(id, when, now);
+    kept.push(`${when} ${id}`);
+  }
+  return kept.slice(-SENT_MAX).map((line) => `${line}\n`).join("");
 }
 
 /** Whether a message with this id was sent by one of this daemon's numbers. */
