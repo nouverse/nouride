@@ -99,6 +99,16 @@ describe("one person's messages in a day", () => {
     expect(h.alerts).toEqual([]);
   });
 
+  test("photos sent together are one answer and as many messages: three, to a person who may send two, are refused", async () => {
+    const h = await install({ messages: 2 });
+    const bot = (h.bench as unknown as { gateway: { receive: (envelope: unknown) => void } }).gateway;
+    for (const n of [1, 2, 3]) {
+      bot.receive(envelopeAt({ id: `p-${n}`, timestamp: Date.now(), gatewayId: "telegram:nora", chatId: "dm-burst", senderId: "burst", senderName: "burst", text: "", attachments: [{ type: "image", mimeType: "image/jpeg", url: `https://files.test/${n}.jpg` }] }));
+    }
+    await h.bench.pipeline.idle();
+    expect({ requests: h.requests(), said: h.said() }).toEqual({ requests: 0, said: [ENOUGH(2)] });
+  });
+
   test("a command that reaches no model is not one of them, and a person let in by name is held to no number", async () => {
     const h = await install({ messages: 1 });
     await h.write("ana", "/help");
@@ -238,6 +248,17 @@ describe("the count itself", () => {
     cleanup.push(() => (db.close(), removePath(dir)));
     return { db, door: new OpenDoorStore(db) };
   }
+
+  test("a burst sent together is as many messages as were sent: within the number, counted so; past it, refused whole", async () => {
+    // Read by a second reader of the branch: the photos of a burst become one turn, and were counted as one message, so
+    // a day's worth of files, each fetched and each looked at, went through as a single message.
+    const { door } = await store();
+    const many = { ...limits, maxDailyMessagesPerPerson: 5 };
+    expect(door.take({ ...from("burst"), limits: many, messages: 3 })).toEqual({ action: "answer" });
+    expect(door.take({ ...from("burst"), limits: many, messages: 3 })).toEqual({ action: "enough", say: true });
+    expect(door.take({ ...from("burst"), limits: many, messages: 2 })).toEqual({ action: "answer" });
+    expect(door.take({ ...from("burst"), limits: many })).toEqual({ action: "enough", say: false });
+  });
 
   test("tokens the daemon counted itself, for a provider that reported none, close the agent as reported ones do", async () => {
     const { db, door } = await store();

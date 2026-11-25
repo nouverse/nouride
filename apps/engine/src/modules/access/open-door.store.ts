@@ -54,7 +54,7 @@ export class OpenDoorStore {
    * One stranger's message for an open agent, on the day that began at `day`: counted here when it may be answered.
    * `tokensToday` is what the agent has used since then, whoever it answered.
    */
-  take(input: { agentId: string; gatewayId: string; senderId: string; name?: string; day: number; tokensToday: number; limits: Pick<OpenLimits, "maxDailyTokens" | "maxDailyMessagesPerPerson"> }): DoorVerdict {
+  take(input: { agentId: string; gatewayId: string; senderId: string; name?: string; day: number; tokensToday: number; limits: Pick<OpenLimits, "maxDailyTokens" | "maxDailyMessagesPerPerson">; messages?: number }): DoorVerdict {
     const { agentId, gatewayId, senderId, day } = input;
     return this.db.transaction((): DoorVerdict => {
       const theirs = this.row(agentId, day, gatewayId, senderId);
@@ -65,11 +65,14 @@ export class OpenDoorStore {
         if (!theirs.told_closed) this.toldClosed(agentId, day, gatewayId, senderId);
         return { action: "closed", say: !theirs.told_closed, first: !agents.told_closed };
       }
-      if (theirs.messages >= input.limits.maxDailyMessagesPerPerson) {
+      // A burst of files sent together is one turn and as many messages as were sent: counted as one, a stranger could
+      // send a day's worth of files, each fetched and each looked at, as a single message.
+      const count = Math.max(1, input.messages ?? 1);
+      if (theirs.messages + count > input.limits.maxDailyMessagesPerPerson) {
         if (!theirs.told_enough) this.db.prepare("UPDATE open_door SET told_enough = 1 WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(agentId, day, gatewayId, senderId);
         return { action: "enough", say: !theirs.told_enough };
       }
-      this.db.prepare("UPDATE open_door SET messages = messages + 1 WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(agentId, day, gatewayId, senderId);
+      this.db.prepare("UPDATE open_door SET messages = messages + ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(count, agentId, day, gatewayId, senderId);
       return { action: "answer" };
     });
   }
