@@ -1431,7 +1431,7 @@
   "packages/wire/src/people.ts": { "version": 1 },
   "packages/wire/src/secrets.ts": { "version": 2 },
   "packages/wire/src/skills.ts": { "version": 4 },
-  "packages/wire/src/status.ts": { "version": 17 },
+  "packages/wire/src/status.ts": { "version": 18 },
   "packages/wire/src/turns.ts": { "version": 4 },
   "packages/wire/src/update.ts": { "version": 1 },
   "packages/wire/src/web-search.ts": { "version": 2 }

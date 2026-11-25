@@ -35,6 +35,17 @@ export function reachedOn(connections: readonly string[]): string {
   return `Anyone who finds it can write to it on ${connections.map(connectionSaid).join(", ")}, with no code for you to approve.`;
 }
 
+/**
+ * What it would answer strangers from under Knowledge, as one sentence, or null where the daemon does not say (an
+ * older one). A collection already for everyone with no agents named is read by every agent opened, so it is named
+ * here before the agent is: nothing else on the page says it.
+ */
+export function answersFrom(collections: readonly string[] | undefined): string | null {
+  if (collections === undefined) return null;
+  if (collections.length === 0) return "Nothing under Knowledge is opened to everyone for it yet, so it answers from its persona files and its notes alone.";
+  return `It answers strangers from ${collections.length === 1 ? "this collection" : "these collections"} under Knowledge, opened to everyone: ${collections.join(", ")}.`;
+}
+
 /** A whole number of 1 or more, as typed; null for anything else. */
 export function limitTyped(text: string): number | null {
   const value = Number(text.trim());
@@ -103,6 +114,7 @@ function OpenForm({ agent, open, onClose }: { agent: AgentSummary; open: AgentOp
         <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-base-content/80">
           <li>{reachedOn(open.connections)}</li>
           <li>It may say whatever its persona files and its notes hold. Read them as a stranger would.</li>
+          {answersFrom(open.collections) ? <li data-open-collections>{answersFrom(open.collections)}</li> : null}
           <li>While it is open it can only search and read what you opened to everyone under Knowledge, read a file someone sends it, and send a file from that knowledge. Its other tools are switched off, whatever its Tools list says.</li>
           <li>It remembers nothing a chat tells it, and knows nothing about you or the people you let in.</li>
         </ul>

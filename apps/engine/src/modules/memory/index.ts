@@ -399,6 +399,12 @@ export function createMemory(deps: MemoryDeps) {
     knowledge: {
       ...knowledge.surface,
       usable: (speaker: Speaker): Collection[] => knowledge.usable(who(speaker)),
+      /**
+       * What an agent would answer strangers from were it open to everyone, by name: read as its turns then read
+       * (`publicAudience`), whether or not it is open now. The Open form lists them: a collection already for everyone,
+       * with no agents named, became the public's the moment the first agent was opened, and nothing said so.
+       */
+      openTo: (agentId: string): string[] => knowledge.usable({ agentId, audience: publicAudience(agentId) }).map((collection) => collection.settings.name),
       /** A kept document's own file, for `send_file` to send where it is asked from: only what this chat may read. */
       fileOf: (speaker: Speaker, item: string) => knowledge.fileOf(who(speaker), item),
       /** A document kept from this chat (`memory_write` about knowledge): saved, or waiting for an admin's yes. */

@@ -183,6 +183,16 @@ describe("what an agent's page is told", () => {
     expect(await told("coder")).toEqual({ never: "cli", notes: false, connections: [], limits: null });
   });
 
+  test("the collections it would answer strangers from, as memory reads them for it; nothing said where memory is not wired", async () => {
+    const { agents } = await service();
+    const openTo = (agentId: string) => (agentId === "nora" ? ["Shop", "Menu"] : []);
+    const memory = { knowledge: { openTo } } as never;
+    const base = { ctx: { config } as never, usage: new UsageStore(db, () => NOW), openDoor: new OpenDoorStore(db) };
+    expect(openOf({ ...base, memory }, agents.get("nora")!, NOW).collections).toEqual(["Shop", "Menu"]);
+    expect(openOf({ ...base, memory }, agents.get("nouva")!, NOW).collections).toEqual([]);
+    expect("collections" in openOf(base, agents.get("nora")!, NOW)).toBe(false);
+  });
+
   test("while it is open, what was used of its day: its tokens, marked where part is the daemon's own count, and who wrote", async () => {
     pack("nora", `${NORA}access = "open"\n\n[open]\nmax_daily_tokens = 200000\nmax_daily_messages_per_person = 30\n`);
     const day = startOfLocalDay(NOW, "Asia/Jakarta");

@@ -106,6 +106,18 @@ describe("what an open agent's tools reach", () => {
   });
 });
 
+describe("what the Open form names (0.8.48)", () => {
+  test("the collections an agent would answer strangers from, before it is opened: for everyone, and naming it or no agent", () => {
+    put("menu/knowledge.toml", 'name = "Menu"\nreaders = "everyone"\nagents = ["nora"]\n');
+    put("old/knowledge.toml", 'name = "Old prices"\nreaders = "everyone"\narchived = true\n');
+    // Nouva is not open: the form asks before it is, and reads as its turns would then read.
+    expect(h.memory.knowledge.openTo("nouva")).toEqual(["Shop"]);
+    expect(h.memory.knowledge.openTo("nora").sort()).toEqual(["Menu", "Shop"]);
+    // What it then answers from is the same list: the prompt an open agent is given names them.
+    expect(h.memory.recall(open(GADING_DM)).knowledge?.map((collection) => collection.name).sort()).toEqual(["Menu", "Shop"]);
+  });
+});
+
 describe("nobody", () => {
   test("is an identity no person's key and no connection's sender can be", () => {
     expect(nobody("nora")).toBe("public:nora");

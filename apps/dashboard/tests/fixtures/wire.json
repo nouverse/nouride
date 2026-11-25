@@ -1391,6 +1391,9 @@
           "never": null,
           "notes": false,
           "connections": [],
+          "collections": [
+            "House"
+          ],
           "limits": null
         },
         "sharedTools": true,

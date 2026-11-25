@@ -141,6 +141,11 @@ export interface AgentOpen {
   notes: boolean;
   /** The connections it owns, which is where strangers would reach it. */
   connections: string[];
+  /**
+   * The knowledge collections it would answer strangers from, by name: those for everyone that name it or no agent.
+   * Absent from a daemon before 0.8.48.
+   */
+  collections?: string[];
   /** Its two limits and its own closing sentence, as its pack holds them; null while it has none. */
   limits: { maxDailyTokens: number; maxDailyMessagesPerPerson: number; closedReply: string | null } | null;
   /**

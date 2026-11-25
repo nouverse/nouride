@@ -10,7 +10,7 @@ import { startOfLocalDay } from "@/commons/clock.ts";
 import { hasNotes } from "@/modules/setup/open-agent.ts";
 import type { ControlDeps } from "./types.ts";
 
-export function openOf(deps: Pick<ControlDeps, "ctx" | "usage" | "openDoor">, agent: LoadedAgent, now: number = Date.now()): AgentOpen {
+export function openOf(deps: Pick<ControlDeps, "ctx" | "usage" | "openDoor" | "memory">, agent: LoadedAgent, now: number = Date.now()): AgentOpen {
   const { config } = deps.ctx;
   const id = agent.config.id;
   const limits = agent.config.open;
@@ -23,6 +23,7 @@ export function openOf(deps: Pick<ControlDeps, "ctx" | "usage" | "openDoor">, ag
     never: config.daemon.orchestrator === id ? "orchestrator" : agent.config.external ? "cli" : null,
     notes: hasNotes(agent.persona.memory),
     connections: config.gateways.filter((gateway) => gateway.enabled && gateway.agent === id).map((gateway) => gateway.id),
+    ...(deps.memory ? { collections: deps.memory.knowledge.openTo(id) } : {}),
     limits: limits ? { maxDailyTokens: limits.maxDailyTokens, maxDailyMessagesPerPerson: limits.maxDailyMessagesPerPerson, closedReply: limits.closedReply ?? null } : null,
     ...(isOpenAgent(agent) ? { today: today() } : {}),
   };

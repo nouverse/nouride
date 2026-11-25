@@ -11,7 +11,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AgentOpen, AgentSummary, PublicConversation } from "@nouride/wire";
 import { openOn } from "../src/modules/access/open-agents.tsx";
-import { limitTyped, OPEN_MEANS, reachedOn, todaySaid } from "../src/modules/agents/components/OpenToEveryone.tsx";
+import { answersFrom, limitTyped, OPEN_MEANS, reachedOn, todaySaid } from "../src/modules/agents/components/OpenToEveryone.tsx";
 import { whoWrote } from "../src/modules/agents/components/PublicConversations.tsx";
 import { answer, buttons, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
@@ -49,6 +49,13 @@ describe("the words", () => {
   test("where strangers would reach it, by the app's name; and nowhere, said as what to do first", () => {
     expect(reachedOn(["telegram:nora", "whatsapp:shop"])).toBe("Anyone who finds it can write to it on Telegram (nora), WhatsApp (shop), with no code for you to approve.");
     expect(reachedOn([])).toBe("It has no connection of its own yet, so nobody can reach it. Give it one on its Connections tab first.");
+  });
+
+  test("what it would answer strangers from under Knowledge, by name; nothing yet said as such; a daemon that does not say, not said", () => {
+    expect(answersFrom(["Shop"])).toBe("It answers strangers from this collection under Knowledge, opened to everyone: Shop.");
+    expect(answersFrom(["Shop", "Menu"])).toBe("It answers strangers from these collections under Knowledge, opened to everyone: Shop, Menu.");
+    expect(answersFrom([])).toBe("Nothing under Knowledge is opened to everyone for it yet, so it answers from its persona files and its notes alone.");
+    expect(answersFrom(undefined)).toBeNull();
   });
 
   test("a limit is a whole number of 1 or more: nothing typed, a zero, a fraction or a word is none", () => {
@@ -106,6 +113,19 @@ describe("a closed agent", () => {
     expect(seen.form).toContain("there is no starting value");
     expect(seen).toMatchObject({ empty: ["", ""], early: true, half: true });
     expect(posted.posts).toEqual([{ path: "/agents/nora/open", body: { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30 } }]);
+  });
+
+  test("its form names the collections it would answer strangers from, before it is opened; an older daemon's names none", async () => {
+    const seen: (string | null)[] = [];
+    for (const open of [{ ...CAN, collections: ["Shop", "Menu"] }, CAN]) {
+      answer(withNora(open));
+      await renderPage("/agents/nora/access", async (host) => {
+        await drawn(host);
+        await pickOpen(host);
+        seen.push(host.querySelector("[data-open-collections]")?.textContent ?? null);
+      });
+    }
+    expect(seen).toEqual(["It answers strangers from these collections under Knowledge, opened to everyone: Shop, Menu.", null]);
   });
 
   test("with notes of its own it takes a second yes, sent with the numbers", async () => {
