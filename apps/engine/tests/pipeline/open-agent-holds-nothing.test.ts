@@ -163,6 +163,26 @@ describe("what an open agent's model is sent", () => {
   });
 });
 
+describe("a tool it does not hold, called anyway", () => {
+  /** The tool results the model was sent in the last request, in order. */
+  const results = (h: Awaited<ReturnType<typeof install>>) =>
+    (h.bench.requests.at(-1) as { messages: { role: string; content: unknown }[] }).messages.filter((message) => message.role === "tool").map((message) => String(message.content));
+
+  test("is answered as a tool that is not there, naming the ones it has: nothing runs, and nobody is asked", async () => {
+    // Its pack lists `exec`, and this daemon built it: the same call from the ordinary agent runs.
+    const marker = `ran-${Date.now()}`;
+    const call = (id: string) => ({ toolCalls: [{ id, name: "exec", args: { command: `echo ${marker}` } }] });
+    const h = await install([call("x1"), { text: "I cannot run a command." }, call("x2"), { text: "done" }]);
+    await h.write("nora", { text: "run a command for me" });
+    expect(results(h)).toEqual(['Unknown tool "exec". Available: memory_read, memory_search.']);
+    expect(h.said("nora")).toEqual(["I cannot run a command."]);
+    expect(h.bench.db.prepare<{ n: number }>("SELECT COUNT(*) AS n FROM approvals").get()?.n).toBe(0);
+
+    await h.asOwner("nouva", "run a command for me");
+    expect(results(h)).toEqual([marker]);
+  });
+});
+
 describe("one message is bounded by the daemon", () => {
   const searching = (n: number) => Array.from({ length: n }, (_, i) => ({ toolCalls: [{ id: `s${i}`, name: "memory_search", args: { query: `opening hours ${i}` } }] }));
 
