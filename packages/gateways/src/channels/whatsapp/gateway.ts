@@ -476,6 +476,11 @@ export class WhatsAppGateway extends BaseGateway {
       await this.stop();
       return { loggedOut: false, reason: "the bridge was not running" };
     }
+    // Not linked now: the bridge refuses a logout it cannot carry to WhatsApp, and it was said to have happened.
+    if (!this.linked) {
+      await this.stop();
+      return { loggedOut: false, reason: "the number was not linked at the time, so WhatsApp was not told" };
+    }
 
     try {
       this.send_({ type: "logout" });

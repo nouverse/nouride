@@ -215,6 +215,14 @@ describe("a file a message carried", () => {
   });
 });
 
+describe("a number removed", () => {
+  test("logged out when it is linked; one not linked is not said to be, and its bridge is asked nothing", async () => {
+    const shop = await number("shop", "nora");
+    expect(await shop.gateway.logoutAndStop()).toEqual({ loggedOut: false, reason: "the number was not linked at the time, so WhatsApp was not told" });
+    expect(shop.fake.written.filter((command) => command.type === "logout")).toEqual([]);
+  });
+});
+
 describe("each number's own addresses", () => {
   test("its phone address once linked, its hidden one once a message says it, each without a device, and none of the other's", async () => {
     const shop = await number("shop", "nora");

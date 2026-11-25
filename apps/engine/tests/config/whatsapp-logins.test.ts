@@ -20,6 +20,7 @@ let dir: string;
 let configPath: string;
 let secrets: SecretStore;
 let settings: SettingsService;
+let deps: ConstructorParameters<typeof SettingsService>[0];
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), "nouride-whatsapp-logins-"));
@@ -29,14 +30,15 @@ beforeEach(async () => {
   config.daemon.dataDir = dir;
   config.gateways = [];
   secrets = await SecretStore.open(dir, {});
-  settings = new SettingsService({
+  deps = {
     config,
     configPath,
     secrets,
     providers: new ProviderRegistry(config.providers, secrets),
     gatewayStatus: () => new Map(),
     retireGateway: async () => ({ stopped: true, loggedOut: true }),
-  });
+  };
+  settings = new SettingsService(deps);
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
@@ -56,6 +58,22 @@ test("removing one connection takes its login and no other's", async () => {
   expect(await settings.removeGateway("whatsapp:shop", "test")).toMatchObject({ ok: true });
   expect({ shop: existsSync(shop), main: existsSync(join(main, "creds.enc")) }).toEqual({ shop: false, main: true });
   expect(await secrets.resolve("whatsapp-main-key")).toBeDefined();
+});
+
+test("a number removed whose phone was not told says so; one logged out from it does not", async () => {
+  // Read by a second reader of the branch: a number not linked at the time was said to be logged out, and its phone
+  // went on listing it under Linked devices.
+  let told = false;
+  const service = new SettingsService({ ...deps, retireGateway: async () => ({ stopped: true, loggedOut: told }) });
+  for (const name of ["shop", "home"]) {
+    await service.saveGateway({ platform: "whatsapp", name, enabled: true, actor: "test" });
+    const login = service.gateways().find((gateway) => gateway.id === `whatsapp:${name}`)!.sessionDir!;
+    mkdirSync(login, { recursive: true });
+    writeFileSync(join(login, "creds.enc"), "encrypted-login-bytes");
+  }
+  expect(await service.removeGateway("whatsapp:shop", "test")).toEqual({ ok: true, restartRequired: false, stillOnThePhone: true });
+  told = true;
+  expect(await service.removeGateway("whatsapp:home", "test")).toEqual({ ok: true, restartRequired: false });
 });
 
 test("a second connection given the folder another keeps its login in is not saved", async () => {

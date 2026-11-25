@@ -132,7 +132,8 @@ function GatewayCard({
   const remove = useMutation({
     mutationFn: () => api.deleteGateway(gateway.id),
     onSuccess: (answer) => {
-      saved(answer, `Connection ${gateway.id} removed`);
+      const phone = answer.stillOnThePhone ? "The phone that held this number may still list it under Linked devices: remove it there too." : undefined;
+      saved(answer, `Connection ${gateway.id} removed`, phone);
       onChanged();
     },
   });

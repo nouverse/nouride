@@ -267,5 +267,7 @@ export async function removeGateway(deps: SettingsDeps, id: string, actor: strin
 
   // A restart is only needed for what could not be retired live. Saying "restart required" after
   // the connection is already down and its files are gone sends the operator to do nothing.
-  return { ok: true, restartRequired: !retired?.stopped };
+  // A number removed without its phone being told is still listed there: said, as the place to finish removing it.
+  const stillOnThePhone = existing.platform === "whatsapp" && sessionRemoved && retired?.loggedOut !== true;
+  return { ok: true, restartRequired: !retired?.stopped, ...(stillOnThePhone ? { stillOnThePhone: true as const } : {}) };
 }

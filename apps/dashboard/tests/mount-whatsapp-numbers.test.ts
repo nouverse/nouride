@@ -26,9 +26,13 @@ const number = (name: string, agent: string, extra: Record<string, unknown> = {}
   ...extra,
 });
 
+/** The answers `answers` last gave, to add one to. */
+let given: Record<string, { status: number; body: unknown }> = {};
+const current = () => given;
+
 /** The daemon's answers for an agent with two numbers, beside another agent's own number and a Telegram bot. */
 function answers(access: "open" | "pair") {
-  answer({
+  answer(given = {
     "/gateways": {
       status: 200,
       body: {
@@ -76,5 +80,34 @@ describe("an agent with two WhatsApp numbers", () => {
       expect(cardOf(host, "whatsapp:promo")?.querySelector("[data-open-number-note]")).not.toBeNull();
       expect(cardOf(host, "telegram:nora")?.querySelector("[data-open-number-note]")).toBeNull();
     });
+  });
+});
+
+describe("a number removed", () => {
+  const remove = async (stillOnThePhone: boolean) => {
+    answers("pair");
+    let toast = "";
+    await renderPage("/agents/nora/gateways", async (host) => {
+      await eventually(() => cardOf(host, "whatsapp:shop") !== null, 3_000, "the shop's card");
+      // The removal's own answer, beside the page's, as the daemon gives it.
+      answer({
+        ...current(),
+        "/gateways/whatsapp%3Ashop": { status: 200, body: { ok: true, restartRequired: false, ...(stillOnThePhone ? { stillOnThePhone: true } : {}) } },
+      });
+      cardOf(host, "whatsapp:shop")!.querySelector<HTMLButtonElement>('[aria-label="Remove connection"]')!.click();
+      await eventually(() => [...document.body.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Remove"), 3_000, "the question");
+      [...document.body.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Remove")!.click();
+      await eventually(() => document.body.textContent?.includes("Connection whatsapp:shop removed") === true, 3_000, "the toast");
+      toast = document.body.textContent ?? "";
+    });
+    return toast;
+  };
+
+  test("whose phone was not told: the person is told where to finish removing it", async () => {
+    expect(await remove(true)).toContain("The phone that held this number may still list it under Linked devices: remove it there too.");
+  });
+
+  test("logged out from its phone: nothing more to do, and nothing said of it", async () => {
+    expect(await remove(false)).not.toContain("Linked devices");
   });
 });
