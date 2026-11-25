@@ -116,7 +116,7 @@ export function wayOnPresses(deps: {
   /** Whether whoever pressed may talk to this agent in this chat. */
   mayAsk: (press: ButtonPress, agent: LoadedAgent) => boolean;
   /** The connection an agent answers through on this platform, and the platform's name. */
-  ownGateway: (agentId: string, gatewayId: string) => string;
+  ownGateway: (agentId: string, gatewayId: string, chatId?: string) => string;
   platform: (gatewayId: string) => MessageEnvelope["gateway"] | undefined;
   now?: () => number;
 }): { owns(data: string): boolean; press(press: ButtonPress): Promise<PressAnswer> } {
@@ -144,7 +144,7 @@ export function wayOnPresses(deps: {
     const to = deps.agent(toId);
     if (!turn || !to || turn.chatId !== press.chatId || !deps.ctx.waysOn.waits(turn.id)) return gone;
     if (!deps.mayAsk(press, to)) return notYours;
-    const gatewayId = deps.ownGateway(to.config.id, press.gatewayId);
+    const gatewayId = deps.ownGateway(to.config.id, press.gatewayId, press.chatId);
     const platform = deps.platform(gatewayId);
     if (!platform) return gone;
     deps.ctx.waysOn.settle(turn.id);

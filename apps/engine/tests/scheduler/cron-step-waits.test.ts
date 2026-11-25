@@ -607,7 +607,9 @@ describe("the question in the chat", () => {
         ask: async (target, text, buttons) => (posted.push({ target, text: text(true), buttons }), { ids: [`m${posted.length}`], buttons: true }),
         settle: async () => true,
       },
-      voice: (agentId, gatewayId) => (agentId === "nouva" ? "telegram:nouva" : gatewayId),
+      // Its own connection, but for a chat that connection is not in (`Gateway.sees`): there the job's own, as the
+      // pipeline's voice chooses. Asked with the chat, or it could not tell.
+      voice: (agentId, gatewayId, chatId) => (agentId === "nouva" && chatId !== "room-only-the-shop-is-in" ? "telegram:nouva" : gatewayId),
       isAdmin: (who) => ADMINS.has(who.senderId),
       answer: (runId, go, by) => (answers.push({ runId, go, by }), answer(runId, go, by)),
       when: (at) => new Date(at).toISOString().slice(0, 16).replace("T", " "),
@@ -649,6 +651,12 @@ describe("the question in the chat", () => {
     expect(store.waitingRun(runId)!.state.card).toEqual({ gatewayId: "telegram:nouva", chatId: "12345", messageId: "m1" });
     expect(c.asks.owns(`run:go:${runId}`)).toBe(true);
     expect(c.asks.owns("job:on:cron_x")).toBe(false);
+  });
+
+  test("in a group only another of the install's connections is in, the card goes on that one", async () => {
+    const c = chat();
+    await waiting(c, { target: { gatewayId: "telegram:shop", chatId: "room-only-the-shop-is-in" } });
+    expect(c.posted.map((one) => one.target)).toEqual([{ gatewayId: "telegram:shop", chatId: "room-only-the-shop-is-in" }]);
   });
 
   test("the card shows what the step before said, cut to a glance, and says where to answer where there are no buttons", () => {

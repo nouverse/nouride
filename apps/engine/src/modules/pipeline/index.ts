@@ -343,7 +343,7 @@ export class Pipeline {
         turns: { get: (id) => this.deps.turns?.get(id) ?? null },
         agent,
         mayAsk,
-        ownGateway: (agentId, gatewayId) => this.voice.voiceGatewayId(agentId, gatewayId),
+        ownGateway: (agentId, gatewayId, chatId) => this.voice.voiceGatewayId(agentId, gatewayId, chatId),
         platform: (gatewayId) => this.deps.gateways.get(gatewayId)?.platform,
       }),
       handedOver: {
@@ -371,8 +371,8 @@ export class Pipeline {
    * Public because an agent's identity has to hold on *everything* it says — the answer, the live
    * progress line and the approval prompt each go out through their own path.
    */
-  voiceGatewayId(agentId: string, inboundGatewayId: string): string {
-    return this.voice.voiceGatewayId(agentId, inboundGatewayId);
+  voiceGatewayId(agentId: string, inboundGatewayId: string, chatId?: string): string {
+    return this.voice.voiceGatewayId(agentId, inboundGatewayId, chatId);
   }
 
   /** Whether a paused agent answers this message: a command that works while paused (`HookRegistry.answersWhilePaused`). */

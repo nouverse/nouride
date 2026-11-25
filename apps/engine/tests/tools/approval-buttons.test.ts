@@ -90,6 +90,30 @@ const press = (gateway: FakeGateway, messageId: string, data: string, senderId: 
 const status = (id: string) => db.prepare<{ status: string; resolved_by: string | null; decision: string | null }>("SELECT status, resolved_by, decision FROM approvals WHERE id = ?").get(id)!;
 
 describe("the prompt", () => {
+  test("goes out through the connection the agent speaks with in that chat: a group only another of its numbers is in", async () => {
+    // Nouva has a number of her own, not in this group; the shop's number is, and she answered there through it. Her
+    // question must go the same way: put on her own number, it went to a group it is not in, and was lost.
+    const home = new FakeGateway("whatsapp:home", "whatsapp");
+    const shop = new FakeGateway("whatsapp:shop", "whatsapp");
+    const gateways = new Map([[home.id, home], [shop.id, shop]]);
+    const asked: unknown[] = [];
+    let gate!: SqliteApprovalGate;
+    const prompts = new ApprovalPrompts({
+      gateways,
+      notifier: new Notifier({ gateways }),
+      approvals: () => gate,
+      // As the pipeline's voice: her own number, unless the chat is one it is not in (`Gateway.sees`).
+      voice: (agentId, gatewayId, chatId) => (asked.push([agentId, gatewayId, chatId]), chatId === "room-1" ? gatewayId : "whatsapp:home"),
+      isAdmin: () => false,
+    });
+    gate = new SqliteApprovalGate({ db, timeoutMs: 60_000, onRequest: (notice) => void prompts.post(notice), onSettled: (request, settlement) => prompts.settled(request, settlement) });
+    gates.push(gate);
+    void gate.request(ask({ gatewayId: "whatsapp:shop", gateway: "whatsapp", chatId: "room-1" }));
+    await eventually(() => shop.sent.length + home.sent.length > 0, 2_000, "the prompt posted");
+    expect({ shop: shop.sent.length, home: home.sent.length }).toEqual({ shop: 1, home: 0 });
+    expect(asked[0]).toEqual(["nouva", "whatsapp:shop", "room-1"]);
+  });
+
   test("carries Approve, Always and Deny where the connection carries buttons — and still says how to answer by command", async () => {
     const gateway = Object.assign(new FakeGateway("telegram:main"), { buttons: true });
     const { gate } = process(gateway);

@@ -33,7 +33,7 @@ export function askKeptApprovals(input: {
   notifier: Pick<Notifier, "toChat">;
   chatEvents?: Pick<ChatEventsPort, "record">;
   /** The connection an agent speaks on in a chat — where its approval prompt went, and where this goes. */
-  voice: (agentId: string, gatewayId: string) => string;
+  voice: (agentId: string, gatewayId: string, chatId?: string) => string;
 }): void {
   const asked = input.approvals.showKept();
   if (asked > 0) log.info("asked the approvals kept across the restart again", { count: asked });
@@ -52,7 +52,7 @@ export function askKeptApprovals(input: {
     const text = lapsedNotice(request);
     input.chatEvents?.record({ gatewayId: request.gateway, chatId: request.chatId, audience: "ui", kind: "note", text, agentId: request.agentId, details: { approval: request.id, kept: false } });
     void input.notifier
-      .toChat({ gatewayId: input.voice(request.agentId, request.gateway), chatId: request.chatId }, text)
+      .toChat({ gatewayId: input.voice(request.agentId, request.gateway, request.chatId), chatId: request.chatId }, text)
       .catch((err: unknown) => log.warn("could not say an approval was lost to the restart", { approval: request.id, error: String(err) }));
   }
 }

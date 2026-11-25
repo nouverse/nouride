@@ -344,7 +344,7 @@ export async function runDaemon(): Promise<void> {
    * and there is nothing further that depends on it — the rows were already corrected above.
    */
   // The approvals it kept, first, so a turn taken up below finds its question already back in front of the person.
-  askKeptApprovals({ approvals, ...keptApprovals, notifier, chatEvents, voice: (agentId, gatewayId) => pipeline.voiceGatewayId(agentId, gatewayId) });
+  askKeptApprovals({ approvals, ...keptApprovals, notifier, chatEvents, voice: (agentId, gatewayId, chatId) => pipeline.voiceGatewayId(agentId, gatewayId, chatId) });
   // Then what else the restart owes: reports, undelivered replies, the inbox — `boot/durable.ts`.
   void resumeAfterBoot({ recovered: recoveredTurns, orphaned: orphanedTurns.conversations, stores: durable, startedAt, pipeline, turns, notifier, chatEvents, keptFor: (turn) => approvals.keptFor(turn) });
   // After the inbox it reopened, so a message from before the restart is ahead of these.

@@ -164,7 +164,7 @@ function draftTelling(notifier: Pick<Notifier, "toChat" | "ask" | "settle" | "fi
 interface MissionsLate {
   queueTurn: (envelope: MessageEnvelope) => boolean;
   /** The connection an agent speaks on in a chat — the notices go out under its own name. */
-  voice: (agentId: string, gatewayId: string) => string;
+  voice: (agentId: string, gatewayId: string, chatId?: string) => string;
   cancelTurn: (agentId: string, chatId: string) => void;
   /** Words into an agent's turn at work in a chat, and how they reach it (`Pipeline.steerInto`, `steerReach`). */
   steerInto: (agentId: string, chatId: string, gatewayId: string, envelope: MessageEnvelope) => "taken" | "full" | "ending" | "none";
@@ -232,7 +232,7 @@ export function buildMissions(params: {
     edit: (to, messageId, text) => params.notifier.edit(to, messageId, text),
   });
   /** The chat a mission reports to, on the connection its agent speaks on there. */
-  const reportsTo = (mission: Mission) => ({ gatewayId: late ? late.voice(mission.agentId, mission.gatewayId) : mission.gatewayId, chatId: mission.chatId });
+  const reportsTo = (mission: Mission) => ({ gatewayId: late ? late.voice(mission.agentId, mission.gatewayId, mission.chatId) : mission.gatewayId, chatId: mission.chatId });
   /** What a mission said, as the dashboard's conversation shows it. */
   // Kept with its mission and its agent: the dashboard's transcript shows it, and the agent reads it back with the next
   // message in that chat (`ChatEventStore.toldByMissions`). A progress line says so: only a mission's newest is read back.
@@ -289,7 +289,7 @@ export function buildMissions(params: {
   const sendAsFile = async (mission: Mission, name: string, text: string): Promise<string | null> => {
     const ctx = commandContext(mission);
     if (!late || !ctx) return "this daemon cannot send files for that agent.";
-    const at = { ...ctx, gatewayId: late.voice(mission.agentId, mission.gatewayId), chatId: mission.chatId };
+    const at = { ...ctx, gatewayId: late.voice(mission.agentId, mission.gatewayId, mission.chatId), chatId: mission.chatId };
     return await sendTextFile({ send: late.sendAttachment, maxBytes: params.config().attachments.maxSizeMb * 1024 * 1024, ...(params.childEnv ? { childEnv: params.childEnv } : {}) }, at, name, text);
   };
   const missions = new Missions({
@@ -406,7 +406,7 @@ export function buildMissions(params: {
       const sendFile = late?.tools.get("send_file");
       const ctx = commandContext(mission);
       if (!late || !sendFile || !ctx) return mission.files.map((file) => basename(file));
-      const at = { ...ctx, gatewayId: late.voice(mission.agentId, mission.gatewayId), chatId: mission.chatId };
+      const at = { ...ctx, gatewayId: late.voice(mission.agentId, mission.gatewayId, mission.chatId), chatId: mission.chatId };
       // In a worktree of its own, what git tracks is the work on its branch, which the notice names (0.8.11).
       const tracked = worktreeBranch(mission) ? await trackedIn(mission.workdir, mission.files, asTheAgent(mission.agentId)) : new Set<string>();
       if (!tracked) log.warn("git could not say which of a mission's files it tracks, so all of them are sent", { mission: mission.id });
@@ -516,7 +516,7 @@ export function buildMissions(params: {
     connect(pipeline: Pipeline, tools: Map<string, Tool>, usage: Pick<UsagePort, "forSession" | "helperTokens">): void {
       late = {
         queueTurn: (envelope) => pipeline.queueTurn(envelope),
-        voice: (agentId, gatewayId) => pipeline.voiceGatewayId(agentId, gatewayId),
+        voice: (agentId, gatewayId, chatId) => pipeline.voiceGatewayId(agentId, gatewayId, chatId),
         cancelTurn: (agentId, chatId) => void pipeline.cancelTurnFor(agentId, chatId),
         steerInto: (agentId, chatId, gatewayId, envelope) => pipeline.steerInto(agentId, chatId, gatewayId, envelope),
         steerReach: (agentId) => pipeline.steerReach(agentId),

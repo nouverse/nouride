@@ -184,7 +184,7 @@ export function buildTurnParts(
     gateways,
     notifier,
     approvals: () => approvals,
-    voice: (agentId, gatewayId) => input.pipeline().voiceGatewayId(agentId, gatewayId),
+    voice: (agentId, gatewayId, chatId) => input.pipeline().voiceGatewayId(agentId, gatewayId, chatId),
     isAdmin: (who) => input.pipeline().isAdmin(who),
     askedIn: missions.askedIn,
     missionOf: missions.missionOf,
