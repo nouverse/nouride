@@ -15,6 +15,7 @@ import { mock } from "bun:test";
 import { chmodSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import * as baileys from "@whiskeysockets/baileys";
+import { idToSend } from "../../src/sent-here.ts";
 
 interface StandIn {
   listeners: Map<string, (payload: unknown) => void>;
@@ -109,6 +110,13 @@ home.said();
 shopFirst.fire("messages.upsert", message("for the shop"));
 await heard(shop);
 seen.aMessage = { shop: shop.said(), home: home.said() };
+// The daemon's own words from another of its numbers, by the id it chose before sending (`sent-here.ts`), and a
+// person's, from the same address: only the first is marked.
+const ownId = idToSend();
+shopFirst.fire("messages.upsert", { type: "notify", messages: [{ key: { remoteJid: "628222@s.whatsapp.net", id: ownId, fromMe: false }, message: { conversation: "from the other number" }, messageTimestamp: 3, pushName: "Nora" }] });
+shopFirst.fire("messages.upsert", { type: "notify", messages: [{ key: { remoteJid: "628222@s.whatsapp.net", id: "typed-on-the-phone", fromMe: false }, message: { conversation: "typed on its phone" }, messageTimestamp: 4, pushName: "Nora" }] });
+await came(() => shop.events.filter((event) => event.type === "message").length === 2);
+seen.ownWords = shop.events.splice(0).filter((event) => event.type === "message").map((event) => `${event.text}:${(event as { sentHere?: boolean }).sentHere === true}`);
 
 // ── each saves its own credentials
 shopFirst.fire("creds.update", {});

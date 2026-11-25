@@ -54,6 +54,8 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
     // One signs in: its channel says so, the other's says nothing and it is not signed in for it.
     shopSignedIn: { shop: ["ready", "status:connected"], home: [], linked: [true, false] },
     aMessage: { shop: ["message:for the shop"], home: [] },
+    // From one of the install's own addresses: the daemon's words by their id, a person's on that phone without it.
+    ownWords: ["from the other number:true", "typed on its phone:false"],
     bothSaved: [true, true],
     // One reconnects on a socket of its own; the other's socket is not ended and still hands its messages up.
     aReconnect: { reconnected: true, shop: ["status:connecting"], home: ["message:for the home, after the shop reconnected"], shopsOldSocketEnded: true, homesSocketEnded: false, homeLinked: true },

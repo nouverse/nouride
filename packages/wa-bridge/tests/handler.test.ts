@@ -14,6 +14,7 @@ import { Handler, withTimeout, type Link, type Sock } from "../src/handler.ts";
 import { BRIDGE_PROTOCOL_VERSION, type BridgeEvent } from "../src/protocol.ts";
 import { speaker, type Speaker } from "../src/say.ts";
 import { eventually } from "./wait.ts";
+import { sentHere } from "../src/sent-here.ts";
 
 const CHAT = "100000000000001@lid";
 
@@ -144,7 +145,7 @@ describe("send", () => {
     await handler.handleLine(JSON.stringify({ type: "send", id: "c1", chatId: CHAT, text: "cc @628123456789 ya" }));
     const sends = calls.filter((c) => c.op === "sendMessage");
     expect(sends).toEqual([
-      { op: "sendMessage", args: [CHAT, { text: "cc @628123456789 ya", mentions: ["628123456789@s.whatsapp.net"] }] },
+      { op: "sendMessage", args: [CHAT, { text: "cc @628123456789 ya", mentions: ["628123456789@s.whatsapp.net"] }, { messageId: expect.any(String) }] },
     ]);
     expect(calls.find((c) => c.op === "sendPresenceUpdate")?.args).toEqual(["paused", CHAT]);
     expect(events).toEqual([{ type: "ack", id: "c1" }]);
@@ -194,6 +195,17 @@ describe("send_media", () => {
   test("anything else is a document named after its file", async () => {
     const payload = await sentPayload({ path: file("report.pdf"), mimeType: "application/pdf", caption: "@628123456789 here" });
     expect(payload).toMatchObject({ mimetype: "application/pdf", fileName: "report.pdf", mentions: ["628123456789@s.whatsapp.net"] });
+  });
+});
+
+describe("the daemon's own sends", () => {
+  test("each message sent goes with an id chosen here and written down first, so another of its numbers knows it", async () => {
+    const { handler, calls } = await helloed();
+    await handler.handleLine(JSON.stringify({ type: "send", id: "c9", chatId: CHAT, text: "on its way" }));
+    const options = calls.find((call) => call.op === "sendMessage")!.args[2] as { messageId?: string };
+    expect(typeof options?.messageId).toBe("string");
+    expect(sentHere(options.messageId)).toBe(true);
+    expect(sentHere("an id nobody here chose")).toBe(false);
   });
 });
 

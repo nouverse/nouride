@@ -12,6 +12,7 @@ import { cleanMentionText, extractMentions } from "./mentions.ts";
 import { splitMessage } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION, type BridgeCommand } from "./protocol.ts";
 import type { Speaker } from "./say.ts";
+import { idToSend } from "./sent-here.ts";
 
 /** What the handler does with a socket — all a stand-in has to answer. */
 export type Sock = Pick<WASocket, "sendMessage" | "sendPresenceUpdate" | "readMessages">;
@@ -226,7 +227,8 @@ export class Handler {
               text: cleanMentionText(chunk),
               ...(mentions.length > 0 ? { mentions } : {}),
             };
-            sent = await withTimeout(socket.sendMessage(target.to, payload), "sendMessage");
+            // Its id chosen here and written down first: the install's other number may be handed it before this resolves.
+            sent = await withTimeout(socket.sendMessage(target.to, payload, { messageId: idToSend() }), "sendMessage");
           }
           this.say.note("sent", {
             chatId: command.chatId,
@@ -277,7 +279,7 @@ export class Handler {
             ...content,
             ...(mentions.length > 0 ? { mentions } : {}),
           };
-          await withTimeout(socket.sendMessage(sendTarget(command.chatId).to, payload as never), "sendMedia");
+          await withTimeout(socket.sendMessage(sendTarget(command.chatId).to, payload as never, { messageId: idToSend() }), "sendMedia");
           this.say.emit({ type: "ack", id: command.id });
           return;
         }

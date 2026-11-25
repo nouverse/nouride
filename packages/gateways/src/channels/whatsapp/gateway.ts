@@ -207,6 +207,9 @@ export class WhatsAppGateway extends BaseGateway {
     return this.itself.owns(id);
   }
 
+  /** The bridge says which messages another of the daemon's numbers sent (`sentHere`): the rest are people's. */
+  readonly tellsOwnSends = true;
+
   sees(chatId: string): boolean | undefined {
     return this.itself.sees(chatId);
   }

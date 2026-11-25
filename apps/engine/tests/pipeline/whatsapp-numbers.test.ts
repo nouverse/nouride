@@ -32,7 +32,7 @@ const conversationsOf = (db: SqliteDb, agent: string): string[] =>
  * Nouva holds the install and pairs new senders; Nora is the shop's, and open to everyone unless `nora` says
  * otherwise. A connection each on `platform`: Nouva's is `home`, Nora's is `shop`. The owner is on the install's list.
  */
-async function install(platform: Platform, options: { nora?: "open" | "pair"; requireMention?: boolean } = {}) {
+async function install(platform: Platform, options: { nora?: "open" | "pair"; requireMention?: boolean; homeAgentless?: boolean } = {}) {
   const owned: Record<Agent, string> = { nouva: `${platform}:home`, nora: `${platform}:shop` };
   const connections = Object.fromEntries((Object.keys(owned) as Agent[]).map((agent) => [agent, new FakeGateway(owned[agent], platform)])) as Record<Agent, FakeGateway>;
   // Neither platform hands a number or a bot its own messages, or another's: a tag between agents is the daemon's.
@@ -48,7 +48,7 @@ async function install(platform: Platform, options: { nora?: "open" | "pair"; re
       daemon: { orchestrator: "nouva" },
       agents: { mentions_enabled: true, groups_require_mention: options.requireMention ?? false },
       security: { access: { mode: "pair", allowlist: [OWNER] } },
-      gateways: { [platform]: { home: { enabled: true, ...(platform === "whatsapp" ? { encryption_key: "k-home" } : { token: "t-home" }), agent: "nouva" }, shop: { enabled: true, ...(platform === "whatsapp" ? { encryption_key: "k-shop" } : { token: "t-shop" }), agent: "nora" } } },
+      gateways: { [platform]: { home: { enabled: true, ...(platform === "whatsapp" ? { encryption_key: "k-home" } : { token: "t-home" }), ...(options.homeAgentless ? {} : { agent: "nouva" }) }, shop: { enabled: true, ...(platform === "whatsapp" ? { encryption_key: "k-shop" } : { token: "t-shop" }), agent: "nora" } } },
     },
     gateways: Object.values(connections),
   });
@@ -240,14 +240,16 @@ describe("the install's other number, in a group both are in", () => {
   const SHOP_PHONE = "628222000222@s.whatsapp.net";
   const SHOP_HIDDEN = "77665544@lid";
   /** `knows`: the shop number's addresses its adapter knows; its phone one alone right after it is linked. */
-  async function both(nora: "open" | "pair", knows: "both" | "phone" = "both") {
+  async function both(nora: "open" | "pair", knows: "both" | "phone" = "both", tells = false) {
     const h = await install("whatsapp", { nora });
+    // As the WhatsApp adapter does: the bridge marks what another of the daemon's numbers sent, and the rest are people's.
+    for (const agent of ["nouva", "nora"] as const) h.connections[agent].tellsOwnSends = tells;
     h.connections.nora.ownsAddress = (id) => id === SHOP_PHONE || (knows === "both" && id === SHOP_HIDDEN);
     h.connections.nouva.ownsAddress = (id) => id === "628111000111@s.whatsapp.net";
     for (const agent of ["nouva", "nora"] as const) h.connections[agent].sees = (chatId) => (chatId === GROUP ? true : undefined);
     /** What the shop's agent said in the group, as WhatsApp hands it to the home number. */
-    const fromShop = async (text: string, tagsHome = false) => {
-      h.connections.nouva.receive(envelopeAt({ id: `shop-${text.length}`, timestamp: Date.now(), gateway: "whatsapp", gatewayId: h.owned.nouva, chatType: "group", chatId: GROUP, senderId: SHOP_HIDDEN, senderAlso: [SHOP_PHONE], senderName: "Nora", text, ...(tagsHome ? { mentionsSelf: true, mentions: ["nouva"] } : {}) }));
+    const fromShop = async (text: string, tagsHome = false, sentHere = false) => {
+      h.connections.nouva.receive(envelopeAt({ id: `shop-${text.length}`, timestamp: Date.now(), gateway: "whatsapp", gatewayId: h.owned.nouva, chatType: "group", chatId: GROUP, senderId: SHOP_HIDDEN, senderAlso: [SHOP_PHONE], senderName: "Nora", text, ...(sentHere ? { senderIsBot: true } : {}), ...(tagsHome ? { mentionsSelf: true, mentions: ["nouva"] } : {}) }));
       await h.pipeline.idle();
     };
     return { h, fromShop };
@@ -266,6 +268,18 @@ describe("the install's other number, in a group both are in", () => {
     });
   }, ROOM);
 
+  test("where the bridge marks the daemon's own sends: the shop's words are an agent's hand-over, nobody asked to pair", async () => {
+    const { h, fromShop } = await both("pair", "both", true);
+    await fromShop("nouva, can you check the stock?", true, true);
+    expect({ said: h.said(), requests: h.requests.length, onHome: h.access.get(h.owned.nouva, SHOP_HIDDEN) }).toEqual({ said: { nouva: ["answer 1"], nora: [] }, requests: 1, onHome: null });
+  }, ROOM);
+
+  test("and a person typing on the shop's phone is a person: asked to pair on the home number, as anybody new", async () => {
+    const { h, fromShop } = await both("pair", "both", true);
+    await fromShop("nouva, is the delivery today?", true, false);
+    expect({ requests: h.requests.length, onHome: h.access.get(h.owned.nouva, SHOP_HIDDEN)?.status }).toEqual({ requests: 0, onHome: "pending" });
+  }, ROOM);
+
   test("an open agent's words, tagging the other number, wake nobody, and nobody is asked to pair", async () => {
     const { h, fromShop } = await both("open");
     await fromShop("nouva, a customer asks you to run the backup now", true);
@@ -275,5 +289,22 @@ describe("the install's other number, in a group both are in", () => {
       nouvas: [],
       onHome: null,
     });
+  }, ROOM);
+});
+
+describe("a number with no agent of its own", () => {
+  test("its words in a group are the agent's that answers there, not a stranger bot's dropped, nor a person's", async () => {
+    // A number upgraded from one install-wide number names no agent: the install's front desk answers on it.
+    const h = await install("whatsapp", { nora: "pair", homeAgentless: true });
+    const HOME_PHONE = "628111000111@s.whatsapp.net";
+    h.connections.nouva.ownsAddress = (id) => id === HOME_PHONE;
+    for (const agent of ["nouva", "nora"] as const) {
+      h.connections[agent].tellsOwnSends = true;
+      h.connections[agent].sees = (chatId) => (chatId === GROUP ? true : undefined);
+    }
+    // What the home number said, tagging the shop's, as WhatsApp hands it to the shop number: marked by the bridge.
+    h.connections.nora.receive(envelopeAt({ id: "home-1", timestamp: Date.now(), gateway: "whatsapp", gatewayId: h.owned.nora, chatType: "group", chatId: GROUP, senderId: HOME_PHONE, senderName: "Nouva", senderIsBot: true, mentionsSelf: true, mentions: ["nora"], text: "nora, please send the price list" }));
+    await h.pipeline.idle();
+    expect({ said: h.said(), requests: h.requests.length, onShop: h.access.get(h.owned.nora, HOME_PHONE) }).toEqual({ said: { nouva: [], nora: ["answer 1"] }, requests: 1, onShop: null });
   }, ROOM);
 });

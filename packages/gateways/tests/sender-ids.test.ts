@@ -35,6 +35,13 @@ describe("WhatsApp", () => {
     expect("senderAlso" in whatsappEnvelope(event, self)!).toBe(false);
     expect("senderAlso" in whatsappEnvelope({ ...event, senderAlso: [] }, self)!).toBe(false);
   });
+
+  test("what another of the daemon's numbers sent is a bot's; anything else from any address is a person's", () => {
+    const event = { type: "message" as const, id: "M2", chatId: "g-shop@g.us", chatType: "group" as const, senderId: "77665544@lid", senderName: "Nora", text: "the stock is in", timestamp: 1 };
+    const self = { gatewayId: "whatsapp:home" };
+    expect(whatsappEnvelope({ ...event, sentHere: true }, self)).toMatchObject({ senderIsBot: true });
+    expect("senderIsBot" in whatsappEnvelope(event, self)!).toBe(false);
+  });
 });
 
 describe("Telegram", () => {

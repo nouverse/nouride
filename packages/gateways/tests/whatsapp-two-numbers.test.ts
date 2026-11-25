@@ -225,6 +225,17 @@ describe("a file a message carried", () => {
   });
 });
 
+describe("the daemon's own words from another of its numbers", () => {
+  test("are marked by the bridge, and the adapter says so: a message from one of the install's addresses it did not mark is a person's", async () => {
+    const home = await number("home", "nouva");
+    expect(home.gateway.tellsOwnSends).toBe(true);
+    home.fake.push({ ...message("m-own", "the stock is in"), sentHere: true });
+    home.fake.push(message("m-typed", "typed on the shop's phone"));
+    await eventually(() => home.heard.length === 2);
+    expect(home.heard.map((one) => [one.text, one.senderIsBot === true])).toEqual([["the stock is in", true], ["typed on the shop's phone", false]]);
+  });
+});
+
 describe("a number removed", () => {
   test("logged out when it is linked; one not linked is not said to be, and its bridge is asked nothing", async () => {
     const shop = await number("shop", "nora");

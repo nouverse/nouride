@@ -143,6 +143,8 @@ export class FakeGateway implements Gateway {
   sees?: (chatId: string) => boolean | undefined;
   /** Settable: whether an address is this account's own, by any of its names — see `Gateway.ownsAddress`. */
   ownsAddress?: (id: string) => boolean;
+  /** Settable: whether it marks the daemon's own sends from another account as a bot's — see `Gateway.tellsOwnSends`. */
+  tellsOwnSends?: boolean;
 
   readonly sent: OutboundMessage[] = [];
   readonly typing: string[] = [];

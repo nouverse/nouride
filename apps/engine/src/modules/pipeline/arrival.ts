@@ -46,7 +46,9 @@ export function arrive(parts: ArrivalParts, gateway: Gateway, arrived: MessageEn
   // One of the install's own accounts is no person, whatever the platform marked: with two WhatsApp numbers in a group,
   // each is handed the other's messages as a person's, and was asked to pair, or answered as a person with no limit on
   // how often. Known as an agent's, it is held to the rules between agents, and an open agent's words reach nobody.
-  const ours = !arrived.senderIsBot && !isSystemEvent(arrived) && parts.turnContext.voice.agentForSender(arrived.gateway, arrived.senderId, arrived.senderAlso) !== undefined;
+  // Not where the connection tells the daemon's own sends apart (`Gateway.tellsOwnSends`): what it did not mark was
+  // typed by a person on that account's phone, and ignored as a bot's they went unanswered.
+  const ours = !arrived.senderIsBot && !isSystemEvent(arrived) && gateway.tellsOwnSends !== true && parts.turnContext.voice.agentForSender(arrived.gateway, arrived.senderId, arrived.senderAlso) !== undefined;
   const envelope = ours ? { ...arrived, senderIsBot: true } : arrived;
   // Before anything keeps or reads it — the room's record, the inbox, a steer, a turn — and before the edit's own path,
   // which keeps one as well. The person is told once they are let in (`chat-secrets.ts`).

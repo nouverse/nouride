@@ -20,6 +20,7 @@ import { proto } from "@whiskeysockets/baileys";
 import { ensureDir, join, proxyAgentFor, writeBytesSync } from "@nouride/runtime";
 import { parseKey, useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
 import { HeldFiles, type Held } from "./held.ts";
+import { sentHere } from "./sent-here.ts";
 import { editEvent, extensionFor, incoming, incomingEdit, mediaSize, messageEvent, selfIdsOf } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION } from "./protocol.ts";
 import type { Speaker } from "./say.ts";
@@ -564,7 +565,9 @@ export class Connection {
     }
 
     // Read after the download, as it always was: the socket may have been replaced while it ran.
-    const event = messageEvent(message, found, selfIdsOf(this.socket?.user), media, (lid) => this.phoneForLid(lid));
+    const made = messageEvent(message, found, selfIdsOf(this.socket?.user), media, (lid) => this.phoneForLid(lid));
+    // The daemon's own words, from another of its numbers: said, so they are not taken for a person's (`sent-here.ts`).
+    const event = sentHere(message.key.id) ? { ...made, sentHere: true as const } : made;
     // A group's name, where it is known — never waited for: the ask runs beside the message (`subjects.ts`).
     const current = this.socket;
     const chatTitle = event.chatType === "group" && current ? this.subjects.of(found.chatId, (jid) => current.groupMetadata(jid)) : undefined;

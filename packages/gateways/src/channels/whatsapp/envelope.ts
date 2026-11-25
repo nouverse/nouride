@@ -57,6 +57,9 @@ export function whatsappEnvelope(event: Extract<BridgeEvent, { type: "message" }
     senderId: event.senderId,
     ...(event.senderAlso && event.senderAlso.length > 0 ? { senderAlso: event.senderAlso } : {}),
     senderName: event.senderName || "unknown",
+    // Sent by another of this daemon's numbers: an agent's words, held to the rules between agents. Not set by the
+    // address alone: a person typing on one of the install's phones is a person.
+    ...(event.sentHere ? { senderIsBot: true } : {}),
     text,
     ...(quoted ? { quotedText: quoted } : {}),
     ...(event.quotedSender ? { quotedSender: event.quotedSender } : {}),

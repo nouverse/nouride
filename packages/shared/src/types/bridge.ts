@@ -73,6 +73,11 @@ export type BridgeEvent =
       edits?: string;
       /** (4, 0.7.24) A group's subject, when the bridge knows it — its name on WhatsApp. Absent in a one-to-one. */
       chatTitle?: string;
+      /**
+       * (4) Sent by one of this daemon's own numbers (`sent-here.ts`): the daemon's words, not a person's on that
+       * number's phone. Absent for everything else, a person typing on one of the install's phones included.
+       */
+      sentHere?: true;
     }
   | { type: "ack"; id: string }
   /**

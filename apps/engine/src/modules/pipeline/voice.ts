@@ -160,10 +160,14 @@ export class Voice {
    */
   agentForSender(platform: GatewayName, senderId: string, also: readonly string[] = []): string | undefined {
     for (const instance of this.deps.config.gateways) {
-      if (!instance.enabled || instance.platform !== platform || !instance.agent) continue;
+      if (!instance.enabled || instance.platform !== platform) continue;
       const gateway = this.deps.gateways.get(instance.id);
       // By any of the sender's addresses, and any of the account's: a WhatsApp number is its phone address and a hidden one.
-      if ([senderId, ...also].some((id) => gateway?.selfId === id || gateway?.ownsAddress?.(id) === true)) return instance.agent;
+      if (![senderId, ...also].some((id) => gateway?.selfId === id || gateway?.ownsAddress?.(id) === true)) continue;
+      // A connection with no agent of its own is answered by the one that holds the install, as the router sends it: its
+      // words are that agent's. Skipped, a number upgraded with no agent named was a person to the install's other one.
+      const agent = instance.agent ?? this.deps.config.daemon.orchestrator;
+      if (agent) return agent;
     }
     return undefined;
   }
