@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureDir, removePath, writeTextFile } from "@nouride/runtime";
@@ -154,6 +154,17 @@ describe("[gateways.whatsapp] session_dir", () => {
     // One that names the folder an install's one login was kept in, beside one that names none.
     const kept = (await load(`${WA}session_dir = ".nouride/data/whatsapp"\n${SHOP}`)).config;
     expect([folderOf(kept, "whatsapp:main"), folderOf(kept, "whatsapp:shop")]).toEqual([join(kept.daemon.dataDir, "whatsapp"), join(kept.daemon.dataDir, "whatsapp-shop")]);
+  });
+
+  test("one folder by two names is one folder: by its case, or through a link to it", async () => {
+    // Read by a second reader of the branch: compared as written, `Shop` and `shop` were two folders, which a Mac's disk
+    // takes for one, and so was a link and the folder it points at.
+    await expect(load(`${WA}session_dir = "/var/lib/WA"\n${SHOP}session_dir = "/var/lib/wa"\n`)).rejects.toThrow("keep their login in one folder");
+    const base = mkdtempSync(join(tmpdir(), "wa-link-"));
+    mkdirSync(join(base, "real"));
+    symlinkSync(join(base, "real"), join(base, "link"));
+    await expect(load(`${WA}session_dir = "${join(base, "real")}"\n${SHOP}session_dir = "${join(base, "link")}"\n`)).rejects.toThrow("keep their login in one folder");
+    rmSync(base, { recursive: true, force: true });
   });
 
   test("two that name one folder are refused at load, with both names; and so is one folder inside another", async () => {

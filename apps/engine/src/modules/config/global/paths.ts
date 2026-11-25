@@ -119,6 +119,15 @@ export function ownLoginDir(dataDir: string, name: string): string {
 }
 
 /**
+ * A folder as the disk tells two apart: through any link to where it is, and in one case. A Mac's disk takes `Shop` and
+ * `shop` for one folder, and a link is another name for the folder it points at: compared as written, two connections
+ * got one login that way. A Linux disk that would keep them apart is refused all the same, which costs a name.
+ */
+function asOnDisk(dir: string): string {
+  return realPath(dir).toLowerCase();
+}
+
+/**
  * Each WhatsApp number keeps its own login: two connections on one folder would be two sockets writing one set of
  * credentials, and WhatsApp closes both. Nor one folder inside another, which removing the outer connection deletes.
  * Asked once every folder is absolute, with both connections named.
@@ -127,12 +136,14 @@ export function assertOwnLogins(config: GlobalConfig): void {
   const numbers = config.gateways.filter((gateway) => gateway.platform === "whatsapp" && gateway.sessionDir);
   for (const [at, one] of numbers.entries()) {
     for (const other of numbers.slice(at + 1)) {
+      // Said as written, compared as the disk has them.
       const [a, b] = [one.sessionDir!, other.sessionDir!];
+      const [onDiskA, onDiskB] = [asOnDisk(a), asOnDisk(b)];
       const tables = `[gateways.whatsapp.${one.name}] and [gateways.whatsapp.${other.name}]`;
-      if (a === b) {
+      if (onDiskA === onDiskB) {
         throw new ConfigError(`${tables} keep their login in one folder (${a}). Each WhatsApp number needs its own: give one of them another session_dir, or remove the line and it gets a folder named for it.`);
       }
-      if (a.startsWith(`${b}/`) || b.startsWith(`${a}/`)) {
+      if (onDiskA.startsWith(`${onDiskB}/`) || onDiskB.startsWith(`${onDiskA}/`)) {
         throw new ConfigError(`${tables} keep their logins one inside the other (${a} and ${b}), so removing one connection would delete the other's. Give one of them a session_dir outside the other's.`);
       }
     }
