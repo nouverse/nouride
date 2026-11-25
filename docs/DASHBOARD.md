@@ -229,8 +229,8 @@ One **switch**, not a mode picker: *Accept new senders*. On is `pair` — a stra
 waits. Off is `allowlist` — a stranger is dropped before anything is queued, while everyone already
 paired keeps talking. That is the shape of the actual question ("can strangers still reach my bots?"),
 and it is live: the next inbound message is judged by the new setting, with no restart. Open to
-everyone is not a position of this switch: no install is (0.8.48). One agent can be, from the card of
-that name on its own Access page, and this card says where.
+everyone is not a position of this switch: no install is (0.8.48). One agent can be: it is the fourth
+answer on its own Access page, among the three that decide for that agent, and this card says where.
 
 It sits on **Agent Settings** (`/agents/settings`, linked from the Agents list), not on any one agent's
 Access page. `[security.access] mode` is daemon-wide: a switch inside Nouva's card would look scoped to

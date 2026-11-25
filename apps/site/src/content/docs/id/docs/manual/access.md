@@ -124,17 +124,19 @@ sementara mereka mencarinya.
 Di dashboard, mode pairing adalah satu sakelar, *Accept new senders*, di halaman pengaturan **Agents**.
 Itu **default**-nya: `[security.access] mode`, yang diikuti setiap agent.
 
-Sebuah agent bisa memutuskan sendiri di halaman **Access**-nya: *Follow the default*, *On* (orang asing
-mendapat kode pairing) atau *Off* (hanya pengirim yang sudah disetujui). Itu
-`[agent] access = "follow" | "pair" | "allowlist"` di `config.toml`-nya, dan berlaku untuk setiap
-koneksi milik agent itu. Membolehkan semua orang masuk bukan salah satu dari tiga itu: ia punya kartu
-sendiri di halaman yang sama, dijelaskan berikutnya.
+Sebuah agent bisa memutuskan sendiri di halaman **Access**-nya, di bagian *Who can write to this
+agent*. Itu satu pilihan dari empat: *Follow the default*, *Ask first* (orang baru mendapat kode
+pairing), *Approved only* (hanya orang yang sudah diizinkan) atau *Open to everyone*. Tiga yang pertama
+adalah `[agent] access = "follow" | "pair" | "allowlist"` di `config.toml`-nya, tersimpan dengan sekali
+tekan, dan berlaku untuk setiap koneksi milik agent itu. Yang keempat meminta dua angka sebelum
+disimpan, dan dijelaskan berikutnya.
 
-![Tab Access sebuah agent: apakah pengirim baru boleh minta masuk, dan ringkasan pengirimnya](/media/dashboard-agent-access.png)
+![Tab Access sebuah agent: siapa yang boleh menulis kepadanya, satu pilihan dari empat, dan ringkasan pengirimnya](/media/dashboard-agent-access.png)
 
 Di bawahnya, tab itu menghitung pengirim agent ini, yang menunggu, yang disetujui, dan yang di-deny
-atau di-block, masing-masing tautan ke **Access** yang sudah tersaring untuk agent itu. Kedua sakelar
-langsung berlaku: pesan berikutnya dinilai dengan pengaturan baru, tanpa restart.
+atau di-block, masing-masing tautan ke **Access** yang sudah tersaring untuk agent itu. Sakelar default
+dan pilihan milik sebuah agent sama-sama langsung berlaku: pesan berikutnya dinilai dengan pengaturan
+baru, tanpa restart.
 
 ## Agent yang terbuka untuk semua orang
 
@@ -142,8 +144,8 @@ Sejak 0.8.48 satu agent bisa menjawab siapa pun yang menemukannya, tanpa kode: m
 bantuan, bot untuk sebuah acara. Yang terbuka itu agent-nya, bukan instalasinya. Agent kamu yang lain
 tetap meminta orang asing untuk pairing.
 
-Di halaman **Access** agent itu, **Open to everyone** menjelaskan artinya sebelum kamu ambil, lalu
-meminta dua angka:
+Di halaman **Access** agent itu, pilih **Open to everyone**, pilihan keempat di bagian *Who can write
+to this agent*. Ia menjelaskan artinya sebelum kamu ambil, lalu meminta dua angka:
 
 - **Token terbanyak yang boleh dipakainya dalam sehari.** Semua yang ia habiskan dihitung, siapa pun
   yang dijawabnya. Begitu jatah hari itu habis, ia memberi tahu orang bahwa ia tutup sampai besok,

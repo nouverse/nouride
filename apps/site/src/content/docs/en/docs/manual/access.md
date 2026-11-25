@@ -115,16 +115,17 @@ list is for tool calls, and the fifteen-minute code expired while they looked fo
 In the dashboard the pairing mode is one switch, *Accept new senders*, on the **Agents** settings
 page. It is the **default**: `[security.access] mode`, which every agent follows.
 
-An agent can decide for itself on its own **Access** page: *Follow the default*, *On* (a stranger gets
-a pairing code) or *Off* (only senders already approved). It is `[agent] access = "follow" | "pair" |
-"allowlist"` in its `config.toml`, and it covers every connection that agent owns. Letting everyone in
-is not one of the three: it has a card of its own on the same page, described next.
+An agent can decide for itself on its own **Access** page, under *Who can write to this agent*. It is
+one choice of four: *Follow the default*, *Ask first* (someone new gets a pairing code), *Approved only*
+(only the people already let in) or *Open to everyone*. The first three are `[agent] access = "follow" |
+"pair" | "allowlist"` in its `config.toml`, saved with one press, and they cover every connection that
+agent owns. The fourth asks for two numbers before it is saved, and is described next.
 
-![An agent's Access tab: whether new senders may ask to be let in, and its senders at a glance](/media/dashboard-agent-access.png)
+![An agent's Access tab: who can write to it, one choice of four, and its senders at a glance](/media/dashboard-agent-access.png)
 
-Below them, the tab counts this agent's senders, waiting, approved, and denied or blocked, each a link
-to **Access** filtered to it. Both switches are live: the next message is judged by the new setting,
-no restart.
+Below it, the tab counts this agent's senders, waiting, approved, and denied or blocked, each a link
+to **Access** filtered to it. The default's switch and an agent's own choice are both live: the next
+message is judged by the new setting, no restart.
 
 ## An agent open to everyone
 
@@ -132,8 +133,8 @@ Since 0.8.48 one agent can answer anybody who finds it, with no code: a shop's f
 a bot for an event. It is the agent that is open, never the install. Your other agents go on asking
 strangers to pair.
 
-On the agent's **Access** page, **Open to everyone** says what it means before you take it, then asks
-for two numbers:
+On the agent's **Access** page, pick **Open to everyone**, the fourth choice under *Who can write to
+this agent*. It says what it means before you take it, then asks for two numbers:
 
 - **Most tokens it may use in a day.** Everything it spends counts, whoever it answered. When the day's
   tokens are used it tells people it is closed until tomorrow, in a sentence you may write yourself, and

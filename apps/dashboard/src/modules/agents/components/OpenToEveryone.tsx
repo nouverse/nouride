@@ -1,11 +1,12 @@
 /**
- * Opening an agent to everyone, and closing it again.
+ * Opening an agent to everyone: the fourth answer on its Access card (`AgentAccessMode`), and what it shows under the
+ * choices.
  *
- * An open agent answers anyone who finds it, on its owner's account. So the switch says what it means before it is
+ * An open agent answers anyone who finds it, on its owner's account. So the answer says what it means before it is
  * taken: where people will reach it, what it may say, the few things it can do while it is open, and the most it may
  * use in a day. The two limits have no default: an agent is not opened without numbers its admin chose. One with notes
  * of its own takes a second yes, since it may say what they hold. Only an admin opens one; closing is anyone's who may
- * change the agent. The orchestrator and an agent on a coding tool are never opened, and the card says why.
+ * change the agent. The orchestrator and an agent on a coding tool are never opened, and the choice says why.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,11 +17,14 @@ import type { AgentOpen, AgentSummary } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { connectionSaid } from "@/commons/lib/platform";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
-import { Card, ErrorNote } from "@/commons/components/ui/ui";
+import { ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
 
+/** What the choice says of itself where an agent may take it. */
+export const OPEN_MEANS = "Anyone who finds it is answered with no code, like a shop's front desk. It answers from what you opened to everyone under Knowledge, and nothing else.";
+
 /** Why an agent is never opened, in the page's words. */
-const NEVER: Record<NonNullable<AgentOpen["never"]>, string> = {
+export const NEVER: Record<NonNullable<AgentOpen["never"]>, string> = {
   orchestrator: "This is the main agent, the one that looks after this server, so it is never opened to everyone. Make another agent for the public, and open that one.",
   cli: "This agent works through a coding tool that brings tools of its own, and those cannot be taken away. So it is never opened to everyone. Open an agent that answers on a model instead.",
 };
@@ -151,12 +155,15 @@ function OpenForm({ agent, open, onClose }: { agent: AgentSummary; open: AgentOp
   );
 }
 
-export function OpenToEveryone({ agent }: { agent: AgentSummary }) {
+/**
+ * Under the choices: the form while opening is being chosen or its limits changed, and where an open agent is reached
+ * with what it used today. Nothing for a closed agent nobody is opening: the choices say that.
+ */
+export function OpenDetails({ agent, open, choosing, onDone }: { agent: AgentSummary; open: AgentOpen; choosing: boolean; onDone: () => void }) {
   const me = useMe();
   const admin = isAdmin(me.data ?? null);
   const queryClient = useQueryClient();
   const saved = useSaved();
-  const open = agent.open;
   const isOpen = agent.access === "open";
   const name = agent.displayName || agent.id;
   const [editing, setEditing] = useState(false);
@@ -167,44 +174,44 @@ export function OpenToEveryone({ agent }: { agent: AgentSummary }) {
       saved(result, `${name} is closed to new people`, "Only the people you let in can write to it. Its limits are kept for the next time.");
     },
   });
+  const done = () => {
+    setEditing(false);
+    onDone();
+  };
 
-  // An older daemon says nothing of it: there is no switch to draw.
-  if (!open) return null;
+  if ((choosing && !isOpen) || editing) {
+    return (
+      <div className="mt-4 border-t border-base-content/10" data-open-form>
+        <OpenForm agent={agent} open={open} onClose={done} />
+      </div>
+    );
+  }
+  if (!isOpen) return null;
 
   return (
-    <Card title="Open to everyone" description="Let anyone who finds this agent write to it, like a shop's front desk. It then answers from what you opened to everyone under Knowledge, and nothing else.">
-      {open.never ? (
-        <p className="text-sm leading-relaxed">{NEVER[open.never]}</p>
-      ) : (
-        <>
-          <p className="flex items-start gap-2 text-sm leading-relaxed">
-            <Globe size={16} className={`mt-0.5 shrink-0 ${isOpen ? "text-primary" : "text-base-content/50"}`} aria-hidden="true" />
-            <span>
-              <span className="font-semibold">{isOpen ? "Open." : "Closed."}</span> {isOpen ? reachedOn(open.connections) : "Only the people you let in can write to it."}
-              {isOpen && open.today && open.limits ? <span className="text-base-content/65 block text-xs mt-1">{todaySaid(open.today, open.limits.maxDailyTokens)}</span> : null}
-            </span>
-          </p>
-
-          {editing ? (
-            <OpenForm agent={agent} open={open} onClose={() => setEditing(false)} />
-          ) : (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {admin ? (
-                <button type="button" className="btn btn-sm" disabled={close.isPending} onClick={() => setEditing(true)}>
-                  {isOpen ? "Change its limits" : "Open to everyone…"}
-                </button>
-              ) : null}
-              {isOpen && canWrite(me.data ?? null) ? (
-                <button type="button" className="btn btn-sm btn-primary" disabled={close.isPending} onClick={() => close.mutate()}>
-                  {close.isPending ? "Closing…" : "Close it"}
-                </button>
-              ) : null}
-            </div>
-          )}
-          {!admin ? <p className="text-base-content/65 mt-3 text-xs">Only an admin can open an agent to everyone.</p> : null}
-        </>
-      )}
+    <div className="mt-4 border-t border-base-content/10 pt-4" data-open-now>
+      <p className="flex items-start gap-2 text-sm leading-relaxed">
+        <Globe size={16} className="mt-0.5 shrink-0 text-primary" aria-hidden="true" />
+        <span>
+          <span className="font-semibold">Open.</span> {reachedOn(open.connections)}
+          {open.today && open.limits ? <span className="text-base-content/65 mt-1 block text-xs">{todaySaid(open.today, open.limits.maxDailyTokens)}</span> : null}
+        </span>
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {admin ? (
+          <button type="button" className="btn btn-sm" onClick={() => setEditing(true)}>
+            Change its limits
+          </button>
+        ) : null}
+        {/* An admin closes it by taking another answer above. Those answers are an admin's, so an operator has this. */}
+        {!admin && canWrite(me.data ?? null) ? (
+          <button type="button" className="btn btn-sm btn-primary" disabled={close.isPending} onClick={() => close.mutate()}>
+            {close.isPending ? "Closing…" : "Close it"}
+          </button>
+        ) : null}
+      </div>
+      {admin ? <p className="text-base-content/65 mt-3 text-xs">Taking another answer above closes it. Its limits are kept for the next time.</p> : null}
       <ErrorNote error={close.error} />
-    </Card>
+    </div>
   );
 }

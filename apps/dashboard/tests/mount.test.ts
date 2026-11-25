@@ -985,7 +985,7 @@ describe("agents: orchestrator first, presets, and tools", () => {
   test("an agent's Access page decides for itself whether new senders are taken, following the default until it does", async () => {
     answer(TWO);
     const html = await renderPage("/agents/nix/access");
-    expect(html).toContain("Accept new senders");
+    expect(html).toContain("Who can write to this agent");
     expect(html).toContain("Follow the default");
     expect(html).toMatch(/<input[^>]*radio[^>]*checked=""[^>]*>\s*<span[^>]*>Follow the default/);
   });
