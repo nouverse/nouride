@@ -30,6 +30,8 @@ export interface Link {
   logout(): Promise<void>;
   /** The phone number behind a LID, when the session store knows it — said in the log, never sent to. */
   phoneForLid(lid: string): string | null;
+  /** A file a message carried, downloaded now: where it was saved. */
+  fetchMedia(ref: string): Promise<string>;
 }
 
 /**
@@ -280,6 +282,10 @@ export class Handler {
           // asserted `available` first on the theory that WhatsApp ignores presence from an offline
           // client; neither reference does that, and theirs show typing.
           await socket.sendPresenceUpdate("composing", sendTarget(command.chatId).to);
+          return;
+
+        case "fetch_media":
+          this.say.emit({ type: "media", id: command.id, path: await this.link.fetchMedia(command.ref) });
           return;
 
         case "logout":

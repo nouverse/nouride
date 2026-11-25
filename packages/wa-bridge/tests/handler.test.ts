@@ -53,6 +53,7 @@ function fakeLink(options: { linked?: boolean; socket?: boolean; fail?: Error } 
     stop: () => void calls.push({ op: "stop", args: [] }),
     logout: async () => void calls.push({ op: "logout", args: [] }),
     phoneForLid: () => "628111111111@s.whatsapp.net",
+    fetchMedia: async (ref) => (calls.push({ op: "fetchMedia", args: [ref] }), `/tmp/wa-media/${ref}.jpg`),
   };
   return { link, calls };
 }
@@ -192,6 +193,16 @@ describe("send_media", () => {
   test("anything else is a document named after its file", async () => {
     const payload = await sentPayload({ path: file("report.pdf"), mimeType: "application/pdf", caption: "@628123456789 here" });
     expect(payload).toMatchObject({ mimetype: "application/pdf", fileName: "report.pdf", mentions: ["628123456789@s.whatsapp.net"] });
+  });
+});
+
+describe("fetch_media", () => {
+  test("a held file is asked of the connection by its ref, and its path is the answer to that command", async () => {
+    const { handler, calls } = await helloed();
+    events.length = 0;
+    await handler.handleLine(JSON.stringify({ type: "fetch_media", id: "c7", ref: "M9-abc" }));
+    expect(calls.at(-1)).toEqual({ op: "fetchMedia", args: ["M9-abc"] });
+    expect(events).toEqual([{ type: "media", id: "c7", path: "/tmp/wa-media/M9-abc.jpg" }]);
   });
 });
 

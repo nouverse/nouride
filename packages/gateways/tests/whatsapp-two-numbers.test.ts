@@ -8,6 +8,9 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { BridgeCommand, BridgeEvent, MessageEnvelope } from "@nouride/shared";
 import { BRIDGE_PROTOCOL_VERSION } from "@nouride/shared";
 import { WhatsAppGateway, type BridgeChannel } from "../src/channels/whatsapp/gateway.ts";
@@ -175,6 +178,40 @@ describe("the groups each number is in", () => {
     // Removed from its group: the bridge says the set again, and it is not in it any more.
     shop.fake.push({ type: "groups", ids: [] });
     await eventually(() => shop.gateway.sees("g-shop@g.us") === false);
+  });
+});
+
+describe("a file a message carried", () => {
+  test("is named and held, with what it weighs; fetched from its own number's bridge when asked, read once and removed", async () => {
+    const shop = await number("shop", "nora");
+    shop.linkedAs("628222@s.whatsapp.net");
+    shop.fake.push({ ...message("m-photo", ""), media: { path: "", held: "m-photo-1", mimeType: "image/jpeg", kind: "image", size: 2048 } });
+    await eventually(() => shop.heard.length === 1);
+    const attachment = shop.heard[0]!.attachments![0]!;
+    expect({ url: attachment.url, size: attachment.size }).toEqual({ url: "wa-held:m-photo-1", size: 2048 });
+    // Nothing is asked of the bridge until the daemon fetches it.
+    expect(shop.fake.written.filter((command) => command.type === "fetch_media")).toEqual([]);
+
+    const saved = join(mkdtempSync(join(tmpdir(), "wa-held-")), "photo.jpg");
+    writeFileSync(saved, "a photo's bytes");
+    const fetching = shop.gateway.fetchAttachment(attachment);
+    await eventually(() => shop.fake.written.some((command) => command.type === "fetch_media"));
+    const asked = shop.fake.written.find((command) => command.type === "fetch_media") as { id: string; ref: string };
+    expect(asked.ref).toBe("m-photo-1");
+    shop.fake.push({ type: "media", id: asked.id, path: saved });
+    expect(new TextDecoder().decode((await fetching)!)).toBe("a photo's bytes");
+    // The daemon keeps its own copy: the bridge's is gone.
+    expect(existsSync(saved)).toBe(false);
+  });
+
+  test("one the bridge no longer holds is none to have: null, said in the log", async () => {
+    const shop = await number("shop", "nora");
+    shop.linkedAs("628222@s.whatsapp.net");
+    const fetching = shop.gateway.fetchAttachment({ type: "image", mimeType: "image/jpeg", url: "wa-held:gone" });
+    await eventually(() => shop.fake.written.some((command) => command.type === "fetch_media"));
+    const asked = shop.fake.written.find((command) => command.type === "fetch_media") as { id: string };
+    shop.fake.push({ type: "error", id: asked.id, message: "that file is no longer held: ask the sender to send it again" });
+    expect(await fetching).toBeNull();
   });
 });
 

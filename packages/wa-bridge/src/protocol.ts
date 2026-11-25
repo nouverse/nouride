@@ -36,6 +36,11 @@ export type BridgeCommand =
   /** Mark an inbound message read — sent only once the engine has accepted it. */
   | { type: "read"; chatId: string; messageId: string; participant?: string }
   | { type: "logout" }
+  /**
+   * (4) A file a message carried, fetched now: the daemon asks once it has let the sender in. Until then the message
+   * names it (`media.held`) and nothing is downloaded, so a sender nobody answers costs no download and no disk.
+   */
+  | { type: "fetch_media"; id: string; ref: string }
   | { type: "shutdown" };
 
 export type BridgeEvent =
@@ -66,8 +71,12 @@ export type BridgeEvent =
       senderAlso?: string[];
       /** Our own address on this account, so the engine can tell whether the mention was for us. */
       selfIds?: string[];
-      /** `fileName`: a document's name as it was sent (0.7.27); absent for a photo, a video or a voice note. */
-      media?: { path: string; mimeType: string; kind: string; caption?: string; fileName?: string };
+      /**
+       * `path` is where it was saved, or empty where it is `held`: not downloaded until the daemon asks for it by that
+       * ref (`fetch_media`). `size` is what the message says it weighs, so a file too large is refused unfetched.
+       * `fileName`: a document's name as it was sent.
+       */
+      media?: { path: string; mimeType: string; kind: string; caption?: string; fileName?: string; held?: string; size?: number };
       /**
        * (4) A person's edit: the id of the message it changes, and `text` what that message says now. `id` is the
        * edit's own, and an edit carries no media — it is words.
@@ -91,4 +100,6 @@ export type BridgeEvent =
    * where the bridge could not ask: a number whose groups are not known is counted as before.
    */
   | { type: "groups"; ids: string[] }
+  /** (4) A held file, fetched: where it was saved, for the `fetch_media` of that id. The daemon reads it and removes it. */
+  | { type: "media"; id: string; path: string }
   | { type: "error"; id?: string; message: string };

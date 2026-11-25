@@ -27,6 +27,7 @@ import { parseMarkdown } from "../../commons/markdown.ts";
 import { chunkRendered, sendsText } from "../../commons/text.ts";
 import { BaseGateway, type GatewayIdentity, deliverInParts, UndeliverableError } from "../../commons/resilience.ts";
 import { whatsappEnvelope, whatsappSenderId } from "./envelope.ts";
+import { fetchWhatsAppFile } from "./media.ts";
 import { NumberItself } from "./number.ts";
 import { toWhatsAppText } from "./format.ts";
 
@@ -98,6 +99,8 @@ const LOGOUT_GRACE_MS = 3_000;
 
 /** How long a `send` waits for its ack before giving up. */
 const ACK_TIMEOUT_MS = 30_000;
+/** A held file's download: a large one takes longer than a command's ack, and the engine's own deadline bounds it. */
+const FETCH_TIMEOUT_MS = 120_000;
 
 /**
  * How long a send waits for the number to finish linking.
@@ -408,33 +411,9 @@ export class WhatsAppGateway extends BaseGateway {
     if (this.channel) this.send_({ type: "typing", chatId });
   }
 
-  /**
-   * Fetch an inbound attachment's bytes for WhatsApp.
-   *
-   * `wa-bridge` downloads media to a local file on disk before emitting the message event,
-   * so `attachment.url` is already a path on disk. `fetch("file://...")` reads the local file.
-   */
+  /** A file its bridge holds until asked, or a path or a link as it is (`media.ts`). */
   override async fetchAttachment(attachment: Attachment): Promise<Uint8Array | null> {
-    if (attachment.buffer) return attachment.buffer;
-    if (!attachment.url) return null;
-
-    try {
-      const url =
-        attachment.url.startsWith("http://") || attachment.url.startsWith("https://")
-          ? attachment.url
-          : attachment.url.startsWith("file://")
-            ? attachment.url
-            : `file://${attachment.url}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        this.log.warn("whatsapp attachment download failed", { status: response.status, url });
-        return null;
-      }
-      return new Uint8Array(await response.arrayBuffer());
-    } catch (err) {
-      this.log.warn("whatsapp attachment fetch failed", { url: attachment.url, err: String(err) });
-      return null;
-    }
+    return fetchWhatsAppFile(attachment, (ref) => this.request((id) => ({ type: "fetch_media", id, ref }), FETCH_TIMEOUT_MS), this.log);
   }
 
   /**
@@ -521,7 +500,7 @@ export class WhatsAppGateway extends BaseGateway {
   }
 
   /** A command that expects an ack, resolved by id. */
-  private request(build: (id: string) => BridgeCommand): Promise<string> {
+  private request(build: (id: string) => BridgeCommand, within = ACK_TIMEOUT_MS): Promise<string> {
     const id = `c${++this.nextId}`;
     const command = build(id);
     // Logged at info, not debug: an outbound message that vanishes leaves nothing else behind, and
@@ -536,9 +515,9 @@ export class WhatsAppGateway extends BaseGateway {
       const timer = setTimeout(
         contained(this.log, "could not time out a command the WhatsApp bridge did not acknowledge", () => {
           this.pending.delete(id);
-          reject(new Error(`the WhatsApp bridge did not acknowledge within ${ACK_TIMEOUT_MS}ms`));
+          reject(new Error(`the WhatsApp bridge did not acknowledge within ${within}ms`));
         }, { id }),
-        ACK_TIMEOUT_MS,
+        within,
       );
 
       this.pending.set(id, { resolve, reject, timer });
@@ -654,6 +633,16 @@ export class WhatsAppGateway extends BaseGateway {
         if (event.chatTitle) this.rememberTitle(event.chatId, event.chatTitle);
         const envelope = whatsappEnvelope(event, { gatewayId: this.id, agentId: this.options.agentId });
         if (envelope) this.emitMessage(envelope);
+        return;
+      }
+
+      // A held file, fetched: its path is the answer the `fetch_media` waits on.
+      case "media": {
+        const entry = this.pending.get(event.id);
+        if (!entry) return;
+        clearTimeout(entry.timer);
+        this.pending.delete(event.id);
+        entry.resolve(event.path);
         return;
       }
 

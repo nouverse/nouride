@@ -13,6 +13,9 @@ export interface WhatsAppSelf {
   agentId?: string | undefined;
 }
 
+/** An attachment's url naming a file its bridge holds until asked (`fetch_media`), and not a path. */
+export const HELD_MEDIA = "wa-held:";
+
 export function whatsappEnvelope(event: Extract<BridgeEvent, { type: "message" }>, self: WhatsAppSelf): MessageEnvelope | null {
   const text = event.text ?? "";
   const hasMedia = Boolean(event.media);
@@ -65,10 +68,12 @@ export function whatsappEnvelope(event: Extract<BridgeEvent, { type: "message" }
           attachments: [
             {
               type: attachmentKind(event.media.kind, event.media.mimeType),
-              // Already a local path: the bridge downloads media itself, because the engine has no
-              // WhatsApp session to fetch it with.
-              url: event.media.path,
+              // A local path the bridge saved it to, or the ref it holds it by until it is asked for (`fetchAttachment`):
+              // the engine has no WhatsApp session to fetch it with.
+              url: event.media.held ? `${HELD_MEDIA}${event.media.held}` : event.media.path,
               mimeType: event.media.mimeType,
+              // What the message says it weighs: a file too large is refused before anything is fetched.
+              ...(event.media.size === undefined ? {} : { size: event.media.size }),
               ...(event.media.caption ? { caption: event.media.caption } : {}),
               // The name it was sent with, as Telegram's documents carry theirs.
               ...(event.media.fileName ? { filename: event.media.fileName } : {}),

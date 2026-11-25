@@ -58,7 +58,7 @@ const key = "a".repeat(64);
 
 /** A connection with the events it handed up, by type, and what it noted of its reconnects. */
 function number() {
-  const events: { type: string; status?: string; text?: string; reason?: string; media?: { path: string }; ids?: string[] }[] = [];
+  const events: { type: string; status?: string; text?: string; reason?: string; media?: { path: string; held?: string }; ids?: string[] }[] = [];
   const waits: { in_ms: number; attempt: number }[] = [];
   const connection = new Connection({
     emit: (event) => void events.push(event as (typeof events)[number]),
@@ -128,11 +128,16 @@ newestOn(shopFirst.auth).fire("messages.upsert", photo);
 await heard(shop);
 homeSocket.fire("messages.upsert", photo);
 await heard(home);
-const keptIn = (events: typeof shop.events) => {
-  const path = events.splice(0).find((event) => event.type === "message")?.media?.path ?? "";
-  return path.startsWith(`${shopDir}/`) ? "the shop's folder" : path.startsWith(`${homeDir}/`) ? "the home's folder" : `elsewhere: ${path}`;
+/** The photo held, not downloaded, then asked for by its ref: where it lands, and whether it was on disk before. */
+const keptIn = async (of: typeof shop) => {
+  const media = of.events.splice(0).find((event) => event.type === "message")?.media;
+  const before = media?.path ?? "";
+  const path = media?.held ? await of.connection.fetchMedia(media.held) : "";
+  const where = path.startsWith(`${shopDir}/`) ? "the shop's folder" : path.startsWith(`${homeDir}/`) ? "the home's folder" : `elsewhere: ${path}`;
+  const again = media?.held ? await of.connection.fetchMedia(media.held).then(() => "fetched twice", (err: Error) => err.message) : "";
+  return { before, where, again };
 };
-seen.aPhotoEach = { shops: keptIn(shop.events), homes: keptIn(home.events) };
+seen.aPhotoEach = { shops: await keptIn(shop), homes: await keptIn(home) };
 shop.waited();
 
 // ── both are told to restart at once: each reconnects, on its own timer

@@ -105,6 +105,27 @@ describe("who is let in", () => {
     expect({ onNora: h.access.get("telegram:nora", STRANGER), conversations: conversationsOf(h.db, "nora") }).toEqual({ onNora: null, conversations: [] });
   });
 
+  test("a file from a sender the door turns away is never fetched: blocked, or in a group untagged", async () => {
+    // The platform's copy of a file is fetched for a turn, after the door: a WhatsApp number's bridge now holds it until
+    // then, where it used to download every one as it came, whoever sent it.
+    const { AttachmentStore } = await import("@/modules/attachments/store.ts");
+    const { ChatAttachmentIndex } = await import("@/modules/attachments/chat-attachments.store.ts");
+    const fetched: string[] = [];
+    const h = await install({
+      turns: ["a nice photo"],
+      deps: ({ db, dataDir }) => ({ attachmentIndex: new ChatAttachmentIndex(db), attachments: new AttachmentStore({ rootDir: `${dataDir}/attachments`, maxBytes: 1_000_000 }) }),
+    });
+    for (const bot of Object.values(h.connections)) (bot as unknown as { fetchAttachment: (a: { url?: string }) => Promise<Uint8Array> }).fetchAttachment = async (attachment) => (fetched.push(attachment.url ?? ""), new Uint8Array([0xff, 0xd8, 0xff]));
+    const photo = (name: string) => ({ attachments: [{ type: "image" as const, mimeType: "image/jpeg", url: `wa-held:${name}` }] });
+    h.access.block("telegram:nora", "blocked-1", "admin");
+    await h.dm("nora", { senderId: "blocked-1", text: "look", ...photo("from-the-blocked") });
+    await h.group({ text: "look at this", ...photo("in-the-group-untagged") });
+    expect({ fetched, requests: h.requests.length }).toEqual({ fetched: [], requests: 0 });
+    // Let in, as anyone is by an open agent: fetched for the turn that answers it.
+    await h.dm("nora", { text: "what is this?", ...photo("let-in") });
+    expect({ fetched, requests: h.requests.length }).toEqual({ fetched: ["wa-held:let-in"], requests: 1 });
+  });
+
   test("a block keeps a sender out of the open agent too", async () => {
     const h = await install();
     h.access.block("telegram:nora", STRANGER, "admin");

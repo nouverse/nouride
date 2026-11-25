@@ -19,7 +19,7 @@ import makeWASocket, {
 import { proto } from "@whiskeysockets/baileys";
 import { ensureDir, join, proxyAgentFor, writeBytesSync } from "@nouride/runtime";
 import { useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
-import { editEvent, extensionFor, incoming, incomingEdit, messageEvent, selfIdsOf } from "./message.ts";
+import { editEvent, extensionFor, incoming, incomingEdit, mediaSize, messageEvent, selfIdsOf } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION } from "./protocol.ts";
 import type { Speaker } from "./say.ts";
 import { aboutSelf, Membership } from "./groups.ts";
@@ -78,6 +78,9 @@ const BACKOFF_MAX_MS = 30_000;
 
 /** After this many failures in a row, it stops being transient and the engine should know. */
 const GIVE_UP_AFTER = 8;
+/** Files held for the daemon to ask for: the newest this many, each for this long, as a message waits in a queue. */
+const HELD_MAX = 500;
+const HELD_FOR_MS = 6 * 60 * 60 * 1000;
 
 export class Connection {
   private socket: WASocket | null = null;
@@ -106,6 +109,12 @@ export class Connection {
   private starting = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private attempt = 0;
+  /**
+   * The files of messages handed up and not yet asked for, by ref: fetched only when the daemon asks (`fetch_media`),
+   * once it has let the sender in. Downloaded as they came, a sender nobody answers filled the disk: a blocked one, one
+   * past their messages, a group's chatter. The newest `HELD_MAX` are kept, each for `HELD_FOR_MS`.
+   */
+  private readonly held = new Map<string, { message: WAMessage; at: number; mimeType: string; fileName?: string }>();
   /** Groups' subjects, for the `message` event's `chatTitle` — across reconnects: a group keeps its name. */
   private readonly subjects = new GroupSubjects();
   /** The groups this number is in (`groups.ts`): what the daemon routes a group's message by, with two numbers. */
@@ -505,31 +514,49 @@ export class Connection {
     return digits ? `${digits}@s.whatsapp.net` : null;
   }
 
-  /** One incoming message up to the engine, with its media saved to disk first — or a person's edit of one. */
+  /** A file held for the daemon to ask for, and those past their time or beyond the newest kept let go. */
+  private hold(ref: string, entry: { message: WAMessage; at: number; mimeType: string; fileName?: string }): void {
+    for (const [key, one] of this.held) if (entry.at - one.at > HELD_FOR_MS) this.held.delete(key);
+    this.held.set(ref, entry);
+    while (this.held.size > HELD_MAX) this.held.delete(this.held.keys().next().value as string);
+  }
+
+  /**
+   * A held file, downloaded now and saved in this number's own folder: where, for the daemon to read and remove. Once
+   * only: a ref asked for twice, or let go, is said to be gone.
+   */
+  async fetchMedia(ref: string): Promise<string> {
+    const entry = this.held.get(ref);
+    if (!entry) throw new Error("that file is no longer held: ask the sender to send it again");
+    this.held.delete(ref);
+    const bytes = (await downloadMediaMessage(entry.message, "buffer", {})) as Buffer;
+    const path = join(this.mediaDir, `${crypto.randomUUID()}.${extensionFor(entry.mimeType, entry.fileName)}`);
+    writeBytesSync(path, bytes, 0o600);
+    return path;
+  }
+
+  /** One incoming message up to the engine, its media held to be asked for — or a person's edit of one. */
   private async forward(message: WAMessage): Promise<void> {
     const edited = incomingEdit(message);
     if (edited) return this.say.emit(editEvent(message, edited, selfIdsOf(this.socket?.user)));
     const found = incoming(message);
     if (!found) return;
 
-    let media: { path: string; mimeType: string; kind: string; caption?: string; fileName?: string } | undefined;
+    // Its file is named and held, not downloaded: the daemon asks for it once it has let the sender in.
+    let media: { path: string; mimeType: string; kind: string; caption?: string; fileName?: string; held: string; size?: number } | undefined;
     if (found.media) {
-      try {
-        const bytes = (await downloadMediaMessage(message, "buffer", {})) as Buffer;
-        const path = join(this.mediaDir, `${crypto.randomUUID()}.${extensionFor(found.media.mimeType, found.media.fileName)}`);
-        writeBytesSync(path, bytes, 0o600);
-        media = {
-          path,
-          mimeType: found.media.mimeType,
-          kind: found.media.kind,
-          ...(found.text.trim() ? { caption: found.text } : {}),
-          ...(found.media.fileName ? { fileName: found.media.fileName } : {}),
-        };
-      } catch (err) {
-        // The text still goes through. Losing a photo is better than losing the message that came with
-        // it, and the sender gets an answer either way.
-        this.say.note("media download failed", String(err));
-      }
+      const ref = `${message.key.id ?? crypto.randomUUID()}-${crypto.randomUUID().slice(0, 8)}`;
+      this.hold(ref, { message, at: Date.now(), mimeType: found.media.mimeType, ...(found.media.fileName ? { fileName: found.media.fileName } : {}) });
+      const size = mediaSize(message);
+      media = {
+        path: "",
+        held: ref,
+        mimeType: found.media.mimeType,
+        kind: found.media.kind,
+        ...(size === undefined ? {} : { size }),
+        ...(found.text.trim() ? { caption: found.text } : {}),
+        ...(found.media.fileName ? { fileName: found.media.fileName } : {}),
+      };
     }
 
     // Read after the download, as it always was: the socket may have been replaced while it ran.
