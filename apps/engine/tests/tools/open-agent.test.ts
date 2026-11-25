@@ -79,6 +79,27 @@ describe("an open agent's toolset", () => {
     expect(open.gate("memory_read", { conversation: "2026-09-25-0459-nouva" }, ctx)).toEqual(refusal);
     expect(open.gate("memory_read", { document: "knowledge:prices/list.md#0", conversation: "2026-09-25-0459-nouva" }, ctx)).toEqual(refusal);
     expect(open.gate("memory_read", {}, ctx)).toEqual(refusal);
+    // `earlier` reads this chat's archived exchanges, every agent's on the connection and those a `/new` put away. It
+    // was never named to an open agent, and its model could send it all the same.
+    expect(open.gate("memory_read", { document: "knowledge:prices/list.md#0", earlier: "1-9999999999999" }, ctx)).toEqual(refusal);
+    expect(open.gate("memory_read", { earlier: "1-9999999999999", query: "door code" }, ctx)).toEqual(refusal);
+    expect(open.gate("memory_read", { document: "knowledge:prices/list.md#0", related: true }, ctx)).toEqual(refusal);
+  });
+
+  test("each of the four is called with what it was told of: an argument of the tool's own that it was not told of is refused", () => {
+    const told = (name: string) => Object.keys((open.definitions.find((definition) => definition.name === name)!.parameters as { properties: Record<string, unknown> }).properties).sort();
+    expect({ search: told("memory_search"), read: told("memory_read"), send: told("send_file") }).toEqual({ search: ["limit", "query"], read: ["document"], send: ["caption", "document"] });
+    const refused = (name: string, args: Record<string, unknown>) => open.gate(name, args, ctx).action;
+    // What an ordinary agent's search takes, to look where an open one may not.
+    expect(refused("memory_search", { query: "price list", agents: ["nouva"] })).toBe("refuse");
+    expect(refused("memory_search", { query: "price list", person: "gading" })).toBe("refuse");
+    expect(open.gate("memory_search", { query: "x", scope: "conversations" }, ctx)).toEqual({ action: "refuse", reason: "an agent open to everyone calls this tool with what it was told of and nothing else: query, limit" });
+    expect(refused("attachment_read", { ref: "f1a2b3c4d5", path: "/etc/passwd" })).toBe("refuse");
+    // With all it was told of, each runs; an argument given as nothing is no argument.
+    expect(refused("memory_search", { query: "price list", limit: 5 })).toBe("run");
+    expect(refused("attachment_read", { ref: "f1a2b3c4d5", question: "what does it say?" })).toBe("run");
+    expect(refused("send_file", { document: "knowledge:prices/list.pdf#0", caption: "the price list" })).toBe("run");
+    expect(refused("memory_read", { document: "knowledge:prices/list.md#0", conversation: undefined })).toBe("run");
   });
 
   test("send_file sends a kept document alone: no path, no address, and its schema names neither", () => {

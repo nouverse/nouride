@@ -17,6 +17,7 @@ import type { AgentToolset } from "./registry.ts";
 export const OPEN_AGENT_TOOLS: readonly string[] = ["attachment_read", "memory_read", "memory_search", "send_file"];
 
 const NOT_HELD = "this agent is open to everyone, and holds only the tools that answer from what was opened to everyone";
+const WHAT_IT_WAS_TOLD = "an agent open to everyone calls this tool with what it was told of and nothing else";
 const A_DOCUMENT_TO_READ = "an agent open to everyone reads a document, named by `document` (the id `memory_search` gave it): there is no conversation for it to open";
 const DOCUMENT_ALONE =
   "an agent open to everyone sends only a file kept in a collection opened to everyone, named by `document` (the id `memory_search` gave it): no path and no address";
@@ -80,12 +81,17 @@ export function openToolset(registry: ReadonlyMap<string, Tool>): AgentToolset {
     requiresApproval: () => false,
     parallelSafe: (name) => held.get(name)?.parallelSafe === true,
     gate: (name, args): GateDecision => {
-      if (!held.has(name)) return { action: "refuse", reason: NOT_HELD };
-      if (name === "send_file" && (typeof args.document !== "string" || args.path !== undefined || args.paths !== undefined || args.url !== undefined)) {
-        return { action: "refuse", reason: DOCUMENT_ALONE };
-      }
+      const tool = held.get(name);
+      if (!tool) return { action: "refuse", reason: NOT_HELD };
+      // Called with what it was told of, and nothing else of the tool's own: each other argument is a way to something
+      // an open agent has no business with. `memory_read`'s `earlier` was one, never named to it and taken all the
+      // same: this chat's archived exchanges, every agent's on the connection, those a `/new` had put away among them.
+      const toldOf = Object.keys((told(tool.definition).parameters as { properties?: Record<string, unknown> }).properties ?? {});
+      const more = Object.keys(args).filter((key) => args[key] !== undefined && !toldOf.includes(key));
+      if (name === "send_file" && (typeof args.document !== "string" || more.length > 0)) return { action: "refuse", reason: DOCUMENT_ALONE };
       // A conversation is nobody's to open here, and with no id the tool reads the agent's own notes, which it holds already.
-      if (name === "memory_read" && (typeof args.document !== "string" || args.conversation !== undefined)) return { action: "refuse", reason: A_DOCUMENT_TO_READ };
+      if (name === "memory_read" && (typeof args.document !== "string" || more.length > 0)) return { action: "refuse", reason: A_DOCUMENT_TO_READ };
+      if (more.length > 0) return { action: "refuse", reason: `${WHAT_IT_WAS_TOLD}: ${toldOf.join(", ") || "nothing"}` };
       return { action: "run", via: "ceiling" };
     },
     blockedPatterns: [],
