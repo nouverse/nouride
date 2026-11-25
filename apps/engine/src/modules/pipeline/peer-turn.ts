@@ -39,7 +39,7 @@
 import { sharedToolsKeeper } from "@/modules/toolchain/shared-tools.ts";
 import { workNotesCopy } from "@/modules/notes/tail.ts";
 import { dirname, join } from "@nouride/runtime";
-import { childSessionId, createLogger, resolveTurnDurationMs, tierModel, toUserMessage, type ChatType, type Tool } from "@nouride/shared";
+import { childSessionId, clipTrimmed, createLogger, oneLine, resolveTurnDurationMs, tierModel, toUserMessage, type ChatType, type Tool } from "@nouride/shared";
 import { brainFor } from "./brain.ts";
 import { resolveToolset } from "@/modules/tools/registry.ts";
 import type { PeerTurnRequest, PeerTurnResult } from "@/modules/tools/builtins/ask-agent.ts";
@@ -328,7 +328,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         userMessage: {
           role: "user",
           // In a room it is a member of, its answer is also said there (`peer-shown.ts`), and it is told so.
-          content: [briefing(request, shownIn(ctx, request, peer.config.id) !== null), workNotesCopy(ctx.deps.notes, { agentId: request.ctx.agentId, gatewayId: request.ctx.gatewayId, chatId: request.ctx.chatId })]
+          content: [briefing(request, shownIn(ctx, request, peer.config.id) !== null, spokenThere(ctx, request)), workNotesCopy(ctx.deps.notes, { agentId: request.ctx.agentId, gatewayId: request.ctx.gatewayId, chatId: request.ctx.chatId })]
             .filter((part): part is string => Boolean(part))
             .join("\n\n"),
           timestamp: Date.now(),
@@ -460,7 +460,7 @@ export const SHOWN_IN_THE_ROOM =
  * asked and the people in the room, so it is written for the people, in the language they are speaking, and still
  * says what the agent that asked needs. The brief itself is in English, as work between agents is.
  */
-function shownBriefing(request: PeerTurnRequest): string {
+function shownBriefing(request: PeerTurnRequest, spoken?: string): string {
   return [
     `[${request.from} is asking you to do something, in a room you are both in. This brief is ${request.from}'s, not a person's.]`,
     "",
@@ -471,8 +471,24 @@ function shownBriefing(request: PeerTurnRequest): string {
     `${request.from} will not repeat it. So: do the work, then answer the people in the room, in the language they`,
     "are speaking there, not the language of this brief. Say what you did, what came of it and anything that failed,",
     "as you would say it to them yourself. No greeting, no sign-off, and tag nobody.",
+    // The brief is in English, as work between agents is, and the asked agent reads nothing else of the room: told only
+    // "their language", it wrote in the brief's. The words of the person this is for show which language that is.
+    ...(spoken ? [`${ROOM_LANGUAGE} "${spoken}"`] : []),
     ASKED_TO_SAY,
   ].join("\n");
+}
+
+/** What tells an asked agent the room's language: the words, quoted after it, of the person the ask is for. */
+export const ROOM_LANGUAGE = "Write your answer in the language of what the person this is for said there last:";
+
+/** At most this much of what they said: enough to tell the language, not a message to answer. */
+const SPOKEN_MAX = 160;
+
+/** The last thing the person the asking turn answers said in the room, as written: for its language alone. */
+function spokenThere(ctx: TurnContext, request: PeerTurnRequest): string | undefined {
+  const said = ctx.deps.roomMessages?.forChat(request.ctx.gatewayId, request.ctx.chatId, 50) ?? [];
+  const theirs = [...said].reverse().find((message) => message.senderId === request.ctx.senderId && message.text.trim());
+  return theirs ? clipTrimmed(oneLine(theirs.text), SPOKEN_MAX) : undefined;
 }
 
 /** What an asked agent says of the brief itself — the words that carry the rule, asserted by a test. */
@@ -487,8 +503,8 @@ export const ASKED_TO_SAY =
  * greeting, a sign-off, a question at the end — into a string that no human will ever read verbatim.
  * What the caller needs back is a report.
  */
-function briefing(request: PeerTurnRequest, shown = false): string {
-  if (shown) return shownBriefing(request);
+function briefing(request: PeerTurnRequest, shown = false, spoken?: string): string {
+  if (shown) return shownBriefing(request, spoken);
   return [
     `[${request.from} is asking you to do something. This is not a person and this is not a chat.]`,
     "",
