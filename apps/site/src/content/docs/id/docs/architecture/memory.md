@@ -66,8 +66,9 @@ yang terlalu panjang untuk satu panggilan model dipecah di batas giliran.
 
 Sebelum dipotong, obrolan sehari terakhir sebuah chat dibaca langsung dari tempatnya (sejak 0.8.48): di
 chat pribadi seseorang, agent diberi tahu percakapan orang itu di chat lain sejak potongan terakhirnya,
-bisa menemukannya dengan `memory_search`, dan membukanya dengan `memory_read`, dengan aturan yang sama
-seperti episode yang sudah dipotong. Ditanya di chat pribadi soal apa yang diputuskan di grup sejam
+paling jauh sampai kemarin, bisa menemukannya dengan `memory_search`, dan membukanya dengan `memory_read`,
+dengan aturan yang sama seperti episode yang sudah dipotong; kalau recall dimatikan, untuk orang itu atau
+untuk seluruh install, percakapan itu tidak dibaca. Ditanya di chat pribadi soal apa yang diputuskan di grup sejam
 lalu, ia gak perlu lagi ditanya ulang di grup itu.
 
 Episode dibangun dari turn log daemon dan log pesan ruangannya, bukan dari konteks percakapan, jadi
