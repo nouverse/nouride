@@ -153,7 +153,9 @@ export class Admission {
    * nobody ends the exchange.
    */
   strangerOf(envelope: MessageEnvelope): LoadedAgent | undefined {
-    if (envelope.senderIsBot) return undefined;
+    // Nor is the daemon's own word: a job's result or a turn taken up again arrives on this connection for the agent it
+    // names, and taken for a stranger's it was handed to the open agent, with what the job had found.
+    if (envelope.senderIsBot || isSystemEvent(envelope)) return undefined;
     const owner = this.ownerOf(envelope.gatewayId);
     return isOpenAgent(owner) && !this.admitsByName(envelope) ? owner : undefined;
   }

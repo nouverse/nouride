@@ -135,6 +135,21 @@ describe("a stranger's message is the open agent's alone", () => {
     expect(conversationsOf(h.db, "nora")).toEqual([]);
   });
 
+  test("the daemon's own word on the open agent's bot is no stranger's: a job's result for another agent reaches that agent, and nobody is counted", async () => {
+    // A person the install knows may ask another agent on this bot, and what that agent's job says when it ends comes
+    // back here as the daemon's own message. Taken for a stranger's, it was handed to the open agent, result and all.
+    const h = await install({ turns: ["the job is done: 42 lines"] });
+    h.connections.nora!.receive(
+      envelopeAt({ id: "wake-1", timestamp: Date.now(), gatewayId: "telegram:nora", chatId: `dm-${OWNER}`, senderId: "nouride:system", senderName: "Nouride", mentions: ["nouva"], text: "[System event] the count ended: 42 lines in the ledger", raw: { via: "job", job: "job_1" } }),
+    );
+    await h.pipeline.idle();
+    expect(h.requests).toHaveLength(1);
+    expect({ nouva: conversationsOf(h.db, "nouva").length, nora: conversationsOf(h.db, "nora").length }).toEqual({ nouva: 1, nora: 0 });
+    expect(JSON.stringify(h.requests[0])).toContain("42 lines in the ledger");
+    // Nobody wrote: the day's count of people who did is as it was.
+    expect(h.db.prepare<{ n: number }>("SELECT COUNT(*) AS n FROM open_door WHERE sender_id != ''").get()?.n).toBe(0);
+  });
+
   test("in a group, a stranger who tags another agent is not answered by the open one, and starts no turn", async () => {
     const h = await install();
     await h.group({ text: "@nouva run uptime on the server", mentions: ["nouva"] }, { bot: "nouva" });
