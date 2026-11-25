@@ -243,6 +243,26 @@ export function guessedWindows(agents: readonly { id: string; model: string; con
 }
 
 /**
+ * A skill an agent carries but cannot actually run: a tool it needs is not among that agent's.
+ *
+ * The tool axis, and it is per agent rather than per host: two agents on one daemon can disagree about this while
+ * agreeing about every binary. `warn` and not `ok`, unlike the unread advisory: this one is a task that *will* fail
+ * partway through, not a cost. Only what is actually missing, per agent: listing every tool the skill names would say
+ * "nox does not have exec, web_search" about an agent that has exec, a sentence that sends somebody to check the
+ * wrong thing. One agent "does not have", several "do not have": the one-agent case read "which nora do not have".
+ */
+export function skillToolsCheck(skill: { name: string; agents?: readonly { id: string; enabled: boolean; missingTools?: readonly string[] }[] }): Check | null {
+  const short = (skill.agents ?? []).filter((agent) => agent.enabled && (agent.missingTools ?? []).length > 0);
+  if (short.length === 0) return null;
+  const gaps = [...new Set(short.flatMap((agent) => agent.missingTools ?? []))].sort();
+  return {
+    level: "warn",
+    message: `skill "${skill.name}" needs ${gaps.join(", ")}, which ${short.map((agent) => agent.id).join(", ")} ${short.length === 1 ? "does" : "do"} not have`,
+    hint: `Add the tool to that agent's \`[tools] enabled\`, or switch the skill off for it: \`nouride skills off ${skill.name} <agent>\`.`,
+  };
+}
+
+/**
  * The agents' ssh config names hosts and keeps no connection open between them (0.7.17,
  * v0.8.x_RFC_FEWER_ROUND_TRIPS §5.2). A hint, never a failure: each `ssh` in a row pays a handshake three lines save.
  * Nothing to say with no config, no host in it, or reuse already on.
