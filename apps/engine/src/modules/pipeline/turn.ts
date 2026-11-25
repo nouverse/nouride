@@ -35,6 +35,7 @@ import { hasWords, writtenBesideCalls } from "@/commons/silence.ts";
 import { Preamble } from "./preamble.ts";
 import { nudgeBaseMs, replyNote, watchTurn } from "./budget-nudges.ts";
 import { outcomeOf, type TurnShape } from "./turn-shape.ts";
+import { closedSentence } from "./open-door.ts";
 import { beginTurn, close, tell, type TurnState } from "./turn-state.ts";
 import { turnBrain } from "./turn-brain.ts";
 import { compose, equip, turnRequest } from "./turn-request.ts";
@@ -105,8 +106,11 @@ export class TurnRunner {
     if (budget.action !== "refuse") return false;
     log.warn("daily cost cap reached, refusing the turn", { agent_id: turn.agent.config.id });
     void this.ctx.deps.notifier?.alert("cost_cap", budget.message);
-    await this.ctx.voice.reply(turn.envelope, budget.message);
-    close(turn, { status: "failed", reply: budget.message, error: "daily cost cap reached" });
+    // The cap, what was spent and the setting that raises it are the install's own: an open agent's words go to
+    // whoever writes, so they are told what they are told when its own day is used. Its admin has the alert above.
+    const said = isOpenAgent(turn.agent) ? closedSentence(turn.agent) : budget.message;
+    await this.ctx.voice.reply(turn.envelope, said);
+    close(turn, { status: "failed", reply: said, error: "daily cost cap reached" });
     tell(turn, { toolCalls: 0, worked: 0, tokens: 0, failed: true, error: budget.message, interrupted: false, readOutside: false });
     this.ctx.releaseTurn(turn.turnKey);
     turn.clock.stop();

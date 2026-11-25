@@ -56,6 +56,8 @@ export const strangerAsleep = (displayName: string): string => `${displayName} i
 
 /** What a stranger is told once, the day an agent's tokens are used, where its admin wrote no sentence of their own. */
 const closedForToday = (displayName: string): string => `${displayName} has answered all it can for today. Please write again tomorrow.`;
+/** What whoever writes to an open agent is told when there is nothing left for it to answer with today: its admin's sentence, or the daemon's. */
+export const closedSentence = (agent: LoadedAgent): string => agent.config.open?.closedReply ?? closedForToday(agent.config.displayName);
 const enoughForToday = (most: number): string => `That is all for today: I can take ${most} ${most === 1 ? "message" : "messages"} a day from each person. Please write again tomorrow.`;
 
 /**
@@ -91,7 +93,7 @@ function strangerMay(
         "Its daily limit is on its page in the dashboard, under Access.",
     );
   }
-  return { answer: false, say: verdict.say ? (limits.closedReply ?? closedForToday(agent.config.displayName)) : null };
+  return { answer: false, say: verdict.say ? closedSentence(agent) : null };
 }
 
 /** A stranger's message asked of the door, and they told what it says when it turns them away. True when it did. */

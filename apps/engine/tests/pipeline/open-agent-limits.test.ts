@@ -29,9 +29,11 @@ const ENOUGH = (most: number) => `That is all for today: I can take ${most} ${mo
 const CLOSED = "Nora has answered all it can for today. Please write again tomorrow.";
 
 /** Nora is open, with these limits, on her own bot. Each answer of the scripted model is metered as 15 tokens: 10 in, 5 out. */
-async function install(limits: { tokens?: number; messages?: number; closedReply?: string; noCount?: boolean }) {
+async function install(limits: { tokens?: number; messages?: number; closedReply?: string; noCount?: boolean; installTokens?: number; nouvaBot?: boolean }) {
   // A bot for each start of the daemon: the one before it is no longer listened to.
   const bots = [new FakeGateway("telegram:nora", "telegram")];
+  // The orchestrator's own bot, where a test wants an ordinary agent beside the open one.
+  const nouvas = new FakeGateway("telegram:nouva", "telegram");
   const alerts: { key: string; text: string }[] = [];
   const open = `[open]\nmax_daily_tokens = ${limits.tokens ?? 1_000_000}\nmax_daily_messages_per_person = ${limits.messages ?? 100}\n${limits.closedReply ? `closed_reply = "${limits.closedReply}"\n` : ""}`;
   const deps = ({ db }: { db: SqliteDb }) => ({
@@ -48,9 +50,11 @@ async function install(limits: { tokens?: number; messages?: number; closedReply
     config: {
       daemon: { orchestrator: "nouva", timezone: "Asia/Jakarta" },
       security: { access: { mode: "pair", allowlist: [OWNER] } },
-      gateways: { telegram: { nora: { enabled: true, token: "t-nora", agent: "nora" } } },
+      gateways: { telegram: { nora: { enabled: true, token: "t-nora", agent: "nora" }, ...(limits.nouvaBot ? { nouva: { enabled: true, token: "t-nouva", agent: "nouva" } } : {}) } },
+      // The install's own cap on a day, every agent's use together.
+      ...(limits.installTokens ? { llm: { defaults: { provider: "test", model: "test-model" }, limits: { max_daily_tokens: limits.installTokens } } } : {}),
     },
-    gateway: bots[0]!,
+    ...(limits.nouvaBot ? { gateways: [bots[0]!, nouvas] } : { gateway: bots[0]! }),
     deps,
   });
   cleanup.push(bench.dispose);
@@ -59,6 +63,7 @@ async function install(limits: { tokens?: number; messages?: number; closedReply
   let sent = 0;
   const rig = {
     alerts,
+    nouvas,
     bench,
     /** The model's requests since the last start. */
     requests: () => rig.bench.requests.length,
@@ -189,6 +194,36 @@ describe("the agent's tokens in a day", () => {
     setSystemTime(new Date("2026-09-25T17:10:00Z"));
     await h.write("budi");
     expect({ requests: h.requests(), said: h.said().at(-1) }).toEqual({ requests: 1, said: "we open at nine" });
+  });
+});
+
+describe("the install's own cap on a day, reached", () => {
+  test("whoever writes to the open agent is told its own sentence: not the cap, what was spent, or the setting that raises it", async () => {
+    // Read by a second reader of the branch: a stranger was told "Today's usage has reached the 20 token cap: 30 so
+    // far across 2 request(s). Raise max_daily_tokens…", which is the install's own business in the install's words.
+    const h = await install({ installTokens: 20, nouvaBot: true, closedReply: "The shop's desk is closed for today." });
+    await h.write("stranger-1");
+    await h.write("stranger-2");
+    expect(h.requests()).toBe(2);
+    // Thirty tokens against a cap of twenty: nobody's turn begins.
+    await h.write("stranger-3");
+    expect(h.requests()).toBe(2);
+    expect(h.said().at(-1)).toBe("The shop's desk is closed for today.");
+    for (const ofTheInstall of ["cap", "max_daily_tokens", "request(s)", "30", "20"]) expect(h.said().at(-1)).not.toContain(ofTheInstall);
+
+    // The admin is told the figures, and an ordinary agent's own chat is told them as ever.
+    expect(h.alerts.map((alert) => alert.key)).toContain("cost_cap");
+    expect(h.alerts.find((alert) => alert.key === "cost_cap")?.text).toContain("has reached the 20 token cap");
+    h.nouvas.receive(envelopeAt({ id: "o-1", timestamp: Date.now(), gatewayId: "telegram:nouva", chatId: `dm-${OWNER}`, senderId: OWNER, senderName: "Gading", text: "are you there?" }));
+    await h.bench.pipeline.idle();
+    expect(h.nouvas.sent.at(-1)?.text).toContain("Today's usage has reached the 20 token cap");
+  });
+
+  test("with no sentence of its admin's, the daemon's own for a day that is used", async () => {
+    const h = await install({ installTokens: 10 });
+    await h.write("stranger-1");
+    await h.write("stranger-2");
+    expect(h.said().at(-1)).toBe(CLOSED);
   });
 });
 
