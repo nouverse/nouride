@@ -61,7 +61,9 @@ export async function gateway(client: Client, args: string[]): Promise<void> {
           `The id becomes <platform>:<name>. That is what sessions, people ids and the access\n` +
           `allowlist are keyed by, so pick it deliberately. \`nouride gateway rename\` exists but\n` +
           `it is a database migration, not a label change.\n\n` +
-          `WhatsApp pairs by QR after it starts: \`nouride gateway\` shows the state.${RESET}`,
+          `WhatsApp pairs by QR after it starts: \`nouride gateway\` shows the state. Each number is a\n` +
+          `connection of its own, with its own name, its own agent and its own code to scan: add a\n` +
+          `second one the same way.${RESET}`,
       );
     }
 
@@ -91,7 +93,12 @@ export async function gateway(client: Client, args: string[]): Promise<void> {
       ...(flag("session-dir") ? { sessionDir: flag("session-dir") } : {}),
     });
     // A gateway is a socket opened at boot: the config is written, and nothing listens on it until the restart.
-    return saidSaved(`${BOLD}${platform}:${instance}${RESET}`, result, `nouride restart --then "confirm ${platform}:${instance} connected"`);
+    saidSaved(`${BOLD}${platform}:${instance}${RESET}`, result, `nouride restart --then "confirm ${platform}:${instance} connected"`);
+    // A number is linked by a scan, not by this command: where its code is, said once, since nothing else on a terminal does.
+    if (platform === "whatsapp" && !has("disabled")) {
+      say(`${DIM}  This number's code to scan is on ${flag("agent") ? `${flag("agent")}'s` : "its agent's"} Connections page in the dashboard once it has started. Scan it from the phone that holds the number.${RESET}`);
+    }
+    return;
   }
 
   if (action === "rm" || action === "delete") {

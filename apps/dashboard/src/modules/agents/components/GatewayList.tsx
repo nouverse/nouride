@@ -277,7 +277,7 @@ function GatewayCard({
 
       {platform?.pairs && gateway.enabled && !editing && (
         <div className="mt-5 pt-5 border-t border-base-content/[0.08]">
-          <WhatsAppPairing gatewayId={gateway.id} />
+          <WhatsAppPairing gatewayId={gateway.id} agentId={agentId} />
         </div>
       )}
 

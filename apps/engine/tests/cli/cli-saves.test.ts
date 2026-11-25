@@ -88,5 +88,24 @@ describe("a save from the CLI says what happened", () => {
   test("a gateway's restart line says how to restart and confirm it connected", async () => {
     await gateway(daemon({ restartRequired: true }), ["add", "--platform", "telegram", "--name", "nox", "--token", "5550002222:AAH-test"]);
     expect(said()).toContain('nouride restart --then "confirm telegram:nox connected"');
+    expect(said()).not.toContain("code to scan");
+  });
+
+  test("a WhatsApp number is added as any connection is, a second like the first, and is told where its code to scan is", async () => {
+    const sent: { path: string; body: unknown }[] = [];
+    const client = { ...daemon({ restartRequired: true }), post: async <T>(path: string, body: unknown) => (sent.push({ path, body }), { ok: true, restartRequired: true }) as T } as unknown as Client;
+    await gateway(client, ["add", "--platform", "whatsapp", "--name", "main", "--agent", "nouva"]);
+    await gateway(client, ["add", "--platform", "whatsapp", "--name", "shop", "--agent", "nora"]);
+    // No token and no folder of its own to name: the daemon makes the key, and the login's folder is named for it.
+    expect(sent).toEqual([
+      { path: "/gateways", body: { platform: "whatsapp", name: "main", enabled: true, agent: "nouva" } },
+      { path: "/gateways", body: { platform: "whatsapp", name: "shop", enabled: true, agent: "nora" } },
+    ]);
+    expect(said()).toContain('nouride restart --then "confirm whatsapp:shop connected"');
+    expect(said()).toContain("This number's code to scan is on nora's Connections page in the dashboard once it has started. Scan it from the phone that holds the number.");
+    // One that is written and not switched on has no code to scan yet.
+    lines = [];
+    await gateway(client, ["add", "--platform", "whatsapp", "--name", "later", "--agent", "nora", "--disabled"]);
+    expect(said()).not.toContain("code to scan");
   });
 });
