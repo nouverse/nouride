@@ -230,7 +230,9 @@ export class InboundRouter {
     // chain that stays exhausted after the operator joins in is a chain that has stopped working.
     // A person joining in is what a fresh budget is *for*: without this, two agents that used their
     // four exchanges this morning would be mute for the rest of the day.
-    if (verdict.kind === "human") this.ctx.voice.outbound.setHops(envelope.gateway, envelope.chatId, 0);
+    // Not a stranger let in only by an open agent: the count is the room's, read by every agent in it, and a busy
+    // public group would have kept two of the household's agents talking for as long as visitors wrote.
+    if (verdict.kind === "human" && !this.admission.strangerOf(envelope)) this.ctx.voice.outbound.setHops(envelope.gateway, envelope.chatId, 0);
 
     if (verdict.kind === "foreign_bot") {
       log.debug("ignoring a message from a bot that is not ours", { chat_id: envelope.chatId });

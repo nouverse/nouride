@@ -303,6 +303,20 @@ describe("a stranger has three commands", () => {
   });
 });
 
+describe("what a stranger's message changes in the room", () => {
+  test("not the count of messages the household's agents have traded there: only a person let in by name starts it again", async () => {
+    const h = await install();
+    // The count is the room's, on the platform, and every agent reads it (`classifyInbound`); held where the voice keeps it.
+    const room = (h.pipeline as unknown as { voice: { outbound: { hops(platform: string, chatId: string): number; setHops(platform: string, chatId: string, hops: number): void } } }).voice.outbound;
+    room.setHops("telegram", GROUP, 3);
+    await h.group({ text: "hello, anyone?" });
+    await h.group({ text: "nora, what are your opening hours?" }, { bot: "nora" });
+    expect(room.hops("telegram", GROUP)).toBe(3);
+    await h.group({ senderId: OWNER, senderName: "Gading", text: "carry on" });
+    expect(room.hops("telegram", GROUP)).toBe(0);
+  });
+});
+
 describe("what an open agent says wakes nobody", () => {
   test("a tag in its answer is not handed to the agent it names", async () => {
     // Telegram hands no bot another bot's message, so a tag between agents is handed over by the daemon itself.
