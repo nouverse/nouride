@@ -159,6 +159,25 @@ describe("a message to a number is that number's", () => {
   });
 });
 
+describe("the groups each number is in", () => {
+  test("each says it is in the groups its own bridge named, and no other's; a one-to-one chat, or before the bridge said, is not known", async () => {
+    const shop = await number("shop", "nora");
+    const home = await number("home", "nouva");
+    expect(shop.gateway.sees("g-shop@g.us")).toBeUndefined();
+    shop.fake.push({ type: "groups", ids: ["g-shop@g.us"] });
+    home.fake.push({ type: "groups", ids: ["g-family@g.us"] });
+    await eventually(() => shop.gateway.sees("g-shop@g.us") === true && home.gateway.sees("g-family@g.us") === true);
+    expect({ shop: ["g-shop@g.us", "g-family@g.us"].map((id) => shop.gateway.sees(id)), home: ["g-shop@g.us", "g-family@g.us"].map((id) => home.gateway.sees(id)) }).toEqual({
+      shop: [true, false],
+      home: [false, true],
+    });
+    expect(shop.gateway.sees("628111@s.whatsapp.net")).toBeUndefined();
+    // Removed from its group: the bridge says the set again, and it is not in it any more.
+    shop.fake.push({ type: "groups", ids: [] });
+    await eventually(() => shop.gateway.sees("g-shop@g.us") === false);
+  });
+});
+
 describe("one number's trouble is its own", () => {
   test("logged out from its phone: it is no longer linked, the other is, and still takes a message", async () => {
     const shop = await number("shop", "nora");

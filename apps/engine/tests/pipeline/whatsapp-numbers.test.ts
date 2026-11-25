@@ -70,6 +70,15 @@ async function install(platform: Platform, options: { nora?: "open" | "pair"; re
       for (const agent of Object.keys(owned) as Agent[]) connections[agent].receive({ ...message, gatewayId: owned[agent], ...(tagged === agent ? { mentionsSelf: true } : {}) });
       await bench.pipeline.idle();
     },
+    /**
+     * A group only `only`'s connection is in, as the platform has it: the message is handed to that one alone, and each
+     * connection says (`Gateway.sees`) whether its account is in the group, as a WhatsApp number does from its groups.
+     */
+    async groupOf(only: Agent, over: Partial<MessageEnvelope>) {
+      for (const agent of Object.keys(owned) as Agent[]) connections[agent].sees = (chatId) => (chatId === GROUP ? agent === only : undefined);
+      connections[only].receive(envelopeAt({ id: `g-${++sent}`, timestamp: Date.now(), gateway: platform, gatewayId: owned[only], chatType: "group", chatId: GROUP, senderId: OWNER, senderName: "Gading", ...over }));
+      await bench.pipeline.idle();
+    },
     /** What each connection sent, by the agent that owns it. */
     said: () => ({ nouva: connections.nouva.sent.map((message) => message.text), nora: connections.nora.sent.map((message) => message.text) }),
   };
@@ -196,5 +205,29 @@ describe("a group two of the install's numbers are in", () => {
       return { untagged, said: h.said(), requests: h.requests.length };
     });
     expect(seen).toEqual({ untagged: 0, said: { nouva: [], nora: ["answer 1"] }, requests: 1 });
+  }, ROOM);
+});
+
+describe("a group only one of the install's numbers is in", () => {
+  // Read by a second reader of the branch: the other number was counted as in the group, so a message that tagged
+  // nobody went to the front desk, whose answer went out through its own number, which was not in the group. On
+  // WhatsApp a send there is taken and lost, with no refusal to fall back on.
+  test("one that tags nobody is answered by that number's agent, there, as a group with one of our numbers is", async () => {
+    const seen = await onBoth(async (platform) => {
+      const h = await install(platform, { nora: "pair" });
+      await h.groupOf("nora", { text: "good morning all" });
+      return { said: h.said(), answeredBy: { nouva: conversationsOf(h.db, "nouva").length, nora: conversationsOf(h.db, "nora").length }, requests: h.requests.length };
+    });
+    // Nora's own answer, not the front desk's said through her number.
+    expect(seen).toEqual({ said: { nouva: [], nora: ["answer 1"] }, answeredBy: { nouva: 0, nora: 1 }, requests: 1 });
+  }, ROOM);
+
+  test("the other agent, named there, answers through the number that is in the group, and not its own", async () => {
+    const seen = await onBoth(async (platform) => {
+      const h = await install(platform, { nora: "pair" });
+      await h.groupOf("nora", { text: "nouva, what is on today?" });
+      return { said: h.said(), nouvasConversations: conversationsOf(h.db, "nouva").length, requests: h.requests.length };
+    });
+    expect(seen).toEqual({ said: { nouva: [], nora: ["answer 1"] }, nouvasConversations: 1, requests: 1 });
   }, ROOM);
 });

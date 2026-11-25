@@ -98,6 +98,10 @@ export const BUDGET: Record<string, Budget> = {
     lines: 438,
     why: "one Discord connection: its client's events, sends in parts at Discord's pace, edits, the one-message limit and a written id, files as a set, buttons, presence, reconnect, a login's timeout with why",
   },
+  "apps/engine/src/modules/pipeline/inbound.ts": {
+    lines: 401,
+    why: "whether a message gets a turn and whose, every decision that costs nothing and their order: who could answer in the room (by what each connection sees), the door, the claim, commands",
+  },
   "apps/engine/src/modules/pipeline/attachments.ts": {
     lines: 417,
     why: "the one place a message's files become what the agent gets (stored, shown, described, heard or transcribed) and the note that says which, an open agent's own among them, so note and parts agree",
@@ -111,8 +115,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and its lists of what is let through, one more store that scans once; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 422,
-    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) that every bridge event's handler reads and writes, and what it declares (how a written number is read)",
+    lines: 431,
+    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) that every bridge event's handler reads and writes, and what it declares: a written number, its groups",
   },
 };
 

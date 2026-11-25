@@ -85,4 +85,10 @@ export type BridgeEvent =
    * Nothing above could tell the difference, which is how it stayed silent.
    */
   | { type: "delivery_refused"; chatId: string; messageId: string; code: string }
+  /**
+   * (4) Every group this number is in, whole, as WhatsApp says: sent once it is linked and after each join or
+   * leave. With two numbers, what tells the daemon which of them a group's message can be answered on. Never sent
+   * where the bridge could not ask: a number whose groups are not known is counted as before.
+   */
+  | { type: "groups"; ids: string[] }
   | { type: "error"; id?: string; message: string };

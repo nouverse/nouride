@@ -117,6 +117,9 @@ export class InboundRouter {
     for (const other of this.ctx.deps.config.gateways) {
       if (!other.enabled || other.platform !== envelope.gateway) continue;
       if (other.id === instance?.id) continue;
+      // Not one the platform says is not in this room (`Gateway.sees`): a second WhatsApp number not in the group was
+      // counted, the message went to the front desk, and its answer, through that number, was lost.
+      if (this.ctx.deps.gateways.get(other.id)?.sees?.(envelope.chatId) === false) continue;
       if (other.agent) candidates.add(other.agent);
     }
 
@@ -421,7 +424,7 @@ export class InboundRouter {
     if (forNobody && envelope.chatType !== "dm") {
       // The desk's own bot's copy says it; the others, which only stand by for it, quietly. Where ids are per connection
       // only that copy goes on at all (`admit`), so the rest need not wait.
-      const own = this.ctx.voice.voiceGatewayId(decision.agent.config.id, envelope.gatewayId) === envelope.gatewayId;
+      const own = this.ctx.voice.voiceGatewayId(decision.agent.config.id, envelope.gatewayId, envelope.chatId) === envelope.gatewayId;
       if (own || !envelope.idsPerConnection) {
         await new Promise<void>((resolve) => setTimeout(resolve, FRONT_DESK_WAIT_MS));
         if (this.admission.routedElsewhere(envelope, decision.agent.config.id)) {
@@ -540,7 +543,7 @@ export class InboundRouter {
 
     const shared = mentioned.filter(
       (agent) =>
-        this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) === envelope.gatewayId,
+        this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId) === envelope.gatewayId,
     );
     // The routed agent is always in, whether or not it shares the connection: routing already said
     // this message is for it, and a filter that could drop it would silence the one certain answer.
@@ -620,7 +623,7 @@ export class InboundRouter {
      */
     if (
       envelope.idsPerConnection &&
-      this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) !== envelope.gatewayId
+      this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId) !== envelope.gatewayId
     ) {
       log.debug("left to the agent's own connection", {
         agent_id: agent.config.id,
@@ -631,7 +634,7 @@ export class InboundRouter {
     }
 
     // The agent's own bot's copy first, so its conversation in a room is one, kept under its own connection.
-    if (!how.claimed) await this.admission.ownCopyFirst(envelope, agent.config.id, this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId) === envelope.gatewayId);
+    if (!how.claimed) await this.admission.ownCopyFirst(envelope, agent.config.id, this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId) === envelope.gatewayId);
 
     // Before anything with a side effect — a hook, a turn, a session write. Every copy of this message
     // reaches here; only the first one carries on.

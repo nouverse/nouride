@@ -76,7 +76,7 @@ export class Voice {
    * turn a wrong name into a message that never arrives.
    */
   voiceFor(agentId: string, envelope: MessageEnvelope): { id: string; gateway: Gateway } {
-    const id = this.voiceGatewayId(agentId, envelope.gatewayId);
+    const id = this.voiceGatewayId(agentId, envelope.gatewayId, envelope.chatId);
     return { id, gateway: this.deps.gateways.get(id)! };
   }
 
@@ -93,7 +93,7 @@ export class Voice {
    * config says which channels a bot is in — so a send may still fail, and each caller decides what to
    * do about that.
    */
-  voiceGatewayId(agentId: string, inboundGatewayId: string): string {
+  voiceGatewayId(agentId: string, inboundGatewayId: string, chatId?: string): string {
     const inbound = this.deps.config.gateways.find((g) => g.id === inboundGatewayId);
     if (!inbound) return inboundGatewayId;
 
@@ -104,6 +104,9 @@ export class Voice {
 
     const gateway = this.deps.gateways.get(owned.id);
     if (!gateway || gateway.status !== "connected") return inboundGatewayId;
+    // Not into a room its own account is known not to be in (`Gateway.sees`): a WhatsApp send there is taken and lost,
+    // with no refusal to fall back on.
+    if (chatId !== undefined && gateway.sees?.(chatId) === false) return inboundGatewayId;
     return owned.id;
   }
 
@@ -321,7 +324,7 @@ export class Voice {
 
     // The gateway the reply actually went out on — may differ from the inbound one when the agent
     // has its own connection.
-    const outboundGatewayId = this.voiceGatewayId(fromAgent, envelope.gatewayId);
+    const outboundGatewayId = this.voiceGatewayId(fromAgent, envelope.gatewayId, envelope.chatId);
 
     for (const id of ids) {
       // Keyed by the connection it actually went out on, not the one that triggered it: a human

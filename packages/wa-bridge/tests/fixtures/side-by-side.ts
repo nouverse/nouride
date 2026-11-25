@@ -26,6 +26,8 @@ interface StandIn {
 const sockets: StandIn[] = [];
 /** Where a step holds the network's answer for the version, as a slow network does: open until it is let go. */
 let versionHeld: Promise<void> | null = null;
+/** The groups a socket's number is in, where a step says; elsewhere the ask is never answered, as a slow network's. */
+let groupsOfNumber: Record<string, unknown> | null = null;
 mock.module("@whiskeysockets/baileys", () => ({
   ...baileys,
   fetchLatestBaileysVersion: async () => {
@@ -42,6 +44,7 @@ mock.module("@whiskeysockets/baileys", () => ({
       ev: { on: (name: string, listener: (payload: unknown) => void) => listeners.set(name, listener), removeAllListeners: (name: string) => listeners.delete(name) },
       end: () => void (standIn.ended = true),
       logout: async () => void (standIn.loggedOut = true),
+      groupFetchAllParticipating: () => (groupsOfNumber ? Promise.resolve(groupsOfNumber) : new Promise(() => {})),
       user: { id: `62800000000${sockets.length}:1@s.whatsapp.net` },
     };
   },
@@ -55,7 +58,7 @@ const key = "a".repeat(64);
 
 /** A connection with the events it handed up, by type, and what it noted of its reconnects. */
 function number() {
-  const events: { type: string; status?: string; text?: string; reason?: string; media?: { path: string } }[] = [];
+  const events: { type: string; status?: string; text?: string; reason?: string; media?: { path: string }; ids?: string[] }[] = [];
   const waits: { in_ms: number; attempt: number }[] = [];
   const connection = new Connection({
     emit: (event) => void events.push(event as (typeof events)[number]),
@@ -64,7 +67,7 @@ function number() {
       throw new Error(`a connection asked to exit with ${code}`);
     },
   });
-  const said = () => events.splice(0).map((event) => (event.type === "status" ? `status:${event.status}` : event.type === "message" ? `message:${event.text}` : event.type));
+  const said = () => events.splice(0).map((event) => (event.type === "status" ? `status:${event.status}` : event.type === "message" ? `message:${event.text}` : event.type === "groups" ? `groups:${event.ids?.join(",")}` : event.type));
   return { connection, events, said, waited: () => waits.splice(0).map((wait) => `try ${wait.attempt} in ${wait.in_ms} ms`) };
 }
 
@@ -176,5 +179,21 @@ versionHeld = null;
 // A turn of the loop for anything the connect would still do once resumed.
 await new Promise((resolve) => setImmediate(resolve));
 seen.stoppedWhileConnecting = { socketsOpened: sockets.length - countBefore, linked: late.connection.isLinked(), said: late.said() };
+
+// ── the groups a number is in: asked once it is linked, then kept by the joins and leaves WhatsApp reports of it
+const grouped = number();
+groupsOfNumber = { "g-shop@g.us": {}, "g-family@g.us": {} };
+await grouped.connection.start(`${homeDir}-groups`, key);
+const groupSocket = sockets.at(-1)!;
+groupSocket.fire("connection.update", { connection: "open" });
+await came(() => grouped.events.some((event) => event.type === "groups"));
+const fetchedGroups = grouped.said().filter((line) => line.startsWith("groups:"));
+groupSocket.fire("groups.upsert", [{ id: "g-new@g.us", subject: "a new one" }]);
+// Its own number removed from one, then somebody else removed from another: only the first is about it.
+groupSocket.fire("group-participants.update", { id: "g-family@g.us", author: "x@s.whatsapp.net", participants: [{ id: `62800000000${sockets.length}@s.whatsapp.net` }], action: "remove" });
+groupSocket.fire("group-participants.update", { id: "g-shop@g.us", author: "x@s.whatsapp.net", participants: [{ id: "628999@s.whatsapp.net" }], action: "remove" });
+seen.itsGroups = { fetched: fetchedGroups, after: grouped.said() };
+grouped.connection.stop();
+groupsOfNumber = null;
 console.log(JSON.stringify(seen));
 process.exit(0);

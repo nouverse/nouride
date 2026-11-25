@@ -69,5 +69,11 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
     aStop: { home: ["message:for the home, after the shop stopped", "status:connecting"], homeReconnected: true, onItsOwnLogin: true, sockets: 6 },
     // Stopped while its connect waits for the version: nothing is opened once the answer comes, and nothing is said.
     stoppedWhileConnecting: { socketsOpened: 0, linked: false, said: [] },
+    // The groups it is in, asked once it is linked; then one joined and one it was removed from, each said whole. A
+    // change to another's place in a group says nothing.
+    itsGroups: {
+      fetched: ["groups:g-family@g.us,g-shop@g.us"],
+      after: ["groups:g-family@g.us,g-new@g.us,g-shop@g.us", "groups:g-new@g.us,g-shop@g.us"],
+    },
   });
 });

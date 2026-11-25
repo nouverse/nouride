@@ -22,6 +22,7 @@ import { useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
 import { editEvent, extensionFor, incoming, incomingEdit, messageEvent, selfIdsOf } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION } from "./protocol.ts";
 import type { Speaker } from "./say.ts";
+import { aboutSelf, Membership } from "./groups.ts";
 import { GroupSubjects } from "./subjects.ts";
 
 /**
@@ -107,6 +108,8 @@ export class Connection {
   private attempt = 0;
   /** Groups' subjects, for the `message` event's `chatTitle` — across reconnects: a group keeps its name. */
   private readonly subjects = new GroupSubjects();
+  /** The groups this number is in (`groups.ts`): what the daemon routes a group's message by, with two numbers. */
+  private readonly membership = new Membership((ids) => this.say.emit({ type: "groups", ids }));
 
   constructor(private readonly say: Speaker) {}
 
@@ -311,6 +314,11 @@ export class Connection {
             this.linked = true;
             this.say.emit({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: this.socket?.user?.id ?? "" });
             this.say.emit({ type: "status", status: "connected" });
+            // Beside the connection, never in its way: a number whose groups are not known yet is counted as before.
+            void socket
+              .groupFetchAllParticipating()
+              .then((groups) => void (mine === this.generation && this.membership.fetched(Object.keys(groups))))
+              .catch((err) => this.say.note("could not ask which groups this number is in", String(err)));
             return;
           }
 
@@ -411,6 +419,28 @@ export class Connection {
           }
         } catch (err) {
           this.say.note("could not read a delivery update", String(err));
+        }
+      });
+
+      // Added to a group, or a group made with it: one more it can be answered in.
+      socket.ev.on("groups.upsert", (groups) => {
+        try {
+          if (mine !== this.generation) return;
+          this.membership.joined(groups.map((group) => group.id));
+        } catch (err) {
+          this.say.note("could not take in a group joined", String(err));
+        }
+      });
+
+      // Its own place in a group's people changed: added, or removed and so not in it any more.
+      socket.ev.on("group-participants.update", (update) => {
+        try {
+          if (mine !== this.generation) return;
+          if (!aboutSelf(update.participants, selfIdsOf(socket.user))) return;
+          if (update.action === "add") this.membership.joined([update.id]);
+          if (update.action === "remove") this.membership.left(update.id);
+        } catch (err) {
+          this.say.note("could not take in a change to a group's people", String(err));
         }
       });
 

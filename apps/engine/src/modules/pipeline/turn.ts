@@ -152,7 +152,7 @@ export class TurnRunner {
     // the same rule the answer follows. Posting it on the inbound one put Nexa's "2 steps · waiting
     // for you" under Nouva.
     const voiceGateway =
-      this.ctx.deps.gateways.get(this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId)) ?? turn.gateway;
+      this.ctx.deps.gateways.get(this.ctx.voice.voiceGatewayId(agent.config.id, envelope.gatewayId, envelope.chatId)) ?? turn.gateway;
     turn.voiceGateway = voiceGateway;
     const progress = (turn.progress =
       this.ctx.deps.config.llm.streaming.progressInChat &&

@@ -190,6 +190,18 @@ export class WhatsAppGateway extends BaseGateway {
     return this.qrCode;
   }
 
+  /** The groups this number is in, as its bridge last said; null until it has (`sees`). */
+  private groups: ReadonlySet<string> | null = null;
+
+  /**
+   * Whether this number is in a group, as WhatsApp last said: with two numbers, which of them a group's
+   * message can be answered on. Not known for a one-to-one chat, nor before the bridge has said.
+   */
+  sees(chatId: string): boolean | undefined {
+    if (!this.groups || !chatId.endsWith("@g.us")) return undefined;
+    return this.groups.has(chatId);
+  }
+
   /** Whether the session directory already holds working credentials. */
   isLinked(): boolean {
     return this.linked;
@@ -653,6 +665,11 @@ export class WhatsAppGateway extends BaseGateway {
         entry.resolve(event.id);
         return;
       }
+
+      case "groups":
+        this.groups = new Set(event.ids);
+        this.log.debug("the groups this number is in", { groups: event.ids.length });
+        return;
 
       case "delivery_refused": {
         const { reason, terminal } = explainRefusal(event.code);
