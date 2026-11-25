@@ -147,6 +147,8 @@ export class Connection {
    */
   stop(): void {
     this.stopping = true;
+    // A connect between its awaits is told by this that it is no longer the one: it opens nothing once it resumes.
+    this.generation += 1;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
     this.teardown();
@@ -155,6 +157,7 @@ export class Connection {
   /** Unlink this number. The one path that deletes: an explicit instruction, not an inferred one. */
   async logout(): Promise<void> {
     this.stopping = true;
+    this.generation += 1;
     await this.socket?.logout();
     this.teardown();
     this.auth?.clear();
@@ -235,9 +238,14 @@ export class Connection {
       // different credential objects writing the same files — which corrupts the session rather than
       // merely wasting work.
       const auth = (this.auth ??= await useEncryptedAuthState(this.sessionDir, this.sessionKey, (line) => this.say.note(line)));
+      // Stopped or unlinked while the login was read: nothing more is opened. The version is asked of the network with
+      // no time limit, and a stop in that wait left a socket signed in that no bridge owned, on a folder removed with
+      // its connection.
+      if (mine !== this.generation) return;
       this.mediaDir = this.ensureMediaDir();
 
       const { version } = await fetchLatestBaileysVersion();
+      if (mine !== this.generation) return;
       this.say.note("connecting", { version, generation: mine });
 
       // This connect's own socket by name: the listeners below are its, and `this.socket` may be another's by the time one fires.

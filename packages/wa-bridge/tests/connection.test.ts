@@ -67,5 +67,7 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
     aLogout: { shopsLogin: false, homesLogin: true, homeLinked: true },
     // One is stopped: the other still takes a message, and still reconnects when it is told to.
     aStop: { home: ["message:for the home, after the shop stopped", "status:connecting"], homeReconnected: true, onItsOwnLogin: true, sockets: 6 },
+    // Stopped while its connect waits for the version: nothing is opened once the answer comes, and nothing is said.
+    stoppedWhileConnecting: { socketsOpened: 0, linked: false, said: [] },
   });
 });

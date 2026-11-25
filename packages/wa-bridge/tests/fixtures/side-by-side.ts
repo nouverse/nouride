@@ -24,9 +24,14 @@ interface StandIn {
 }
 
 const sockets: StandIn[] = [];
+/** Where a step holds the network's answer for the version, as a slow network does: open until it is let go. */
+let versionHeld: Promise<void> | null = null;
 mock.module("@whiskeysockets/baileys", () => ({
   ...baileys,
-  fetchLatestBaileysVersion: async () => ({ version: [2, 3000, 1], isLatest: true }),
+  fetchLatestBaileysVersion: async () => {
+    if (versionHeld) await versionHeld;
+    return { version: [2, 3000, 1], isLatest: true };
+  },
   // A photo's bytes, as Baileys would have fetched them.
   downloadMediaMessage: async () => Buffer.from("a photo's bytes"),
   default: (config: { auth: unknown }) => {
@@ -156,5 +161,20 @@ const homeReconnected = await came(() => sockets.length === before + 1);
 seen.aStop = { home: home.said(), homeReconnected, onItsOwnLogin: newestOn(homeSocket.auth) === sockets.at(-1), sockets: sockets.length };
 
 home.connection.stop();
+
+// ── stopped while its connect waits on the network for the version: once the answer comes, no socket is opened
+const late = number();
+let answer!: () => void;
+versionHeld = new Promise<void>((resolve) => (answer = resolve));
+const countBefore = sockets.length;
+const connecting = late.connection.start(`${homeDir}-late`, key);
+await came(() => existsSync(`${homeDir}-late`));
+late.connection.stop();
+answer();
+await connecting;
+versionHeld = null;
+// A turn of the loop for anything the connect would still do once resumed.
+await new Promise((resolve) => setImmediate(resolve));
+seen.stoppedWhileConnecting = { socketsOpened: sockets.length - countBefore, linked: late.connection.isLinked(), said: late.said() };
 console.log(JSON.stringify(seen));
 process.exit(0);
