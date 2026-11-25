@@ -50,29 +50,66 @@ export class OpenDoorStore {
     this.db.prepare("UPDATE open_door SET told_closed = 1 WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(agentId, day, gatewayId, senderId);
   }
 
+  /** A row as it is, made by nobody: another address of the same person, read beside the one written to. */
+  private peek(agentId: string, day: number, gatewayId: string, senderId: string): Row | undefined {
+    return this.db.prepare<Row>("SELECT messages, told_closed, told_enough FROM open_door WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").get(agentId, day, gatewayId, senderId) ?? undefined;
+  }
+
+  /**
+   * Whether this person is still to be told today that there is nothing left to answer them with, marked as told: once
+   * a day, as the agent's own day is said. For the install's own cap, which the door does not count by.
+   */
+  tellClosed(input: { agentId: string; gatewayId: string; senderId: string; also?: readonly string[]; day: number }): boolean {
+    const { agentId, gatewayId, senderId, day } = input;
+    return this.db.transaction((): boolean => {
+      const theirs = this.row(agentId, day, gatewayId, senderId);
+      const told = theirs.told_closed || (input.also ?? []).some((other) => other !== senderId && this.peek(agentId, day, gatewayId, other)?.told_closed);
+      if (!told) this.toldClosed(agentId, day, gatewayId, senderId);
+      return !told;
+    });
+  }
+
   /**
    * One stranger's message for an open agent, on the day that began at `day`: counted here when it may be answered.
    * `tokensToday` is what the agent has used since then, whoever it answered.
    */
-  take(input: { agentId: string; gatewayId: string; senderId: string; name?: string; day: number; tokensToday: number; limits: Pick<OpenLimits, "maxDailyTokens" | "maxDailyMessagesPerPerson">; messages?: number }): DoorVerdict {
+  take(input: { agentId: string; gatewayId: string; senderId: string; also?: readonly string[]; name?: string; day: number; tokensToday: number; limits: Pick<OpenLimits, "maxDailyTokens" | "maxDailyMessagesPerPerson">; messages?: number }): DoorVerdict {
     const { agentId, gatewayId, senderId, day } = input;
     return this.db.transaction((): DoorVerdict => {
       const theirs = this.row(agentId, day, gatewayId, senderId);
+      /**
+       * The same person by their other addresses (`senderAlso`): a WhatsApp sender is a phone address in one chat and a
+       * hidden one in another. Each address they wrote from holds their whole count, written to all of them as it moves,
+       * so one that comes alone, with no other beside it, still reads what they used; and each keeps the name it wrote
+       * under, the one its conversation knows them by, so the agent's page finds it.
+       */
+      const alsoIds = (input.also ?? []).filter((other) => other !== senderId);
+      const others = alsoIds.flatMap((other) => this.peek(agentId, day, gatewayId, other) ?? []);
+      const before = Math.max(theirs.messages, ...others.map((other) => other.messages));
+      const setCount = (count: number) => {
+        for (const id of [senderId, ...alsoIds]) this.db.prepare("UPDATE open_door SET messages = ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(count, agentId, day, gatewayId, id);
+      };
+      const toldClosed = theirs.told_closed || others.some((other) => other.told_closed);
+      const toldEnough = theirs.told_enough || others.some((other) => other.told_enough);
       if (input.name?.trim()) this.db.prepare("UPDATE open_door SET name = ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(input.name.trim().slice(0, 120), agentId, day, gatewayId, senderId);
       if (input.tokensToday >= input.limits.maxDailyTokens) {
         const agents = this.row(agentId, day, "", "");
         if (!agents.told_closed) this.toldClosed(agentId, day, "", "");
-        if (!theirs.told_closed) this.toldClosed(agentId, day, gatewayId, senderId);
-        return { action: "closed", say: !theirs.told_closed, first: !agents.told_closed };
+        if (!toldClosed) this.toldClosed(agentId, day, gatewayId, senderId);
+        return { action: "closed", say: !toldClosed, first: !agents.told_closed };
       }
       // A burst of files sent together is one turn and as many messages as were sent: counted as one, a stranger could
       // send a day's worth of files, each fetched and each looked at, as a single message.
       const count = Math.max(1, input.messages ?? 1);
-      if (theirs.messages + count > input.limits.maxDailyMessagesPerPerson) {
-        if (!theirs.told_enough) this.db.prepare("UPDATE open_door SET told_enough = 1 WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(agentId, day, gatewayId, senderId);
-        return { action: "enough", say: !theirs.told_enough };
+      const most = input.limits.maxDailyMessagesPerPerson;
+      if (before + count > most) {
+        // Their day is over, as they are told: a burst past what was left closes it, rather than a single message after
+        // it being answered the same day.
+        for (const id of [senderId, ...alsoIds]) this.db.prepare("UPDATE open_door SET told_enough = 1 WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(agentId, day, gatewayId, id);
+        setCount(Math.max(before, most));
+        return { action: "enough", say: !toldEnough };
       }
-      this.db.prepare("UPDATE open_door SET messages = messages + ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(count, agentId, day, gatewayId, senderId);
+      setCount(before + count);
       return { action: "answer" };
     });
   }

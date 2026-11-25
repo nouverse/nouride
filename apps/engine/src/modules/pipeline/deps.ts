@@ -268,7 +268,7 @@ export interface PipelineDeps {
    * What strangers have used of an agent open to everyone today (`open-door.ts`). Absent, a stranger is answered
    * nothing: the count is what bounds them, and a process that cannot keep it does not answer on its owner's tokens.
    */
-  openDoor?: Pick<OpenDoorStore, "take">;
+  openDoor?: Pick<OpenDoorStore, "take" | "tellClosed">;
   /**
    * Resolved credentials and the credentials directory, for a command this agent runs.
    *

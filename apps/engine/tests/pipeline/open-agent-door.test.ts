@@ -362,6 +362,33 @@ describe("the turns strangers take at once", () => {
   });
 });
 
+describe("a stranger's message counted once", () => {
+  test("one that came while the agent was at work, handed back unread and answered after, is not counted again", async () => {
+    // The first turn held until let go; the second message arrives during it, is not read by it, and is answered next.
+    let release: (() => void) | undefined;
+    let calls = 0;
+    const fetch = (scripted: typeof globalThis.fetch) => (async (...args: Parameters<typeof globalThis.fetch>) => {
+      if (++calls === 1) await new Promise<void>((resolve) => (release = resolve));
+      return await scripted(...args);
+    }) as typeof globalThis.fetch;
+    const h = await install({ bots: ["nora"], maxDailyMessages: 2, fetch });
+    let n = 0;
+    const say = (text: string) => h.connections.nora!.receive(envelopeAt({ id: `c-${++n}`, timestamp: Date.now(), gatewayId: "telegram:nora", chatType: "group", chatId: GROUP, senderId: STRANGER, senderName: "A stranger", text, mentionsSelf: true }));
+    say("nora, what are your hours?");
+    await eventually(() => calls === 1, 3_000, "the first turn to begin");
+    say("nora, and on sunday?");
+    // Taken off the queue and handed to the turn at work, which does not read it: nothing waits in the queue.
+    await eventually(() => h.pipeline.stats().waiting === 0 && h.pipeline.stats().running >= 1, 3_000, "the second message taken");
+    release?.();
+    await h.pipeline.idle();
+    // Two messages of a day's two: both answered, and nobody told their day is over.
+    // Two messages of a day's two: each answered (the second beside the turn at work, then by the turn after it), and
+    // nobody told their day is over.
+    expect(h.said().nora!.filter((text) => text?.startsWith("That is all for today"))).toEqual([]);
+    expect(h.said().nora!.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe("what a stranger's message changes in the room", () => {
   test("not the count of messages the household's agents have traded there: only a person let in by name starts it again", async () => {
     const h = await install();

@@ -769,7 +769,8 @@ export class InboundRouter {
 
     // What strangers may cost an open agent is bounded, and counted here, before anything is begun or read by a turn
     // at work: past either limit they are told once a day and nothing is spent on them (`open-door.ts`).
-    if (stranger && (await turnedAway(this.ctx.deps, agent, envelope, (text) => this.ctx.voice.reply(envelope, text, agent.config.id)))) return;
+    // Once: a message a turn handed back unread (`claimed`) was counted as it first came, with what it was merged with.
+    if (stranger && !how.claimed && (await turnedAway(this.ctx.deps, agent, envelope, (text) => this.ctx.voice.reply(envelope, text, agent.config.id)))) return;
 
     /**
      * Already working here. Said out loud, and nothing queued behind it.

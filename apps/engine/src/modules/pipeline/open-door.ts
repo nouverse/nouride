@@ -86,10 +86,10 @@ function strangerMay(
   const day = startOfLocalDay(now, deps.config.daemon.timezone);
   const used = deps.usage?.since(day, agent.config.id);
   const name = envelope.senderName ? { name: envelope.senderName } : {};
-  // One person by one name, whichever of their addresses the platform put first: a WhatsApp sender is a phone address
-  // in one chat and a hidden one in another, and counted by each they had twice the day's messages.
-  const person = [envelope.senderId, ...(envelope.senderAlso ?? [])].sort()[0]!;
-  const verdict = deps.openDoor.take({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: person, ...name, day, tokensToday: used ? used.inputTokens + used.outputTokens : 0, limits, messages: 1 + (envelope.mergedIds?.length ?? 0) });
+  // One person by all their addresses: a WhatsApp sender is a phone address in one chat and a hidden one in another,
+  // and counted by each they had twice the day's messages (`OpenDoorStore.take`).
+  const also = envelope.senderAlso ?? [];
+  const verdict = deps.openDoor.take({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: envelope.senderId, also, ...name, day, tokensToday: used ? used.inputTokens + used.outputTokens : 0, limits, messages: 1 + (envelope.mergedIds?.length ?? 0) });
   if (verdict.action === "answer") return { answer: true };
   if (verdict.action === "enough") return { answer: false, say: verdict.say ? enoughForToday(limits.maxDailyMessagesPerPerson) : null };
   if (verdict.first) {
@@ -101,6 +101,16 @@ function strangerMay(
     );
   }
   return { answer: false, say: verdict.say ? closedSentence(agent) : null };
+}
+
+/**
+ * Whether whoever wrote to an open agent is to be told now that there is nothing left to answer them with, when the
+ * install's own cap refuses its turn: once a day each, as the agent's own day is said, and marked as told. Said under
+ * every message, it was the one notice to strangers with no bound.
+ */
+export function tellsClosedNow(deps: Pick<PipelineDeps, "openDoor" | "config">, agent: LoadedAgent, envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderAlso">, now: number = Date.now()): boolean {
+  if (!deps.openDoor) return true;
+  return deps.openDoor.tellClosed({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: envelope.senderId, also: envelope.senderAlso ?? [], day: startOfLocalDay(now, deps.config.daemon.timezone) });
 }
 
 /** A stranger's message asked of the door, and they told what it says when it turns them away. True when it did. */

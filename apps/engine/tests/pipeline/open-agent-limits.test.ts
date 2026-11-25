@@ -257,6 +257,11 @@ describe("the install's own cap on a day, reached", () => {
     expect(h.requests()).toBe(2);
     expect(h.said().at(-1)).toBe("The shop's desk is closed for today.");
     for (const ofTheInstall of ["cap", "max_daily_tokens", "request(s)", "30", "20"]) expect(h.said().at(-1)).not.toContain(ofTheInstall);
+    // Once a day for each person: their next messages are left unanswered, and nothing is begun for them.
+    const told = h.said().length;
+    await h.write("stranger-3");
+    await h.write("stranger-3");
+    expect({ said: h.said().length, requests: h.requests() }).toEqual({ said: told, requests: 2 });
 
     // The admin is told the figures, and an ordinary agent's own chat is told them as ever.
     expect(h.alerts.map((alert) => alert.key)).toContain("cost_cap");
@@ -286,15 +291,47 @@ describe("the count itself", () => {
     return { db, door: new OpenDoorStore(db) };
   }
 
-  test("a burst sent together is as many messages as were sent: within the number, counted so; past it, refused whole", async () => {
+  test("a burst sent together is as many messages as were sent: within the number, counted so; past it, refused whole, and their day is over", async () => {
     // Read by a second reader of the branch: the photos of a burst become one turn, and were counted as one message, so
     // a day's worth of files, each fetched and each looked at, went through as a single message.
     const { door } = await store();
     const many = { ...limits, maxDailyMessagesPerPerson: 5 };
     expect(door.take({ ...from("burst"), limits: many, messages: 3 })).toEqual({ action: "answer" });
     expect(door.take({ ...from("burst"), limits: many, messages: 3 })).toEqual({ action: "enough", say: true });
-    expect(door.take({ ...from("burst"), limits: many, messages: 2 })).toEqual({ action: "answer" });
+    // Told their day is over, it is: a message that would have fit what was left is not answered the same day.
+    expect(door.take({ ...from("burst"), limits: many, messages: 2 })).toEqual({ action: "enough", say: false });
     expect(door.take({ ...from("burst"), limits: many })).toEqual({ action: "enough", say: false });
+    expect(door.take({ ...from("burst", { day: DAY + 86_400_000 }), limits: many })).toEqual({ action: "answer" });
+  });
+
+  test("one person by two addresses: counted together whichever came first, each address keeping the name it wrote under", async () => {
+    const { door } = await store();
+    const two = { ...limits, maxDailyMessagesPerPerson: 2 };
+    expect(door.take({ ...from("62811@s.whatsapp.net"), also: ["77665544@lid"], name: "Budi", limits: two })).toEqual({ action: "answer" });
+    expect(door.take({ ...from("77665544@lid"), also: ["62811@s.whatsapp.net"], name: "Budi", limits: two })).toEqual({ action: "answer" });
+    // A message that comes with no other address is still theirs by the one it has: each address holds their count.
+    expect(door.take({ ...from("62811@s.whatsapp.net"), limits: two })).toEqual({ action: "enough", say: true });
+    // Refused by the other address alone too. Told by it once more: with neither address beside the other, nothing
+    // says it is the same person who was told. Once both come together again, nothing more is said.
+    expect(door.take({ ...from("77665544@lid"), limits: two })).toEqual({ action: "enough", say: true });
+    expect(door.take({ ...from("62811@s.whatsapp.net"), also: ["77665544@lid"], limits: two })).toEqual({ action: "enough", say: false });
+    expect(door.take({ ...from("77665544@lid"), limits: two })).toEqual({ action: "enough", say: false });
+    // The next day, told with both addresses together: the other, alone after, is not told again.
+    const next = { day: DAY + 86_400_000 };
+    expect(door.take({ ...from("62811@s.whatsapp.net", next), also: ["77665544@lid"], limits: two })).toEqual({ action: "answer" });
+    expect(door.take({ ...from("77665544@lid", next), also: ["62811@s.whatsapp.net"], limits: two })).toEqual({ action: "answer" });
+    expect(door.take({ ...from("62811@s.whatsapp.net", next), also: ["77665544@lid"], limits: two })).toEqual({ action: "enough", say: true });
+    expect(door.take({ ...from("77665544@lid", next), limits: two })).toEqual({ action: "enough", say: false });
+    // Their name is on the address each conversation knows them by: the page finds it by either.
+    expect([...door.names("nora", "telegram:nora").entries()].sort()).toEqual([["62811@s.whatsapp.net", "Budi"], ["77665544@lid", "Budi"]]);
+  });
+
+  test("told the install's own day is over: once a day for each person, by any of their addresses", async () => {
+    const { door } = await store();
+    const ask = (senderId: string, also: string[] = [], day = DAY) => door.tellClosed({ agentId: "nora", gatewayId: "telegram:nora", senderId, also, day });
+    expect([ask("ana"), ask("ana"), ask("ana")]).toEqual([true, false, false]);
+    expect([ask("62811@s.whatsapp.net", ["77665544@lid"]), ask("77665544@lid", ["62811@s.whatsapp.net"])]).toEqual([true, false]);
+    expect(ask("ana", [], DAY + 86_400_000)).toBe(true);
   });
 
   test("tokens the daemon counted itself, for a provider that reported none, close the agent as reported ones do", async () => {
