@@ -1,9 +1,10 @@
 /**
  * An agent's WhatsApp numbers on its Connections page: each one its own card, linked or waiting for its scan.
  *
- * A daemon held one WhatsApp number once. An agent may have its own now, and more than one, so the page
- * shows each by its own state, asked of the daemon by that connection's id: one linked, one with its code to scan,
- * and never another agent's. A number of an agent that is open to everyone says what that may cost the number.
+ * A daemon held one WhatsApp number once. An agent has its own now. The page adds one for an agent
+ * (`mount-add-connection.test.ts`), and a file written by hand may hold two, so the page shows each by its own
+ * state, asked of the daemon by that connection's id: one linked, one with its code to scan, and never another
+ * agent's. A number of an agent that is open to everyone says what that may cost the number.
  * Mounted in a real DOM with the daemon's answers as it gives them.
  */
 

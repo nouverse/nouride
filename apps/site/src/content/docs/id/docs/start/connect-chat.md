@@ -25,6 +25,10 @@ Ini jalur yang lebih singkat, dan yang gak mengharuskan kamu menyentuh file.
 2. **Add Connection**, pilih platform, tempel token-nya.
 3. Simpan, lalu **restart**: halamannya menyediakan tombol **Restart Runtime**.
 
+Satu agent punya satu koneksi di tiap aplikasi chat. Aplikasi yang sudah dijawabnya gak ditawarkan lagi,
+dan kalau ketiganya sudah ada, tombol **Add Connection** gak muncul: untuk mengubah salah satunya, pakai
+**Edit** di kartunya.
+
 Restart itu gak opsional dan dashboard bilang begitu: adapter gateway dibangun saat boot, jadi
 koneksi yang tersimpan belum berarti koneksi yang berjalan. Halaman itu menampilkan "not started",
 bukan "disconnected", untuk koneksi yang belum pernah naik, karena keduanya masalah yang berbeda.
