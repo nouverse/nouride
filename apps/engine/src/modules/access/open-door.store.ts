@@ -30,6 +30,7 @@ interface Row {
   messages: number;
   told_closed: number;
   told_enough: number;
+  person: string | null;
 }
 
 export class OpenDoorStore {
@@ -37,13 +38,13 @@ export class OpenDoorStore {
 
   private row(agentId: string, day: number, gatewayId: string, senderId: string): Row {
     const found = this.db
-      .prepare<Row>("SELECT messages, told_closed, told_enough FROM open_door WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?")
+      .prepare<Row>("SELECT messages, told_closed, told_enough, person FROM open_door WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?")
       .get(agentId, day, gatewayId, senderId);
     if (found) return found;
     // A new day's first row for somebody: the days past keeping go with it.
     this.db.prepare("DELETE FROM open_door WHERE day < ?").run(day - KEPT_DAYS * DAY_MS);
     this.db.prepare("INSERT INTO open_door (agent_id, day, gateway_id, sender_id) VALUES (?, ?, ?, ?)").run(agentId, day, gatewayId, senderId);
-    return { messages: 0, told_closed: 0, told_enough: 0 };
+    return { messages: 0, told_closed: 0, told_enough: 0, person: null };
   }
 
   private toldClosed(agentId: string, day: number, gatewayId: string, senderId: string): void {
@@ -52,17 +53,20 @@ export class OpenDoorStore {
 
   /** A row as it is, made by nobody: another address of the same person, read beside the one written to. */
   private peek(agentId: string, day: number, gatewayId: string, senderId: string): Row | undefined {
-    return this.db.prepare<Row>("SELECT messages, told_closed, told_enough FROM open_door WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").get(agentId, day, gatewayId, senderId) ?? undefined;
+    return this.db.prepare<Row>("SELECT messages, told_closed, told_enough, person FROM open_door WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").get(agentId, day, gatewayId, senderId) ?? undefined;
   }
 
   /**
    * Whether this person is still to be told today that there is nothing left to answer them with, marked as told: once
-   * a day, as the agent's own day is said. For the install's own cap, which the door does not count by.
+   * a day, as the agent's own day is said. For the install's own cap, which the door does not count by. Only a sender the
+   * door has counted (a stranger) is marked; anyone else (a person of the household) is told each time, and is not made
+   * one of the people the agent's page counts.
    */
   tellClosed(input: { agentId: string; gatewayId: string; senderId: string; also?: readonly string[]; day: number }): boolean {
     const { agentId, gatewayId, senderId, day } = input;
     return this.db.transaction((): boolean => {
-      const theirs = this.row(agentId, day, gatewayId, senderId);
+      const theirs = this.peek(agentId, day, gatewayId, senderId);
+      if (!theirs) return true;
       const told = theirs.told_closed || (input.also ?? []).some((other) => other !== senderId && this.peek(agentId, day, gatewayId, other)?.told_closed);
       if (!told) this.toldClosed(agentId, day, gatewayId, senderId);
       return !told;
@@ -85,6 +89,9 @@ export class OpenDoorStore {
        */
       const alsoIds = (input.also ?? []).filter((other) => other !== senderId);
       const others = alsoIds.flatMap((other) => this.peek(agentId, day, gatewayId, other) ?? []);
+      // Who they are for the page's count of people: the address they were first counted by, which the others take.
+      const person = [theirs, ...others].find((row) => row.person)?.person ?? senderId;
+      for (const id of [senderId, ...alsoIds]) this.db.prepare("UPDATE open_door SET person = COALESCE(person, ?) WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(person, agentId, day, gatewayId, id);
       const before = Math.max(theirs.messages, ...others.map((other) => other.messages));
       const setCount = (count: number) => {
         for (const id of [senderId, ...alsoIds]) this.db.prepare("UPDATE open_door SET messages = ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(count, agentId, day, gatewayId, id);
@@ -110,6 +117,7 @@ export class OpenDoorStore {
         return { action: "enough", say: !toldEnough };
       }
       setCount(before + count);
+      this.db.prepare("UPDATE open_door SET answered = answered + ? WHERE agent_id = ? AND day = ? AND gateway_id = ? AND sender_id = ?").run(count, agentId, day, gatewayId, senderId);
       return { action: "answer" };
     });
   }
@@ -125,10 +133,16 @@ export class OpenDoorStore {
     return new Map(rows.map((row) => [row.sender_id, row.name]));
   }
 
-  /** How many people wrote to an agent on the day that began at `day`, and how many of their messages it answered. */
+  /**
+   * How many people wrote to an agent on the day that began at `day`, and how many of their messages it answered: a
+   * person by all their addresses once (where the platform gave them together), and the messages answered, not the
+   * count their limit is held to.
+   */
   today(agentId: string, day: number): { people: number; messages: number } {
     const row = this.db
-      .prepare<{ people: number; messages: number | null }>("SELECT COUNT(*) AS people, SUM(messages) AS messages FROM open_door WHERE agent_id = ? AND day = ? AND sender_id != ''")
+      .prepare<{ people: number; messages: number | null }>(
+        "SELECT COUNT(DISTINCT COALESCE(person, sender_id)) AS people, SUM(answered) AS messages FROM open_door WHERE agent_id = ? AND day = ? AND sender_id != ''",
+      )
       .get(agentId, day);
     return { people: row?.people ?? 0, messages: row?.messages ?? 0 };
   }

@@ -302,6 +302,8 @@ describe("the count itself", () => {
     expect(door.take({ ...from("burst"), limits: many, messages: 2 })).toEqual({ action: "enough", say: false });
     expect(door.take({ ...from("burst"), limits: many })).toEqual({ action: "enough", say: false });
     expect(door.take({ ...from("burst", { day: DAY + 86_400_000 }), limits: many })).toEqual({ action: "answer" });
+    // Three answered that day, whatever their day's count was set to as it closed.
+    expect(door.today("nora", DAY)).toEqual({ people: 1, messages: 3 });
   });
 
   test("one person by two addresses: counted together whichever came first, each address keeping the name it wrote under", async () => {
@@ -322,6 +324,9 @@ describe("the count itself", () => {
     expect(door.take({ ...from("77665544@lid", next), also: ["62811@s.whatsapp.net"], limits: two })).toEqual({ action: "answer" });
     expect(door.take({ ...from("62811@s.whatsapp.net", next), also: ["77665544@lid"], limits: two })).toEqual({ action: "enough", say: true });
     expect(door.take({ ...from("77665544@lid", next), limits: two })).toEqual({ action: "enough", say: false });
+    // The page counts them once, and the messages answered: not the count their limit is held to.
+    expect(door.today("nora", DAY)).toEqual({ people: 1, messages: 2 });
+    expect(door.today("nora", DAY + 86_400_000)).toEqual({ people: 1, messages: 2 });
     // Their name is on the address each conversation knows them by: the page finds it by either.
     expect([...door.names("nora", "telegram:nora").entries()].sort()).toEqual([["62811@s.whatsapp.net", "Budi"], ["77665544@lid", "Budi"]]);
   });
@@ -329,9 +334,13 @@ describe("the count itself", () => {
   test("told the install's own day is over: once a day for each person, by any of their addresses", async () => {
     const { door } = await store();
     const ask = (senderId: string, also: string[] = [], day = DAY) => door.tellClosed({ agentId: "nora", gatewayId: "telegram:nora", senderId, also, day });
+    // Strangers the door counted that day.
+    for (const [senderId, also] of [["ana", []], ["62811@s.whatsapp.net", ["77665544@lid"]], ["77665544@lid", ["62811@s.whatsapp.net"]]] as const) door.take({ ...from(senderId), also });
     expect([ask("ana"), ask("ana"), ask("ana")]).toEqual([true, false, false]);
     expect([ask("62811@s.whatsapp.net", ["77665544@lid"]), ask("77665544@lid", ["62811@s.whatsapp.net"])]).toEqual([true, false]);
-    expect(ask("ana", [], DAY + 86_400_000)).toBe(true);
+    // A person of the household, whom the door never counted: told each time, and not made one of the people who wrote.
+    expect([ask("owner-1"), ask("owner-1")]).toEqual([true, true]);
+    expect(door.today("nora", DAY)).toEqual({ people: 2, messages: 3 });
   });
 
   test("tokens the daemon counted itself, for a provider that reported none, close the agent as reported ones do", async () => {
