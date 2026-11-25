@@ -69,8 +69,15 @@ export function holdingConfig<T>(path: string, running: GlobalConfig | null, fn:
         } catch (err) {
           return { ok: false, error: `Saved nothing: with that change the config would not load. ${messageOf(err)}` };
         }
-        if (before !== null) await rotateBackups(path, before);
-        await writeTextFileAtomic(path, next.text);
+        // A file or a folder that cannot be written is an answer, not a throw: a first-start step that brings a file
+        // forward says the daemon starts either way, and a throw from here stopped the start instead (a config mounted
+        // read-only). The backup first, so a write that fails halfway has one.
+        try {
+          if (before !== null) await rotateBackups(path, before);
+          await writeTextFileAtomic(path, next.text);
+        } catch (err) {
+          return { ok: false, error: `Saved nothing: ${path} could not be written. ${messageOf(err)}` };
+        }
         if (running) followFile(running, { path, before: before ?? "", after });
         return { ok: true, changed: true };
       },

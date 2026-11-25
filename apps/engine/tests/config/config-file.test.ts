@@ -7,7 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseToml } from "@nouride/runtime";
@@ -144,6 +144,26 @@ describe("what the next boot would refuse", () => {
   test("what was there is kept as .bak.1 when a save lands", async () => {
     await settings.setMentionsEnabled({ enabled: false, actor: "a" });
     expect(readFileSync(`${configPath}.bak.1`, "utf8")).toBe(FILE);
+  });
+});
+
+describe("a file that cannot be written", () => {
+  test("is an answer and not a throw: nothing is saved, the running copy is as it was, and the caller can carry on", async () => {
+    // A config mounted read-only, or a folder the daemon's user may not write in. A first-start step that brings
+    // the file forward says the daemon starts either way: a throw from here stopped the start instead.
+    chmodSync(configPath, 0o444);
+    chmodSync(dir, 0o555);
+    try {
+      const was = config.daemon.name;
+      const saved = await editDaemonConfig(configPath, config, (text) => text.replace('name = "nouride"', 'name = "another"'));
+      expect(saved).toEqual({ ok: false, error: expect.stringMatching(new RegExp(`^Saved nothing: ${configPath} could not be written\\. `)) });
+      expect([was, config.daemon.name]).toEqual(["nouride", "nouride"]);
+    } finally {
+      chmodSync(dir, 0o755);
+      chmodSync(configPath, 0o644);
+    }
+    expect(file()).toBe(FILE);
+    expect(readdirSync(dir).filter((name) => name.startsWith("config.toml."))).toEqual([]);
   });
 });
 
