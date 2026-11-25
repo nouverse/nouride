@@ -83,6 +83,8 @@ const BACKOFF_MAX_MS = 30_000;
  * the same moment; the rest wait their turn here, each written to disk as it arrives.
  */
 const DOWNLOADS_AT_ONCE = 2;
+/** Sends between two keepings of a number's record of what it sent: it is otherwise kept to its day only at start. */
+const SENT_LOG_LINES = 5_000;
 /** A file in the number's media folder older than this was fetched for a turn that has long read it, or never will. */
 const MEDIA_LEFT_FOR_MS = 24 * 60 * 60 * 1000;
 
@@ -117,8 +119,9 @@ export class Connection {
   private attempt = 0;
   /** Baileys' logger, kept off stdout (`makeLogger`); a download asked of the sender's phone again uses it too. */
   private readonly logger = makeLogger(process.env.NOURIDE_WA_LOG_LEVEL ?? "warn", (message, detail) => this.say.note(message, detail));
-  /** This number's own record of the ids it sent (`sent-here.ts`), appended to as it sends. */
+  /** This number's own record of the ids it sent (`sent-here.ts`), appended to as it sends, and the lines since kept. */
   private sentLog: FileWriter | null = null;
+  private sentLines = 0;
   /** Downloads running now (`DOWNLOADS_AT_ONCE`), and those waiting for one to end. */
   private downloading = 0;
   private readonly waitingToDownload: (() => void)[] = [];
@@ -156,8 +159,9 @@ export class Connection {
     if (!this.held || this.sessionDir !== dir) {
       this.held = new HeldFiles(join(dir, "held"), parseKey(key), (message, detail) => this.say.note(message, detail));
       this.held.load();
-      this.keepSentIn(dir);
     }
+    // Opened again after a stop closed it.
+    if (!this.sentLog || this.sessionDir !== dir) this.keepSentIn(dir);
     this.sessionDir = dir;
     this.sessionKey = key;
     this.stopping = false;
@@ -175,6 +179,8 @@ export class Connection {
    */
   stop(): void {
     this.stopping = true;
+    void this.sentLog?.close();
+    this.sentLog = null;
     // A connect between its awaits is told by this that it is no longer the one: it opens nothing once it resumes.
     this.generation += 1;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
@@ -185,6 +191,8 @@ export class Connection {
   /** Unlink this number. The one path that deletes: an explicit instruction, not an inferred one. */
   async logout(): Promise<void> {
     this.stopping = true;
+    void this.sentLog?.close();
+    this.sentLog = null;
     this.generation += 1;
     await this.socket?.logout();
     this.teardown();
@@ -200,9 +208,14 @@ export class Connection {
   private ensureMediaDir(): string {
     const dir = join(this.sessionDir, "media");
     ensureDir(dir, 0o700);
-    for (const { name, isFile } of listDir(dir)) {
-      const at = isFile ? statFile(join(dir, name))?.mtimeMs : undefined;
-      if (at !== undefined && Date.now() - at > MEDIA_LEFT_FOR_MS) removePath(join(dir, name));
+    // A sweep that cannot remove a file is said and left: it must not stop the number connecting.
+    try {
+      for (const { name, isFile } of listDir(dir)) {
+        const at = isFile ? statFile(join(dir, name))?.mtimeMs : undefined;
+        if (at !== undefined && Date.now() - at > MEDIA_LEFT_FOR_MS) removePath(join(dir, name));
+      }
+    } catch (err) {
+      this.say.note("old files in the media folder could not be removed", { error: String(err) });
     }
     return dir;
   }
@@ -545,19 +558,25 @@ export class Connection {
     try {
       ensureDir(dir, 0o700);
       const kept = sentBefore(statFile(path) ? readTextFileSync(path) : "");
-      writeBytesSync(path, new TextEncoder().encode(kept), 0o600);
       void this.sentLog?.close();
+      writeBytesSync(path, new TextEncoder().encode(kept), 0o600);
       this.sentLog = openFileWriter(path, { append: true, mode: 0o600 });
+      this.sentLines = 0;
     } catch (err) {
       // Known in memory still: only a restart forgets them, as before this was kept.
       this.say.note("the record of what this number sent could not be kept", { error: String(err) });
     }
   }
 
-  /** A new message's id, chosen and written down before it is sent: in the daemon's record, and in this number's own. */
+  /**
+   * A new message's id, chosen and written down before it is sent: in the daemon's record, and in this number's own,
+   * which is kept to its day again every `SENT_LOG_LINES` sends as well as at start.
+   */
   idToSend(): string {
     const id = idToSend();
     this.sentLog?.write(new TextEncoder().encode(`${Date.now()} ${id}\n`)).catch((err: unknown) => this.say.note("a sent id could not be written down", { error: String(err) }));
+    this.sentLines += 1;
+    if (this.sentLines >= SENT_LOG_LINES && this.sessionDir) this.keepSentIn(this.sessionDir);
     return id;
   }
 
@@ -575,10 +594,11 @@ export class Connection {
   async fetchMedia(ref: string): Promise<string> {
     const entry = this.held?.get(ref);
     if (!entry) throw new Error("that file is no longer held: ask the sender to send it again");
-    if (this.downloading >= DOWNLOADS_AT_ONCE) await new Promise<void>((resolve) => this.waitingToDownload.push(resolve));
-    this.downloading += 1;
     const dir = this.mediaDir || this.ensureMediaDir();
     const path = join(dir, `${crypto.randomUUID()}.${extensionFor(entry.mimeType, entry.fileName)}`);
+    // The folder before a download's place is taken: a fetch that cannot make it fails without keeping one.
+    if (this.downloading >= DOWNLOADS_AT_ONCE) await new Promise<void>((resolve) => this.waitingToDownload.push(resolve));
+    this.downloading += 1;
     try {
       const socket = this.socket;
       const stream = await downloadMediaMessage(entry.message, "stream", {}, socket ? { reuploadRequest: (message) => socket.updateMediaMessage(message), logger: this.logger as never } : undefined);

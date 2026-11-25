@@ -12,7 +12,7 @@
  */
 
 import { mock } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as baileys from "@whiskeysockets/baileys";
 import { sleep } from "../wait.ts";
@@ -255,5 +255,60 @@ chmodSync(`${homeDir}-groups`, 0o700);
 seen.aSaveThatFails = { said: grouped.notes.filter((line) => line.startsWith("could not save")), unhandled: unhandled.length };
 grouped.connection.stop();
 groupsOfNumber = null;
+
+// ── a media folder whose old files cannot be removed: said, and the number connects all the same
+const swept = number();
+const sweepDir = `${homeDir}-sweep`;
+mkdirSync(join(sweepDir, "media"), { recursive: true });
+writeFileSync(join(sweepDir, "media", "left.jpg"), "old");
+utimesSync(join(sweepDir, "media", "left.jpg"), new Date(Date.now() - 2 * 86_400_000), new Date(Date.now() - 2 * 86_400_000));
+chmodSync(join(sweepDir, "media"), 0o500);
+const socketsBeforeSweep = sockets.length;
+await swept.connection.start(sweepDir, key).catch((err: Error) => void swept.notes.push(err.message));
+chmodSync(join(sweepDir, "media"), 0o700);
+seen.aSweepThatFails = { said: swept.notes.filter((line) => line.startsWith("old files")), socketsOpened: sockets.length - socketsBeforeSweep };
+swept.connection.stop();
+
+// ── a fetch whose media folder cannot be made fails alone: it keeps no download's place from the fetches after it
+const holder = number();
+const unmadeDir = `${homeDir}-unmade`;
+await holder.connection.start(unmadeDir, key);
+sockets.at(-1)!.fire("connection.update", { connection: "open" });
+sockets.at(-1)!.fire("messages.upsert", photo);
+await heard(holder);
+const heldRef = holder.events.find((event) => event.type === "message")?.media?.held ?? "";
+holder.connection.stop();
+// Started again on the folder with a file where its media folder goes: each fetch tries to make it, and cannot.
+rmSync(join(unmadeDir, "media"), { recursive: true, force: true });
+writeFileSync(join(unmadeDir, "media"), "not a folder");
+const unmade = number();
+await unmade.connection.start(unmadeDir, key).catch(() => undefined);
+const failedFetches = await Promise.all([unmade.connection.fetchMedia(heldRef), unmade.connection.fetchMedia(heldRef)].map((fetch) => fetch.then(() => "fetched", () => "failed")));
+rmSync(join(unmadeDir, "media"));
+let fetchedAfter = "still waiting for a download's place";
+void unmade.connection.fetchMedia(heldRef).then(() => (fetchedAfter = "fetched"), (err: Error) => (fetchedAfter = err.message));
+await came(() => fetchedAfter !== "still waiting for a download's place");
+seen.aFolderThatCannotBeMade = { failedFetches, fetchedAfter };
+unmade.connection.stop();
+
+// ── its record of what it sent: written to again after a stop and a start, and kept to its day while it runs
+const sender = number();
+const sendDir = `${homeDir}-sends`;
+await sender.connection.start(sendDir, key);
+sender.connection.stop();
+await sender.connection.start(sendDir, key);
+const sentFile = join(sendDir, "sent-ids");
+const idAfterRestart = sender.connection.idToSend();
+const writtenAfterRestart = await came(() => readFileSync(sentFile, "utf8").includes(` ${idAfterRestart}\n`));
+// A line two days old, as a number that has run that long holds: the next keeping, a few thousand sends on, drops it.
+appendFileSync(sentFile, `${Date.now() - 2 * 86_400_000} an-old-id\n`);
+let lastId = "";
+for (let n = 0; n < 5_000; n++) lastId = sender.connection.idToSend();
+const keptToItsDay = await came(() => {
+  const text = readFileSync(sentFile, "utf8");
+  return text.includes(` ${lastId}\n`) && !text.includes("an-old-id");
+});
+seen.itsSends = { writtenAfterRestart, keptToItsDay };
+sender.connection.stop();
 console.log(JSON.stringify(seen));
 process.exit(0);

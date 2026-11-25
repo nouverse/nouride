@@ -90,5 +90,11 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
       fetched: ["groups:g-family@g.us,g-shop@g.us"],
       after: ["groups:g-family@g.us,g-new@g.us,g-shop@g.us", "groups:g-new@g.us,g-shop@g.us"],
     },
+    // A day-old file it cannot remove from its media folder: said, and it connects all the same.
+    aSweepThatFails: { said: ["old files in the media folder could not be removed"], socketsOpened: 1 },
+    // Two fetches whose media folder cannot be made fail, and leave no download's place taken: the next is fetched.
+    aFolderThatCannotBeMade: { failedFetches: ["failed", "failed"], fetchedAfter: "fetched" },
+    // What it sent is written down after a stop and a start, and the record is kept to its day while it runs.
+    itsSends: { writtenAfterRestart: true, keptToItsDay: true },
   });
 });
