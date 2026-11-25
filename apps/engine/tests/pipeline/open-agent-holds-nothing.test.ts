@@ -274,6 +274,27 @@ describe("what an open agent's model is sent", () => {
     expect(whole).not.toContain("is the one speaking now");
     expect(system).toContain("This is a group conversation.");
   });
+
+  test("in a group, a person of the household is named as the chat app names them, never by the name People gives them", async () => {
+    const h = await install([{ text: "Noted." }, { text: "We open at nine." }, { text: "Hi." }, { text: "Nothing." }]);
+    const group = { chatType: "group" as const, chatId: "-100300" };
+    // A second apart: what is overheard is what came strictly before the message answered.
+    const at = (second: number) => ({ timestamp: Date.now() - 60_000 + second * 1_000 });
+    // The chat app and People call him by two names. An ordinary agent reads the household's name for him.
+    await h.asOwner("nouva", "nouva: we are out of rice", { ...group, senderName: "gnst", ...at(1) });
+    expect(h.last().whole).toContain("Gading: we are out of rice");
+    // What he said in the room before a stranger asked the open agent, and what he asks it himself.
+    await h.write("nora", { ...group, senderId: OWNER, senderName: "gnst", text: "the shop closes early today", ...at(2) });
+    await h.write("nora", { ...group, text: "nora: when do you open?", ...at(3) });
+    const asked = h.last().whole;
+    expect(asked).toContain("gnst");
+    expect(asked).toContain("the shop closes early today");
+    await h.asOwner("nora", "nora: and on sunday?", { ...group, senderName: "gnst", ...at(4) });
+    for (const whole of [asked, h.last().whole]) expect(whole).not.toContain("Gading");
+    // The ordinary agent, asked again, reads what he said in the room by the household's name, as before.
+    await h.asOwner("nouva", "nouva: anything new?", { ...group, senderName: "gnst", ...at(5) });
+    expect(h.last().whole).toContain("Gading: the shop closes early today");
+  });
 });
 
 describe("a tool it does not hold, called anyway", () => {

@@ -138,15 +138,17 @@ export async function compose(
   const events = rooms.eventsBefore(agent, envelope, history, session.startedAt);
   // And what its own missions told this chat in that window, under its name: read by the person, and by it only here.
   const told = rooms.missionNoticesBefore(agent, envelope, history, session.startedAt);
+  // Who wrote, by `[[people]]` name; for an agent open to everyone by what the chat app calls them (`room-memory.ts`).
+  const people = isOpenAgent(agent) ? [] : ctx.deps.config.people;
   const question = composeQuestion({
     text,
     overheard,
     events: [events, told].filter(Boolean).join("\n\n"),
     hasAttachments: Boolean(attachmentNotice),
-    ...(envelope.chatType === "dm" ? {} : { speaker: speakerName(ctx.deps.config.people, envelope) }),
+    ...(envelope.chatType === "dm" ? {} : { speaker: speakerName(people, envelope) }),
     // A thread's first question carries what the thread was started from; after that it is in the history (0.7.24).
     ...(envelope.threadOpener && history.length === 0
-      ? { opener: threadOpenerNote({ name: speakerName(ctx.deps.config.people, { gatewayId: envelope.gatewayId, ...envelope.threadOpener }), ...envelope.threadOpener }) }
+      ? { opener: threadOpenerNote({ name: speakerName(people, { gatewayId: envelope.gatewayId, ...envelope.threadOpener }), ...envelope.threadOpener }) }
       : {}),
     // An edit of a message already answered is asked as one, so the agent can say what changes (`edit-rules.ts`).
     ...(isEdit(envelope) ? { edit: editedQuestionNote(envelope) } : {}),

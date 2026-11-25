@@ -8,7 +8,7 @@
  * voice rather than owning a second copy of that record.
  */
 
-import { createLogger, type ChatMessage, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
+import { createLogger, isOpenAgent, type ChatMessage, type LoadedAgent, type MessageEnvelope } from "@nouride/shared";
 import {
   formatOverheard,
   GroupContext,
@@ -188,8 +188,9 @@ export class RoomMemory {
       chat_id: envelope.chatId,
       messages: overheard.length,
     });
-    // An agent's line keeps the agent's name; a person's is their `[[people]]` name, read now so a rename applies.
-    const people = this.deps.config.people;
+    // An agent's line keeps the agent's name; a person's is their `[[people]]` name, read now so a rename applies. An
+    // agent open to everyone reads what the chat app calls them: the household's name for a person is the household's.
+    const people = isOpenAgent(agent) ? [] : this.deps.config.people;
     return formatOverheard(overheard.map((message) => (message.fromAgent ? message : { ...message, senderName: speakerName(people, message) })));
   }
 
