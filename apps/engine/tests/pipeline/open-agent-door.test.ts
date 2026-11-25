@@ -282,6 +282,25 @@ describe("a stranger has three commands", () => {
     expect(h.said().nora!.at(-1)).not.toBe(NOT_THEIRS);
     expect(h.requests).toHaveLength(0);
   });
+
+  test("in a group, /new is not a stranger's: the conversation is everyone's there, and is kept; /help says where it is theirs", async () => {
+    const h = await install({ bots: ["nora"] });
+    await h.group({ text: "nora, what are your opening hours?" }, { bot: "nora" });
+    const group = { agentId: "nora", gatewayId: "telegram:nora", chatId: GROUP };
+    const before = h.sessions.load(group).messages.length;
+    await h.group({ senderId: "another-stranger", text: "/new" }, { bot: "nora" });
+    await h.group({ senderId: "another-stranger", text: "/help" }, { bot: "nora" });
+    expect(h.said().nora!.slice(-2)).toEqual([
+      "This conversation is everyone's in this group, so /new is not taken here. In a chat with me alone it is.",
+      "Just write to me. In a chat with me alone, /new starts a new conversation.",
+    ]);
+    expect({ before, after: h.sessions.load(group).messages.length }).toEqual({ before: expect.any(Number), after: before });
+    expect(before).toBeGreaterThan(0);
+    // A person let in by name may start the group's conversation over, as on any bot.
+    await h.group({ senderId: OWNER, senderName: "Gading", text: "/new" }, { bot: "nora" });
+    expect(h.said().nora!.at(-1)).toStartWith("New conversation started.");
+    expect(h.sessions.load(group).messages).toEqual([]);
+  });
 });
 
 describe("what an open agent says wakes nobody", () => {

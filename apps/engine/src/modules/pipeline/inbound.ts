@@ -711,7 +711,7 @@ export class InboundRouter {
     let asked = text;
     if (command && this.hooks.has(command.command)) {
       // A sender let in only because the agent is open has three commands, and the rest do nothing (`open-door.ts`).
-      const result = (stranger ? strangerCommand(command.command) : null) ?? (await this.hooks.run(command.command, command.args, agent, envelope));
+      const result = (stranger ? strangerCommand(command.command, envelope.chatType !== "dm") : null) ?? (await this.hooks.run(command.command, command.args, agent, envelope));
       if (!result.handled && result.prompt) asked = result.prompt;
       if (result.reply) {
         await this.ctx.voice.reply(envelope, result.reply);

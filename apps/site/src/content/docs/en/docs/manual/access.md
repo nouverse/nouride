@@ -156,6 +156,9 @@ While it is open, an agent has four tools and nothing else, whatever its Tools l
 | Read a file | that the person sent in the chat |
 | Send a file | kept in one of those collections, into the chat it is answering |
 
+A collection for *Everyone* that names no agents is read by every agent you open, so before you take the
+answer the form lists the collections this agent would answer strangers from.
+
 No commands, no files of the server, no web, no other agents, no reminders, no memory of its own. Its
 Tools tab shows them switched off while it is open, and keeps what was picked for when you close it. It
 is told nothing about you, the people you let in, your other agents or the server, and it is told the
@@ -175,8 +178,9 @@ coding CLI until you close it.
 
 Somebody who was let in only because the agent is open has three commands: `/start`, which a chat app
 sends when a bot's chat is opened and which the agent answers with a greeting of its own; `/new`; and
-`/help`. Any other command answers one sentence and does nothing, so nobody can put your bot to sleep
-or change its model. People you let in by name keep the commands they have everywhere.
+`/help`. In a group `/new` is not theirs, since the conversation there is everyone's. Any other command
+answers one sentence and does nothing, so nobody can put your bot to sleep or change its model. People
+you let in by name keep the commands they have everywhere.
 
 Naming another agent does not reach it: a stranger's message on an open agent's bot is that agent's
 alone. And what an open agent says wakes no other agent, whatever it tags.

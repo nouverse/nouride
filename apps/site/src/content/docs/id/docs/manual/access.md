@@ -168,6 +168,10 @@ Selama terbuka, sebuah agent punya empat tool dan gak ada yang lain, apa pun isi
 | Membaca file | yang dikirim orang itu di chat |
 | Mengirim file | yang disimpan di salah satu koleksi itu, ke chat yang sedang dijawabnya |
 
+Koleksi untuk *Everyone* yang gak menyebut agent mana pun dibaca oleh setiap agent yang kamu buka, jadi
+sebelum kamu memilihnya, form-nya menyebut koleksi mana saja yang akan dipakai agent ini untuk menjawab
+orang asing.
+
 Tanpa perintah, tanpa file server, tanpa web, tanpa agent lain, tanpa pengingat, tanpa memori sendiri.
 Tab Tools-nya menampilkan semuanya dalam keadaan mati selama ia terbuka, dan menyimpan pilihanmu untuk
 saat ia ditutup. Ia gak diberi tahu apa pun tentang kamu, orang-orang yang kamu masukkan, agent kamu
@@ -189,7 +193,8 @@ coding CLI sampai kamu menutupnya.
 
 Orang yang masuk hanya karena agent-nya terbuka punya tiga perintah: `/start`, yang dikirim aplikasi
 chat saat chat sebuah bot dibuka dan dijawab agent dengan sapaannya sendiri; `/new`; dan `/help`.
-Perintah lain dijawab satu kalimat dan gak melakukan apa-apa, jadi gak ada yang bisa menidurkan bot
+Di grup, `/new` bukan miliknya, karena percakapan di sana milik semua orang. Perintah lain dijawab
+satu kalimat dan gak melakukan apa-apa, jadi gak ada yang bisa menidurkan bot
 kamu atau mengganti modelnya. Orang yang kamu masukkan atas namanya tetap punya perintah yang mereka
 punya di mana pun.
 
