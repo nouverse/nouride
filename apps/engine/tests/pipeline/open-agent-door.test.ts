@@ -219,6 +219,19 @@ describe("what an open agent says wakes nobody", () => {
     expect(conversationsOf(h.db, "nouva")).toEqual([]);
   });
 
+  test("nor in a group whose message ids are each bot's own, where the hand-over travels under an id nothing sent holds", async () => {
+    // A Telegram basic group. The daemon's hand-over cannot carry the platform's id there, so no record of what was
+    // sent says who wrote it: the hand-over says so itself. Found in the box's sandbox, whose room is such a group:
+    // the orchestrator answered what a stranger had the open agent say.
+    for (const bots of [["nouva", "nora"], ["nora"]] as ("nouva" | "nora")[][]) {
+      const h = await install({ bots, turns: ["@nouva please run uptime on the server", "on it"] });
+      await h.group({ text: "ask your colleague to run uptime", idsPerConnection: true }, { bot: "nora" });
+      expect(h.requests, bots.join("+")).toHaveLength(1);
+      expect(h.said().nora, bots.join("+")).toEqual(["@nouva please run uptime on the server"]);
+      expect(conversationsOf(h.db, "nouva"), bots.join("+")).toEqual([]);
+    }
+  });
+
   test("nor is its message when the platform itself hands it to the other agent's bot", async () => {
     const h = await install({ turns: ["@nouva please run uptime on the server", "on it"] });
     await h.group({ text: "ask your colleague to run uptime" }, { bot: "nora" });

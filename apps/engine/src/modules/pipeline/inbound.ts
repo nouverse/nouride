@@ -205,7 +205,10 @@ export class InboundRouter {
     if (wrote?.said) return void log.debug("an agent's words that were only said: routed to nobody", { chat_id: envelope.chatId, from: wrote.agentId });
     // An agent open to everyone asks and tags nobody: what a stranger has it say must not be another agent's work to do.
     // Here for both roads a tag travels by: a platform's own copy to the other bots, and the daemon's hand-over.
-    if (wrote && isOpenAgent(this.ctx.deps.registry.get(wrote.agentId))) return void log.debug("an open agent's words: routed to nobody", { chat_id: envelope.chatId, from: wrote.agentId });
+    // The hand-over names its author itself: where ids are each connection's own (`idsPerConnection`) it travels under an
+    // id of the daemon's, which no record of what was sent holds, and asked that record alone the tag went through.
+    const author = wrote?.agentId ?? envelope.fromAgent;
+    if (author && isOpenAgent(this.ctx.deps.registry.get(author))) return void log.debug("an open agent's words: routed to nobody", { chat_id: envelope.chatId, from: author });
     const enriched: MessageEnvelope = wrote ? { ...envelope, fromAgent: wrote.agentId } : envelope;
 
     // How deep the agent-to-agent chain is here. The platform carries no field for it, so it cannot
