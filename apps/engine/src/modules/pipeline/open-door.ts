@@ -71,7 +71,7 @@ const enoughForToday = (most: number): string => `That is all for today: I can t
 function strangerMay(
   deps: Pick<PipelineDeps, "openDoor" | "usage" | "config" | "notifier">,
   agent: LoadedAgent,
-  envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderName" | "mergedIds">,
+  envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderName" | "mergedIds" | "senderAlso">,
   now: number = Date.now(),
 ): { answer: true } | { answer: false; say: string | null } {
   const limits = agent.config.open;
@@ -82,7 +82,10 @@ function strangerMay(
   const day = startOfLocalDay(now, deps.config.daemon.timezone);
   const used = deps.usage?.since(day, agent.config.id);
   const name = envelope.senderName ? { name: envelope.senderName } : {};
-  const verdict = deps.openDoor.take({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: envelope.senderId, ...name, day, tokensToday: used ? used.inputTokens + used.outputTokens : 0, limits, messages: 1 + (envelope.mergedIds?.length ?? 0) });
+  // One person by one name, whichever of their addresses the platform put first: a WhatsApp sender is a phone address
+  // in one chat and a hidden one in another, and counted by each they had twice the day's messages.
+  const person = [envelope.senderId, ...(envelope.senderAlso ?? [])].sort()[0]!;
+  const verdict = deps.openDoor.take({ agentId: agent.config.id, gatewayId: envelope.gatewayId, senderId: person, ...name, day, tokensToday: used ? used.inputTokens + used.outputTokens : 0, limits, messages: 1 + (envelope.mergedIds?.length ?? 0) });
   if (verdict.action === "answer") return { answer: true };
   if (verdict.action === "enough") return { answer: false, say: verdict.say ? enoughForToday(limits.maxDailyMessagesPerPerson) : null };
   if (verdict.first) {
@@ -100,7 +103,7 @@ function strangerMay(
 export async function turnedAway(
   deps: Parameters<typeof strangerMay>[0],
   agent: LoadedAgent,
-  envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderName" | "mergedIds">,
+  envelope: Pick<MessageEnvelope, "gatewayId" | "senderId" | "senderName" | "mergedIds" | "senderAlso">,
   say: (text: string) => Promise<unknown>,
 ): Promise<boolean> {
   const may = strangerMay(deps, agent, envelope);

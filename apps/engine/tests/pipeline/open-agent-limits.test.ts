@@ -109,6 +109,21 @@ describe("one person's messages in a day", () => {
     expect({ requests: h.requests(), said: h.said() }).toEqual({ requests: 0, said: [ENOUGH(2)] });
   });
 
+  test("one person by two addresses is one person: their messages are counted together, whichever the platform put first", async () => {
+    // Read by a second reader of the branch: a WhatsApp sender is a phone address in one chat and a hidden one in
+    // another, and counted by each, they had twice the day's messages.
+    const h = await install({ messages: 2 });
+    const bot = (h.bench as unknown as { gateway: { receive: (envelope: unknown) => void } }).gateway;
+    const as = async (id: string, senderId: string, senderAlso: string[]) => {
+      bot.receive(envelopeAt({ id, timestamp: Date.now(), gatewayId: "telegram:nora", chatId: `dm-${senderId}`, senderId, senderAlso, senderName: "Budi", text: "when do you open?" }));
+      await h.bench.pipeline.idle();
+    };
+    await as("a-1", "628111@s.whatsapp.net", ["77665544@lid"]);
+    await as("a-2", "77665544@lid", ["628111@s.whatsapp.net"]);
+    await as("a-3", "77665544@lid", ["628111@s.whatsapp.net"]);
+    expect({ requests: h.requests(), told: h.said().at(-1) }).toEqual({ requests: 2, told: ENOUGH(2) });
+  });
+
   test("a command that reaches no model is not one of them, and a person let in by name is held to no number", async () => {
     const h = await install({ messages: 1 });
     await h.write("ana", "/help");
