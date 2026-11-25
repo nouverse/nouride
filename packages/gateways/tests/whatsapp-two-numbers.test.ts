@@ -204,6 +204,16 @@ describe("a file a message carried", () => {
     expect(existsSync(saved)).toBe(false);
   });
 
+  test("one the bridge answers after its wait was given up is removed, not left in the number's folder", async () => {
+    const shop = await number("shop", "nora");
+    shop.linkedAs("628222@s.whatsapp.net");
+    const late = join(mkdtempSync(join(tmpdir(), "wa-held-")), "late.jpg");
+    writeFileSync(late, "a photo nobody waits for");
+    // An answer for a fetch nothing is waiting on any more: its wait ran out, and the daemon moved on.
+    shop.fake.push({ type: "media", id: "c-given-up", path: late });
+    await eventually(() => !existsSync(late), 2_000, "the late file to be removed");
+  });
+
   test("one the bridge no longer holds is none to have: null, said in the log", async () => {
     const shop = await number("shop", "nora");
     shop.linkedAs("628222@s.whatsapp.net");

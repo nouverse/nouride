@@ -116,6 +116,15 @@ export class Handler {
     }
   }
 
+  /** `fetch_media`, answered by its id when the download ends: the path, or why there is none. */
+  private async fetchApart(id: string, ref: string): Promise<void> {
+    try {
+      this.say.emit({ type: "media", id, path: await this.link.fetchMedia(ref) });
+    } catch (err) {
+      this.say.emit({ type: "error", id, message: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
   private async handle(command: BridgeCommand): Promise<void> {
     if (command.type === "hello") {
       if (command.version !== BRIDGE_PROTOCOL_VERSION) {
@@ -157,6 +166,20 @@ export class Handler {
 
     if (!this.handshakeDone) {
       this.say.emit({ type: "error", message: "no hello received" });
+      return;
+    }
+
+    /**
+     * A held file, fetched apart from the line of commands, and whether or not the number is linked this moment.
+     *
+     * Commands are taken one at a time, so a reply is never sent before the one asked first. A download awaited in that
+     * line held every reply behind it for as long as the file and the network took: a reply past its acknowledgement's
+     * time was sent again, the last files of a burst ran out of their own time waiting for the first, and a logout
+     * queued behind it was dropped when the number was removed. The file is WhatsApp's to serve, so a number
+     * reconnecting still hands it over.
+     */
+    if (command.type === "fetch_media") {
+      void this.fetchApart(command.id, command.ref);
       return;
     }
 
@@ -282,10 +305,6 @@ export class Handler {
           // asserted `available` first on the theory that WhatsApp ignores presence from an offline
           // client; neither reference does that, and theirs show typing.
           await socket.sendPresenceUpdate("composing", sendTarget(command.chatId).to);
-          return;
-
-        case "fetch_media":
-          this.say.emit({ type: "media", id: command.id, path: await this.link.fetchMedia(command.ref) });
           return;
 
         case "logout":

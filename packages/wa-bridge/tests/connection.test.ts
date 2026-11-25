@@ -58,10 +58,12 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
     // One reconnects on a socket of its own; the other's socket is not ended and still hands its messages up.
     aReconnect: { reconnected: true, shop: ["status:connecting"], home: ["message:for the home, after the shop reconnected"], shopsOldSocketEnded: true, homesSocketEnded: false, homeLinked: true },
     // A photo for each is kept under its own login's folder, whichever connected last.
-    // Held, not downloaded, until asked for; then saved in its own number's folder, and once only.
+    // Held, not downloaded, until asked for; then saved in its own number's folder. Asked again (a second agent
+    // answering the same message), it is downloaded again; and a connection started again on the same folder, as after
+    // a restart, still holds it: the held message is written there, encrypted, one file.
     aPhotoEach: {
-      shops: { before: "", where: "the shop's folder", again: "that file is no longer held: ask the sender to send it again" },
-      homes: { before: "", where: "the home's folder", again: "that file is no longer held: ask the sender to send it again" },
+      shops: { before: "", where: "the shop's folder", again: "fetched twice, to a file of its own", afterRestart: "fetched", onDisk: 1 },
+      homes: { before: "", where: "the home's folder", again: "fetched twice, to a file of its own", afterRestart: "fetched", onDisk: 1 },
     },
     // Both told to restart in the same moment: each reconnects, on a timer and a count of tries of its own.
     bothAtOnce: { bothReconnected: true, aSocketEach: true, shopWaited: ["try 1 in 1000 ms"], homeWaited: ["try 1 in 1000 ms"] },

@@ -13,6 +13,7 @@ import { BridgeExit, type BridgeIo } from "../src/io.ts";
 import { Handler, withTimeout, type Link, type Sock } from "../src/handler.ts";
 import { BRIDGE_PROTOCOL_VERSION, type BridgeEvent } from "../src/protocol.ts";
 import { speaker, type Speaker } from "../src/say.ts";
+import { eventually } from "./wait.ts";
 
 const CHAT = "100000000000001@lid";
 
@@ -34,7 +35,7 @@ afterEach(() => {
 });
 
 /** A connection that records what was asked of it. */
-function fakeLink(options: { linked?: boolean; socket?: boolean; fail?: Error } = {}) {
+function fakeLink(options: { linked?: boolean; socket?: boolean; fail?: Error; fetch?: (ref: string) => Promise<string> } = {}) {
   const calls: Array<{ op: string; args: unknown[] }> = [];
   const record = (op: string) => async (...args: unknown[]) => {
     calls.push({ op, args });
@@ -53,7 +54,7 @@ function fakeLink(options: { linked?: boolean; socket?: boolean; fail?: Error } 
     stop: () => void calls.push({ op: "stop", args: [] }),
     logout: async () => void calls.push({ op: "logout", args: [] }),
     phoneForLid: () => "628111111111@s.whatsapp.net",
-    fetchMedia: async (ref) => (calls.push({ op: "fetchMedia", args: [ref] }), `/tmp/wa-media/${ref}.jpg`),
+    fetchMedia: async (ref) => (calls.push({ op: "fetchMedia", args: [ref] }), options.fetch ? await options.fetch(ref) : `/tmp/wa-media/${ref}.jpg`),
   };
   return { link, calls };
 }
@@ -202,7 +203,38 @@ describe("fetch_media", () => {
     events.length = 0;
     await handler.handleLine(JSON.stringify({ type: "fetch_media", id: "c7", ref: "M9-abc" }));
     expect(calls.at(-1)).toEqual({ op: "fetchMedia", args: ["M9-abc"] });
+    await eventually(() => events.length > 0, 2_000, "the answer");
     expect(events).toEqual([{ type: "media", id: "c7", path: "/tmp/wa-media/M9-abc.jpg" }]);
+  });
+
+  test("a download does not hold the commands behind it: a reply asked after it goes out while it runs", async () => {
+    let finish: (path: string) => void = () => {};
+    const { handler, calls } = await helloed({ fetch: () => new Promise<string>((resolve) => (finish = resolve)) });
+    events.length = 0;
+    // As the daemon's host takes lines: each awaited before the next is begun.
+    await handler.handleLine(JSON.stringify({ type: "fetch_media", id: "c1", ref: "BIG-video" }));
+    await handler.handleLine(JSON.stringify({ type: "send", id: "c2", chatId: CHAT, text: "on it" }));
+    expect(calls.map((call) => call.op).slice(0, 3)).toEqual(["start", "fetchMedia", "sendMessage"]);
+    expect(events.map((event) => event.type)).toEqual(["ack"]);
+    finish("/tmp/wa-media/BIG-video.mp4");
+    await eventually(() => events.length === 2, 2_000, "the download's answer");
+    expect(events[1]).toEqual({ type: "media", id: "c1", path: "/tmp/wa-media/BIG-video.mp4" });
+  });
+
+  test("fetched while the number is not linked this moment: the file is WhatsApp's to serve", async () => {
+    const { handler } = await helloed({ linked: false });
+    events.length = 0;
+    await handler.handleLine(JSON.stringify({ type: "fetch_media", id: "c3", ref: "M2-x" }));
+    await eventually(() => events.length > 0, 2_000, "the answer");
+    expect(events).toEqual([{ type: "media", id: "c3", path: "/tmp/wa-media/M2-x.jpg" }]);
+  });
+
+  test("a download that fails is answered by its id, with why", async () => {
+    const { handler } = await helloed({ fetch: async () => { throw new Error("that file is no longer held: ask the sender to send it again"); } });
+    events.length = 0;
+    await handler.handleLine(JSON.stringify({ type: "fetch_media", id: "c4", ref: "gone" }));
+    await eventually(() => events.length > 0, 2_000, "the answer");
+    expect(events).toEqual([{ type: "error", id: "c4", message: "that file is no longer held: ask the sender to send it again" }]);
   });
 });
 

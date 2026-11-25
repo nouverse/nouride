@@ -18,7 +18,8 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import { proto } from "@whiskeysockets/baileys";
 import { ensureDir, join, proxyAgentFor, writeBytesSync } from "@nouride/runtime";
-import { useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
+import { parseKey, useEncryptedAuthState, type EncryptedAuthState } from "./auth.ts";
+import { HeldFiles, type Held } from "./held.ts";
 import { editEvent, extensionFor, incoming, incomingEdit, mediaSize, messageEvent, selfIdsOf } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION } from "./protocol.ts";
 import type { Speaker } from "./say.ts";
@@ -78,10 +79,6 @@ const BACKOFF_MAX_MS = 30_000;
 
 /** After this many failures in a row, it stops being transient and the engine should know. */
 const GIVE_UP_AFTER = 8;
-/** Files held for the daemon to ask for: the newest this many, each for this long, as a message waits in a queue. */
-const HELD_MAX = 500;
-const HELD_FOR_MS = 6 * 60 * 60 * 1000;
-
 export class Connection {
   private socket: WASocket | null = null;
   private auth: EncryptedAuthState | null = null;
@@ -109,12 +106,10 @@ export class Connection {
   private starting = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private attempt = 0;
-  /**
-   * The files of messages handed up and not yet asked for, by ref: fetched only when the daemon asks (`fetch_media`),
-   * once it has let the sender in. Downloaded as they came, a sender nobody answers filled the disk: a blocked one, one
-   * past their messages, a group's chatter. The newest `HELD_MAX` are kept, each for `HELD_FOR_MS`.
-   */
-  private readonly held = new Map<string, { message: WAMessage; at: number; mimeType: string; fileName?: string }>();
+  /** Baileys' logger, kept off stdout (`makeLogger`); a download asked of the sender's phone again uses it too. */
+  private readonly logger = makeLogger(process.env.NOURIDE_WA_LOG_LEVEL ?? "warn", (message, detail) => this.say.note(message, detail));
+  /** The files of messages handed up and not yet asked for, by ref (`held.ts`): kept in this number's own folder. */
+  private held: HeldFiles | null = null;
   /** Groups' subjects, for the `message` event's `chatTitle` — across reconnects: a group keeps its name. */
   private readonly subjects = new GroupSubjects();
   /** The groups this number is in (`groups.ts`): what the daemon routes a group's message by, with two numbers. */
@@ -142,6 +137,12 @@ export class Connection {
    * up after eight tries, the engine restarted it into nothing, and WhatsApp took no message until the daemon restarted.
    */
   async start(dir: string, key: string): Promise<void> {
+    // What an earlier start held is read back once, for this login's folder: a message the daemon still has queued
+    // across the restart is fetched as if nothing happened.
+    if (!this.held || this.sessionDir !== dir) {
+      this.held = new HeldFiles(join(dir, "held"), parseKey(key), (message, detail) => this.say.note(message, detail));
+      this.held.load();
+    }
     this.sessionDir = dir;
     this.sessionKey = key;
     this.stopping = false;
@@ -268,7 +269,7 @@ export class Connection {
         // `warn` by default, matching the reference implementations. Silent was a mistake: the one thing
         // that would have explained a message accepted and never delivered is Baileys' own warning, and
         // it was being thrown away. `NOURIDE_WA_LOG_LEVEL=debug` turns it all the way up.
-        logger: makeLogger(process.env.NOURIDE_WA_LOG_LEVEL ?? "warn", (message, detail) => this.say.note(message, detail)) as never,
+        logger: this.logger as never,
         // We forward it instead. Printing to stdout would corrupt the protocol stream, and printing to
         // a terminal nobody is watching is why this field exists at all.
         printQRInTerminal: false,
@@ -516,23 +517,24 @@ export class Connection {
     return digits ? `${digits}@s.whatsapp.net` : null;
   }
 
-  /** A file held for the daemon to ask for, and those past their time or beyond the newest kept let go. */
-  private hold(ref: string, entry: { message: WAMessage; at: number; mimeType: string; fileName?: string }): void {
-    for (const [key, one] of this.held) if (entry.at - one.at > HELD_FOR_MS) this.held.delete(key);
-    this.held.set(ref, entry);
-    while (this.held.size > HELD_MAX) this.held.delete(this.held.keys().next().value as string);
+  /** A file held for the daemon to ask for (`held.ts`). */
+  private hold(ref: string, entry: Held): void {
+    this.held?.hold(ref, entry);
   }
 
   /**
-   * A held file, downloaded now and saved in this number's own folder: where, for the daemon to read and remove. Once
-   * only: a ref asked for twice, or let go, is said to be gone.
+   * A held file, downloaded now and saved in this number's own folder under a name of its own: where, for the daemon
+   * to read and remove. Asked for again (two agents answering one message), it is downloaded again. Needs no socket:
+   * the file is WhatsApp's to serve, so a number reconnecting still hands it over; with one, an address that has aged
+   * is asked of the sender's phone again (`reuploadRequest`), as WhatsApp Web does.
    */
   async fetchMedia(ref: string): Promise<string> {
-    const entry = this.held.get(ref);
+    const entry = this.held?.get(ref);
     if (!entry) throw new Error("that file is no longer held: ask the sender to send it again");
-    this.held.delete(ref);
-    const bytes = (await downloadMediaMessage(entry.message, "buffer", {})) as Buffer;
-    const path = join(this.mediaDir, `${crypto.randomUUID()}.${extensionFor(entry.mimeType, entry.fileName)}`);
+    const socket = this.socket;
+    const bytes = (await downloadMediaMessage(entry.message, "buffer", {}, socket ? { reuploadRequest: (message) => socket.updateMediaMessage(message), logger: this.logger as never } : undefined)) as Buffer;
+    const dir = this.mediaDir || this.ensureMediaDir();
+    const path = join(dir, `${crypto.randomUUID()}.${extensionFor(entry.mimeType, entry.fileName)}`);
     writeBytesSync(path, bytes, 0o600);
     return path;
   }

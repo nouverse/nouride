@@ -13,6 +13,7 @@
 
 import { mock } from "bun:test";
 import { chmodSync, existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import * as baileys from "@whiskeysockets/baileys";
 
 interface StandIn {
@@ -129,16 +130,27 @@ newestOn(shopFirst.auth).fire("messages.upsert", photo);
 await heard(shop);
 homeSocket.fire("messages.upsert", photo);
 await heard(home);
-/** The photo held, not downloaded, then asked for by its ref: where it lands, and whether it was on disk before. */
-const keptIn = async (of: typeof shop) => {
+/**
+ * The photo held, not downloaded, then asked for by its ref: where it lands, whether it was on disk before, whether it is
+ * there for a second agent asking, and whether a connection started again on the same folder (a restart) still has it.
+ */
+const keptIn = async (of: typeof shop, folder: string) => {
   const media = of.events.splice(0).find((event) => event.type === "message")?.media;
   const before = media?.path ?? "";
   const path = media?.held ? await of.connection.fetchMedia(media.held) : "";
   const where = path.startsWith(`${shopDir}/`) ? "the shop's folder" : path.startsWith(`${homeDir}/`) ? "the home's folder" : `elsewhere: ${path}`;
-  const again = media?.held ? await of.connection.fetchMedia(media.held).then(() => "fetched twice", (err: Error) => err.message) : "";
-  return { before, where, again };
+  const again = media?.held ? await of.connection.fetchMedia(media.held).then((second) => (second !== path ? "fetched twice, to a file of its own" : "the same file"), (err: Error) => err.message) : "";
+  const restarted = number().connection;
+  await restarted.start(folder, key);
+  const afterRestart = media?.held ? await restarted.fetchMedia(media.held).then(() => "fetched", (err: Error) => err.message) : "";
+  restarted.stop();
+  const onDisk = existsSync(join(folder, "held")) ? readdirSync(join(folder, "held")).filter((name) => name.endsWith(".enc")).length : 0;
+  return { before, where, again, afterRestart, onDisk };
 };
-seen.aPhotoEach = { shops: await keptIn(shop), homes: await keptIn(home) };
+const shopsSockets = sockets.length;
+seen.aPhotoEach = { shops: await keptIn(shop, shopDir), homes: await keptIn(home, homeDir) };
+// The two restarted connections opened sockets of their own: put away, so the count below is the run's own.
+sockets.length = shopsSockets;
 shop.waited();
 
 // ── both are told to restart at once: each reconnects, on its own timer
