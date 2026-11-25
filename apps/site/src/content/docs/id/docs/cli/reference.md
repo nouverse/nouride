@@ -194,7 +194,9 @@ nouride gateway rename <lama> <baru> [--apply]     # daemon harus BERHENTI
 `gateway restart` ikut aturan yang sama dengan `nouride restart`: me-restart gateway tempat sebuah
 percakapan masuk berarti mengakhirinya, jadi tindak lanjutnya dibuat duluan. `gateway add` tanpa flag
 mencetak sisanya (`--token-secret`, `--session-dir`, `--disabled`); gateway barunya tersambung pada
-restart berikutnya.
+restart berikutnya. Nomor WhatsApp gak butuh token (`--platform whatsapp --name shop --agent nora`):
+kode yang dipindai ada di halaman Connections agent-nya setelah ia jalan, dan nomor kedua ditambah
+dengan cara yang sama.
 
 `rename` menulis ulang config sekaligus database yang sedang dibuka daemon, itu sebabnya ia menolak
 jalan selama daemon hidup, dan sebabnya ia satu-satunya perintah gateway yang gak lewat control API.
