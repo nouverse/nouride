@@ -29,7 +29,7 @@ import { ftsQuery, queryTerms } from "./terms.ts";
 import { SHARED } from "./vault.ts";
 import type { IndexedSection, KnowledgePort } from "./knowledge/knowledge.store.ts";
 
-const LIMIT_DEFAULT = 10;
+export const LIMIT_DEFAULT = 10;
 const LIMIT_MAX = 30;
 /**
  * Visible episodes considered by meaning, newest first — every one a household has, in practice. Ids only: what each

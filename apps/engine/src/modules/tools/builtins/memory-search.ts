@@ -44,7 +44,8 @@ export function createMemorySearchTool(memory: MemoryToolsDeps): Tool {
     definition: {
       name: "memory_search",
       description:
-        "Search what you remember: past conversations (a summary each, with an id `memory_read` opens) and " +
+        "Search what you remember: past conversations (a summary each, with an id `memory_read` opens), the talk of " +
+        "the last day in other chats you may see, not filed yet, and " +
         "facts kept about people, and shared facts such as house rules and devices, and documents people keep for reference " +
         "(sections of them, with an id `memory_read` opens as `document`). Use it before saying you do not recall, and when the " +
         "answer would come from an earlier conversation. Memory is written in English whatever language was " +

@@ -40,8 +40,9 @@ export type { FactReach } from "./own-fact.ts";
 import { nobody, PUBLIC_KEEPS_NOTHING, publicAudience, publicRecall, withoutPublic } from "./public.ts";
 import { recallFor, type Recall } from "./recall.ts";
 import { cutActive, cutChat, runPass, type ActivitySource, type PassReport, type RunDeps } from "./run.ts";
+import { asWaiting, liveEpisodes, liveHits } from "./live.ts";
 import { saveConversation, type SaveRequest } from "./saved.ts";
-import { searchMemory, type SearchHit } from "./search.ts";
+import { LIMIT_DEFAULT as SEARCH_LIMIT, searchMemory, type SearchHit } from "./search.ts";
 import { catchUp, parseVectorKey, rankingModel, rankingVectors, vectorKey, type CatchUpReport, type Embedder, type Semantic } from "./semantic.ts";
 import { vaultAt } from "./vault.ts";
 import { idsOf } from "@/modules/people/match.ts";
@@ -178,6 +179,9 @@ export function createMemory(deps: MemoryDeps) {
   }
 
   const isPublic = (speaker: Pick<Speaker, "agentId">) => deps.publicAgent?.(speaker.agentId) === true;
+  /** Other chats' talk since their last cut that this speaker may see (`live.ts`): none for an agent open to everyone. */
+  const live = (speaker: Speaker) =>
+    isPublic(speaker) ? [] : liveEpisodes({ source: runDeps().source, index, vault, people: config.people, timeZone: timeZone() }, situate(speaker).audience, now(), memoryChatKey(speaker.gatewayId, speaker.chatId));
 
   /** Who is asking, and what the chat they ask from may see. */
   function situate(speaker: Speaker): { identity: string; person: { key: string; name: string } | null; audience: Audience } {
@@ -260,7 +264,9 @@ export function createMemory(deps: MemoryDeps) {
       const theirs = knowledge.brought(who(speaker)).map(named);
       const person = situate(speaker).person;
       const own = recall.own ?? (theirs.length && person ? { name: person.name, facts: [] } : undefined);
-      return { ...recall, knowledge: knowledge.usable(who(speaker)).map(named), ...(own ? { own: { ...own, ...(theirs.length ? { collections: theirs } : {}) } } : {}) };
+      // What other chats it may see said since they were last cut, ahead of what was cut and waits to be filed (`live.ts`).
+      const waiting = [...live(speaker).map((episode) => asWaiting(episode, speaker.agentId, timeZone())), ...recall.waiting];
+      return { ...recall, waiting, knowledge: knowledge.usable(who(speaker)).map(named), ...(own ? { own: { ...own, ...(theirs.length ? { collections: theirs } : {}) } } : {}) };
     },
 
     async search(speaker: Speaker, query: { query: string; since?: string; until?: string; people?: string[]; agents?: readonly string[]; limit?: number; kind?: "knowledge" }): Promise<SearchHit[]> {
@@ -273,7 +279,9 @@ export function createMemory(deps: MemoryDeps) {
         { audience: situate(speaker).audience, ...asked, knowledge: scopes, brings: config.memory.privateInGroups },
       );
       // An open agent's search is of the collections alone, whatever else the index would have matched.
-      return kind === "knowledge" || isPublic(speaker) ? hits.filter((hit) => hit.kind === "section") : hits;
+      if (kind === "knowledge" || isPublic(speaker)) return hits.filter((hit) => hit.kind === "section");
+      // Ahead of the index's: what other chats said since their last cut, which the index does not hold yet.
+      return [...liveHits(live(speaker), asked), ...hits].slice(0, Math.max(hits.length, asked.limit ?? SEARCH_LIMIT));
     },
 
     /** A knowledge section, or (`#all`) its whole document, if this agent may search its collection here. */
@@ -295,7 +303,7 @@ export function createMemory(deps: MemoryDeps) {
 
     /** One episode, if this chat may see it — its transcript while kept, else its summary. */
     async read(speaker: Speaker, id: string): Promise<Episode | { refused: string }> {
-      const episode = await readEpisode(vault, id);
+      const episode = (await readEpisode(vault, id)) ?? live(speaker).find((one) => one.id === id);
       if (!episode || !canSeeEpisode(episode, situate(speaker).audience)) return { refused: `no conversation "${id}" that this chat may see` };
       return episode;
     },

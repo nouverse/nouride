@@ -64,6 +64,12 @@ momen: `/new` atau `/reset` di chat itu, dan nightly pass, yang memotong tiap ch
 potongan terakhirnya. Gak ada timer idle. Rentang yang melewati tengah malam dipecah per hari, dan
 yang terlalu panjang untuk satu panggilan model dipecah di batas giliran.
 
+Sebelum dipotong, obrolan sehari terakhir sebuah chat dibaca langsung dari tempatnya (sejak 0.8.48): di
+chat pribadi seseorang, agent diberi tahu percakapan orang itu di chat lain sejak potongan terakhirnya,
+bisa menemukannya dengan `memory_search`, dan membukanya dengan `memory_read`, dengan aturan yang sama
+seperti episode yang sudah dipotong. Ditanya di chat pribadi soal apa yang diputuskan di grup sejam
+lalu, ia gak perlu lagi ditanya ulang di grup itu.
+
 Episode dibangun dari turn log daemon dan log pesan ruangannya, bukan dari konteks percakapan, jadi
 compaction dan `/new` gak menghilangkan apa pun. Group chat dengan beberapa bot adalah satu episode
 yang menyebut semuanya. Episode butuh setidaknya satu giliran agent: orang yang mengobrol di antara
