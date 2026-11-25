@@ -75,6 +75,8 @@ test("two connections side by side: a message, a photo, a reconnect, a refusal, 
     stoppedWhileConnecting: { socketsOpened: 0, linked: false, said: [] },
     // The groups it is in, asked once it is linked; then one joined and one it was removed from, each said whole. A
     // change to another's place in a group says nothing.
+    // Its login cannot be written: said, as this number's, and no rejection left for the daemon to catch.
+    aSaveThatFails: { said: ["could not save the session's credentials"], unhandled: 0 },
     itsGroups: {
       fetched: ["groups:g-family@g.us,g-shop@g.us"],
       after: ["groups:g-family@g.us,g-new@g.us,g-shop@g.us", "groups:g-new@g.us,g-shop@g.us"],

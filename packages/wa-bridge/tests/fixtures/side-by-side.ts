@@ -12,7 +12,7 @@
  */
 
 import { mock } from "bun:test";
-import { existsSync, readdirSync } from "node:fs";
+import { chmodSync, existsSync, readdirSync } from "node:fs";
 import * as baileys from "@whiskeysockets/baileys";
 
 interface StandIn {
@@ -60,15 +60,16 @@ const key = "a".repeat(64);
 function number() {
   const events: { type: string; status?: string; text?: string; reason?: string; media?: { path: string; held?: string }; ids?: string[] }[] = [];
   const waits: { in_ms: number; attempt: number }[] = [];
+  const notes: string[] = [];
   const connection = new Connection({
     emit: (event) => void events.push(event as (typeof events)[number]),
-    note: (said, detail) => void (said === "reconnecting" && waits.push(detail as (typeof waits)[number])),
+    note: (said, detail) => void (said === "reconnecting" ? waits.push(detail as (typeof waits)[number]) : notes.push(said)),
     exit: (code) => {
       throw new Error(`a connection asked to exit with ${code}`);
     },
   });
   const said = () => events.splice(0).map((event) => (event.type === "status" ? `status:${event.status}` : event.type === "message" ? `message:${event.text}` : event.type === "groups" ? `groups:${event.ids?.join(",")}` : event.type));
-  return { connection, events, said, waited: () => waits.splice(0).map((wait) => `try ${wait.attempt} in ${wait.in_ms} ms`) };
+  return { connection, events, said, notes, waited: () => waits.splice(0).map((wait) => `try ${wait.attempt} in ${wait.in_ms} ms`) };
 }
 
 const message = (text: string) => ({ type: "notify", messages: [{ key: { remoteJid: "628111@s.whatsapp.net", id: `m-${text}`, fromMe: false }, message: { conversation: text }, messageTimestamp: 1, pushName: "Budi" }] });
@@ -198,6 +199,15 @@ groupSocket.fire("groups.upsert", [{ id: "g-new@g.us", subject: "a new one" }]);
 groupSocket.fire("group-participants.update", { id: "g-family@g.us", author: "x@s.whatsapp.net", participants: [{ id: `62800000000${sockets.length}@s.whatsapp.net` }], action: "remove" });
 groupSocket.fire("group-participants.update", { id: "g-shop@g.us", author: "x@s.whatsapp.net", participants: [{ id: "628999@s.whatsapp.net" }], action: "remove" });
 seen.itsGroups = { fetched: fetchedGroups, after: grouped.said() };
+
+// ── its login cannot be written: the save's failure is said, as this number's, and nothing is left unhandled
+const unhandled: string[] = [];
+process.on("unhandledRejection", (err) => void unhandled.push(String(err)));
+chmodSync(`${homeDir}-groups`, 0o500);
+groupSocket.fire("creds.update", {});
+await came(() => grouped.notes.includes("could not save the session's credentials") || unhandled.length > 0);
+chmodSync(`${homeDir}-groups`, 0o700);
+seen.aSaveThatFails = { said: grouped.notes.filter((line) => line.startsWith("could not save")), unhandled: unhandled.length };
 grouped.connection.stop();
 groupsOfNumber = null;
 console.log(JSON.stringify(seen));

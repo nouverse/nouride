@@ -301,7 +301,9 @@ export class Connection {
       socket.ev.on("creds.update", () => {
         try {
           if (mine !== this.generation) return;
-          void this.auth?.saveCreds();
+          // Its own catch: the save is async, so a failure arrives after the `try` has ended, and was the daemon's
+          // nameless "unhandled rejection" line, with no word of which number's login was not saved.
+          void this.auth?.saveCreds().catch((err: unknown) => this.say.note("could not save the session's credentials", String(err)));
         } catch (err) {
           this.say.note("could not save the session's credentials", String(err));
         }
