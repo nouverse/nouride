@@ -396,22 +396,32 @@ describe("in a room", () => {
     expect(b.prompts()).toEqual(["migrate the database"]);
   });
 
-  test("a message that did not address it is left alone — a room with one bot hands it everything said there", async () => {
+  test("somebody else's message that did not address it is left alone — a room with one bot hands it everything said there", async () => {
     // Routed to it all the same, as the one agent here — so the busy agent is asked, and has to say nothing.
     const b = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "migrated" }, { text: "ok" }], { orchestrator: "nouva" });
     b.say("m1", "nouva: migrate the database", group());
     await b.stepStarted();
     b.say("m2", "lunch, anyone?", mira);
     await sleep(20);
-    // Not even from the person who started it: talking to the room is not talking to the agent.
-    b.say("m3", "brb", group());
-    await sleep(20);
     await b.pipeline.idle();
 
     expect(texts(b).some((text) => text.includes("is still working"))).toBe(false);
     expect(texts(b)).not.toContain(STEER_ACK);
     expect(JSON.stringify(b.requests)).not.toContain("lunch");
-    expect(JSON.stringify(b.requests)).not.toContain("brb");
+    expect(b.prompts()).toEqual(["migrate the database"]);
+  });
+
+  test("the person who started it steers it by a message routed to it, named or not: what it would answer were it free", async () => {
+    // A follow-up to the front desk, naming nobody, was dropped in silence while it worked, and sent again once it had
+    // answered. The same person steers, as in a one-to-one chat.
+    const b = await bench([{ toolCalls: [{ id: "c1", name: "slow", args: {} }] }, { text: "switched to staging" }], { orchestrator: "nouva" });
+    b.say("m1", "nouva: migrate the database", group());
+    await b.stepStarted();
+    b.say("m2", "use the staging DB instead", group());
+    await b.pipeline.idle();
+
+    expect(texts(b)).toContain(STEER_ACK);
+    expect(sent(b.requests, 1)).toContain("use the staging DB instead");
     expect(b.prompts()).toEqual(["migrate the database"]);
   });
 
@@ -870,6 +880,12 @@ describe("what a busy agent does with a message for it", () => {
     expect(whileBusy(turn(), from(), { ...ways, fromPerson: false })).toBe("tell");
     // A turn the daemon started has nobody who started it.
     expect(whileBusy(turn({ trigger: { ...started, senderId: "nouride:system" } }), from(), ways)).toBe("tell");
+  });
+
+  test("the one who started it reaches it by a message routed to it though it named nobody; anybody else does not", () => {
+    expect(whileBusy(turn(), from(), { ...ways, addressed: false, routed: true })).toBe("steer");
+    expect(whileBusy(turn(), from({ senderId: "user-2" }), { ...ways, addressed: false, routed: true })).toBe("quiet");
+    expect(whileBusy(turn(), from(), { ...ways, addressed: false })).toBe("quiet");
   });
 
   test("says nothing to a message that did not address it, to somebody already told, or to its own events", () => {

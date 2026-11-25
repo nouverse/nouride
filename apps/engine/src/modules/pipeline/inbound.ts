@@ -800,7 +800,8 @@ export class InboundRouter {
      */
     const working = this.ctx.turnIn(agent.config.id, envelope.chatId, envelope.gatewayId);
     if (working) {
-      await atWork(this.ctx, agent, envelope, working, { addressed, fromPerson: verdict.kind === "human", ...(verdict.kind === "agent" ? { handed: verdict } : {}) });
+      // Routed here, whether or not it addressed the agent: every message `admit` is handed was routed to it.
+      await atWork(this.ctx, agent, envelope, working, { addressed, routed: true, fromPerson: verdict.kind === "human", ...(verdict.kind === "agent" ? { handed: verdict } : {}) });
       return;
     }
 

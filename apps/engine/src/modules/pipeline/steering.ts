@@ -13,8 +13,9 @@
  * - **A one-to-one chat** steers on arrival (`steerTarget`), before the queue: the person is the only one the
  *   turn could be for.
  * - **A room** steers after routing (`whileBusy`, from `inbound.ts`), which is where it is first known which
- *   agent a message is for. Only the person who started the turn, and only when they addressed the agent —
- *   anybody else is told the agent is busy (`busyNotice`), once, instead of being refused in silence.
+ *   agent a message is for. Only the person who started the turn, by a message that addressed the agent or that
+ *   routing gave it as the room's answerer — anybody else who addressed it is told the agent is busy (`busyNotice`),
+ *   once, instead of being refused in silence.
  */
 
 import { type ChatMessage, clipTrimmed, type MessageEnvelope, oneLine } from "@nouride/shared";
@@ -121,6 +122,11 @@ export function whileBusy(
   o: {
     /** Named, tagged, or a reply to something it said — not merely overheard. A one-to-one chat always is. */
     addressed: boolean;
+    /**
+     * Routed to this agent though it named nobody: the room's front desk, or the one agent there that answers what
+     * names nobody. What it would have answered were it free.
+     */
+    routed?: boolean;
     /** A person, not another agent handing over: an agent does not rewrite another one's turn. */
     fromPerson: boolean;
     /** `[queue] steer`. */
@@ -129,10 +135,14 @@ export function whileBusy(
     handedOver?: boolean;
   },
 ): "steer" | "tell" | "wait" | "quiet" {
-  if (!turn || !o.addressed || isSystemEvent(envelope)) return "quiet";
-  if (o.handedOver && !o.fromPerson) return "wait";
+  if (!turn || isSystemEvent(envelope)) return "quiet";
   const started = turn.trigger;
   const starter = Boolean(envelope.senderId) && started !== undefined && !isSystemEvent(started) && started.senderId === envelope.senderId;
+  // The person who started the turn reaches it as they would were it free: in a room whose front desk it is, their
+  // follow-up that names nobody was its to answer, and was dropped in silence while it worked, to be sent again once it
+  // answered. Anybody else, only by addressing it: theirs is another question, which waits.
+  if (!o.addressed && !(o.routed === true && starter)) return "quiet";
+  if (o.handedOver && !o.fromPerson) return "wait";
   if (o.steer && o.fromPerson && starter && turn.steers && wordsOnly(envelope) && (turn.steered ?? 0) + turn.steers.length < STEER_CAP) {
     return "steer";
   }
