@@ -48,11 +48,27 @@ describe("from the direct chat of someone who took part", () => {
     expect(((await h.memory.read(speaker(GADING_DM), before[0]!.id)) as { transcript: string }).transcript).toContain("the backend stays on the homelab");
   });
 
-  test("once it is cut, it is memory's own: named once, under the same id", async () => {
-    const before = h.memory.recall(speaker(GADING_DM)).waiting.map((one) => one.id);
+  test("once it is cut, it is memory's own: named once, as the episode it became", async () => {
+    expect(h.memory.recall(speaker(GADING_DM)).waiting.map((one) => one.id.startsWith("live-"))).toEqual([true]);
     await h.memory.cut(FAMILY.gatewayId, FAMILY.chatId);
-    const after = h.memory.recall(speaker(GADING_DM)).waiting.map((one) => one.id);
-    expect(after).toEqual(before);
+    const after = h.memory.recall(speaker(GADING_DM)).waiting;
+    expect(after.map((one) => one.id.startsWith("live-"))).toEqual([false]);
+    expect(after[0]).toMatchObject({ preview: "nouva, which provider for the client pods? dalang or sumopod?" });
+  });
+
+  test("two chats whose talk began in the same minute are two, each opening its own", async () => {
+    const OTHER = { ...FAMILY, chatId: "4455@g.us" };
+    h.group(OTHER, "nouva, what time is the school pickup?", at(17, 20), { agentId: "nouva", text: "Half past three." });
+    const waiting = h.memory.recall(speaker(GADING_DM)).waiting;
+    expect(new Set(waiting.map((one) => one.id)).size).toBe(2);
+    const opened = await Promise.all(waiting.map(async (one) => ((await h.memory.read(speaker(GADING_DM), one.id)) as { chat: string }).chat));
+    expect(opened.sort()).toEqual(["whatsapp:main:1203@g.us", "whatsapp:main:4455@g.us"]);
+  });
+
+  test("a search's common words find nothing on their own; half of its words said there do", async () => {
+    expect(await h.memory.search(speaker(GADING_DM), { query: "the what and" })).toEqual([]);
+    expect((await h.memory.search(speaker(GADING_DM), { query: "durian prepaid" })).length).toBe(1);
+    expect(await h.memory.search(speaker(GADING_DM), { query: "durian mango papaya prepaid" })).toEqual([]);
   });
 });
 
@@ -75,8 +91,34 @@ describe("where it would not be seen once cut", () => {
     expect(await h.memory.search(speaker(GADING_DM), { query: "sumopod" })).toEqual([]);
   });
 
-  test("not past a day: what is older waits for the pass, as before", async () => {
+  test("not past yesterday: with no nightly pass a chat is never cut, and only its last two days are read", async () => {
     h.clock.now = at(23, 0, 27);
     expect(h.memory.recall(speaker(GADING_DM)).waiting).toEqual([]);
+    // Talk on the 27th, in the same chat whose earlier talk was never cut: read from yesterday's start, not the 25th.
+    h.group(FAMILY, "nouva, did the pods stay out of stock?", at(10, 0, 27), { agentId: "nouva", text: "Yes, all of them." });
+    const waiting = h.memory.recall(speaker(GADING_DM)).waiting;
+    expect(waiting.map((one) => one.preview)).toEqual(["nouva, did the pods stay out of stock?"]);
+  });
+
+  test("not where recall is off: for this person, or for the install", async () => {
+    h.config.people.find((person) => person.key === "gading")!.recall = false;
+    expect(h.memory.recall(speaker(GADING_DM)).waiting).toEqual([]);
+    h.config.people.find((person) => person.key === "gading")!.recall = undefined as never;
+    h.config.memory.recall = false;
+    expect(h.memory.recall(speaker(GADING_DM)).waiting).toEqual([]);
+  });
+});
+
+describe("a chat that cannot be read", () => {
+  test("is left out, and the turn has the rest of its recall", async () => {
+    h.close();
+    // A source whose reading of one group fails, as a database busy at that moment would.
+    h = await household({ source: (logs) => ({ ...logs, exchangesBetween: (gatewayId, chatId, after, until) => (chatId === "4455@g.us" ? (() => { throw new Error("database is locked"); })() : logs.exchangesBetween(gatewayId, chatId, after, until)) }) });
+    h.clock.now = at(20, 0);
+    h.group(FAMILY, "nouva, which provider for the client pods? dalang or sumopod?", at(17, 20), { agentId: "nouva", text: "Dalang." });
+    h.group({ ...FAMILY, chatId: "4455@g.us" }, "nouva, what time is the school pickup?", at(17, 30), { agentId: "nouva", text: "Half past three." });
+    const waiting = h.memory.recall(speaker(GADING_DM)).waiting;
+    expect(waiting.map((one) => one.preview)).toEqual(["nouva, which provider for the client pods? dalang or sumopod?"]);
+    expect((await h.memory.search(speaker(GADING_DM), { query: "sumopod dalang" })).length).toBe(1);
   });
 });

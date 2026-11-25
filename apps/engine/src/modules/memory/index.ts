@@ -40,7 +40,7 @@ export type { FactReach } from "./own-fact.ts";
 import { nobody, PUBLIC_KEEPS_NOTHING, publicAudience, publicRecall, withoutPublic } from "./public.ts";
 import { recallFor, type Recall } from "./recall.ts";
 import { cutActive, cutChat, runPass, type ActivitySource, type PassReport, type RunDeps } from "./run.ts";
-import { asWaiting, liveEpisodes, liveHits } from "./live.ts";
+import { asWaiting, LIVE_ID, liveEpisodes, liveHits } from "./live.ts";
 import { saveConversation, type SaveRequest } from "./saved.ts";
 import { LIMIT_DEFAULT as SEARCH_LIMIT, searchMemory, type SearchHit } from "./search.ts";
 import { catchUp, parseVectorKey, rankingModel, rankingVectors, vectorKey, type CatchUpReport, type Embedder, type Semantic } from "./semantic.ts";
@@ -180,8 +180,16 @@ export function createMemory(deps: MemoryDeps) {
 
   const isPublic = (speaker: Pick<Speaker, "agentId">) => deps.publicAgent?.(speaker.agentId) === true;
   /** Other chats' talk since their last cut that this speaker may see (`live.ts`): none for an agent open to everyone. */
-  const live = (speaker: Speaker) =>
-    isPublic(speaker) ? [] : liveEpisodes({ source: runDeps().source, index, vault, people: config.people, timeZone: timeZone() }, situate(speaker).audience, now(), memoryChatKey(speaker.gatewayId, speaker.chatId));
+  const live = (speaker: Speaker): Episode[] => {
+    if (isPublic(speaker)) return [];
+    try {
+      return liveEpisodes({ source: runDeps().source, index, vault, people: config.people, timeZone: timeZone() }, situate(speaker).audience, now(), memoryChatKey(speaker.gatewayId, speaker.chatId));
+    } catch (err) {
+      // A turn answers with what memory holds: what other chats said is a part of recall, never the whole of it.
+      log.warn("other chats' talk could not be read", { error: String(err) });
+      return [];
+    }
+  };
 
   /** Who is asking, and what the chat they ask from may see. */
   function situate(speaker: Speaker): { identity: string; person: { key: string; name: string } | null; audience: Audience } {
@@ -257,16 +265,16 @@ export function createMemory(deps: MemoryDeps) {
       // of the collections it may search, and nothing else.
       if (isPublic(speaker)) return publicRecall(knowledge.usable(who(speaker)).map((collection) => ({ name: collection.settings.name, description: collection.settings.description })));
       const semantic = semanticNow();
-      const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, privateInGroups: config.memory.privateInGroups, timeZone: timeZone(), now: now(), ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
+      // What other chats it may see said since they were last cut (`live.ts`), under recall's own switches.
+      const elsewhere = () => live(speaker).map((episode) => asWaiting(episode, speaker.agentId, timeZone()));
+      const recall = recallFor({ index, people: config.people, audience: situate(speaker).audience, agentId: speaker.agentId, recent: config.memory.promptRecent, recall: config.memory.recall, privateInGroups: config.memory.privateInGroups, timeZone: timeZone(), now: now(), elsewhere, ...(semantic ? { vectors: rankingVectors(semantic) } : {}) });
       // The collections it may search here, by name: never their documents. Those that went with the one speaking are
       // said with what else is theirs, apart from what the group's prompt caches.
       const named = (collection: Collection) => ({ name: collection.settings.name, description: collection.settings.description, ...(collection.settings.about.length ? { about: namesOf(collection.settings.about) } : {}) });
       const theirs = knowledge.brought(who(speaker)).map(named);
       const person = situate(speaker).person;
       const own = recall.own ?? (theirs.length && person ? { name: person.name, facts: [] } : undefined);
-      // What other chats it may see said since they were last cut, ahead of what was cut and waits to be filed (`live.ts`).
-      const waiting = [...live(speaker).map((episode) => asWaiting(episode, speaker.agentId, timeZone())), ...recall.waiting];
-      return { ...recall, waiting, knowledge: knowledge.usable(who(speaker)).map(named), ...(own ? { own: { ...own, ...(theirs.length ? { collections: theirs } : {}) } } : {}) };
+      return { ...recall, knowledge: knowledge.usable(who(speaker)).map(named), ...(own ? { own: { ...own, ...(theirs.length ? { collections: theirs } : {}) } } : {}) };
     },
 
     async search(speaker: Speaker, query: { query: string; since?: string; until?: string; people?: string[]; agents?: readonly string[]; limit?: number; kind?: "knowledge" }): Promise<SearchHit[]> {
@@ -303,7 +311,7 @@ export function createMemory(deps: MemoryDeps) {
 
     /** One episode, if this chat may see it — its transcript while kept, else its summary. */
     async read(speaker: Speaker, id: string): Promise<Episode | { refused: string }> {
-      const episode = (await readEpisode(vault, id)) ?? live(speaker).find((one) => one.id === id);
+      const episode = id.startsWith(LIVE_ID) ? live(speaker).find((one) => one.id === id) : await readEpisode(vault, id);
       if (!episode || !canSeeEpisode(episode, situate(speaker).audience)) return { refused: `no conversation "${id}" that this chat may see` };
       return episode;
     },

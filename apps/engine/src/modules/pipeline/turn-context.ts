@@ -525,7 +525,8 @@ export class TurnContext extends ActiveTurns {
         chatId: envelope.chatId,
         chatType: envelope.chatType,
       });
-      return recall.profiles.length || recall.shared.length || recall.recent.length || recall.knowledge?.length || recall.own ? recall : undefined;
+      // What waits to be summarized counts too: alone, it was dropped, and with it what other chats said today.
+      return recall.profiles.length || recall.shared.length || recall.recent.length || recall.waiting.length || recall.knowledge?.length || recall.own ? recall : undefined;
     } catch (err) {
       log.warn("could not read memory for this turn, answering without recall", { agent_id: agentId, error: String(err) });
       return undefined;

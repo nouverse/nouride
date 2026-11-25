@@ -210,7 +210,10 @@ const PER_TOOL = 5_040;
 // 54,070 for a mission's brief in one place (~95, measured at 54,067): a mission's own `start` takes a `brief` as a
 // chat's does, both say the person is sent it as a file, and the goal's field sends its detail there. It said "a long
 // one points at a brief file by its absolute path", and agents ended every goal with a path nobody could open in a chat.
-const TOTAL = 54_070;
+// 54,140 for another chat's talk not filed yet (~66, measured at 54,136): `memory_search` says it finds the last day's
+// talk in the other chats this one may see. Asked in a direct chat about a group an hour before, an agent searched
+// nothing, said it could not see the group, and the talk waited for the nightly pass to become memory.
+const TOTAL = 54_140;
 
 /**
  * What a provider is sent for the same set: the skill tools as the one entry that stands for them (`tools/fold.ts`).
@@ -224,8 +227,9 @@ const TOTAL = 54_070;
  * against 53,296). 48,640 with a mission a job drafts (measured at 48,639 against 53,470). 48,670 with a step's `id`
  * (measured at 48,662 against 53,493). 48,980 with a fact kept to direct chats (measured at 48,974 against 53,805). 49,145 with a file whose words are not read
  * (measured at 49,140 against 53,971). 49,240 with a mission's brief in one place (measured at 49,236 against 54,067).
+ * 49,310 with another chat's talk not filed yet (measured at 49,305 against 54,136).
  */
-const SENT = 49_240;
+const SENT = 49_310;
 
 describe("tool schema budget", () => {
   test("every conditional tool was built, so the total means what it says", () => {
