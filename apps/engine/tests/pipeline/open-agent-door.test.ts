@@ -323,8 +323,8 @@ describe("what the daemon says for an open agent", () => {
 });
 
 describe("the turns strangers take at once", () => {
-  test("are half the install's, all of them together: the household's message is answered beside them, not after", async () => {
-    // Every model call held until let go, so what runs at once is what was begun.
+  /** Four strangers and the owner writing at once, every model call held until let go: what runs at once is what began. */
+  async function atOnce(strangersSay: string) {
     let inFlight = 0;
     let most = 0;
     const held: (() => void)[] = [];
@@ -337,22 +337,28 @@ describe("the turns strangers take at once", () => {
     }) as typeof globalThis.fetch;
     const h = await install({ turns: ["a", "b", "c", "d", "e"], ceiling: 4, fetch });
     let n = 0;
-    const arrive = (bot: "nouva" | "nora", senderId: string) => h.connections[bot]!.receive(envelopeAt({ id: `x-${++n}`, timestamp: Date.now(), gatewayId: `telegram:${bot}`, chatId: `dm-${senderId}`, senderId, senderName: senderId, text: "hello" }));
-    for (const one of ["s1", "s2", "s3", "s4"]) arrive("nora", one);
-    arrive("nouva", OWNER);
-    // Two strangers of the four, and the household's message: one slot of the four is left, and it is not a stranger's to take. The
-    // queue decides as each message arrives, so two waiting beside three begun is its answer, not a moment of it.
+    const arrive = (bot: "nouva" | "nora", senderId: string, text: string) => h.connections[bot]!.receive(envelopeAt({ id: `x-${++n}`, timestamp: Date.now(), gatewayId: `telegram:${bot}`, chatId: `dm-${senderId}`, senderId, senderName: senderId, text }));
+    for (const one of ["s1", "s2", "s3", "s4"]) arrive("nora", one, strangersSay);
+    arrive("nouva", OWNER, "hello");
+    // Two strangers of the four, and the household's message: one slot of the four is left, and it is not a stranger's
+    // to take. The queue decides as each message arrives, so two waiting beside three begun is its answer.
     await eventually(() => inFlight === 3 && h.pipeline.stats().waiting === 2, 3_000, "three turns begun, two waiting");
-    expect({ inFlight, most }).toEqual({ inFlight: 3, most: 3 });
+    const begun = { inFlight, most };
     // Let go, every one is answered, and never more than three at once.
     await eventually(() => {
       for (const release of held.splice(0)) release();
       return h.said().nora!.length === 4 && h.said().nouva!.length === 1;
     }, 5_000, "every answer");
     await h.pipeline.idle();
-    expect(h.said().nora).toHaveLength(4);
-    expect(h.said().nouva).toHaveLength(1);
-    expect(most).toBe(3);
+    return { begun, most };
+  }
+
+  test("are half the install's, all of them together: the household's message is answered beside them, not after", async () => {
+    expect(await atOnce("hello")).toEqual({ begun: { inFlight: 3, most: 3 }, most: 3 });
+  });
+
+  test("a stranger's /start too, which the model answers: it is a turn, and waits its turn within their half", async () => {
+    expect(await atOnce("/start")).toEqual({ begun: { inFlight: 3, most: 3 }, most: 3 });
   });
 });
 

@@ -17,6 +17,7 @@ import { commandForAnotherBot } from "./command-for-another.ts";
 import { jobOfCompletionWake } from "./job-wakes.ts";
 import { answerGroupCommand } from "./room-mention.ts";
 import { conversationSlots, strangerSlots } from "./fair-share.ts";
+import { strangerCommand } from "./open-door.ts";
 
 const log = createLogger("pipeline");
 
@@ -77,7 +78,10 @@ export function chatQueue(parts: {
     // Everything here is cheap and touches no session, so running it beside a turn is safe.
     urgent: (envelope) => {
       const command = parseCommand(envelope.text.trim());
-      return command !== null && hooks.has(command.command);
+      if (command === null || !hooks.has(command.command)) return false;
+      // Not a stranger's command the model answers (`/start`, the opening of a chat): that is a turn, and waits its turn
+      // within the strangers' share. Fifty new visitors' `/start`s ran at once, past the share and the ceiling both.
+      return !(admission.strangerOf(envelope) && strangerCommand(command.command, envelope.chatType !== "dm")?.handled === false);
     },
     /**
      * One turn at a time in a one-to-one chat; several in a room.

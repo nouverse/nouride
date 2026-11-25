@@ -15,8 +15,8 @@ import { pipelineBench, type Bench } from "../pipeline-bench.ts";
 import { eventually } from "../wait.ts";
 
 describe("the decision", () => {
-  test("strangers of open agents hold half the ceiling together, at least one, and with no ceiling no part of it", () => {
-    expect([8, 4, 3, 1].map(strangerSlots)).toEqual([4, 2, 2, 1]);
+  test("strangers of open agents hold at most half the ceiling together, at least one, and with no ceiling no part of it", () => {
+    expect([8, 4, 3, 2, 1].map(strangerSlots)).toEqual([4, 2, 1, 1, 1]);
     expect(strangerSlots(0)).toBe(Number.POSITIVE_INFINITY);
   });
 
