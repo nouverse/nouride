@@ -839,7 +839,9 @@ export function resolveToolIterations(perAgent: number | undefined, daemon: numb
  * The most tool round-trips one message to an agent open to everyone may take, whatever its pack or the daemon says.
  * The daemon's bound on what one stranger's message costs, and no setting: a search, the document it names, a second
  * search with other words, that document, and a file sent is five, and the sixth is room for one of them refused.
- * An estimate, from what its four tools are for: no real model's run has set it yet.
+ * Measured on one small model, three kinds of ask, each twice: a question took one (a search), a file asked for took
+ * two (a search, the file sent), and four where a send was refused and the document read before the second. Six
+ * leaves room for that, and is still a judgment: one model is not every model.
  */
 export const OPEN_TOOL_ITERATIONS = 6;
 
