@@ -16,7 +16,7 @@ import type { InboundRouter } from "./inbound.ts";
 import { commandForAnotherBot } from "./command-for-another.ts";
 import { jobOfCompletionWake } from "./job-wakes.ts";
 import { answerGroupCommand } from "./room-mention.ts";
-import { conversationSlots } from "./fair-share.ts";
+import { conversationSlots, strangerSlots } from "./fair-share.ts";
 
 const log = createLogger("pipeline");
 
@@ -96,6 +96,8 @@ export function chatQueue(parts: {
      */
     maxConcurrentPerKey: (envelope) => conversationSlots(envelope, deps),
     maxConcurrentTotal: deps.config.queue.maxConcurrentTurns,
+    // Strangers let in only by an open agent hold half the ceiling together, whoever they are (`fair-share.ts`).
+    share: (envelope) => (admission.strangerOf(envelope) ? { name: "strangers", most: strangerSlots(deps.config.queue.maxConcurrentTurns) } : null),
     maxQueueDepth: deps.config.queue.maxQueueDepth,
     queueTimeoutMs: deps.config.queue.queueTimeoutMs,
     /**

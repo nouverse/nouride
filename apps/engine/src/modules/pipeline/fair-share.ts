@@ -45,3 +45,12 @@ export function roomSlots(members: number, ceiling: number): number {
 function roomMembers(envelope: Pick<MessageEnvelope, "gatewayId" | "chatId">, deps: Pick<PipelineDeps, "rooms" | "registry">): number {
   return deps.rooms?.membersOf(envelope.gatewayId, envelope.chatId).length || deps.registry.enabled().length;
 }
+
+/**
+ * How many of the ceiling's slots strangers of agents open to everyone hold at once, all of them together: half, as a
+ * room's share is, and at least one. Each stranger is a conversation of their own, and fifty arriving together took
+ * every slot, so the household's next message waited behind them, past its timeout. With no ceiling (`0`), none.
+ */
+export function strangerSlots(ceiling: number): number {
+  return ceiling > 0 ? Math.max(1, Math.ceil(ceiling / 2)) : Number.POSITIVE_INFINITY;
+}

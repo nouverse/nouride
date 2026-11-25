@@ -158,6 +158,10 @@ yang kamu pilih. Satu hari itu harinya kamu, menurut zona waktu server, dan rest
 hitungan mana pun. Orang yang kamu masukkan atas namanya gak kena dua batas itu. Hanya admin yang
 membuka agent; operator boleh menutupnya.
 
+Orang asing, semuanya bersama, paling banyak memakai separuh jawaban yang dikerjakan server sekaligus
+(`[queue] max_concurrent_turns`), jadi kamu dan orang yang kamu masukkan dijawab di samping mereka,
+bukan setelahnya.
+
 ### Apa yang bisa ia lakukan, dan apa yang ia tahu
 
 Selama terbuka, sebuah agent punya empat tool dan gak ada yang lain, apa pun isi daftar Tools-nya:

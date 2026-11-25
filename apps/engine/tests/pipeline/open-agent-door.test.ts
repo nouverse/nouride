@@ -14,6 +14,7 @@ import type { MessageEnvelope } from "@nouride/shared";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
 import { pipelineBench, type BenchOptions } from "../pipeline-bench.ts";
 import { emptyTurnMessage } from "@/modules/pipeline/messages.ts";
+import { eventually } from "../wait.ts";
 
 type BenchDeps = NonNullable<BenchOptions["deps"]>;
 
@@ -35,7 +36,7 @@ const conversationsOf = (db: SqliteDb, agent: string): string[] =>
  * Nouva is the orchestrator and pairs strangers; Nora is open. Each has its own Telegram bot, unless `bots` says
  * Nora's alone. The owner is on the install's list; nobody else is known.
  */
-async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; noraOff?: boolean; perMinute?: number; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps } = {}) {
+async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[]; noraOff?: boolean; perMinute?: number; groupsRequireMention?: boolean; maxDailyTokens?: number; maxDailyMessages?: number; closedReply?: string; deps?: BenchDeps; fetch?: BenchOptions["fetch"]; ceiling?: number } = {}) {
   const bots = options.bots ?? ["nouva", "nora"];
   const connections = Object.fromEntries(bots.map((id) => [id, new FakeGateway(`telegram:${id}`, "telegram")]));
   // As Telegram is: no bot is handed another bot's message, so a tag between agents is the daemon's to hand over.
@@ -51,9 +52,11 @@ async function install(options: { turns?: string[]; bots?: ("nouva" | "nora")[];
       agents: { mentions_enabled: true, groups_require_mention: options.groupsRequireMention ?? false },
       security: { access: { mode: "pair", allowlist: [OWNER] }, ...(options.perMinute ? { rate_limit: { messages_per_minute: options.perMinute, cooldown_reply: "Slow down, please." } } : {}) },
       gateways: { telegram: Object.fromEntries(bots.map((id) => [id, { enabled: true, token: `t-${id}`, agent: id }])) },
+      ...(options.ceiling ? { queue: { max_concurrent_turns: options.ceiling } } : {}),
     },
     gateways: Object.values(connections),
     ...(options.deps ? { deps: options.deps } : {}),
+    ...(options.fetch ? { fetch: options.fetch } : {}),
   });
   cleanup.push(bench.dispose);
   bench.pipeline.setTools(new Map());
@@ -316,6 +319,40 @@ describe("what the daemon says for an open agent", () => {
       expect(emptyTurnMessage("stop", 3, true, refused, false)).toEndWith("Ask me again and I will pick it up.");
       expect(emptyTurnMessage("stop", 3, true, refused)).toEndWith("Ask me again and I will pick it up, or `/status` to see where I am.");
     }
+  });
+});
+
+describe("the turns strangers take at once", () => {
+  test("are half the install's, all of them together: the household's message is answered beside them, not after", async () => {
+    // Every model call held until let go, so what runs at once is what was begun.
+    let inFlight = 0;
+    let most = 0;
+    const held: (() => void)[] = [];
+    const fetch = (scripted: typeof globalThis.fetch) => (async (...args: Parameters<typeof globalThis.fetch>) => {
+      inFlight += 1;
+      most = Math.max(most, inFlight);
+      await new Promise<void>((resolve) => held.push(resolve));
+      inFlight -= 1;
+      return await scripted(...args);
+    }) as typeof globalThis.fetch;
+    const h = await install({ turns: ["a", "b", "c", "d", "e"], ceiling: 4, fetch });
+    let n = 0;
+    const arrive = (bot: "nouva" | "nora", senderId: string) => h.connections[bot]!.receive(envelopeAt({ id: `x-${++n}`, timestamp: Date.now(), gatewayId: `telegram:${bot}`, chatId: `dm-${senderId}`, senderId, senderName: senderId, text: "hello" }));
+    for (const one of ["s1", "s2", "s3", "s4"]) arrive("nora", one);
+    arrive("nouva", OWNER);
+    // Two strangers of the four, and the household's message: one slot of the four is left, and it is not a stranger's to take. The
+    // queue decides as each message arrives, so two waiting beside three begun is its answer, not a moment of it.
+    await eventually(() => inFlight === 3 && h.pipeline.stats().waiting === 2, 3_000, "three turns begun, two waiting");
+    expect({ inFlight, most }).toEqual({ inFlight: 3, most: 3 });
+    // Let go, every one is answered, and never more than three at once.
+    await eventually(() => {
+      for (const release of held.splice(0)) release();
+      return h.said().nora!.length === 4 && h.said().nouva!.length === 1;
+    }, 5_000, "every answer");
+    await h.pipeline.idle();
+    expect(h.said().nora).toHaveLength(4);
+    expect(h.said().nouva).toHaveLength(1);
+    expect(most).toBe(3);
   });
 });
 

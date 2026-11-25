@@ -146,6 +146,9 @@ Neither has a starting value: it answers on your account, and an agent is not op
 you chose. A day is your own, by the server's time zone, and a restart resets neither count. People you
 let in by name are held to neither. Only an admin opens an agent; an operator may close it.
 
+Strangers together take at most half of the answers the server works on at once (`[queue]
+max_concurrent_turns`), so you and the people you let in are answered beside them, not after.
+
 ### What it can do, and what it knows
 
 While it is open, an agent has four tools and nothing else, whatever its Tools list says:
