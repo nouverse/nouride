@@ -46,8 +46,9 @@ const FIXED_SLEEPS: Record<string, number> = {
   // 216 → 217 for an asked agent's step line that is not written where its own answer is said (`ask-shown.test.ts`):
   // one holds its answer past the line's own timer, to show the line did not go out while it worked.
   // 217 → 219 for a run that waits for a draft's notice before it goes on (`cron-step-waits.test.ts`): two show the
-  // run said nothing more, and did not end, while the notice was still on its way.
-  "apps/engine": 219,
+  // run said nothing more, and did not end, while the notice was still on its way. 219 → 220 for a weighed file's time
+  // to arrive (`attachment-store.test.ts`): one paces a stand-in download past the deadline a file of no weight is given.
+  "apps/engine": 220,
   "apps/dashboard": 37,
   // 11 → 12 for a connection that goes on trying slowly once its tries run out (`resilience.test.ts`): one shows a drop
   // its fast tries mend is said to nobody, which no condition can show. The test that lost its end in `dead` gave one up.

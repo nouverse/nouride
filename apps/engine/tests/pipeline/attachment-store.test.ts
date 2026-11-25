@@ -19,6 +19,7 @@ import {
   safeFilename,
 } from "@/modules/attachments/store.ts";
 import { tempDir } from "../helpers.ts";
+import { sleep } from "../wait.ts";
 
 let root: string;
 
@@ -251,6 +252,16 @@ describe("a download, written as it arrives (G9)", () => {
     expect(Date.now() - started).toBeLessThan(2_000);
     expect(seen.cancelled).toBe(true);
     expect(filesUnder(root)).toEqual([]);
+  });
+
+  test("a large file the platform says the weight of is given a second more for each megabyte", async () => {
+    // Half a megabyte declared: half a second more than the 100 ms a file of no stated weight is given.
+    const weighed = { ...image, size: 500_000 };
+    const slow = (ms: number) => async () => (await sleep(ms), new Uint8Array([0xff, 0xd8, 0xff, 0xe0]));
+    const store = new AttachmentStore({ rootDir: root, maxBytes: 1_000_000, deadlineMs: 100 });
+    expect(isStored(await store.store(SCOPE, weighed, slow(300), 0))).toBe(true);
+    const unweighed = await store.store(SCOPE, image, slow(300), 0);
+    expect(isStored(unweighed) ? null : unweighed.unavailable).toBe("took longer than 100ms to download");
   });
 
   test("the deadline is the adapter's too, and an adapter that never answers still cannot hold the chat", async () => {
