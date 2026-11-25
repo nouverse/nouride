@@ -178,6 +178,23 @@ describe("the groups each number is in", () => {
   });
 });
 
+describe("each number's own addresses", () => {
+  test("its phone address once linked, its hidden one once a message says it, each without a device, and none of the other's", async () => {
+    const shop = await number("shop", "nora");
+    const home = await number("home", "nouva");
+    expect([shop.gateway.selfId, shop.gateway.ownsAddress("628222@s.whatsapp.net")]).toEqual([undefined, false]);
+    shop.linkedAs("628222:7@s.whatsapp.net");
+    home.linkedAs("628111:3@s.whatsapp.net");
+    await eventually(() => shop.gateway.selfId !== undefined && home.gateway.selfId !== undefined);
+    expect([shop.gateway.selfId, home.gateway.selfId]).toEqual(["628222@s.whatsapp.net", "628111@s.whatsapp.net"]);
+    expect(shop.gateway.ownsAddress("77665544@lid")).toBe(false);
+    shop.fake.push({ ...message("m-1", "hi"), selfIds: ["628222@s.whatsapp.net", "77665544:7@lid"] });
+    await eventually(() => shop.heard.length === 1);
+    expect(["628222:9@s.whatsapp.net", "77665544@lid", "628111@s.whatsapp.net"].map((id) => shop.gateway.ownsAddress(id))).toEqual([true, true, false]);
+    expect(home.gateway.ownsAddress("77665544@lid")).toBe(false);
+  });
+});
+
 describe("one number's trouble is its own", () => {
   test("logged out from its phone: it is no longer linked, the other is, and still takes a message", async () => {
     const shop = await number("shop", "nora");

@@ -27,6 +27,7 @@ import { parseMarkdown } from "../../commons/markdown.ts";
 import { chunkRendered, sendsText } from "../../commons/text.ts";
 import { BaseGateway, type GatewayIdentity, deliverInParts, UndeliverableError } from "../../commons/resilience.ts";
 import { whatsappEnvelope, whatsappSenderId } from "./envelope.ts";
+import { NumberItself } from "./number.ts";
 import { toWhatsAppText } from "./format.ts";
 
 /**
@@ -190,16 +191,19 @@ export class WhatsAppGateway extends BaseGateway {
     return this.qrCode;
   }
 
-  /** The groups this number is in, as its bridge last said; null until it has (`sees`). */
-  private groups: ReadonlySet<string> | null = null;
+  /** Its own addresses and the groups it is in (`number.ts`): with two numbers, which messages are whose and where. */
+  private readonly itself = new NumberItself();
 
-  /**
-   * Whether this number is in a group, as WhatsApp last said: with two numbers, which of them a group's
-   * message can be answered on. Not known for a one-to-one chat, nor before the bridge has said.
-   */
+  get selfId(): string | undefined {
+    return this.itself.phone;
+  }
+
+  ownsAddress(id: string): boolean {
+    return this.itself.owns(id);
+  }
+
   sees(chatId: string): boolean | undefined {
-    if (!this.groups || !chatId.endsWith("@g.us")) return undefined;
-    return this.groups.has(chatId);
+    return this.itself.sees(chatId);
   }
 
   /** Whether the session directory already holds working credentials. */
@@ -593,6 +597,7 @@ export class WhatsAppGateway extends BaseGateway {
           return;
         }
         this.linked = true;
+        this.itself.isAlso([event.jid]);
         this.everLinked = true;
         this.unlinkedSince = null;
         this.expired = false;
@@ -645,6 +650,7 @@ export class WhatsAppGateway extends BaseGateway {
         return;
 
       case "message": {
+        this.itself.isAlso(event.selfIds ?? []);
         if (event.chatTitle) this.rememberTitle(event.chatId, event.chatTitle);
         const envelope = whatsappEnvelope(event, { gatewayId: this.id, agentId: this.options.agentId });
         if (envelope) this.emitMessage(envelope);
@@ -667,7 +673,7 @@ export class WhatsAppGateway extends BaseGateway {
       }
 
       case "groups":
-        this.groups = new Set(event.ids);
+        this.itself.isIn(event.ids);
         this.log.debug("the groups this number is in", { groups: event.ids.length });
         return;
 

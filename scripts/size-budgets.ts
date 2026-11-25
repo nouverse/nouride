@@ -115,8 +115,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and its lists of what is let through, one more store that scans once; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
-    lines: 431,
-    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) that every bridge event's handler reads and writes, and what it declares: a written number, its groups",
+    lines: 439,
+    why: "the WhatsApp adapter's one state machine (bridge up, WhatsApp open, number linked, sends held) every bridge event's handler reads and writes, and what it declares: its addresses, its groups",
   },
 };
 

@@ -42,7 +42,12 @@ export interface ArrivalParts {
 }
 
 /** One message from `gateway`, from arrival to the queue — or to where it stops. */
-export function arrive(parts: ArrivalParts, gateway: Gateway, envelope: MessageEnvelope): void {
+export function arrive(parts: ArrivalParts, gateway: Gateway, arrived: MessageEnvelope): void {
+  // One of the install's own accounts is no person, whatever the platform marked: with two WhatsApp numbers in a group,
+  // each is handed the other's messages as a person's, and was asked to pair, or answered as a person with no limit on
+  // how often. Known as an agent's, it is held to the rules between agents, and an open agent's words reach nobody.
+  const ours = !arrived.senderIsBot && !isSystemEvent(arrived) && parts.turnContext.voice.agentForSender(arrived.gateway, arrived.senderId, arrived.senderAlso) !== undefined;
+  const envelope = ours ? { ...arrived, senderIsBot: true } : arrived;
   // Before anything keeps or reads it — the room's record, the inbox, a steer, a turn — and before the edit's own path,
   // which keeps one as well. The person is told once they are let in (`chat-secrets.ts`).
   const taken = parts.secrets?.take(envelope) ?? [];

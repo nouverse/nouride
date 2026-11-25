@@ -137,7 +137,7 @@ export class Voice {
    * account id catches exactly that race, for the one-bot-per-agent case.
    */
   wroteInbound(envelope: MessageEnvelope): { agentId: string; said: boolean } | undefined {
-    const agentId = this.outbound.authorOf(envelope.gateway, envelope.chatId, envelope.id) ?? (envelope.senderIsBot ? this.agentForSender(envelope.gateway, envelope.senderId) : undefined);
+    const agentId = this.outbound.authorOf(envelope.gateway, envelope.chatId, envelope.id) ?? (envelope.senderIsBot ? this.agentForSender(envelope.gateway, envelope.senderId, envelope.senderAlso) : undefined);
     return agentId ? { agentId, said: this.outbound.isSaid(envelope.gateway, envelope.chatId, envelope.id, agentId, Date.now()) } : undefined;
   }
 
@@ -158,10 +158,12 @@ export class Voice {
    * message-id registry to say *which* of them wrote it, and this is never consulted in place of
    * that, only when it comes back empty.
    */
-  agentForSender(platform: GatewayName, senderId: string): string | undefined {
+  agentForSender(platform: GatewayName, senderId: string, also: readonly string[] = []): string | undefined {
     for (const instance of this.deps.config.gateways) {
       if (!instance.enabled || instance.platform !== platform || !instance.agent) continue;
-      if (this.deps.gateways.get(instance.id)?.selfId === senderId) return instance.agent;
+      const gateway = this.deps.gateways.get(instance.id);
+      // By any of the sender's addresses, and any of the account's: a WhatsApp number is its phone address and a hidden one.
+      if ([senderId, ...also].some((id) => gateway?.selfId === id || gateway?.ownsAddress?.(id) === true)) return instance.agent;
     }
     return undefined;
   }

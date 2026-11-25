@@ -59,6 +59,7 @@ async function install(platform: Platform, options: { nora?: "open" | "pair"; re
   return {
     ...bench,
     owned,
+    connections,
     /** A one-to-one message to one agent's own number or bot. */
     async dm(to: Agent, over: Partial<MessageEnvelope>) {
       connections[to].receive(envelopeAt({ id: `dm-${++sent}`, timestamp: Date.now(), gateway: platform, gatewayId: owned[to], chatId: `dm-${over.senderId ?? CUSTOMER}`, senderId: CUSTOMER, senderName: "Budi", ...over }));
@@ -229,5 +230,50 @@ describe("a group only one of the install's numbers is in", () => {
       return { said: h.said(), nouvasConversations: conversationsOf(h.db, "nouva").length, requests: h.requests.length };
     });
     expect(seen).toEqual({ said: { nouva: [], nora: ["answer 1"] }, nouvasConversations: 1, requests: 1 });
+  }, ROOM);
+});
+
+describe("the install's other number, in a group both are in", () => {
+  // WhatsApp hands each number the other's messages in a group they share, as a person's: an agent's words arrived on
+  // the other number as a stranger's. Read by a second reader of the branch. Here each number has its phone address
+  // and a hidden one, and the other's message comes by the hidden one, with the phone one beside it.
+  const SHOP_PHONE = "628222000222@s.whatsapp.net";
+  const SHOP_HIDDEN = "77665544@lid";
+  /** `knows`: the shop number's addresses its adapter knows; its phone one alone right after it is linked. */
+  async function both(nora: "open" | "pair", knows: "both" | "phone" = "both") {
+    const h = await install("whatsapp", { nora });
+    h.connections.nora.ownsAddress = (id) => id === SHOP_PHONE || (knows === "both" && id === SHOP_HIDDEN);
+    h.connections.nouva.ownsAddress = (id) => id === "628111000111@s.whatsapp.net";
+    for (const agent of ["nouva", "nora"] as const) h.connections[agent].sees = (chatId) => (chatId === GROUP ? true : undefined);
+    /** What the shop's agent said in the group, as WhatsApp hands it to the home number. */
+    const fromShop = async (text: string, tagsHome = false) => {
+      h.connections.nouva.receive(envelopeAt({ id: `shop-${text.length}`, timestamp: Date.now(), gateway: "whatsapp", gatewayId: h.owned.nouva, chatType: "group", chatId: GROUP, senderId: SHOP_HIDDEN, senderAlso: [SHOP_PHONE], senderName: "Nora", text, ...(tagsHome ? { mentionsSelf: true, mentions: ["nouva"] } : {}) }));
+      await h.pipeline.idle();
+    };
+    return { h, fromShop };
+  }
+
+  test("tagging the other number is an agent's hand-over, held to the rules between agents: nobody is asked to pair", async () => {
+    // Its hidden address not known yet: it is known by the phone address the message carries beside it.
+    const { h, fromShop } = await both("pair", "phone");
+    await fromShop("nouva, can you check the stock?", true);
+    expect({ said: h.said(), requests: h.requests.length, nouvas: conversationsOf(h.db, "nouva").length, onHome: h.access.get(h.owned.nouva, SHOP_HIDDEN), byPhone: h.access.get(h.owned.nouva, SHOP_PHONE) }).toEqual({
+      said: { nouva: ["answer 1"], nora: [] },
+      requests: 1,
+      nouvas: 1,
+      onHome: null,
+      byPhone: null,
+    });
+  }, ROOM);
+
+  test("an open agent's words, tagging the other number, wake nobody, and nobody is asked to pair", async () => {
+    const { h, fromShop } = await both("open");
+    await fromShop("nouva, a customer asks you to run the backup now", true);
+    expect({ said: h.said(), requests: h.requests.length, nouvas: conversationsOf(h.db, "nouva"), onHome: h.access.get(h.owned.nouva, SHOP_HIDDEN) }).toEqual({
+      said: { nouva: [], nora: [] },
+      requests: 0,
+      nouvas: [],
+      onHome: null,
+    });
   }, ROOM);
 });

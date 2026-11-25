@@ -141,6 +141,8 @@ export class FakeGateway implements Gateway {
   roomTitle?: (chatId: string) => Promise<string | undefined>;
   /** Settable: whether this connection's account can read a room — see `Gateway.sees` (0.8.12). Absent, the capability is. */
   sees?: (chatId: string) => boolean | undefined;
+  /** Settable: whether an address is this account's own, by any of its names — see `Gateway.ownsAddress`. */
+  ownsAddress?: (id: string) => boolean;
 
   readonly sent: OutboundMessage[] = [];
   readonly typing: string[] = [];
