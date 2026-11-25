@@ -183,6 +183,17 @@ export abstract class TurnStore {
    */
   private inserted = 0;
 
+  /**
+   * Which agents are open to everyone, asked as each turn begins: its record is marked, for good, as one of an agent
+   * anyone could write to (`096_turn_public.sql`). Told here and not by each caller, since four places begin a turn.
+   * A store that was never told marks none.
+   */
+  private isPublic: (agentId: string) => boolean = () => false;
+
+  publicWhen(isPublic: (agentId: string) => boolean): void {
+    this.isPublic = isPublic;
+  }
+
   begin(input: BeginTurn): string {
     const id = newId("turn");
     const now = Date.now();
@@ -190,8 +201,8 @@ export abstract class TurnStore {
     this.db
       .prepare(
         `INSERT INTO turn_records (id, session_id, agent_id, gateway_id, chat_id, message_id,
-                                   sender_id, status, prompt, reply, started_at, attachments, cause, seq)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'running', ?, '', ?, ?, ?, ?)`,
+                                   sender_id, status, prompt, reply, started_at, attachments, cause, seq, public)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'running', ?, '', ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -206,6 +217,7 @@ export abstract class TurnStore {
         input.attachments?.length ? JSON.stringify(input.attachments) : null,
         input.cause ? JSON.stringify(input.cause) : null,
         this.inserted,
+        this.isPublic(input.agentId) ? 1 : null,
       );
     return id;
   }
@@ -528,8 +540,8 @@ export abstract class TurnStore {
    */
   exchangesBetween(gatewayId: string, chatId: string, after: number, until: number): TurnExchange[] {
     return this.db
-      .prepare<{ agent_id: string; sender_id: string | null; prompt: string; reply: string; started_at: number; ended_at: number | null }>(
-        `SELECT agent_id, sender_id, prompt, reply, started_at, ended_at FROM turn_records
+      .prepare<{ agent_id: string; sender_id: string | null; prompt: string; reply: string; started_at: number; ended_at: number | null; public: number | null }>(
+        `SELECT agent_id, sender_id, prompt, reply, started_at, ended_at, public FROM turn_records
          WHERE gateway_id = ? AND chat_id = ? AND started_at > ? AND started_at <= ?
            AND status <> 'running' AND NOT (status = 'done' AND model IS NULL) AND ${OWN}
          ORDER BY started_at, seq`,
@@ -542,6 +554,7 @@ export abstract class TurnStore {
         reply: row.reply,
         startedAt: row.started_at,
         endedAt: row.ended_at ?? row.started_at,
+        ...(row.public ? { public: true as const } : {}),
       }));
   }
 
@@ -750,6 +763,8 @@ export interface TurnExchange {
   reply: string;
   startedAt: number;
   endedAt: number;
+  /** Answered by an agent that was open to everyone at the time: never anybody's memory. */
+  public?: true;
 }
 
 export interface TurnRow {

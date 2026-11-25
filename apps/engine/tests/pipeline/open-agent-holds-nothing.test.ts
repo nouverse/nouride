@@ -41,7 +41,7 @@ const PACK_TOOLS = '[tools]\nenabled = ["memory_write", "memory_search", "memory
  * Nouva is the orchestrator, an ordinary agent that keeps what it is told; Nora is open. A bot each. The owner is in
  * People, with notes, and on the install's list.
  */
-async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLlm?: string; seen?: string[]; fetch?: BenchOptions["fetch"]; full?: () => string | null; files?: Uint8Array; tools?: [string, Tool][] } = {}) {
+async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLlm?: string; seen?: string[]; fetch?: BenchOptions["fetch"]; full?: () => string | null; files?: Uint8Array; tools?: [string, Tool][]; openNow?: { nora: boolean } } = {}) {
   let memory!: Memory;
   const bots = { nouva: new FakeGateway("telegram:nouva", "telegram"), nora: new FakeGateway("telegram:nora", "telegram") };
   // A file sent to either bot is fetched as these bytes, and long results are kept to files as a daemon keeps them.
@@ -73,7 +73,7 @@ async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLl
     gateways: Object.values(bots),
     deps: async ({ config, db, dataDir, turns: turnLog, providers }) => {
       const roomMessages = new RoomMessageStore(db);
-      memory = await bootMemory(config, db, { turns: turnLog, roomMessages, providers, vaultFormat: await checkMemoryVault(config), publicAgent: (id) => id === "nora" });
+      memory = await bootMemory(config, db, { turns: turnLog, roomMessages, providers, vaultFormat: await checkMemoryVault(config), publicAgent: (id) => id === "nora" && (more.openNow?.nora ?? true) });
       return {
         roomMessages,
         memory,
@@ -325,6 +325,27 @@ describe("nothing a stranger says stays", () => {
     expect(await h.memory.search(speaker, { query: "alarm code" })).toEqual([]);
     expect(await h.memory.search(speaker, { query: "Budi card number" })).toEqual([]);
     expect((await h.memory.search(speaker, { query: "selling the car" })).length).toBeGreaterThan(0);
+  });
+
+  test("nor once the agent is closed, deleted or no longer loads: what was said to it while it was open is never filed", async () => {
+    // Read by a second reader of the branch: whether a conversation was a stranger's was asked of the agent as it is
+    // at the cut. Closed, deleted or a pack that no longer loads, and the next pass filed every one it had had.
+    const openNow = { nora: true };
+    const h = await install([{ text: "hello" }, { text: "we open at nine" }, { text: "noted" }], { openNow });
+    await h.asOwner("nouva", "I am thinking of selling the car next month");
+    await h.write("nora", { text: "my name is Budi and my card number is 4111 1111 1111 1111" });
+    // Its turn is marked as one of an agent open to everyone, as it began.
+    expect(h.bench.db.prepare<{ agent_id: string; public: number | null }>("SELECT agent_id, public FROM turn_records ORDER BY agent_id").all()).toEqual([
+      { agent_id: "nora", public: 1 },
+      { agent_id: "nouva", public: null },
+    ]);
+    // Now it is not open, as memory is told: closed, or gone from the registry.
+    openNow.nora = false;
+    await h.memory.cutAll();
+    const chats = h.bench.db.prepare<{ chat: string }>("SELECT chat FROM memory_episodes ORDER BY chat").all().map((row) => row.chat);
+    expect(chats).toEqual([`telegram:nouva:dm-${OWNER}`]);
+    const speaker = { agentId: "nouva", gatewayId: "telegram:nouva", senderId: OWNER, chatId: `dm-${OWNER}`, chatType: "dm" as const };
+    expect(await h.memory.search(speaker, { query: "Budi card number" })).toEqual([]);
   });
 
   test("skill learning is handed an ordinary agent's finished turn, and never an open agent's", async () => {

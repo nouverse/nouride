@@ -38,8 +38,12 @@ export const PUBLIC_KEEPS_NOTHING = "This agent is open to everyone and keeps no
  * A chat's log without what an agent open to everyone was asked and answered: its conversations make no episode, so
  * what one stranger said is neither filed nor read by the nightly pass, and never becomes what any agent remembers.
  * A chat that only such an agent answered in then has nothing to cut.
+ *
+ * By the exchange's own mark, set as its turn began, and by what the agent is now. The mark is what holds once the
+ * agent is closed, deleted or no longer loads: by the agent alone, the next pass after any of those filed every
+ * conversation it had had with strangers.
  */
 export function withoutPublic<Source extends Pick<ChatSource, "exchangesBetween">>(source: Source, isPublic: (agentId: string) => boolean): Source {
-  const exchangesBetween: ChatSource["exchangesBetween"] = (...window) => source.exchangesBetween(...window).filter((exchange) => !isPublic(exchange.agentId));
+  const exchangesBetween: ChatSource["exchangesBetween"] = (...window) => source.exchangesBetween(...window).filter((exchange) => exchange.public !== true && !isPublic(exchange.agentId));
   return Object.assign(Object.create(source) as Source, { exchangesBetween });
 }

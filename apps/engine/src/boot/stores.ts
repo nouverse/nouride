@@ -116,6 +116,7 @@ export async function openStores(input: {
   // What turns do, as one stream a watcher subscribes to — and where their steps are kept (`turn-events.store.ts`).
   const events = new EventStore(db, Date.now, { epoch: databaseEpoch(dbPath) });
   const turns = new EventedTurnStore(db, events);
+  turns.publicWhen((agentId) => isOpenAgent(input.agent(agentId)));
   // Turns committed as they run, messages written down on arrival, replies marked once they land — `boot/durable.ts`.
   const durable = durableStores(db, events);
   const chatEvents = new ChatEventStore(db);

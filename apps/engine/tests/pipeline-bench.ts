@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { removePath, type SqliteDb } from "@nouride/runtime";
 import { AgentRegistry } from "@nouride/persona";
 import { SecretStore } from "@nouride/secrets";
-import type { Gateway, GlobalConfig } from "@nouride/shared";
+import { isOpenAgent, type Gateway, type GlobalConfig } from "@nouride/shared";
 import { durableStores } from "@/boot/durable.ts";
 import { pausedAgentsState } from "@/commons/daemon-state.ts";
 import type { Machine } from "@/commons/machine.ts";
@@ -192,6 +192,8 @@ async function boot(install: Install, options: RebootOptions): Promise<Bench> {
   // As boot has it: one event stream, which the turn store writes through and whose transaction the durable stores share.
   const events = new EventStore(db, Date.now, { strict: true });
   const turns = new EventedTurnStore(db, events);
+  // As boot has it (`boot/stores.ts`): a turn of an agent open to everyone is marked as one, for good.
+  turns.publicWhen((agentId) => isOpenAgent(registry.get(agentId)));
   const durable = durableStores(db, events);
   const sessions = new SessionStore(db);
   // Everyone is let in unless the test gives `[security.access]`: a test that is not about the door runs behind one
