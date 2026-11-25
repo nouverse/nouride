@@ -53,7 +53,8 @@ export function AgentAccessMode({ agent }: { agent: AgentSummary }) {
 
   return (
     <Card title="Who can write to this agent" description="One answer, for every connection this agent has.">
-      <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${open ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
+      {/* Two rows of two on a wide page as on a narrow one: four in a row left each answer a thin column of words. */}
+      <div className={`grid grid-cols-1 gap-2 ${open ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
         {options.map((option) => {
           const off = !admin || save.isPending || option.never === true;
           return (
