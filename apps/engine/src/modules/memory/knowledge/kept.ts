@@ -130,7 +130,9 @@ export async function keepFromChat(keeping: Keeping, asker: Asker, request: Keep
  * them would pass over each collection's readers, which this asks first.
  */
 export function keptFile(keeping: Pick<Keeping, "knowledge" | "usable">, asker: Asker, item: string): { path: string; name: string; title: string } | { refused: string } {
-  const parsed = parseItem(item);
+  // A file is its whole document, so an id written without its section number names the same one. A model asked for
+  // "the price list as a file" wrote it so, was told there was no such document, and spent two more steps finding out.
+  const parsed = parseItem(item) ?? parseItem(`${item.trim()}#all`);
   const { knowledge } = keeping;
   const nothing = { refused: `no document "${item}" that this chat may read` };
   if (!parsed) return nothing;
