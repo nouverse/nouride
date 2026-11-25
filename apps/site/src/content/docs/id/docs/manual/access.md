@@ -153,6 +153,10 @@ to this agent*. Ia menjelaskan artinya sebelum kamu ambil, lalu meminta dua angk
 - **Pesan terbanyak yang boleh dikirim satu orang dalam sehari.** Lewat dari itu, orang tersebut
   diberi tahu sekali lalu gak dijawab sampai hari berikutnya.
 
+Jatah hari itu dicek sebelum tiap jawaban, jadi jawaban yang sudah dimulai saat jatahnya habis tetap
+selesai. Token yang dihitung adalah token model: transkripsi pesan suara gak dihitung di situ, dan
+hanya terjadi untuk jawaban yang masih muat di jatah hari itu.
+
 Dua-duanya gak punya nilai awal: ia menjawab pakai akun kamu, dan sebuah agent gak dibuka tanpa angka
 yang kamu pilih. Satu hari itu harinya kamu, menurut zona waktu server, dan restart gak mengulang
 hitungan mana pun. Orang yang kamu masukkan atas namanya gak kena dua batas itu. Hanya admin yang

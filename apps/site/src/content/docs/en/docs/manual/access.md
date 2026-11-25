@@ -142,6 +142,10 @@ this agent*. It says what it means before you take it, then asks for two numbers
 - **Most messages one person may send it in a day.** Past it, that person is told once and left
   unanswered until the next day.
 
+The day is checked before each answer, so answers already begun when it runs out still finish. The
+tokens are the model's: a voice note's transcription is not counted in them, and comes only with an
+answer the day still has room for.
+
 Neither has a starting value: it answers on your account, and an agent is not opened without numbers
 you chose. A day is your own, by the server's time zone, and a restart resets neither count. People you
 let in by name are held to neither. Only an admin opens an agent; an operator may close it.

@@ -14,6 +14,8 @@ import { removePath, type SqliteDb } from "@nouride/runtime";
 import { openAndMigrate } from "@/db/index.ts";
 import { OpenDoorStore } from "@/modules/access/open-door.store.ts";
 import { UsageStore } from "@/modules/llm/usage.store.ts";
+import { ChatAttachmentIndex } from "@/modules/attachments/chat-attachments.store.ts";
+import { AttachmentStore } from "@/modules/attachments/store.ts";
 import { envelope as envelopeAt, FakeGateway, tempDir } from "../helpers.ts";
 import { pipelineBench } from "../pipeline-bench.ts";
 
@@ -29,15 +31,17 @@ const ENOUGH = (most: number) => `That is all for today: I can take ${most} ${mo
 const CLOSED = "Nora has answered all it can for today. Please write again tomorrow.";
 
 /** Nora is open, with these limits, on her own bot. Each answer of the scripted model is metered as 15 tokens: 10 in, 5 out. */
-async function install(limits: { tokens?: number; messages?: number; closedReply?: string; noCount?: boolean; installTokens?: number; nouvaBot?: boolean }) {
+async function install(limits: { tokens?: number; messages?: number; closedReply?: string; noCount?: boolean; installTokens?: number; nouvaBot?: boolean; files?: boolean }) {
   // A bot for each start of the daemon: the one before it is no longer listened to.
   const bots = [new FakeGateway("telegram:nora", "telegram")];
   // The orchestrator's own bot, where a test wants an ordinary agent beside the open one.
   const nouvas = new FakeGateway("telegram:nouva", "telegram");
   const alerts: { key: string; text: string }[] = [];
   const open = `[open]\nmax_daily_tokens = ${limits.tokens ?? 1_000_000}\nmax_daily_messages_per_person = ${limits.messages ?? 100}\n${limits.closedReply ? `closed_reply = "${limits.closedReply}"\n` : ""}`;
-  const deps = ({ db }: { db: SqliteDb }) => ({
+  const deps = ({ db, dataDir }: { db: SqliteDb; dataDir: string }) => ({
     usage: new UsageStore(db),
+    // Where a test sends files: a message's file is fetched and kept for the turn that answers it.
+    ...(limits.files ? { attachmentIndex: new ChatAttachmentIndex(db), attachments: new AttachmentStore({ rootDir: `${dataDir}/attachments`, maxBytes: 1_000_000 }) } : {}),
     notifier: { alert: async (key: string, text: string) => (alerts.push({ key, text }), true), toChat: async () => {} } as never,
     ...(limits.noCount ? { openDoor: undefined } : {}),
   });
@@ -179,6 +183,24 @@ describe("the agent's tokens in a day", () => {
         text: "Nora has used the 20 tokens it may use in a day, and answers nobody from the public until tomorrow. Its daily limit is on its page in the dashboard, under Access.",
       },
     ]);
+  });
+
+  test("a voice note sent once the day is used is never fetched, so nothing is paid to transcribe it", async () => {
+    const h = await install({ tokens: 20, files: true });
+    const fetched: string[] = [];
+    (h.bench.gateway as unknown as { fetchAttachment: (a: { url?: string }) => Promise<Uint8Array> }).fetchAttachment = async (attachment) => (fetched.push(attachment.url ?? ""), new Uint8Array([0x4f, 0x67, 0x67, 0x53]));
+    const voice = (senderId: string, name: string) => envelopeAt({ id: name, timestamp: Date.now(), gatewayId: "telegram:nora", chatId: `dm-${senderId}`, senderId, senderName: senderId, text: "", attachments: [{ type: "audio", mimeType: "audio/ogg", url: `wa-held:${name}` }] });
+    // While the day has room, a voice note is fetched for the turn that answers it.
+    h.bench.gateway.receive(voice("ana", "in-the-day"));
+    await h.bench.pipeline.idle();
+    expect(fetched).toEqual(["wa-held:in-the-day"]);
+    // Two answers use the day, whether or not a voice nobody can hear reached the model.
+    await h.write("budi");
+    await h.write("dedi");
+    const before = h.requests();
+    h.bench.gateway.receive(voice("cici", "after-the-day"));
+    await h.bench.pipeline.idle();
+    expect({ fetched, requests: h.requests(), said: h.said().at(-1) }).toEqual({ fetched: ["wa-held:in-the-day"], requests: before, said: CLOSED });
   });
 
   test("said in its admin's own sentence where they wrote one, and a person let in by name is still answered", async () => {
