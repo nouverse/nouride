@@ -4,7 +4,7 @@
  * Phases of `TurnRunner.runTurn` (`turn.ts`), in the order it runs them.
  */
 
-import { newId, type ChatMessage, type LLMProvider } from "@nouride/shared";
+import { isOpenAgent, newId, type ChatMessage, type LLMProvider } from "@nouride/shared";
 import type { ModelOverrides } from "@/modules/hooks/registry.ts";
 import type { TurnRequest, Unattended } from "@/modules/llm/executor/types.ts";
 import type { Recall } from "@/modules/memory/index.ts";
@@ -220,7 +220,9 @@ export function turnRequest(
     // sent the caption alone and the model answered confidently about a screenshot it had never
     // seen — worse than an error, because nothing in the reply shows it happened.
     userMessage: ask.asked,
-    reminders: [
+    // An open agent's words go to anyone who asks, so nothing of the household is put beside the message it reads: not
+    // who else is at work here and in which folder, not how full the box is, not a page of the dashboard.
+    reminders: isOpenAgent(agent) ? [] : [
       ...turnReminders(turn.text, toolset.definitions, { running: ctx.helpersRunning(agent.config.id, envelope), now: Date.now() }, ctx.loadNow(agent)),
       // The other agents of this chat, and what else is at work on the box (`work-now.ts`).
       ...workNotes(sourcesFrom(ctx, agent, envelope, reader), now),

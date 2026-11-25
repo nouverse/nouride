@@ -20,6 +20,7 @@ import type { Memory } from "@/modules/memory/index.ts";
 import { createBuiltinTools } from "@/modules/tools/registry.ts";
 import { envelope as envelopeAt, FakeGateway } from "../helpers.ts";
 import { pipelineBench, type Bench, type BenchOptions } from "../pipeline-bench.ts";
+import { eventually } from "../wait.ts";
 
 const benches: Bench[] = [];
 afterEach(async () => {
@@ -37,11 +38,12 @@ const PACK_TOOLS = '[tools]\nenabled = ["memory_write", "memory_search", "memory
  * Nouva is the orchestrator, an ordinary agent that keeps what it is told; Nora is open. A bot each. The owner is in
  * People, with notes, and on the install's list.
  */
-async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLlm?: string; seen?: string[] } = {}) {
+async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLlm?: string; seen?: string[]; fetch?: BenchOptions["fetch"]; full?: () => string | null } = {}) {
   let memory!: Memory;
   const bots = { nouva: new FakeGateway("telegram:nouva", "telegram"), nora: new FakeGateway("telegram:nora", "telegram") };
   const bench = await pipelineBench({
     turns,
+    ...(more.fetch ? { fetch: more.fetch } : {}),
     agents: [
       { id: "nouva", configToml: `[agent]\ndisplay_name = "Nouva"\n\n[llm]\nprovider = "test"\n\n${PACK_TOOLS}` },
       {
@@ -71,6 +73,7 @@ async function install(turns: NonNullable<BenchOptions["turns"]>, more: { noraLl
         roomMessages,
         memory,
         heldSecrets: new TransientSecrets(),
+        ...(more.full ? { full: more.full } : {}),
         ...(more.seen ? { reflection: { observe: async (turn: { agentId: string }) => void more.seen!.push(turn.agentId) } as never } : {}),
       };
     },
@@ -145,6 +148,42 @@ describe("what an open agent's model is sent", () => {
     for (const theirs of OF_THE_HOUSEHOLD) expect(whole).not.toContain(theirs);
     expect(whole).toContain("You do not know who is speaking, and you answer everyone the same.");
     expect(whole).not.toContain("You are talking to");
+  });
+
+  test("while another agent is at work and the box is short of room: an ordinary agent's message says so, an open one's says nothing of either", async () => {
+    // Read by a second reader of the branch: each message carried what else was at work on the box, with the agents'
+    // ids and their folders, and how full the box was, to an open agent as to any other.
+    const SHORT = "(This machine is short of room: 3% of the disk under its data is free.)";
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let holding = false;
+    const h = await install([{ text: "we open at nine" }, { text: "on it" }], {
+      full: () => SHORT,
+      // Nouva's request is kept waiting, so its turn is at work while the stranger writes to Nora.
+      fetch: (scripted) =>
+        (async (url: string | URL | Request, init?: RequestInit) => {
+          if (!holding && !String(init?.body ?? "").includes("front desk")) {
+            holding = true;
+            await held;
+          }
+          return scripted(url, init);
+        }) as typeof fetch,
+    });
+    const of = (bot: "nouva" | "nora", senderId: string, text: string) => h.bots[bot].receive(envelopeAt({ id: `w-${bot}`, timestamp: Date.now(), gatewayId: `telegram:${bot}`, chatId: `dm-${senderId}`, senderId, senderName: senderId === OWNER ? "Gading" : "Budi", text }));
+    of("nouva", OWNER, "tidy the garage notes");
+    await eventually(() => holding, 5_000, "Nouva's turn at work");
+    of("nora", "stranger-7", "when do you open?");
+    await eventually(() => h.bots.nora.sent.length === 1, 5_000, "Nora's answer");
+    const sent = (h.bench.requests as { messages: unknown }[]).map((request) => JSON.stringify(request.messages));
+    const noras = sent.find((request) => request.includes("front desk"))!;
+    release();
+    await h.bench.pipeline.idle();
+    const nouvas = (h.bench.requests as { messages: unknown }[]).map((request) => JSON.stringify(request.messages)).find((request) => !request.includes("front desk"))!;
+
+    // The ordinary agent is told how full the box is: the note is there to be left out.
+    expect(nouvas).toContain("This machine is short of room");
+    expect(noras).toContain("when do you open?");
+    for (const ofTheBox of ["nouva", "Nouva", "at work", "short of room", "garage", h.bench.dataDir, h.bench.agentsDir]) expect(noras).not.toContain(ofTheBox);
   });
 
   test("in a group too, where an ordinary agent is shown what the one speaking brings: an open one is shown none of it", async () => {
