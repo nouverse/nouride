@@ -9,26 +9,27 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import * as io from "../src/io.ts";
-import { BridgeExit } from "../src/io.ts";
+import { BridgeExit, type BridgeIo } from "../src/io.ts";
 import { Handler, withTimeout, type Link, type Sock } from "../src/handler.ts";
 import { BRIDGE_PROTOCOL_VERSION, type BridgeEvent } from "../src/protocol.ts";
+import { speaker, type Speaker } from "../src/say.ts";
 
 const CHAT = "100000000000001@lid";
 
 let events: BridgeEvent[];
 let exits: number[];
-let detach: () => void;
+/** The handler's own voice in a test: its events and its exits, read back here. */
+let say: Speaker;
 let dir: string;
 
 beforeEach(() => {
   events = [];
   exits = [];
-  detach = io.attach({ write: (line) => events.push(JSON.parse(line) as BridgeEvent), exit: (code) => exits.push(code) });
+  const io: BridgeIo = { write: (line) => events.push(JSON.parse(line) as BridgeEvent), exit: (code) => exits.push(code) };
+  say = speaker(io, "");
   dir = mkdtempSync(join(tmpdir(), "wa-handler-"));
 });
 afterEach(() => {
-  detach();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -60,30 +61,29 @@ const hello = (sessionDir = dir) => JSON.stringify({ type: "hello", version: BRI
 
 async function helloed(options?: Parameters<typeof fakeLink>[0]) {
   const fake = fakeLink(options);
-  const handler = new Handler(fake.link, { sessionDir: "", sessionKey: "k".repeat(64) });
+  const handler = new Handler(fake.link, { sessionDir: "", sessionKey: "k".repeat(64) }, say);
   await handler.handleLine(hello());
   return { ...fake, handler };
 }
 
 describe("hello", () => {
-  test("starts the connection with the engine's directory and the key it was configured with", async () => {
+  test("starts the connection with the engine's directory and the key the bridge was opened with", async () => {
     const { link, calls } = fakeLink();
-    const handler = new Handler(link, { sessionDir: "/from/env", sessionKey: "" });
-    handler.configure({ encryptionKey: "secret-key" });
+    const handler = new Handler(link, { sessionDir: "/from/its-host", sessionKey: "secret-key" }, say);
     await handler.handleLine(hello("/from/engine"));
     expect(calls).toEqual([{ op: "start", args: ["/from/engine", "secret-key"] }]);
   });
 
-  test("the environment's directory when the engine sends none", async () => {
+  test("the directory it was opened with when the engine sends none", async () => {
     const { link, calls } = fakeLink();
-    await new Handler(link, { sessionDir: "/from/env", sessionKey: "k" }).handleLine(hello(""));
-    expect(calls[0]?.args[0]).toBe("/from/env");
+    await new Handler(link, { sessionDir: "/from/its-host", sessionKey: "k" }, say).handleLine(hello(""));
+    expect(calls[0]?.args[0]).toBe("/from/its-host");
   });
 
   test("another protocol version is refused and the bridge stops", async () => {
     const { link, calls } = fakeLink();
     const line = JSON.stringify({ type: "hello", version: BRIDGE_PROTOCOL_VERSION + 1, sessionDir: dir });
-    await expect(new Handler(link, { sessionDir: "", sessionKey: "k" }).handleLine(line)).rejects.toBeInstanceOf(BridgeExit);
+    await expect(new Handler(link, { sessionDir: "", sessionKey: "k" }, say).handleLine(line)).rejects.toBeInstanceOf(BridgeExit);
     expect(events[0]).toMatchObject({ type: "error", message: expect.stringContaining("protocol version mismatch") });
     expect(exits).toEqual([1]);
     expect(calls).toEqual([]);
@@ -91,7 +91,7 @@ describe("hello", () => {
 
   test("no key: refused rather than writing an unencrypted session", async () => {
     const { link, calls } = fakeLink();
-    await expect(new Handler(link, { sessionDir: "", sessionKey: "" }).handleLine(hello())).rejects.toBeInstanceOf(BridgeExit);
+    await expect(new Handler(link, { sessionDir: "", sessionKey: "" }, say).handleLine(hello())).rejects.toBeInstanceOf(BridgeExit);
     expect(events[0]).toMatchObject({ type: "error", message: expect.stringContaining("refusing to write an unencrypted session") });
     expect(calls).toEqual([]);
   });
@@ -101,7 +101,7 @@ describe("hello", () => {
     link.start = async () => {
       throw new Error("no network");
     };
-    await new Handler(link, { sessionDir: "", sessionKey: "k" }).handleLine(hello());
+    await new Handler(link, { sessionDir: "", sessionKey: "k" }, say).handleLine(hello());
     expect(events).toEqual([{ type: "status", status: "disconnected", reason: "Error: no network" }]);
     expect(exits).toEqual([]);
   });
@@ -110,7 +110,7 @@ describe("hello", () => {
 describe("before a hello, and before the link", () => {
   test("a command before hello is refused", async () => {
     const { link, calls } = fakeLink();
-    await new Handler(link, { sessionDir: "", sessionKey: "k" }).handleLine(JSON.stringify({ type: "typing", chatId: CHAT }));
+    await new Handler(link, { sessionDir: "", sessionKey: "k" }, say).handleLine(JSON.stringify({ type: "typing", chatId: CHAT }));
     expect(events).toEqual([{ type: "error", message: "no hello received" }]);
     expect(calls).toEqual([]);
   });

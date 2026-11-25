@@ -256,6 +256,59 @@ describe("two parties, and what a missing session says", () => {
     expect(reply.type).toBe(2); // and the answer continues it rather than starting again
   });
 
+  test("two logins in one process: one contact's session with each is that login's own", async () => {
+    /**
+     * A daemon holds a bridge for each WhatsApp number, so two logins meet the same contact in one process. Each
+     * keeps its session with them under the same address in a store of its own, and the cipher holds nothing between
+     * calls but the store it is given: what the contact wrote to one number is read by that number and by no other,
+     * with the two conversations going on in turn.
+     */
+    const { rs, SessionCipher, store } = await handshake();
+    const { SessionBuilder } = await import("libsignal");
+    const login = () => {
+      const [identity, signed, pre] = [rs.generateKeyPair(), rs.generateKeyPair(), rs.generateKeyPair()];
+      const signature = rs.calculateSignature(identity.privKey, signed.pubKey);
+      return { identity, signed, pre, signature, keys: { signed: { keyId: 1, keyPair: signed, signature }, pre: { keyId: 2, keyPair: pre } }, sessions: new Map<string, unknown>() };
+    };
+    const [shop, home] = [login(), login()];
+    const contact = rs.generateKeyPair();
+    const theirPhone = new Map<string, unknown>();
+    const contactAddr = new rs.ProtocolAddress("contact", 0);
+    const [shopAddr, homeAddr] = [new rs.ProtocolAddress("shop", 0), new rs.ProtocolAddress("home", 0)];
+    for (const [addr, number] of [[shopAddr, shop], [homeAddr, home]] as const) {
+      await new SessionBuilder(store(contact, theirPhone), addr).initOutgoing({
+        registrationId: 2,
+        identityKey: number.identity.pubKey,
+        signedPreKey: { keyId: 1, publicKey: number.signed.pubKey, signature: number.signature },
+        preKey: { keyId: 2, publicKey: number.pre.pubKey },
+      } as never);
+    }
+    const from = (addr: typeof shopAddr, text: string) => new SessionCipher(store(contact, theirPhone), addr).encrypt(Buffer.from(text));
+    const at = (number: ReturnType<typeof login>) => new SessionCipher(store(number.identity, number.sessions, number.keys), contactAddr);
+    const read = (bytes: Uint8Array) => Buffer.from(bytes).toString();
+
+    // The first message to each, read in the other order than they were written.
+    const [toShop, toHome] = [await from(shopAddr, "for the shop"), await from(homeAddr, "for the home")];
+    expect(read(await at(home).decryptPreKeyWhisperMessage(toHome.body))).toBe("for the home");
+    expect(read(await at(shop).decryptPreKeyWhisperMessage(toShop.body))).toBe("for the shop");
+    // One session each, under the same address, and not the same session.
+    expect([[...shop.sessions.keys()], [...home.sessions.keys()]]).toEqual([["contact.0"], ["contact.0"]]);
+    const kept = (number: ReturnType<typeof login>) => Buffer.from((number.sessions.get("contact.0") as { serialize(): Uint8Array }).serialize());
+    expect(kept(shop).equals(kept(home))).toBe(false);
+
+    // Each answers, and the contact reads each answer on the session it belongs to.
+    const [shopSays, homeSays] = [await at(shop).encrypt(Buffer.from("the shop answers")), await at(home).encrypt(Buffer.from("the home answers"))];
+    expect(read(await new SessionCipher(store(contact, theirPhone), homeAddr).decryptWhisperMessage(homeSays.body))).toBe("the home answers");
+    expect(read(await new SessionCipher(store(contact, theirPhone), shopAddr).decryptWhisperMessage(shopSays.body))).toBe("the shop answers");
+
+    // What is written to one number next is not the other's to read, and trying leaves the right one able to.
+    const next = await from(shopAddr, "again, for the shop");
+    expect(next.type).toBe(2);
+    await expect(at(home).decryptWhisperMessage(next.body)).rejects.toThrow();
+    expect(read(await at(shop).decryptWhisperMessage(next.body))).toBe("again, for the shop");
+    expect(read(await at(home).decryptWhisperMessage((await from(homeAddr, "again, for the home")).body))).toBe("again, for the home");
+  });
+
   test("SessionNotFound is reported as `SessionError: No session record`", async () => {
     /**
      * The exact substring `isSessionRecordError` tests for, pinned because Baileys matches **text**:

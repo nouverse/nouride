@@ -7,12 +7,11 @@
 
 import { isLidUser, type WASocket } from "@whiskeysockets/baileys";
 import { readBytesSync } from "@nouride/runtime";
-import * as io from "./io.ts";
 import { BridgeExit } from "./io.ts";
 import { cleanMentionText, extractMentions } from "./mentions.ts";
 import { splitMessage } from "./message.ts";
 import { BRIDGE_PROTOCOL_VERSION, type BridgeCommand } from "./protocol.ts";
-import { emit, note } from "./say.ts";
+import type { Speaker } from "./say.ts";
 
 /** What the handler does with a socket — all a stand-in has to answer. */
 export type Sock = Pick<WASocket, "sendMessage" | "sendPresenceUpdate" | "readMessages">;
@@ -73,7 +72,7 @@ export function withTimeout<T>(work: Promise<T>, what: string, ms = SEND_TIMEOUT
 /** Between chunks, so a split reply arrives in order rather than interleaved. */
 const CHUNK_DELAY_MS = 300;
 
-/** Where the session lives and the key it is encrypted under, before the engine's `hello` says otherwise. */
+/** Where the session lives, before the engine's `hello` says otherwise, and the key it is encrypted under. */
 export interface Settings {
   sessionDir: string;
   sessionKey: string;
@@ -82,36 +81,22 @@ export interface Settings {
 export class Handler {
   /** Whether a `hello` has arrived. Nothing else is carried out before it. */
   private handshakeDone = false;
-  private sessionDirFromEnv: string;
+  /** Where the session lives unless the engine's `hello` names a folder, which wins: the engine holds the config. */
+  private readonly sessionDir: string;
   /**
-   * Read from the environment when nothing calls `configure()` — the way a bridge run as its own process
-   * was given it.
-   *
-   * Changeable, for the in-process host — which must not use the environment at all. Putting the
-   * session key into the daemon's own `process.env` would hand it to every command the agent runs
-   * through `exec`, since a child inherits the parent's environment. `configure()` passes it directly
-   * instead, so it exists only in this module.
+   * The key the session is encrypted under, handed over by the host when it opens the bridge and never read from the
+   * environment: the daemon's `process.env` is inherited by every command an agent runs through `exec`, and a
+   * WhatsApp session key there is one `printenv` away from the model. So it exists only in this object.
    */
-  private sessionKey: string;
+  private readonly sessionKey: string;
 
   constructor(
     private readonly link: Link,
     settings: Settings,
+    private readonly say: Speaker,
   ) {
-    this.sessionDirFromEnv = settings.sessionDir;
+    this.sessionDir = settings.sessionDir;
     this.sessionKey = settings.sessionKey;
-  }
-
-  /**
-   * Supply what the environment would have carried, for a bridge running inside another process.
-   *
-   * The in-process host calls this; without it the environment is read. The session
-   * directory still arrives over the protocol in `hello` and still wins over this — the engine holds
-   * the config — so this is really about the key.
-   */
-  configure(input: { sessionDir?: string; encryptionKey: string }): void {
-    this.sessionKey = input.encryptionKey;
-    if (input.sessionDir) this.sessionDirFromEnv = input.sessionDir;
   }
 
   /**
@@ -125,52 +110,51 @@ export class Handler {
       await this.handle(JSON.parse(trimmed) as BridgeCommand);
     } catch (err) {
       if (err instanceof BridgeExit) throw err;
-      emit({ type: "error", message: `malformed command: ${String(err)}` });
+      this.say.emit({ type: "error", message: `malformed command: ${String(err)}` });
     }
   }
 
   private async handle(command: BridgeCommand): Promise<void> {
     if (command.type === "hello") {
       if (command.version !== BRIDGE_PROTOCOL_VERSION) {
-        emit({
+        this.say.emit({
           type: "error",
           message: `protocol version mismatch: engine ${command.version}, bridge ${BRIDGE_PROTOCOL_VERSION}`,
         });
-        io.exit(1);
+        this.say.exit(1);
       }
       this.handshakeDone = true;
 
-      // The engine's value wins over the environment: the environment is how the key arrives, but the
-      // directory is a config setting and the engine is the one holding the config.
-      const sessionDir = command.sessionDir || this.sessionDirFromEnv;
+      // The engine's value wins: the directory is a config setting and the engine is the one holding the config.
+      const sessionDir = command.sessionDir || this.sessionDir;
       if (!sessionDir) {
-        emit({ type: "error", message: "no session directory was given" });
-        io.exit(1);
+        this.say.emit({ type: "error", message: "no session directory was given" });
+        this.say.exit(1);
       }
       if (!this.sessionKey) {
-        emit({
+        this.say.emit({
           type: "error",
-          message: "NOURIDE_WA_SESSION_KEY is not set; refusing to write an unencrypted session",
+          message: "no session key was given; refusing to write an unencrypted session",
         });
-        io.exit(1);
+        this.say.exit(1);
       }
 
       try {
         await this.link.start(sessionDir, this.sessionKey);
       } catch (err) {
-        emit({ type: "status", status: "disconnected", reason: String(err) });
-        note("start failed", String(err));
+        this.say.emit({ type: "status", status: "disconnected", reason: String(err) });
+        this.say.note("start failed", String(err));
       }
       return;
     }
 
     if (command.type === "shutdown") {
       this.link.stop();
-      io.exit(0);
+      this.say.exit(0);
     }
 
     if (!this.handshakeDone) {
-      emit({ type: "error", message: "no hello received" });
+      this.say.emit({ type: "error", message: "no hello received" });
       return;
     }
 
@@ -185,7 +169,7 @@ export class Handler {
      */
     const socket = this.link.currentSocket();
     if (!socket || !this.link.isLinked()) {
-      emit({
+      this.say.emit({
         type: "error",
         ...("id" in command ? { id: command.id } : {}),
         message: socket
@@ -219,7 +203,7 @@ export class Handler {
             };
             sent = await withTimeout(socket.sendMessage(target.to, payload), "sendMessage");
           }
-          note("sent", {
+          this.say.note("sent", {
             chatId: command.chatId,
             to: target.to,
             isLid: isLidUser(command.chatId) ?? false,
@@ -231,7 +215,7 @@ export class Handler {
           // Clears the typing bubble the turn raised. Without it WhatsApp leaves "typing…" up until it
           // times out on its own, which reads as a second reply still coming.
           void socket.sendPresenceUpdate("paused", target.to).catch(() => {});
-          emit({ type: "ack", id: command.id });
+          this.say.emit({ type: "ack", id: command.id });
           return;
         }
 
@@ -269,7 +253,7 @@ export class Handler {
             ...(mentions.length > 0 ? { mentions } : {}),
           };
           await withTimeout(socket.sendMessage(sendTarget(command.chatId).to, payload as never), "sendMedia");
-          emit({ type: "ack", id: command.id });
+          this.say.emit({ type: "ack", id: command.id });
           return;
         }
 
@@ -301,11 +285,11 @@ export class Handler {
         case "logout":
           // The one path that deletes: an explicit instruction, not an inferred one.
           await this.link.logout();
-          emit({ type: "session_expired" });
+          this.say.emit({ type: "session_expired" });
           return;
       }
     } catch (err) {
-      emit({
+      this.say.emit({
         type: "error",
         ...("id" in command ? { id: command.id } : {}),
         message: String(err),

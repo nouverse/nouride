@@ -32,6 +32,70 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
+/** The next event a channel hands up. One reader for each channel: its lines are a queue, read once. */
+function reader(channel: { lines(): AsyncIterable<string> }): () => Promise<Record<string, unknown>> {
+  const lines = channel.lines()[Symbol.asyncIterator]();
+  return async () => JSON.parse((await lines.next()).value as string) as Record<string, unknown>;
+}
+
+describe("a bridge for each WhatsApp connection", () => {
+  test("two are hosted side by side, each on its own channel: what one is told and what ends it are its own", async () => {
+    const exit = spyOn(process, "exit").mockImplementation((() => undefined) as never);
+    try {
+      const shop = await openInProcess("shop", context());
+      const home = await openInProcess("home", context());
+      const [fromShop, fromHome] = [reader(shop), reader(home)];
+      // Each is answered on the channel it was written to. Were one's events handed up the other's, the first
+      // thing the second read would be the first one's answer.
+      shop.writeLine("not a command");
+      expect(await fromShop()).toMatchObject({ type: "error", message: expect.stringContaining("malformed command") });
+      home.writeLine(JSON.stringify({ type: "typing", chatId: "628@s.whatsapp.net" }));
+      expect(await fromHome()).toEqual({ type: "error", message: "no hello received" });
+
+      // One is closed, as the adapter closes it: the other stays open and still answers.
+      let homeClosed = false;
+      void home.closed.then(() => (homeClosed = true));
+      shop.writeLine(JSON.stringify({ type: "shutdown" }));
+      shop.close();
+      await shop.closed;
+      home.writeLine("not a command either");
+      expect(await fromHome()).toMatchObject({ type: "error", message: expect.stringContaining("malformed command") });
+      expect(homeClosed).toBe(false);
+      expect(exit).not.toHaveBeenCalled();
+      home.close();
+      await home.closed;
+    } finally {
+      exit.mockRestore();
+    }
+  });
+
+  test("a bridge that ends itself ends alone: another number's protocol mismatch closes no other channel", async () => {
+    const shop = await openInProcess("shop", context());
+    const home = await openInProcess("home", context());
+    let homeClosed = false;
+    void home.closed.then(() => (homeClosed = true));
+    shop.writeLine(JSON.stringify({ type: "hello", version: -1, sessionDir: "" }));
+    await shop.closed;
+    // Still answering, after the other's end has run its course.
+    const fromHome = reader(home);
+    home.writeLine("not a command");
+    expect(await fromHome()).toMatchObject({ type: "error" });
+    expect(homeClosed).toBe(false);
+    home.close();
+    await home.closed;
+  });
+
+  test("never two for one connection: a second while the first is open is refused, and taken once it has closed", async () => {
+    const first = await openInProcess("shop", context());
+    await expect(openInProcess("shop", context())).rejects.toThrow("[gateways.whatsapp.shop] cannot start: this connection's WhatsApp bridge is already open in this daemon");
+    first.close();
+    await first.closed;
+    const again = await openInProcess("shop", context());
+    again.close();
+    await again.closed;
+  });
+});
+
 describe("closing the in-process bridge", () => {
   test("a shutdown queued before close does not exit the daemon", async () => {
     const exit = spyOn(process, "exit").mockImplementation((() => undefined) as never);

@@ -145,7 +145,11 @@ describe("the bridge is reached only on demand", () => {
 describe("the session key stays out of the environment", () => {
   test("the host hands it over directly", () => {
     const text = source("modules/gateways/bridge-inproc.ts");
-    expect(text).toContain("bridge.configure(");
+    expect(text).toContain("plugin.openBridge({");
+    expect(text).toContain("encryptionKey: context.encryptionKey,");
+    // Nor does the bridge look for it there: the key is the one it was opened with.
+    const bridge = join(import.meta.dir, "../../../../packages/wa-bridge/src");
+    for (const file of ["index.ts", "handler.ts", "connection.ts"]) expect(readFileSync(join(bridge, file), "utf8"), file).not.toContain("NOURIDE_WA_SESSION");
     // The spawned path's mechanism must not appear here. `printenv` in an agent's shell is one
     // command, and a child inherits whatever the daemon set.
     expect(text).not.toContain("NOURIDE_WA_SESSION_KEY");
@@ -175,7 +179,7 @@ describe("what a config may still say about the transport", () => {
     // It dialled a bridge running elsewhere, which nothing in this repository served. Read as in-process it would
     // start a second session for the number here instead of saying what changed.
     expect(() => whatsapp({ bridge_transport: "ws", bridge_url: "ws://wa:8099" })).toThrow(
-      /bridge_transport = "ws" is gone: the bridge runs in this process, one WhatsApp number per daemon\. Remove bridge_transport and bridge_url/,
+      /bridge_transport = "ws" is gone: the bridge runs in this process\. Remove bridge_transport and bridge_url/,
     );
     expect(() => whatsapp({ bridge_transport: "carrier-pigeon" })).toThrow(/bridge_transport must be "inproc", or left out/);
   });

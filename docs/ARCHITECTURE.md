@@ -701,8 +701,9 @@ compiles it into the binary:
 **Transport.** The bridge runs in the daemon's own process, which is what `bridge_transport` unset or
 `"inproc"` means, and the only shape left. A config naming `ws`, which dialled a bridge somewhere else that
 nothing in this repository ever served, is refused at load (0.7.10); so, since 0.8.0, is one naming the old
-`stdio` transport or its `bridge_command`, which named the second executable `stdio` spawned. The bridge keeps
-its connection at module scope, so it is one WhatsApp number per daemon.
+`stdio` transport or its `bridge_command`, which named the second executable `stdio` spawned. The daemon opens
+a bridge for each WhatsApp connection (`openInProcess`, `openBridge`), each holding its own socket, login and
+channel: the connection's state was the module's until 0.8.48, which was one WhatsApp number per daemon.
 
 Crash isolation is weaker in-process — the bridge shares a crash domain with the agent loop — and that
 is the trade for not paying for a second Bun runtime.

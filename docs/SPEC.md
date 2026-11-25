@@ -2335,7 +2335,7 @@ interface LogEntry {
 
 Baileys is MIT. The bridge is a **module** of its own — `packages/wa-bridge`, sharing nothing with the
 engine but `@nouride/runtime`, behind a newline-delimited JSON protocol — and every edition compiles it
-into the binary. It runs in the daemon's process — one WhatsApp number per daemon. Its one copyleft dependency, `libsignal` (GPL-3.0), is replaced
+into the binary. It runs in the daemon's process, a bridge for each WhatsApp connection. Its one copyleft dependency, `libsignal` (GPL-3.0), is replaced
 by an MIT shim, and a contract test fails if the real package returns (`packages/wa-bridge/README.md`).
 `ARCHITECTURE.md` §6 is the account of the boundary.
 
