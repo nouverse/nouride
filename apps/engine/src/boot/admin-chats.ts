@@ -16,6 +16,11 @@ export function adminChatsOf(params: {
   turns: Pick<TurnsPort, "lastFrom">;
   /** An admin by People: their dashboard account holds the admin role (`Pipeline.isAdmin`). */
   isAdmin: (who: { gatewayId: string; senderId: string }) => boolean;
+  /**
+   * Whether a connection is an agent's open to everyone: never one an admin's question goes out on, whoever wrote there
+   * last. Its phone, or its bot's chat, is the public's, and the question names what is asked on the household's side.
+   */
+  openOn?: (gatewayId: string) => boolean;
 }): () => { gatewayId: string; chatId: string }[] {
   return () =>
     params
@@ -23,7 +28,7 @@ export function adminChatsOf(params: {
       .people.filter((person) => accountsOf(person).some((one) => one.platform === "web" && params.isAdmin({ gatewayId: LOCAL_GATEWAY_ID, senderId: one.account })))
       .flatMap((person) => {
         const lastFrom = params.turns.lastFrom(accountsOf(person).map((one) => one.account));
-        const connected = (gateway: Gateway | undefined, platform: string): gateway is Gateway => gateway?.platform === platform && gateway.status === "connected";
+        const connected = (gateway: Gateway | undefined, platform: string): gateway is Gateway => gateway?.platform === platform && gateway.status === "connected" && params.openOn?.(gateway.id) !== true;
         for (const { platform, account } of morningRoute(person, lastFrom)) {
           // The connection they last wrote on from that account, where it is up: with two WhatsApp numbers, the first
           // connected one was the shop's as often as the household's, and a question about the household came from it.
