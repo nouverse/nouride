@@ -141,6 +141,8 @@ export const KEY_COLUMNS: readonly KeyColumn[] = [
   { table: "open_door", column: "agent_id", kind: "agent" },
   { table: "open_door", column: "gateway_id", kind: "gateway" },
   { table: "open_door", column: "sender_id", kind: "sender" },
+  // The address a person was first counted by that day, on the same connection: one of their own (097).
+  { table: "open_door", column: "person", kind: "sender" },
 
   { table: "memory_episode_agents", column: "agent_id", kind: "agent" },
   { table: "memory_episode_people", column: "person", kind: "person" },
