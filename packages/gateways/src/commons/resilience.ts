@@ -556,6 +556,8 @@ export abstract class BaseGateway implements Gateway {
   }
 
   private async attemptConnect(): Promise<void> {
+    // A connect whose timer outlived a stop: a stopped gateway stays stopped.
+    if (this.stopping) return;
     this.setStatus("connecting");
     // A connect nothing has answered says so by itself: "connecting" for an hour is not the whole of what is known.
     this.wait.begin(this.resilience.slowConnectMs ?? SLOW_CONNECT_MS, () => this._status === "connecting");
@@ -642,6 +644,8 @@ export abstract class BaseGateway implements Gateway {
 
   private scheduleReconnect(): void {
     if (this.stopping) return;
+    // One reconnect waits at a time: a timer overwritten and not cleared was one a stop could not end.
+    clearTimeout(this.reconnectTimer);
     clearInterval(this.healthTimer);
     // The connection did not hold, so it does not get its retry budget back.
     clearTimeout(this.stableTimer);

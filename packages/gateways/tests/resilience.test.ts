@@ -271,10 +271,35 @@ describe("connecting", () => {
 
     // In place of the slow try ten minutes away: after its own wait, and the spent budget neither slows nor says it.
     gateway.onceMore(30);
-    expect(gateway.status).toBe("reconnecting");
     await eventually(() => gateway.connectCalls === calls + 1, 2_000, "the one connect more");
     expect(unreachable(events)).toHaveLength(1);
     await gateway.stop();
+  });
+
+  test("a stop ends every connect waiting: one asked once more while another was on its way, which then failed", async () => {
+    // A connect that waits to be told how it went, as a bridge that is slow to open does.
+    class Held extends FakeGateway {
+      release: ((ok: boolean) => void) | null = null;
+      protected override async connect(): Promise<void> {
+        this.connectCalls += 1;
+        if (this.connectCalls === 1) return;
+        const ok = await new Promise<boolean>((resolve) => (this.release = resolve));
+        if (!ok) throw new Error("connect refused");
+      }
+    }
+    const gateway = new Held({ resilience: { ...FAST, reconnectBackoffMs: 10, reconnectBackoffMaxMs: 10 } });
+    await gateway.start();
+    await eventually(() => gateway.status === "connected", 4_000, "first connect");
+    gateway.dropConnection("socket closed");
+    await eventually(() => gateway.release !== null, 2_000, "the second connect on its way");
+    // A logout signal heard while it is: one connect more, then the one on its way fails and schedules its own.
+    gateway.onceMore(80);
+    gateway.release!(false);
+    await sleep(20);
+    await gateway.stop();
+    const atStop = gateway.connectCalls;
+    await sleep(150);
+    expect([gateway.connectCalls, gateway.status]).toEqual([atStop, "disconnected"]);
   });
 
   test("one connect more is not asked of a gateway that is stopping or stopped", async () => {

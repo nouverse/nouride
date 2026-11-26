@@ -5,7 +5,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { clearLogin } from "../src/channels/whatsapp/login-folder.ts";
@@ -77,5 +77,26 @@ describe("an old WhatsApp login cleared for a new link", () => {
     const cleared = clearLogin(folder, 1);
     expect(cleared.ok).toBe(false);
     expect(cleared.ok ? "" : cleared.reason).toStartWith("its old login could not be removed: ");
+  });
+
+  test("a link to the login's real place is emptied there, the link kept: the login is not moved off its volume", () => {
+    const { parent, folder } = aLogin();
+    const link = join(parent, "whatsapp-linked");
+    symlinkSync(folder, link);
+    expect(clearLogin(link, 1)).toEqual({ ok: true });
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readdirSync(folder)).toEqual([]);
+    expect(readdirSync(parent).sort()).toEqual(["whatsapp-linked", "whatsapp-shop"]);
+  });
+
+  test.skipIf(asRoot)("that cannot be moved and is emptied part of the way, is broken all the same: the link goes on, what was left said", () => {
+    const { parent, folder } = aLogin();
+    // Its keys may not be removed; its credentials may.
+    chmodSync(join(folder, "keys"), 0o555);
+    chmodSync(parent, 0o555);
+    const cleared = clearLogin(folder, 1);
+    // Whichever comes first in the folder: the credentials gone is a link that goes on; nothing gone is said.
+    if (existsSync(join(folder, "creds.enc"))) expect(cleared.ok).toBe(false);
+    else expect(cleared).toEqual({ ok: true, left: folder });
   });
 });
