@@ -49,7 +49,7 @@ Memory            agent notes · people · timeline · shared · proposals · se
 People            who is who across platforms ([[people]])
 Groups            the rooms the agents talk in: each group, channel, thread and dashboard room
 Access            who may talk to the agents: pending · approved · denied · blocked · history
-Open agents       the agents anyone may write to, one at a time, on Access's template: today and its limits · Wrote · Let in · Blocked
+Open agents       the agents anyone may write to, one at a time, on Access's template, a line back to Access: today and its own limits, by name · Wrote · Let in · Blocked
 Models            Model providers: endpoint, wire format, credential · Coding CLIs: each CLI,
                   its accounts and the agents on each, a shared account's sign-in
 LLM Gateway       the in-process Nougate's console — only on an edition that carries it

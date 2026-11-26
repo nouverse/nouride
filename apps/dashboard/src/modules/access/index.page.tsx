@@ -48,7 +48,6 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
    * list let in from a file may be thousands, and the page is sent the newest of them.
    */
   const [found, setFound] = useState("");
-  const access = useQuery({ queryKey: found ? ["access", found] : ["access"], queryFn: () => api.access(found || undefined), refetchInterval: 15_000, retry: false });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
   const tab: AccessTab = search.tab ?? "pending";
   /** One filter for whichever tab is open, in the row that stays at the top of the window. */
@@ -59,8 +58,23 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
   const opened = useOpenConnections();
   const { agentOf, onOpen } = opened;
   const open = opened.agents;
-  const agents = useOrchestratorFirst([...new Set((gateways.data?.gateways ?? []).map((gateway) => gateway.agent).filter((agent): agent is string => Boolean(agent) && !open.has(agent!)))].sort(), (id) => id);
   const inScope = (gatewayId: string) => !onOpen(gatewayId) && (!search.agent || agentOf(gatewayId) === search.agent);
+  /**
+   * A search of everyone approved is asked of the page's own connections where it shows less than the install: an agent
+   * picked, or an open agent left out. Across the install, rows not the page's would fill the newest the daemon sends,
+   * and the page would say nobody matches where somebody does. The connections are the ones the install has, and the
+   * ones its listing counts approved on (a connection since removed keeps its people).
+   */
+  const listing = useQuery({ queryKey: ["access"], queryFn: () => api.access(), refetchInterval: 15_000, retry: false });
+  const narrowed = open.size > 0 || search.agent !== undefined;
+  const own = narrowed ? [...new Set([...(gateways.data?.gateways ?? []).map((gateway) => gateway.id), ...Object.keys(listing.data?.approvedOn ?? {})])].filter(inScope).sort() : [];
+  const access = useQuery({
+    queryKey: found ? ["access", found, ...own] : ["access"],
+    queryFn: () => api.access(found || undefined, found && narrowed ? own : undefined),
+    refetchInterval: 15_000,
+    retry: false,
+  });
+  const agents = useOrchestratorFirst([...new Set((gateways.data?.gateways ?? []).map((gateway) => gateway.agent).filter((agent): agent is string => Boolean(agent) && !open.has(agent!)))].sort(), (id) => id);
   const senders = opened.known ? (access.data?.senders ?? []).filter((sender) => inScope(sender.gatewayId)) : [];
   const by = (status: string) => senders.filter((sender) => sender.status === status);
   const [pending, approved, denied, blocked] = [by("pending"), by("approved"), by("denied"), by("blocked")];

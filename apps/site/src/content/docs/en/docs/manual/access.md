@@ -215,9 +215,10 @@ senders are in none of its lists or counts, nor in the count of requests in the 
 nobody until it knows which agents are open, and says so if Nouride does not tell it. One line on it points to
 where they are: **Settings → Open agents**, beside Access.
 
-That page is built as the Access page is. Under its title, two lines for the agent picked: what it used today, and
-its two limits, with the way to change them on its own **Access** tab. Then the row that stays at the top of the
-window: three tabs, the filter, and the agent. The picker lists only the agents open to everyone, with no "All": one
+That page is built as the Access page is, and each says where the other is: under its title, one line leads back to
+**Access**, for the agents that ask for a code. Then two lines for the agent picked, by its name: what it used today,
+and its two limits (each agent has its own), with the way to change them on its own **Access** tab. Then the row that
+stays at the top of the window: three tabs, the filter, and the agent. The picker lists only the agents open to everyone, with no "All": one
 agent at a time, and never two agents' people in one list.
 
 - **Wrote**: its conversations with people you do not know, a row each: who (their name, or their address), "in a
@@ -233,7 +234,9 @@ The filter narrows the tab that is open, as it does on the Access page. Where a 
 line above its list says so: type a name, a number or (on **Wrote**) words from what they first asked, and press
 **Search everyone**, which looks through every one the agent has, on its own connections; **Show the newest** brings
 the list back. A search still on its way, or one that did not come back, is said as that, never answered with the
-list from before.
+list from before; and **Let in** and **Blocked** list nobody until the page knows whose connections are whose, and say
+so if Nouride does not tell it. On the Access page, **Search everyone** looks through its own connections too: the
+agent picked, or every one that is not an open agent's.
 
 The agent's own **Access** tab keeps a short card in place of the lists: how many conversations it has had
 with people who wrote, how many people wrote today, how many are blocked, and **Open the list**, each opening

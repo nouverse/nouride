@@ -107,8 +107,9 @@ describe("an open agent's people let in by name", () => {
   test("more let in than the page was sent, and none of them here: the filter finds one among everyone, asked of its own connections, and Blocked is not narrowed", async () => {
     // The household's newest fill what the daemon sends: none of Nora's five among them.
     answer({ ...house(NOUVA, NORA), "/access": ok({ mode: "pair", editable: true, allowlist: [], senders: SENDERS.filter((one) => one.gatewayId !== "telegram:nora" || one.status !== "approved"), approvedTotal: 605, approvedOn: { "telegram:nouva": 600, "telegram:nora": 5 } }) });
-    // Answered only where it is asked on Nora's connections: across the install, another agent's many would crowd hers out.
-    overrides["/access?q=Rudi&on=telegram%3Anora"] = accessOf([SENDERS[2]]);
+    // Answered only where it is asked on Nora's connections, both and none else: across the install, another agent's many
+    // would crowd hers out.
+    overrides["/access?q=Rudi&on=telegram%3Anora&on=whatsapp%3Ashop"] = accessOf([SENDERS[2]]);
     const seen = { said: "", searched: "", blocked: "" };
     await renderPage("/open-agents?tab=let-in", async (host) => {
       await eventually(() => card(host, "Let in by name") !== undefined, 3_000, "the Let in tab");
@@ -258,6 +259,39 @@ describe("the Access page's Approved count", () => {
     // Nouva's six hundred: not 620 less the one of Nora's it was sent, nor the one of Nouva's.
     expect(all).toEqual(["Pending1", "Approved600", "Denied", "Blocked", "History"]);
     expect(nouva).toEqual(["Pending1", "Approved600", "Denied", "Blocked", "History"]);
+  });
+
+  test("a search of everyone approved is asked of the page's own connections: every one of them, and none of an open agent's", async () => {
+    /** The connections each search of everyone was asked to hold to, by the `on` values it sent. */
+    const searched: string[][] = [];
+    const spy = globalThis.fetch;
+    globalThis.fetch = ((input: unknown, init?: RequestInit) => {
+      const url = new URL(String(typeof input === "string" ? input : (input as Request).url), "http://localhost");
+      if (url.pathname.endsWith("/access") && url.searchParams.has("q")) searched.push(url.searchParams.getAll("on").sort());
+      return (spy as typeof fetch)(input as RequestInfo, init);
+    }) as typeof fetch;
+    const find = async (path: string) => {
+      await renderPage(path, async (host) => {
+        await eventually(() => text(host).includes("Alex Approved"), 3_000, "the Approved tab");
+        type(host.querySelector<HTMLInputElement>('input[placeholder="Filter senders"]')!, "Alex");
+        const everyone = () => [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Search everyone"));
+        await eventually(() => everyone()?.disabled === false, 2_000, "the search of everyone");
+        everyone()!.click();
+        await eventually(() => searched.length > 0, 2_000, "asked");
+      });
+    };
+    try {
+      answer(house(NOUVA, NORA));
+      await find("/access?tab=approved");
+      // With every agent: the household's connections, Omar's (not open) among them, and not Nora's two.
+      expect(searched.splice(0)).toEqual([["telegram:nouva", "telegram:omar"]]);
+      answer(house(NOUVA, NORA));
+      await find("/access?tab=approved&agent=nouva");
+      // With one picked: its own, and only its own.
+      expect(searched.splice(0)).toEqual([["telegram:nouva"]]);
+    } finally {
+      globalThis.fetch = spy;
+    }
   });
 });
 

@@ -375,10 +375,16 @@ function install(): void {
 
     const bare = pathname === "/api/health" ? "/health" : pathname.replace(/^\/api\/control/, "");
     // A fixture asked with a query (`/memory/graph?knowledge=1`) answers a request whose query holds those values; the
-    // bare path answers the rest.
+    // bare path answers the rest. A name given more than once (`on=a&on=b`) is held to all its values, in any order and
+    // none more: the first alone let a request through that sent another connection beside the one asked for.
     const query = new URL(url, "http://localhost").searchParams;
+    const same = (a: string[], b: string[]) => a.length === b.length && [...a].sort().every((value, i) => value === [...b].sort()[i]);
     const withQuery = (table: Record<string, unknown>) =>
-      Object.keys(table).find((key) => key.startsWith(`${bare}?`) && [...new URLSearchParams(key.slice(bare.length + 1))].every(([name, value]) => query.get(name) === value));
+      Object.keys(table).find((key) => {
+        if (!key.startsWith(`${bare}?`)) return false;
+        const wanted = new URLSearchParams(key.slice(bare.length + 1));
+        return [...new Set(wanted.keys())].every((name) => same(query.getAll(name), wanted.getAll(name)));
+      });
     const path = withQuery(overrides) ?? withQuery(RESPONSES) ?? bare;
     // Overrides first, so a test can put the app in a state the shared fixture does not describe —
     // signed *out*, which is the only state in which the login page is the page that renders.

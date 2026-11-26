@@ -234,9 +234,11 @@ di menu dan di Home. Halaman itu gak menampilkan siapa pun sampai ia tahu agent 
 begitu kalau Nouride gak memberi tahu. Satu baris di sana menunjukkan di mana mereka: **Settings → Open
 agents**, di sebelah Access.
 
-Halaman itu dibuat seperti halaman Access. Di bawah judulnya, dua baris untuk agent yang dipilih: berapa
-yang terpakai hari ini, dan dua batasnya, dengan jalan untuk mengubahnya di tab **Access** agent itu sendiri.
-Lalu baris yang tetap di atas layar: tiga tab, filter, dan agent-nya. Pilihan agent-nya hanya berisi agent
+Halaman itu dibuat seperti halaman Access, dan masing-masing menunjukkan di mana yang lain: di bawah
+judulnya, satu baris kembali ke **Access**, untuk agent yang meminta kode. Lalu dua baris untuk agent yang
+dipilih, dengan namanya: berapa yang terpakai hari ini, dan dua batasnya (tiap agent punya sendiri), dengan
+jalan untuk mengubahnya di tab **Access** agent itu sendiri. Lalu baris yang tetap di atas layar: tiga tab,
+filter, dan agent-nya. Pilihan agent-nya hanya berisi agent
 yang terbuka untuk siapa saja, tanpa "All": satu agent sekali waktu, dan gak pernah menggabungkan orang dari
 dua agent dalam satu daftar.
 
@@ -255,7 +257,10 @@ Filter-nya mempersempit tab yang sedang terbuka, seperti di halaman Access. Kala
 banyak dari yang dikirim, baris di atas daftarnya bilang begitu: ketik nama, nomor, atau (di **Wrote**) kata
 dari pertanyaan pertama mereka, lalu tekan **Search everyone**, yang mencari di semuanya, di koneksi agent itu
 sendiri; **Show the newest** mengembalikan daftarnya. Pencarian yang masih berjalan, atau yang gak kembali,
-dikatakan begitu, gak pernah dijawab dengan daftar yang sebelumnya.
+dikatakan begitu, gak pernah dijawab dengan daftar yang sebelumnya; dan **Let in** serta **Blocked** gak
+menampilkan siapa pun sampai halaman itu tahu koneksi mana milik siapa, dan bilang begitu kalau Nouride gak
+memberi tahu. Di halaman Access, **Search everyone** juga mencari di koneksinya sendiri: agent yang dipilih,
+atau semua yang bukan milik agent terbuka.
 
 Tab **Access** agent itu sendiri menyimpan kartu pendek sebagai ganti daftarnya: berapa percakapannya dengan
 orang yang menulis, berapa orang yang menulis hari ini, berapa yang diblokir, dan **Open the list**, masing-masing
