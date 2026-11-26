@@ -235,4 +235,29 @@ describe("what a page or a terminal lists, once thousands are in", () => {
     expect(both.approvedTotal).toBe(APPROVED_LISTED + 102);
     expect(both.senders.filter((one) => one.gatewayId === "telegram:main" && one.status === "approved")).toEqual([]);
   });
+
+  test("searched on named connections, the newest it sends are theirs: another connection's many crowd none of them out", async () => {
+    // Many on WhatsApp whose ids hold "555", newer than the two on Telegram that do.
+    clock -= 3_600_000;
+    await imported({ gateway: "telegram:main", senders: ["5550001111", "5550002222"] });
+    clock += 7_200_000;
+    await imported({ gateway: WA, senders: Array.from({ length: APPROVED_LISTED + 10 }, (_, i) => `62555${String(i).padStart(8, "0")}`) });
+    access.check({ gatewayId: "telegram:main", senderId: "777", senderName: "Asking on Telegram", chatId: "777", mode: "pair", staticAllowlist: [] });
+    access.check({ gatewayId: WA, senderId: "6289900000001@s.whatsapp.net", senderName: "Asking on WhatsApp", chatId: "6289900000001@s.whatsapp.net", mode: "pair", staticAllowlist: [] });
+
+    // The whole install: the newest five hundred matches are all WhatsApp's.
+    const everywhere = (await (await app.request("/access?q=555")).json()) as AccessListing;
+    expect(everywhere.senders.filter((one) => one.status === "approved" && one.gatewayId === "telegram:main")).toEqual([]);
+    // On Telegram's: its two, and nothing of WhatsApp's, asking or approved.
+    const onTelegram = (await (await app.request("/access?q=555&on=telegram%3Amain")).json()) as AccessListing;
+    expect(onTelegram.senders.filter((one) => one.status === "approved").map((one) => one.senderId).sort()).toEqual(["5550001111", "5550002222"]);
+    expect(onTelegram.senders.map((one) => one.gatewayId).every((id) => id === "telegram:main")).toBe(true);
+    expect(onTelegram.senders.some((one) => one.senderId === "777")).toBe(true);
+    // Repeated, both; the counts every connection's either way.
+    const onBoth = (await (await app.request(`/access?status=pending&on=telegram%3Amain&on=${encodeURIComponent(WA)}`)).json()) as AccessListing;
+    expect(onBoth.senders.map((one) => one.senderId).sort()).toEqual(["6289900000001@s.whatsapp.net", "777"]);
+    expect(onTelegram.approvedOn).toEqual({ [WA]: APPROVED_LISTED + 10, "telegram:main": 2 });
+    // Asked as before, the answer is as before.
+    expect(((await (await app.request("/access?status=pending")).json()) as AccessListing).senders).toHaveLength(2);
+  });
 });

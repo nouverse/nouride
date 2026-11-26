@@ -48,7 +48,9 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
     const status = c.req.query("status");
     // Before reading: a code that ran out is not waiting, and a denial whose day is over is not denied.
     deps.access.tidy();
-    const listed = deps.access.listed(status === "pending" || status === "approved" || status === "denied" || status === "blocked" ? status : undefined, c.req.query("q"));
+    // `on`, repeated: these connections' rows only, for a page that shows one agent's and searches its own.
+    const on = c.req.queries("on");
+    const listed = deps.access.listed(status === "pending" || status === "approved" || status === "denied" || status === "blocked" ? status : undefined, c.req.query("q"), on);
     return c.json({
       mode: deps.ctx.config.security.access.mode,
       // Whether the mode can be changed from here at all. A daemon running on built-in defaults has no

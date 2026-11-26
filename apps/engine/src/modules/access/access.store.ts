@@ -455,8 +455,8 @@ export class AccessStore {
   }
 
   /** The senders as a page or a terminal lists them, the approved bounded (`access-many.store.ts`). */
-  listed(status?: AccessStatus, find?: string): { senders: SenderRecord[]; approvedTotal: number; approvedOn: Record<string, number> } {
-    const { rows, approvedTotal, approvedOn } = listedRows(this.options.db, status, find);
+  listed(status?: AccessStatus, find?: string, on?: readonly string[]): { senders: SenderRecord[]; approvedTotal: number; approvedOn: Record<string, number> } {
+    const { rows, approvedTotal, approvedOn } = listedRows(this.options.db, status, find, on);
     return { senders: rows.map(toRecord), approvedTotal, approvedOn };
   }
 

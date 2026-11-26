@@ -223,6 +223,7 @@ const TEXT_RULES: TextRule[] = [
 export const INTERPOLATIONS: Record<string, { why: string; planAs?: string }> = {
   "memory-index.store.ts sql": { why: "`where()` builds it from fixed clauses; every value is bound with `?`", planAs: "e.chat = ?" },
   "memory-index.store.ts table": { why: "a name from the literal list beside it" },
+  "access-many.store.ts within": { why: "` AND gateway_id IN (?, …)` with a `?` for each connection named, the constant ` AND 0`, or nothing", planAs: " AND gateway_id IN (?)" },
   "memory-fts.store.ts sql": { why: "the same `where()` fragment, scoping `rank()`", planAs: "e.chat = ?" },
   "memory-fts.store.ts fact": { why: "`i.item IN (?, …)` from `marks()`, or the constant `1 = 0`", planAs: "i.item IN (?)" },
   "memory-fts.store.ts section": { why: "`s.collection IN (?, …)` from `marks()`, or the constant `1 = 0`", planAs: "s.collection IN (?)" },

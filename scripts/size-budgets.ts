@@ -111,8 +111,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the release build in the order a tarball is made: the edition this checkout can build, compile, check what is embedded, stage what goes beside the binary, pack, say what was built; staging is the seam",
   },
   "scripts/check-sql.ts": {
-    lines: 499,
-    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and its lists of what is let through, one more store that scans once; the plan half is the seam",
+    lines: 500,
+    why: "the SQL lint: one reader of the code's SQL and three judges of it (text rules, plans, floors), and its lists of what is let through, one entry a line; the plan half is the seam",
   },
   "packages/gateways/src/channels/whatsapp/gateway.ts": {
     lines: 495,
