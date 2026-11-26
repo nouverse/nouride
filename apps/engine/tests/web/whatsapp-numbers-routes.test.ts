@@ -108,7 +108,7 @@ async function running(id: string) {
     bridges.push(bridge);
     return bridge.channel;
   };
-  const gateway = new WhatsAppGateway({ id, platform: "whatsapp", sessionDir: saved.sessionDir!, encryptionKey: (await secrets.resolve(saved.encryptionKeySecret!))!, agentId: saved.agent!, openChannel });
+  const gateway = new WhatsAppGateway({ id, platform: "whatsapp", sessionDir: saved.sessionDir!, encryptionKey: (await secrets.resolve(saved.encryptionKeySecret!))!, agentId: saved.agent!, openChannel, logoutCheckMs: 10 });
   started.push(gateway);
   gateways.set(id, gateway as unknown as Gateway);
   await gateway.start();
@@ -182,16 +182,25 @@ describe("a number logged out from its phone", () => {
     expect(await linkAgain("whatsapp:shop")).toMatchObject({ status: 409, body: { plain: "This number is not logged out, so there is nothing to link again. Reload the page." } });
     expect(existsSync(join(folder, "creds.enc"))).toBe(true);
 
-    // Logged out from the phone: the bridge says both, for one event. No code comes, and the page is told why.
-    shop.says({ type: "session_expired" });
-    shop.says({ type: "status", status: "disconnected", reason: "logged out" });
+    // WhatsApp ends the link: the bridge says both, for one event. Not yet said to be logged out: its old login is
+    // tried once more first.
+    const endsTheLink = () => {
+      shop.says({ type: "session_expired" });
+      shop.says({ type: "status", status: "disconnected", reason: "logged out" });
+    };
+    endsTheLink();
+    await eventually(() => shop.gateway.status === "dead");
+    expect((await pairing("whatsapp:shop")).body).toEqual({ status: "dead", linked: false, loggedOut: false, qr: null });
+    await eventually(() => shop.opened() === 2);
+    // Said again to the old login: logged out from the phone. No code comes, and the page is told why.
+    endsTheLink();
     await eventually(() => shop.gateway.isLoggedOut());
     expect((await pairing("whatsapp:shop")).body).toEqual({ status: "dead", linked: false, loggedOut: true, qr: null });
 
     expect(await linkAgain("whatsapp:shop")).toMatchObject({ status: 200, body: { ok: true, id: "whatsapp:shop" } });
     // The old login is gone, a new bridge was started on the empty folder, and its code is the one served.
     expect(existsSync(join(folder, "creds.enc"))).toBe(false);
-    expect(shop.opened()).toBe(2);
+    expect(shop.opened()).toBe(3);
     shop.says({ type: "qr", qr: "2@a-new-code" });
     await eventually(() => shop.gateway.pairingCode() !== null);
     expect(await pairing("whatsapp:shop")).toMatchObject({ status: 200, body: { linked: false, loggedOut: false, qr: "2@a-new-code" } });
@@ -201,8 +210,6 @@ describe("a number logged out from its phone", () => {
   test("is an admin's to link again, and only a connection that pairs with a code is", async () => {
     await post({ platform: "whatsapp", name: "shop", agent: "nora" });
     const shop = await running("whatsapp:shop");
-    shop.says({ type: "session_expired" });
-    await eventually(() => shop.gateway.isLoggedOut());
 
     role = "operator";
     expect(await linkAgain("whatsapp:shop")).toEqual({ status: 403, body: { error: "admin only" } });
@@ -211,6 +218,12 @@ describe("a number logged out from its phone", () => {
     gateways.set("telegram:bot", { id: "telegram:bot", status: "connected" } as unknown as Gateway);
     expect(await linkAgain("telegram:bot")).toEqual({ status: 400, body: { error: "this gateway does not pair with a code", plain: "This chat connection does not pair with a code." } });
     expect(await linkAgain("whatsapp:gone")).toEqual({ status: 404, body: { error: "no such gateway", plain: "That chat connection is not there any more. Reload the page." } });
+    expect(audited).toEqual([]);
+  });
+
+  test("a login that could not be removed is said as that, and not as a refusal", async () => {
+    gateways.set("whatsapp:stuck", { id: "whatsapp:stuck", status: "connecting", linkAgain: async () => ({ ok: false, refused: false, reason: "its old login could not be removed: EACCES" }) } as unknown as Gateway);
+    expect(await linkAgain("whatsapp:stuck")).toEqual({ status: 500, body: { error: "its old login could not be removed: EACCES", plain: "Its old link could not be removed, so it was not linked again. The log says why." } });
     expect(audited).toEqual([]);
   });
 });

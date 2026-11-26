@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { CheckCircle2, Link2, Loader2, QrCode, Unlink } from "lucide-react";
 import { api } from "@/commons/lib/api";
+import { isAdmin, useMe } from "@/commons/lib/session";
 import { useConfirm } from "@/commons/components/ui/confirm";
 import { TextLoading } from "@/commons/components/ui/Skeleton";
 import { ErrorNote } from "@/commons/components/ui/ui";
@@ -81,6 +82,15 @@ function PairingState({ gatewayId }: { gatewayId: string }) {
 
   if (pairing.data?.loggedOut) return <LoggedOut gatewayId={gatewayId} />;
 
+  // WhatsApp ended the link once: its old login is tried again before the number is said to be logged out.
+  if (pairing.data?.status === "dead" && !qr) {
+    return (
+      <div className="flex items-center gap-2.5 py-4 text-xs font-medium text-base-content/65" data-checking-link>
+        <Loader2 size={15} className="animate-spin text-primary" /> WhatsApp ended this number's link. Trying it once more…
+      </div>
+    );
+  }
+
   if (!image) {
     return (
       <div className="flex items-center gap-2.5 py-4 text-xs font-medium text-base-content/65">
@@ -134,6 +144,7 @@ function PairingState({ gatewayId }: { gatewayId: string }) {
  * a spinner and no way out but removing the connection. Linked again on the person's word: a new code, here.
  */
 function LoggedOut({ gatewayId }: { gatewayId: string }) {
+  const admin = isAdmin(useMe().data ?? null);
   const queryClient = useQueryClient();
   const { ask, dialog } = useConfirm();
   const again = useMutation({
@@ -158,13 +169,17 @@ function LoggedOut({ gatewayId }: { gatewayId: string }) {
         <Unlink size={18} className="text-warning mt-0.5 shrink-0" aria-hidden="true" />
         <div className="text-sm">
           <p className="font-semibold">This number was logged out from its phone</p>
-          <p className="text-base-content/70 mt-0.5">It stopped, and messages to it are not answered. Link it again to show a new QR code to scan.</p>
+          <p className="text-base-content/70 mt-0.5">
+            It stopped, and messages to it are not answered. {admin ? "Link it again to show a new QR code to scan." : "An admin can link it again."}
+          </p>
         </div>
       </div>
       <ErrorNote error={again.error} />
-      <button type="button" className="btn btn-sm btn-primary rounded-xl gap-2" disabled={again.isPending} onClick={() => again.mutate()}>
-        {again.isPending ? <span className="loading loading-spinner loading-xs" /> : <Link2 size={14} aria-hidden="true" />} Link again
-      </button>
+      {admin ? (
+        <button type="button" className="btn btn-sm btn-primary rounded-xl gap-2" disabled={again.isPending} onClick={() => again.mutate()}>
+          {again.isPending ? <span className="loading loading-spinner loading-xs" /> : <Link2 size={14} aria-hidden="true" />} Link again
+        </button>
+      ) : null}
     </div>
   );
 }
