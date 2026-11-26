@@ -16,7 +16,7 @@
 import { type ReactNode, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Activity, Gauge, Globe, Info } from "lucide-react";
+import { Activity, Gauge, Globe, Info, Shield } from "lucide-react";
 import type { AgentSummary, SenderRecord } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { todaySaid } from "@/commons/lib/open-agent";
@@ -27,18 +27,21 @@ import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { useOpenConnections } from "@/commons/hooks/use-open-connections";
 import { ApprovedTab, type SearchState } from "./approved.tab";
 import { approvedCounted } from "./approved-count";
 import { BlockedTab } from "./blocked.tab";
-import { WroteTab } from "./people-who-wrote";
+import { WroteTab, wroteFirst } from "./people-who-wrote";
 import type { OpenAgentsSearch, OpenAgentsTab } from "./search";
 import { SenderQuery } from "./sender-line";
 
-/** Its two limits, as one sentence. */
-export function limitsSaid(limits: NonNullable<NonNullable<AgentSummary["open"]>["limits"]>): string {
+/** Its two limits, as one sentence: whose they are where a name is given, since the page shows one agent's of several. */
+export function limitsSaid(limits: NonNullable<NonNullable<AgentSummary["open"]>["limits"]>, name?: string): string {
   const tokens = limits.maxDailyTokens.toLocaleString("en-US");
-  const messages = limits.maxDailyMessagesPerPerson.toLocaleString("en-US");
-  return `At most ${tokens} tokens a day, and ${messages} ${limits.maxDailyMessagesPerPerson === 1 ? "message" : "messages"} from one person a day.`; // plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it
+  const messages = `${limits.maxDailyMessagesPerPerson.toLocaleString("en-US")} ${limits.maxDailyMessagesPerPerson === 1 ? "message" : "messages"}`;
+  // plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it
+  if (name) return `${name} answers at most ${messages} from one person a day, and uses at most ${tokens} tokens a day.`;
+  return `At most ${tokens} tokens a day, and ${messages} from one person a day.`; // plain-words-ok: tokens, as above
 }
 
 const count = (n: number | undefined) => (n ? <span className="badge badge-xs badge-ghost font-semibold font-mono">{n.toLocaleString("en-US")}</span> : null);
@@ -50,6 +53,51 @@ function Rule({ icon: Icon, children }: { icon: typeof Info; children: ReactNode
       <Icon size={14} className="text-primary mt-0.5 shrink-0" aria-hidden="true" />
       <span>{children}</span>
     </p>
+  );
+}
+
+/** The Access page's own line, turned round: the two pages are one question, and each says where the other half is. */
+function BackToAccess() {
+  return (
+    <p className="text-base-content/65 text-sm flex items-start gap-2" data-access-link>
+      <Shield size={14} className="text-info mt-0.5 shrink-0" aria-hidden="true" />
+      <span>
+        Agents that ask for a code, and everyone who writes to them, are on{" "}
+        <Link to="/access" className="link link-primary">
+          Access
+        </Link>
+        .
+      </span>
+    </p>
+  );
+}
+
+/** The agent picked, by its name: what it used today, and its own two limits, changed on its own Access tab. */
+function AgentLines({ agent, name }: { agent: AgentSummary; name: string }) {
+  return (
+    <div className="space-y-2" data-open-today>
+      {agent.open?.today && agent.open.limits ? <Rule icon={Activity}>{todaySaid(agent.open.today, agent.open.limits.maxDailyTokens, name)}</Rule> : null}
+      {agent.open?.limits ? (
+        <Rule icon={Gauge}>
+          {limitsSaid(agent.open.limits, name)} Change them on{" "}
+          <Link to="/agents/$agentId/access" params={{ agentId: agent.id }} className="link link-primary">
+            its Access tab
+          </Link>
+          .
+        </Rule>
+      ) : null}
+    </div>
+  );
+}
+
+/** What cannot be told without an answer that did not come: said, never a list said to be empty. */
+function NotKnown({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card title={title}>
+      <p className="text-base-content/65 text-sm" data-open-unknown>
+        {children}
+      </p>
+    </Card>
   );
 }
 
@@ -76,8 +124,8 @@ export default function OpenAgentsPage({ search, onSearch }: { search: OpenAgent
   const [wroteFound, setWroteFound] = usePerAgent(picked?.id);
   // Its listing, never narrowed by a search: what the tabs count and Blocked lists.
   const access = useQuery({ queryKey: ["access"], queryFn: () => api.access(), refetchInterval: 15_000, retry: false });
-  /** How many conversations it has in all: the Wrote tab's count, whatever is searched in it. An admin's to read. */
-  const wrote = useQuery({ queryKey: ["agent-public", picked?.id, "count"], queryFn: () => api.agentPublic(picked!.id), enabled: picked !== undefined && admin, refetchInterval: 30_000 });
+  /** How many conversations it has in all: the Wrote tab's count, read from its list's own first page. An admin's to read. */
+  const wrote = useQuery({ ...wroteFirst(picked?.id ?? "", ""), enabled: picked !== undefined && admin });
 
   // A link from before, to an agent that has been closed since: its people are back on the Access page.
   const closed = search.agent !== undefined && status.data && !open.some((one) => one.id === search.agent) ? search.agent : null;
@@ -107,11 +155,19 @@ export default function OpenAgentsPage({ search, onSearch }: { search: OpenAgent
     return id.indexOf(":") < at && its(id.slice(0, at));
   });
   const name = picked ? picked.displayName || picked.id : "";
+  /**
+   * Whether its rows can be told: every row is sorted to it by the connections' own list, so without that list, or the
+   * listing, "nobody is blocked" would be a guess. As the Access page holds its lists (`useOpenConnections`).
+   */
+  const opened = useOpenConnections();
+  const whose: "known" | "waiting" | "failed" = opened.failed || access.error ? "failed" : opened.known && access.data ? "known" : "waiting";
 
   return (
     // A tab's panel fades in as it is drawn (`*:animate-fade`), as on the Access page.
     <div className="space-y-6 *:animate-fade">
       <PageHeader title="Open agents" description="The agents anyone may write to, with no code: who wrote to each, who was let in by name, and who is kept out." />
+
+      <BackToAccess />
 
       {closed ? (
         <p className="text-base-content/65 text-sm flex items-start gap-2" data-open-closed>
@@ -128,6 +184,10 @@ export default function OpenAgentsPage({ search, onSearch }: { search: OpenAgent
 
       {status.isPending ? (
         <ListLoading />
+      ) : status.error && !status.data ? (
+        <NotKnown title="Which agents are open is not known">
+          Nouride did not say which of your agents are open to everyone, so this page cannot show them. Reload the page to try again.
+        </NotKnown>
       ) : !picked ? (
         <Card>
           <EmptyState
@@ -143,18 +203,7 @@ export default function OpenAgentsPage({ search, onSearch }: { search: OpenAgent
         </Card>
       ) : (
         <>
-          <div className="space-y-2" data-open-today>
-            {picked.open?.today && picked.open.limits ? <Rule icon={Activity}>{todaySaid(picked.open.today, picked.open.limits.maxDailyTokens)}</Rule> : null}
-            {picked.open?.limits ? (
-              <Rule icon={Gauge}>
-                {limitsSaid(picked.open.limits)} Change them on{" "}
-                <Link to="/agents/$agentId/access" params={{ agentId: picked.id }} className="link link-primary">
-                  its Access tab
-                </Link>
-                .
-              </Rule>
-            ) : null}
-          </div>
+          <AgentLines agent={picked} name={name} />
 
           {/* The tabs, the filter and the agent stay at the top of the window while the list scrolls under them. */}
           <StickyBar
@@ -177,7 +226,7 @@ export default function OpenAgentsPage({ search, onSearch }: { search: OpenAgent
           >
             <SegmentedTabs
               tabs={[
-                { value: "wrote", label: "Wrote", after: count(admin ? wrote.data?.total : undefined) },
+                { value: "wrote", label: "Wrote", after: count(admin ? wrote.data?.page.total : undefined) },
                 { value: "let-in", label: "Let in", after: count(access.data ? letInTotal : undefined) },
                 { value: "blocked", label: "Blocked", after: count(blocked.length) },
               ]}
@@ -196,7 +245,13 @@ export default function OpenAgentsPage({ search, onSearch }: { search: OpenAgent
                     <p className="text-base-content/65 text-sm">Only an admin reads who wrote to it, and what they said.</p>
                   </Card>
                 )
-              ) : access.isPending ? (
+              ) : whose === "failed" ? (
+                <NotKnown title="Who is let in and kept out cannot be told now">
+                  {access.error instanceof Error
+                    ? `Nouride did not answer for who may write to your agents: ${access.error.message}. Reload the page to try again.`
+                    : "Nouride did not say which connections are whose, so this agent's people cannot be told from another's. Reload the page to try again."}
+                </NotKnown>
+              ) : whose === "waiting" ? (
                 <ListLoading />
               ) : tab === "let-in" ? (
                 <ApprovedTab

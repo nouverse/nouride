@@ -31,6 +31,19 @@ export function writerName(conversation: Pick<PublicConversation, "sender">): st
   return conversation.sender ? (conversation.sender.name ?? conversation.sender.id) : "Somebody";
 }
 
+/**
+ * Its conversations' first page: what the Wrote tab's count and its list both read, one request on one timer, so the
+ * count in the tab never says another number than the list under it.
+ */
+export function wroteFirst(agentId: string, found: string) {
+  return {
+    queryKey: ["agent-public", agentId, found, "first"],
+    // What it answers says which search it is, so the rows of another, kept while this one is asked, are never its answer.
+    queryFn: async () => ({ found, page: await api.agentPublic(agentId, undefined, found || undefined) }),
+    refetchInterval: 30_000,
+  };
+}
+
 /** A row's tag: a group's conversation, or one whose sender is kept out. */
 const tag = (text: string) => <span className="badge badge-sm badge-ghost font-semibold font-mono">{text}</span>;
 
@@ -42,12 +55,14 @@ export function WroteTab({ agent, found, onFind }: { agent: AgentSummary; found:
   /** The pages read so far: each "Show more" reads the next under the ones on screen; a new search starts again. */
   const [read, setRead] = useState({ found, cursors: [0] });
   const cursors = read.found === found ? read.cursors : [0];
-  const pages = useQuery({
-    queryKey: ["agent-public", agent.id, found, cursors],
-    // What it answers says which search it is, so the rows of another, kept while this one is asked, are never its answer.
-    queryFn: async () => ({ found, pages: await Promise.all(cursors.map((before) => api.agentPublic(agent.id, before || undefined, found || undefined))) }),
+  // The rows on screen stay while the next page is asked, rather than the list emptying under the person who asked.
+  const first = useQuery({ ...wroteFirst(agent.id, found), placeholderData: keepPreviousData });
+  const later = cursors.slice(1);
+  const more = useQuery({
+    queryKey: ["agent-public", agent.id, found, "later", later],
+    queryFn: async () => ({ found, pages: await Promise.all(later.map((before) => api.agentPublic(agent.id, before, found || undefined))) }),
+    enabled: later.length > 0,
     refetchInterval: 30_000,
-    // The rows on screen stay while the next page is asked, rather than the list emptying under the person who asked.
     placeholderData: keepPreviousData,
   });
   const block = useMutation({
@@ -68,8 +83,9 @@ export function WroteTab({ agent, found, onFind }: { agent: AgentSummary; found:
   });
 
   // A search on its way, or not come back: said, with nothing listed as its answer.
-  const searching: SearchState = pages.data && pages.data.found !== found ? "looking" : !pages.data && pages.error && found ? "failed" : !pages.data && found ? "looking" : "done";
-  const answered = searching === "done" ? pages.data?.pages : undefined;
+  const searching: SearchState = first.data && first.data.found !== found ? "looking" : !first.data && first.error && found ? "failed" : !first.data && found ? "looking" : "done";
+  const laterPages = later.length > 0 && more.data?.found === found ? more.data.pages : [];
+  const answered = searching === "done" && first.data ? [first.data.page, ...laterPages] : undefined;
   const conversations = (answered ?? []).flatMap((page) => page.conversations);
   const total = answered?.[0]?.total ?? 0;
   const next = answered?.at(-1)?.nextBefore;
@@ -78,7 +94,7 @@ export function WroteTab({ agent, found, onFind }: { agent: AgentSummary; found:
   return (
     <ListCard title={`Wrote${searching === "done" ? ` (${total.toLocaleString("en-US")})` : ""}`} description="Its conversations with people you do not know. They are kept out of your own list of chats, and go when conversations of their age do.">
       {dialog}
-      <ErrorNote error={pages.error ?? block.error} />
+      <ErrorNote error={first.error ?? more.error ?? block.error} />
       {found || (answered && total > conversations.length) ? (
         <MoreListed
           searching={searching}
@@ -127,7 +143,7 @@ export function WroteTab({ agent, found, onFind }: { agent: AgentSummary; found:
       )}
       {next !== undefined && conversations.length > 0 ? (
         <div className="flex justify-center pt-3">
-          <button type="button" className="btn btn-ghost btn-sm gap-1.5 rounded-full" disabled={pages.isFetching} onClick={() => setRead({ found, cursors: [...cursors, next] })}>
+          <button type="button" className="btn btn-ghost btn-sm gap-1.5 rounded-full" disabled={more.isFetching} onClick={() => setRead({ found, cursors: [...cursors, next] })}>
             Show more ({(total - conversations.length).toLocaleString("en-US")} more)
           </button>
         </div>

@@ -152,12 +152,14 @@ describe("the Open agents page", () => {
   test("is the Access page's template: its rules, then the tabs, the filter and the agent in the row that stays, and the tab's list", async () => {
     answer(house(NOUVA, NORA));
     const calls = asking();
-    const seen = { options: [] as string[], today: "", tabs: [] as unknown[], rows: [] as unknown[], filter: "", blocked: "", title: "", where: {} as Record<string, unknown> };
+    const seen = { options: [] as string[], today: "", back: "", backTo: "", tabs: [] as unknown[], rows: [] as unknown[], filter: "", blocked: "", title: "", where: {} as Record<string, unknown> };
     try {
       await renderPage("/open-agents", async (host, app) => {
         await eventually(() => people(host).length === 2 && tabs(host).join() === "Wrote4,Letin1,Blocked2", 3_000, "the page");
         seen.tabs = tabs(host);
         seen.today = host.querySelector("[data-open-today]")?.textContent ?? "";
+        seen.back = host.querySelector("[data-access-link]")?.textContent ?? "";
+        seen.backTo = host.querySelector("[data-access-link] a")?.getAttribute("href") ?? "";
         seen.rows = people(host);
         // The filter and the tabs in the one row that stays at the top, as on the Access page.
         const row = host.querySelector<HTMLElement>("[data-sticky-bar]");
@@ -180,7 +182,11 @@ describe("the Open agents page", () => {
     expect(seen.tabs).toEqual(["Wrote4", "Letin1", "Blocked2"]);
     expect(seen.filter).toBe("in the row");
     expect(seen.options).toEqual(["Nora"]);
-    expect(seen.today).toBe("1,200 of 200,000 tokens used today; 2 people have written, 5 messages answered.At most 200,000 tokens a day, and 30 messages from one person a day. Change them on its Access tab.");
+    // Whose the two lines are, since the page is one agent's of several and the picker sits under them.
+    expect(seen.today).toBe("Nora used 1,200 of its 200,000 tokens today; 2 people have written, 5 messages answered.Nora answers at most 30 messages from one person a day, and uses at most 200,000 tokens a day. Change them on its Access tab.");
+    // And the way back to Access, as Access has its way here.
+    expect(seen.back).toBe("Agents that ask for a code, and everyone who writes to them, are on Access.");
+    expect(seen.backTo).toEndWith("/access");
     expect(seen.rows).toEqual(["ses_budi", "ses_ani"]);
     // Hers alone: Nouva's blocked spammer is the Access page's.
     expect(seen.blocked).toContain("Blocked (2)");
@@ -193,6 +199,67 @@ describe("the Open agents page", () => {
     // Only her list was asked for.
     expect([...new Set(calls.asked.filter((one) => !one.startsWith("POST")))]).toEqual(["/agents/nora/public"]);
     expect(limitsSaid({ ...LIMITS, maxDailyMessagesPerPerson: 1 })).toBe("At most 200,000 tokens a day, and 1 message from one person a day.");
+    expect(limitsSaid({ ...LIMITS, maxDailyMessagesPerPerson: 1 }, "Omar")).toBe("Omar answers at most 1 message from one person a day, and uses at most 200,000 tokens a day.");
+  });
+
+  test("the Wrote tab's count and its list are one answer: its first page asked once, never on a timer of its own", async () => {
+    answer(house(NOUVA, NORA));
+    const calls = asking();
+    let firstAsked = 0;
+    try {
+      await renderPage("/open-agents", async (host) => {
+        await eventually(() => people(host).length === 2 && tabs(host)[0] === "Wrote4", 3_000, "the count and the list");
+        firstAsked = calls.asked.filter((one) => one === "/agents/nora/public").length;
+      });
+    } finally {
+      calls.restore();
+    }
+    expect(firstAsked).toBe(1);
+  });
+
+  test("Let in and Blocked say nothing of anybody before it is known whose rows are whose, and say why when it cannot be", async () => {
+    const seen = { waiting: "", waitingTabs: [] as unknown[], failed: "", failedTabs: [] as unknown[], noAccess: "" };
+    // The connections' own list on its way: no row can be told to be hers yet.
+    answer({ ...house(NOUVA, NORA), "/gateways": { status: 200, body: {}, hold: true } });
+    await renderPage("/open-agents?tab=blocked", async (host) => {
+      await eventually(() => tabs(host).length === 3, 3_000, "the tabs");
+      seen.waiting = text(host);
+      seen.waitingTabs = tabs(host);
+    });
+    // It did not come.
+    answer({ ...house(NOUVA, NORA), "/gateways": { status: 500, body: { error: "boom" } } });
+    await renderPage("/open-agents?tab=let-in", async (host) => {
+      await eventually(() => host.querySelector("[data-open-unknown]") !== null, 3_000, "the note");
+      seen.failed = text(host);
+      seen.failedTabs = tabs(host);
+    });
+    // Its senders did not come.
+    answer({ ...house(NOUVA, NORA), "/access": { status: 500, body: { error: "the access store is locked" } } });
+    await renderPage("/open-agents?tab=blocked", async (host) => {
+      await eventually(() => host.querySelector("[data-open-unknown]") !== null, 3_000, "the note");
+      seen.noAccess = text(host);
+    });
+    for (const said of [seen.waiting, seen.failed, seen.noAccess]) {
+      expect(said).not.toContain("Nobody is blocked");
+      expect(said).not.toContain("Nobody was let in");
+      expect(said).not.toContain("Looking among everyone");
+    }
+    // No count said for either while it is not known.
+    expect(seen.waitingTabs).toEqual(["Wrote4", "Letin", "Blocked"]);
+    expect(seen.failedTabs).toEqual(["Wrote4", "Letin", "Blocked"]);
+    expect(seen.failed).toContain("Nouride did not say which connections are whose");
+    expect(seen.noAccess).toContain("the access store is locked");
+  });
+
+  test("which agents are open not known: said, never that no agent is open", async () => {
+    answer({ ...house(NOUVA, NORA), "/status": { status: 500, body: { error: "boom" } } });
+    let said = "";
+    await renderPage("/open-agents", async (host) => {
+      await eventually(() => host.querySelector("[data-open-unknown]") !== null, 3_000, "the note");
+      said = text(host);
+    });
+    expect(said).toContain("Nouride did not say which of your agents are open to everyone");
+    expect(said).not.toContain("No agent is open to everyone");
   });
 
   test("the filter in the row narrows the tab that is open, as the Access page's does", async () => {
@@ -255,6 +322,7 @@ describe("the Open agents page", () => {
       seen = { said: text(host), rows: people(host).length, tabs: tabs(host), picker: host.querySelector('button[aria-haspopup="listbox"]') !== null };
     });
     expect(seen.said).toContain("An admin opens an agent to everyone on that agent's own Access tab.");
+    expect(seen.said).toContain("Agents that ask for a code, and everyone who writes to them, are on Access.");
     expect(seen).toMatchObject({ rows: 0, tabs: [], picker: false });
   });
 });
