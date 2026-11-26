@@ -5,10 +5,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { AcpError, INTERNAL_ERROR, type CliRow } from "@nouride/acp";
+import { AcpError, BUILT_IN_CLIS, INTERNAL_ERROR, type CliRow } from "@nouride/acp";
 import { NourideError } from "@nouride/shared";
 import { AccountRotation, ACCOUNTS_SPENT, accountsOf, limitOf, OWN_MODEL, UNSAID_END_MS, type LimitMark } from "@/modules/external-agents/rotation.ts";
-import { useOf } from "@/modules/external-agents/use.ts";
+import { fullest } from "@/modules/external-agents/use.ts";
 
 const ROW = { id: "claude-code", name: "Claude Code", limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" } } as CliRow;
 const NOW = Date.parse("2026-11-14T13:00:00Z");
@@ -213,7 +213,9 @@ describe("the account a turn starts on", () => {
 describe("how much of an account's limits is used", () => {
   /** A count of the context as claude-agent-acp 0.107.0 sent one on the box, the windows' figures its own. */
   const update = (windows: unknown) => ({ sessionUpdate: "usage_update", used: 17_235, size: 1_000_000, _meta: { "_claude/rateLimit": { status: "allowed", resetsAt: 1794675000, rateLimitType: "five_hour", unifiedWindows: windows }, "_claude/model": "claude-sonnet-5-5" } });
-  const USE = { use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" } };
+  const USE = { use: BUILT_IN_CLIS.find((row) => row.id === "claude-code")!.use };
+  /** What the row reads of an update, as the fullest window the rotation acts on. */
+  const useOf = (row: Partial<CliRow>, update: unknown, now: number) => fullest(row.use?.(update, now) ?? null, now);
   const soon = (NOW + 3 * HOUR) / 1000;
   const later = (NOW + 5 * 24 * HOUR) / 1000;
 
@@ -343,5 +345,54 @@ describe("the marks, where the daemon keeps its state", () => {
     rows.set("cli-account-limits", JSON.stringify({ good: { until: 5 }, bad: { until: "soon" }, worse: 7, loose: { until: 9, known: "yes" } }));
     expect(cliLimitsState(rows).load()).toEqual({ good: { until: 5, known: false }, loose: { until: 9, known: false } });
     expect(cliLimitsState(stateRows()).load()).toEqual({});
+  });
+});
+
+describe("a window of the account's used up, read before a message is refused", () => {
+  const window = (usedPercent: number, hours: number | null) => ({ usedPercent, minutes: 300, resetsAt: hours === null ? null : NOW + hours * HOUR });
+  const use = (...windows: ReturnType<typeof window>[]) => ({ limits: windows.map((each, index) => ({ id: `w${index}`, label: `w${index}`, windows: [each] })) });
+
+  test("marks the account at its limit for every model until the latest such window starts again, for every agent on it, once", () => {
+    const { turn, said, later } = rotation();
+    turn.started("nix", "rina");
+    turn.seen(ROW, "rina", use(window(100, 2), window(100, 30), window(40, 1)));
+    for (const model of ["fable", "opus", OWN_MODEL]) expect(turn.limited("claude-code", "rina", model)).toEqual({ until: NOW + 30 * HOUR, known: true });
+    // Every agent on it moves where it has another account; the chat is told it is at its limit, for no one model.
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("work");
+    expect(turn.accountFor(ROW, NOX, "opus")).toBe("spare");
+    expect(turn.says("claude-code", "rina")).toEqual(["At its limit: for about 30 hours more."]);
+    turn.seen(ROW, "rina", use(window(100, 30)));
+    expect(said).toEqual([["cli_account_limited", { cli: "claude-code", account: "rina", model: "**", until: NOW + 30 * HOUR, known: true, read: true }]]);
+    // Once it starts again, the mark is gone.
+    later(31 * HOUR);
+    expect(turn.limited("claude-code", "rina", "fable")).toBeNull();
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("rina");
+  });
+
+  test("as its CLI says it while it works too: a window at its end marks the account, whatever the agent asked", () => {
+    const { turn } = rotation();
+    turn.started("solo", "rina");
+    turn.used(ROW, SOLO, { used: 1, until: NOW + 3 * HOUR });
+    expect(turn.limited("claude-code", "rina", "fable")).toEqual({ until: NOW + 3 * HOUR, known: true });
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("work");
+  });
+
+  test("nothing is marked short of the end, for a window with no end or one over, a model's own limit, or credits left beyond it", () => {
+    const { turn, kept } = rotation();
+    turn.seen(ROW, "rina", use(window(99.5, 2), window(100, null), window(100, -1)));
+    turn.seen(ROW, "rina", { limits: [{ id: "opus", label: "Weekly, opus", models: ["opus"], windows: [window(100, 5)] }] });
+    turn.seen(ROW, "rina", { ...use(window(100, 2)), creditsLeft: true });
+    turn.seen(ROW, "rina", null);
+    expect(kept()).toEqual({});
+  });
+});
+
+describe("when a turn held for its accounts' limits goes on", () => {
+  test("at the first of their ends where every account's limit said its end; never where one did not, or one is not at a limit", () => {
+    const { turn } = rotation({ kept: { "claude-code|rina|fable": { until: NOW + 5 * HOUR, known: true }, "claude-code|work|fable": { until: NOW + 2 * HOUR, known: true }, "claude-code|spare|fable": { until: NOW + HOUR, known: false } } });
+    expect(turn.freeAt("claude-code", ["rina", "work"], "fable")).toBe(NOW + 2 * HOUR);
+    expect(turn.freeAt("claude-code", ["rina", "spare"], "fable")).toBeNull();
+    expect(turn.freeAt("claude-code", ["rina", "other"], "fable")).toBeNull();
+    expect(turn.freeAt("claude-code", ["rina"], "opus")).toBeNull();
   });
 });

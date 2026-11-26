@@ -11,7 +11,7 @@ import { openDatabase } from "@nouride/runtime";
 import { resumeAfterBoot } from "@/boot/durable.ts";
 import { migrate } from "@/db/index.ts";
 import { MIGRATIONS } from "@/db/migrations.ts";
-import { providerResumesOwed, scheduleProviderResume, type ResumableTurn } from "@/modules/pipeline/provider-resume.ts";
+import { HOLD_MAX_MS, providerResumesOwed, scheduleProviderResume, type ResumableTurn } from "@/modules/pipeline/provider-resume.ts";
 import { envelope, FakeGateway, turnStore } from "../helpers.ts";
 import { pipelineBench, type Bench } from "../pipeline-bench.ts";
 import { eventually, sleep } from "../wait.ts";
@@ -49,6 +49,19 @@ describe("scheduling", () => {
     expect(scheduleProviderResume(TURN, { resume: (turn) => (resumed.push(turn.id), true), movedOn: closed, stopping: () => false, delayMs: 20 })).toBe(true);
     await sleep(80);
     expect(resumed).toEqual([]);
+  });
+
+  test("a turn held for a limit's end waits for that end, not a few minutes; one ending past the longest hold is not held", async () => {
+    const resumed: string[] = [];
+    const deps = { resume: (turn: ResumableTurn) => (resumed.push(turn.id), true), movedOn: () => false, stopping: () => false, delayMs: 10 };
+    const end = Date.now() + 150;
+    expect(scheduleProviderResume({ ...TURN, retryAt: end }, deps)).toBe(true);
+    // Past the few minutes a provider is given here (10 ms), and short of the limit's end: still held.
+    await sleep(60);
+    expect(resumed).toEqual([]);
+    await eventually(() => resumed.length === 1, 2_000, "taken up at the limit's end");
+    expect(Date.now()).toBeGreaterThanOrEqual(end);
+    expect(scheduleProviderResume({ ...TURN, retryAt: Date.now() + HOLD_MAX_MS + 60_000 }, deps)).toBe(false);
   });
 
   test("is not for a cron run, nor for a turn that was itself a second try", () => {
@@ -224,6 +237,22 @@ describe("a turn its provider ended, across a restart", () => {
     expect(owed(Date.now())).toEqual([both]);
   });
 
+  test("a turn held for a limit's end is owed after a restart until it is taken up, however long ago it failed, once", async () => {
+    const made = await pipelineBench({ gateway: new FakeGateway("telegram:nouva") });
+    benches.push(made);
+    const { turns } = made;
+    const end = Date.now() + 3 * 60 * MINUTE;
+    const held = turns.begin({ sessionId: "ses_nouva:telegram:nouva:818", agentId: "nouva", gatewayId: "telegram:nouva", chatId: "818", prompt: "push the fix" });
+    turns.finish(held, { status: "failed", reply: "At its limit.", error: "limit", retryPromised: true, retryAt: end });
+    const owed = (at: number) => providerResumesOwed(turns, at).map((turn) => [turn.id, turn.retryAt]);
+    // Once, not again as a turn that failed within the few minutes, and with its end.
+    expect(owed(Date.now())).toEqual([[held, end]]);
+    expect(owed(Date.now() + 2 * 60 * MINUTE)).toEqual([[held, end]]);
+    expect(owed(Date.now() + HOLD_MAX_MS + 60 * MINUTE)).toEqual([]);
+    turns.begin({ sessionId: "ses_x", agentId: "nouva", gatewayId: "telegram:nouva", chatId: "818", prompt: "[system] carry on", messageId: `resume:${held}` });
+    expect(owed(Date.now())).toEqual([]);
+  });
+
   test("a turn that promised under the mark is taken up once after a restart, though the words of its promise have changed since", async () => {
     const failing = (async () =>
       new Response(JSON.stringify({ error: { message: "upstream unavailable" } }), { status: 503, headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
@@ -307,11 +336,13 @@ describe("a database at the schema before the mark", () => {
     // Every row as it was, with the one column more and nothing in it.
     expect(after).toEqual(before.map((row) => ({ ...row, retry_promised: null })));
 
+    // Read on the schema a start migrates the whole way to before any turn is read: the turns held for a limit are
+    // read beside them, from a column a later schema brings.
+    await migrate(db, {}, MIGRATIONS);
     const turns = turnStore(db);
     expect(providerResumesOwed(turns, now).map((turn) => turn.id)).toEqual(["turn_promised"]);
     // And a turn closed from here on is found by its mark: begun by this release's store, on the schema this release
-    // starts on, as a start migrates the whole way before any turn is begun.
-    await migrate(db, {}, MIGRATIONS);
+    // starts on.
     const marked = turns.begin({ sessionId: "ses_nouva:telegram:nouva:815", agentId: "nouva", gatewayId: "telegram:nouva", chatId: "815", prompt: "run the tests" });
     turns.finish(marked, { status: "failed", reply: "No answer from the model. I will come back to this.", error: "503", retryPromised: true });
     expect(providerResumesOwed(turns, Date.now()).map((turn) => turn.id).sort()).toEqual(["turn_promised", marked].sort());

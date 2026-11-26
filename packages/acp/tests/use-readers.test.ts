@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { claudeUse } from "../src/clis/claude-code.ts";
+import { claudeSaid, claudeUse } from "../src/clis/claude-code.ts";
 import { codexUse } from "../src/clis/codex.ts";
 import { cursorUse } from "../src/clis/cursor.ts";
 import { grokUse } from "../src/clis/grok.ts";
@@ -30,6 +30,17 @@ describe("an account's use, read from what its maker answers", () => {
         // Past 100 is held at 100: a share, not a count.
         { id: "seven_day_opus", label: "Weekly, opus", models: ["opus"], windows: [{ usedPercent: 100, minutes: 10_080, resetsAt: Date.parse("2026-12-01T00:00:00Z") }] },
         { id: "weekly_fable", label: "Weekly, Fable", models: ["Fable"], windows: [{ usedPercent: 80, minutes: 10_080, resetsAt: Date.parse("2026-12-02T00:00:00Z") }] },
+      ],
+    });
+  });
+
+  test("Claude: with extra usage turned on, credits are left beyond the windows; and what it says while it works, in the same shape", () => {
+    expect(claudeUse({ five_hour: { utilization: 100, resets_at: "2026-11-27T12:00:00Z" }, extra_usage: { is_enabled: true } })?.creditsLeft).toBe(true);
+    expect(claudeSaid({ _meta: { "_claude/rateLimit": { unifiedWindows: { five_hour: { utilization: 0.44, resetsAt: 1_795_700_000 }, seven_day_opus: { utilization: 1.2, resetsAt: 1_796_000_000 }, odd_one: { utilization: 0.1, resetsAt: 1_796_000_000 } } } } })).toEqual({
+      limits: [
+        { id: "five_hour", label: "5-hour", windows: [{ usedPercent: 44, minutes: 300, resetsAt: 1_795_700_000_000 }] },
+        { id: "seven_day_opus", label: "Weekly, opus", models: ["opus"], windows: [{ usedPercent: 100, minutes: 10_080, resetsAt: 1_796_000_000_000 }] },
+        { id: "odd_one", label: "odd one", windows: [{ usedPercent: 10, minutes: null, resetsAt: 1_796_000_000_000 }] },
       ],
     });
   });

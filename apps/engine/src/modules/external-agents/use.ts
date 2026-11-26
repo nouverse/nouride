@@ -3,11 +3,12 @@
  *
  * A message refused for a limit is how an agent learns its account is spent, and by then the turn has stopped once.
  * claude-agent-acp says the use itself with every count of the context: each limit's window, the share of it used and
- * when it starts again. Read here as the CLI's row says it is written (`CliRow.use`), never by the CLI's name, for an
- * agent that asked to move on before the limit (`rotation.ts`).
+ * when it starts again. Read into the one shape every CLI's use is kept in (`CliUse`) by the CLI's own row
+ * (`CliRow.use`), never by the CLI's name; what an agent that asked to move on before the limit reads of it
+ * (`rotation.ts`) is the fullest window.
  */
 
-import type { CliRow } from "@nouride/acp";
+import type { CliUse } from "@nouride/acp";
 
 /** An account's fullest limit: the share of it used, from 0 to 1, and when it starts again. */
 export interface AccountUse {
@@ -15,22 +16,15 @@ export interface AccountUse {
   until: number;
 }
 
-const field = (value: unknown, key: string): unknown => (value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined);
-
 /**
- * What a session update says of the account's use: of its limits that have not started again yet, the fullest. Null
- * where the update says none, the row names no place for it, or what is there is not a share and a time.
+ * Of an account's windows that have not started again yet, the fullest, with when it starts again. Null where it
+ * said none, or none says when it starts again: a share with no end is nothing to wait for.
  */
-export function useOf(row: Pick<CliRow, "use">, update: unknown, now: number): AccountUse | null {
-  if (!row.use) return null;
-  const windows = field(field(field(update, "_meta"), row.use.meta), row.use.windows);
-  if (!windows || typeof windows !== "object") return null;
-  let fullest: AccountUse | null = null;
-  for (const window of Object.values(windows)) {
-    const used = field(window, row.use.used);
-    const seconds = field(window, row.use.resets);
-    if (typeof used !== "number" || !Number.isFinite(used) || used < 0 || typeof seconds !== "number" || !Number.isFinite(seconds)) continue;
-    if (seconds * 1000 > now && (!fullest || used > fullest.used)) fullest = { used, until: seconds * 1000 };
+export function fullest(use: CliUse | null, now: number): AccountUse | null {
+  let found: AccountUse | null = null;
+  for (const window of (use?.limits ?? []).flatMap((limit) => limit.windows)) {
+    if (window.resetsAt === null || window.resetsAt <= now) continue;
+    if (!found || window.usedPercent / 100 > found.used) found = { used: window.usedPercent / 100, until: window.resetsAt };
   }
-  return fullest;
+  return found;
 }

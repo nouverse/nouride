@@ -15,7 +15,7 @@
  * its own list, in its own folder. Nothing is switched for every agent at once.
  */
 
-import { AcpError, type CliRow } from "@nouride/acp";
+import { AcpError, type CliRow, type CliUse } from "@nouride/acp";
 import { NourideError, type ExternalAgentConfig } from "@nouride/shared";
 import { failedInPrompt } from "./connection.ts";
 import type { AccountUse } from "./use.ts";
@@ -34,6 +34,12 @@ export interface LimitMark {
 
 /** The model a mark of nearness is kept under: the limit it is near is the account's, whatever model runs. */
 const ANY_MODEL = "*";
+
+/**
+ * The model a mark of a window used up is kept under, read as every model's: a limit of the account's own, its use
+ * read before any message was refused (`seen`).
+ */
+const EVERY_MODEL = "**";
 
 /**
  * How long a limit that named no end is held: an hour. Trying again costs one refused message and the CLI started
@@ -92,7 +98,7 @@ function about(ms: number): string {
   return `about ${Math.round(hours / 24)} days`;
 }
 
-const forModel = (model: string) => (model === OWN_MODEL ? "" : ` for \`${model}\``);
+const forModel = (model: string) => (model === OWN_MODEL || model === EVERY_MODEL ? "" : ` for \`${model}\``);
 const percent = (mark: LimitMark) => `${Math.round((mark.near ?? 1) * 100)}%`;
 const ends = (mark: LimitMark, now: number) => (mark.known ? `for ${about(mark.until - now)} more` : "it did not say until when");
 
@@ -119,9 +125,15 @@ export class AccountRotation {
     return (this.deps.now ?? Date.now)();
   }
 
-  /** The mark on an account for a model, where it still holds; one whose time has come is dropped. */
+  /**
+   * The mark on an account for a model, where it still holds: its own, else a window of the account's used up, which
+   * holds for every model. One whose time has come is dropped.
+   */
   limited(cli: string, account: string, model: string): LimitMark | null {
-    const key = `${cli}|${account}|${model}`;
+    return this.held(`${cli}|${account}|${model}`) ?? (model === ANY_MODEL ? null : this.held(`${cli}|${account}|${EVERY_MODEL}`));
+  }
+
+  private held(key: string): LimitMark | null {
     const mark = this.kept[key];
     if (!mark) return null;
     if (mark.until > this.now()) return mark;
@@ -136,7 +148,7 @@ export class AccountRotation {
     const prefix = `${cli}|${account}|`;
     return Object.keys(this.kept).flatMap((key) => {
       const model = key.startsWith(prefix) ? key.slice(prefix.length) : null;
-      const mark = model === null ? null : this.limited(cli, account, model);
+      const mark = model === null ? null : this.held(key);
       return mark && model !== null ? [{ model, ...mark }] : [];
     });
   }
@@ -149,6 +161,15 @@ export class AccountRotation {
         ? `Near a limit, ${percent(mark)} of it used: it starts again in ${about(mark.until - now)}.`
         : `At its limit${forModel(mark.model)}: ${mark.known ? `for ${about(mark.until - now)} more` : "it did not say until when, and it is tried again within the hour"}.`,
     );
+  }
+
+  /**
+   * When a turn on `model` refused for its accounts' limits can go on: the first of their ends, where every account is
+   * at a limit that said its end. Null where one is not at a limit, or its limit did not say: nothing to wait for.
+   */
+  freeAt(cli: string, accounts: readonly string[], model: string): number | null {
+    const marks = accounts.map((account) => this.limited(cli, account, model));
+    return marks.length > 0 && marks.every((mark) => mark?.known) ? Math.min(...marks.map((mark) => mark!.until)) : null;
   }
 
   /** The account the agent's CLI was last started on; none before its first start. */
@@ -219,6 +240,8 @@ export class AccountRotation {
   used(row: CliRow, agent: { id: string; external: ExternalAgentConfig }, use: AccountUse | null): void {
     const moveAt = agent.external.moveAt;
     const accounts = accountsOf(agent.external);
+    // Used up: the account's, for every agent on it, whatever this one asked.
+    if (use && use.used >= 1 && use.until > this.now()) this.full(row.id, this.on.get(agent.id) ?? accounts[0]!, use.until);
     if (moveAt === undefined || accounts.length < 2 || !use || use.until <= this.now() || use.used * 100 < moveAt) return;
     const account = this.on.get(agent.id) ?? accounts[0]!;
     const key = `${row.id}|${account}|${ANY_MODEL}`;
@@ -226,6 +249,31 @@ export class AccountRotation {
     this.kept = { ...this.kept, [key]: { until: use.until, known: true, near: use.used } };
     this.deps.file?.save(this.kept);
     if (!seen) this.deps.record?.("cli_account_near", { cli: row.id, account, used: use.used, until: use.until, agent: agent.id });
+  }
+
+  /**
+   * An account's use as last read or said: a window of the account's own used up, with no credits said to be left
+   * beyond it, marks the account at its limit for every model until that window starts again, for every agent on it.
+   * A model's own limit is left to its refusal: what the maker calls a model is not the id a turn runs on.
+   */
+  seen(row: CliRow, account: string, use: CliUse | null): void {
+    const now = this.now();
+    if (!use || use.creditsLeft === true) return;
+    const ends = use.limits
+      .filter((limit) => !limit.models?.length)
+      .flatMap((limit) => limit.windows)
+      .filter((window) => window.usedPercent >= 100 && window.resetsAt !== null && window.resetsAt > now)
+      .map((window) => window.resetsAt!);
+    if (ends.length > 0) this.full(row.id, account, Math.max(...ends));
+  }
+
+  /** The account marked used up until `until`, said once for each end. */
+  private full(cli: string, account: string, until: number): void {
+    const key = `${cli}|${account}|${EVERY_MODEL}`;
+    if (this.kept[key]?.until === until) return;
+    this.kept = { ...this.kept, [key]: { until, known: true } };
+    this.deps.file?.save(this.kept);
+    this.deps.record?.("cli_account_limited", { cli, account, model: EVERY_MODEL, until, known: true, read: true });
   }
 
   /**

@@ -3,7 +3,7 @@
  * sign-in, and the accounts each CLI is signed in on.
  */
 
-import type { CliPart, CliStanding, CliVersionView } from "@nouride/acp";
+import type { CliPart, CliStanding, CliUse, CliVersionView } from "@nouride/acp";
 
 /** An external agent's coding CLI, on its row of the agents (0.8.1). */
 export interface AgentExternal {
@@ -125,6 +125,12 @@ export interface CliAccountView {
   agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];
   /** The limits this account is at now, a sentence a model; absent where it is at none. */
   limits?: string[];
+}
+
+/** An account's use as last read of its maker or said by its CLI, and when; `use` null where it is not known. */
+export interface CliAccountUse {
+  use: CliUse | null;
+  at: number | null;
 }
 
 export interface CliAccountsView {

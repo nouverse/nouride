@@ -8,12 +8,11 @@
  */
 
 import { VERSION } from "@/commons/version.ts";
-import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliPart, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
+import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliPart, type CliRow, type CliUse, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
 import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
 import { thoughtLevel } from "./models.ts";
-import { useOf, type AccountUse } from "./use.ts";
 
 const log = createLogger("external-agents");
 
@@ -96,8 +95,8 @@ export class CliConnection {
   onOwnWords?: (sessionId: string, update: SessionUpdate) => void;
   /** What this CLI runs on, read from the files installed as it started (`parts.ts`); none until then, or for a row that names no package. */
   parts: Promise<CliPart[]> = Promise.resolve([]);
-  /** The account's use as this CLI last said it in a prompt (`use.ts`); null before it said any. */
-  accountUse: AccountUse | null = null;
+  /** The account's use as this CLI last said it in a prompt (`CliRow.use`), and when; null before it said any. */
+  accountUse: { use: CliUse; at: number } | null = null;
 
   constructor(
     readonly row: CliRow,
@@ -326,6 +325,12 @@ export class CliConnection {
     return opened;
   }
 
+  /** A method of the CLI's own, asked on this connection: how its row reads its account's use (`readUse`). */
+  ask(method: string, timeoutMs: number): Promise<unknown> {
+    // Not a use of the CLI: a page that asks keeps no idle CLI running.
+    return this.need().extension(method, {}, timeoutMs);
+  }
+
   /**
    * The session set to the mode, model and effort the pack names now, each where it differs from what it was last set
    * to: set only when a session opened, a preset changed on the Brain tab never reached a chat already going — one moved
@@ -435,7 +440,8 @@ export class CliConnection {
     let letGo = false;
     try {
       const answering = client.promptAnswer(sessionId, blocks, (update) => {
-        this.accountUse = useOf(this.row, update, this.now()) ?? this.accountUse;
+        const said = this.row.use?.(update, this.now());
+        if (said) this.accountUse = { use: said, at: this.now() };
         onUpdate(update);
       });
       if (!held) return await answering;

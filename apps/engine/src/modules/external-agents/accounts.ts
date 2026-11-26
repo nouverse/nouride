@@ -10,8 +10,9 @@
  *   copying one sign-in into several agents' folders would have them refresh it out from under each other, so each
  *   agent on the account signs in once, in its own folder, and the page says which have.
  *
- * Either way the agent runs inside the CLI itself, signed in with the CLI's own sign-in; nothing here takes a sign-in
- * out of a CLI for anything else.
+ * Either way the agent runs inside the CLI itself, signed in with the CLI's own sign-in; nothing takes a sign-in out of
+ * a CLI for anything else but asking its maker how much of the account is used (`account-use.ts`), the request the
+ * CLI's own usage command makes.
  */
 
 import type { CliPart, CliRow, CliVersionView } from "@nouride/acp";

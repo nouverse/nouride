@@ -104,6 +104,11 @@ export class AcpClient {
     return this.peer.call("authenticate", { methodId }, { timeoutMs });
   }
 
+  /** A method of the agent's own, beside the protocol's (named with a leading `_`), answered as it answers. */
+  extension(method: string, params: Record<string, unknown> = {}, timeoutMs = OPEN_TIMEOUT_MS): Promise<unknown> {
+    return this.peer.call(method, params, { timeoutMs });
+  }
+
   newSession(cwd: string, mcpServers: McpServer[] = [], timeoutMs = OPEN_TIMEOUT_MS): Promise<NewSessionResult> {
     return this.peer.call<NewSessionResult>("session/new", { cwd, mcpServers }, { timeoutMs });
   }

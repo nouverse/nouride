@@ -10,6 +10,31 @@ const WINDOWS: Readonly<Record<string, { label: string; minutes: number }>> = {
   seven_day: { label: "Weekly", minutes: 10_080 },
 };
 
+/** A limit by its key: one of the account's windows, or a model's own weekly one (`seven_day_opus`). */
+function limitNamed(key: string): { label: string; minutes: number; models?: string[] } | null {
+  const known = WINDOWS[key];
+  if (known) return known;
+  const model = key.startsWith("seven_day_") ? key.slice("seven_day_".length) : "";
+  return model ? { label: `Weekly, ${model}`, minutes: 10_080, models: [model] } : null;
+}
+
+/**
+ * What claude-agent-acp says of the account's use with every count of the context: each window of
+ * `_meta["_claude/rateLimit"].unifiedWindows`, its share used from 0 to 1 and when it starts again in seconds.
+ */
+export function claudeSaid(update: unknown): CliUse | null {
+  const windows = field(update, "_meta", "_claude/rateLimit", "unifiedWindows");
+  const limits: UseLimit[] = [];
+  for (const [key, value] of Object.entries(windows && typeof windows === "object" ? windows : {})) {
+    const used = field(value, "utilization");
+    const resets = field(value, "resetsAt");
+    if (typeof used !== "number" || !Number.isFinite(used) || used < 0 || typeof resets !== "number" || !Number.isFinite(resets)) continue;
+    const named = limitNamed(key);
+    limits.push({ id: key, label: named?.label ?? key.replaceAll("_", " "), ...(named?.models ? { models: named.models } : {}), windows: [{ usedPercent: percent(used * 100), minutes: named?.minutes ?? null, resetsAt: resets * 1000 }] });
+  }
+  return limits.length > 0 ? { limits } : null;
+}
+
 /**
  * Anthropic's answer for a Claude subscription's use (`/api/oauth/usage`, what Claude Code's own `/usage` reads): each
  * window's share used in percent and its end, the weekly ones of a model beside the account's own, as keys
@@ -22,10 +47,9 @@ export function claudeUse(answer: unknown): CliUse | null {
     return used === null ? null : { usedPercent: percent(used), minutes, resetsAt: timeOf(field(value, "resets_at")) };
   };
   for (const [key, value] of Object.entries(answer && typeof answer === "object" ? answer : {})) {
-    const known = WINDOWS[key];
-    const model = !known && key.startsWith("seven_day_") ? key.slice("seven_day_".length) : null;
-    const said = known ? window(value, known.minutes) : model ? window(value, 10_080) : null;
-    if (said) limits.push({ id: key, label: known ? known.label : `Weekly, ${model}`, ...(model ? { models: [model] } : {}), windows: [said] });
+    const named = limitNamed(key);
+    const said = named ? window(value, named.minutes) : null;
+    if (named && said) limits.push({ id: key, label: named.label, ...(named.models ? { models: named.models } : {}), windows: [said] });
   }
   const scoped = field(answer, "limits");
   for (const limit of Array.isArray(scoped) ? scoped : []) {
@@ -34,7 +58,9 @@ export function claudeUse(answer: unknown): CliUse | null {
     if (field(limit, "kind") !== "weekly_scoped" || typeof model !== "string" || used === null) continue;
     limits.push({ id: `weekly_${model.toLowerCase()}`, label: `Weekly, ${model}`, models: [model], windows: [{ usedPercent: percent(used), minutes: 10_080, resetsAt: timeOf(field(limit, "resets_at")) }] });
   }
-  return limits.length > 0 ? { limits } : null;
+  // Extra usage turned on: past a window it goes on, paid for, so a window at its end is not the account spent.
+  const extra = field(answer, "extra_usage", "is_enabled") === true;
+  return limits.length > 0 ? { limits, ...(extra ? { creditsLeft: true } : {}) } : null;
 }
 
 export const claudeCode: CliRow = {
@@ -73,7 +99,7 @@ export const claudeCode: CliRow = {
   limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" },
   // Every `usage_update` of 0.107.0, read on the box: `_meta["_claude/rateLimit"].unifiedWindows` holds
   // `five_hour` and `seven_day`, each `{ utilization: 0.44, resetsAt: 1794675000, status: "allowed" }`.
-  use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" },
+  use: claudeSaid,
   // 0.107.0, read in its own source on the box: every update of a subagent's carries
   // `_meta.claudeCode.parentToolUseId`, the `Agent` call that started it. With no word from the client that it reads
   // a subagent's work after a prompt, it keeps the prompt open until its background subagents end.

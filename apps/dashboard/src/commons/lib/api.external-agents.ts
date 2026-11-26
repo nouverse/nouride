@@ -4,7 +4,7 @@
  */
 
 import { control, post, request } from "./api.client";
-import type { AgentCli, CliAccountsView, CliLoginView, CliPreset, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
+import type { AgentCli, CliAccountUse, CliAccountsView, CliLoginView, CliPreset, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
 
 /** A coding CLI as it is listed: who makes it, then its name — "Anthropic: Claude Code" (0.8.1). */
 export const cliLabel = (cli: { name: string; maker?: string }): string => (cli.maker ? `${cli.maker}: ${cli.name}` : cli.name);
@@ -14,6 +14,8 @@ const account = (cli: string, name: string) => `${control}/cli-accounts/${encode
 export const externalAgentsApi = {
   /** Asks each CLI on each account's agents, so it takes seconds; `fresh` asks again. */
   cliAccounts: (fresh = false) => request<{ clis: CliAccountsView[] }>(`${control}/cli-accounts${fresh ? "?fresh=1" : ""}`),
+  /** Asks the account's maker, at most every few minutes; `use` null where it is not known. */
+  cliAccountUse: (cli: string, name: string) => request<CliAccountUse>(`${account(cli, name)}/use`),
   addCliAccount: (cli: string, name: string) => post<{ ok: true }>(`${control}/cli-accounts`, { cli, name }),
   removeCliAccount: (cli: string, name: string) => request<{ ok: true }>(account(cli, name), { method: "DELETE" }),
   startAccountLogin: (cli: string, name: string) => post<{ login: CliLoginView }>(`${account(cli, name)}/login`, {}),

@@ -27,7 +27,7 @@ import { isMissionChat, MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts
 import { ownFolderOf } from "@/modules/missions/worktree.ts";
 import { missionDeleteScope } from "./inside-delete.ts";
 import { promptOf, promptTakes } from "./prompt.ts";
-import { ACCOUNTS_SPENT, accountsOf, OWN_MODEL, type AccountRotation } from "./rotation.ts";
+import { ACCOUNTS_SPENT, accountsOf, limitOf, OWN_MODEL, type AccountRotation } from "./rotation.ts";
 import type { AccountUse } from "./use.ts";
 import { cliUsage, type CliContexts, type CliSpending } from "./usage.ts";
 import { merged, MidPrompt, untilSaid } from "./steering.ts";
@@ -43,7 +43,7 @@ export interface RunnerHost {
   forTurn?(agent: LoadedAgent, signal?: AbortSignal, model?: string): Promise<{ cli: CliConnection; notYet: string[] }>;
   /** The agent's CLI as this install knows it, and the accounts at a limit: a refused message may move the agent (`rotation.ts`). */
   row?(id: string): CliRow | undefined;
-  rotation?: Pick<AccountRotation, "refused" | "early" | "used">;
+  rotation?: Pick<AccountRotation, "refused" | "early" | "used" | "freeAt">;
   /** The account's use as the agent's CLI last said it; null where it said none (`use.ts`). */
   accountUse?(agentId: string): AccountUse | null;
   /**
@@ -161,8 +161,13 @@ export class ExternalTurnRunner {
         if (row && agent) this.host.rotation?.used(row, agent, this.host.accountUse?.(agent.id) ?? null);
         return moved ? { ...answered, text: `${moved}${answered.text}` } : answered;
       } catch (err) {
-        const note = req.signal?.aborted || moves <= 0 ? null : this.movedBy(err, model);
-        if (!note) throw err;
+        let note: string | null;
+        try {
+          note = req.signal?.aborted || moves <= 0 ? null : this.movedBy(err, model);
+        } catch (spent) {
+          throw this.held(spent, model);
+        }
+        if (!note) throw this.held(err, model);
         tell(note);
         if (this.worked) ask = { ...req, userMessage: { ...req.userMessage, content: GO_ON } };
       }
@@ -177,6 +182,19 @@ export class ExternalTurnRunner {
     const external = this.agent.config.external;
     const row = external && this.host.row?.(external.cli);
     return row ? (this.host.rotation?.refused(row, { id: this.agent.config.id, name: this.agent.config.displayName, external }, err, model) ?? null) : null;
+  }
+
+  /**
+   * A turn refused for its account's limit, where every account it has is at one that said its end: thrown again with
+   * the first end, so the turn is held until then (`pipeline/provider-resume.ts`). Any other failure as it was.
+   */
+  private held(err: unknown, model: string): unknown {
+    const external = this.agent.config.external;
+    const row = external && this.host.row?.(external.cli);
+    if (!row || !external || !(err instanceof NourideError) || err.retryAt !== undefined) return err;
+    const limit = err.code === ACCOUNTS_SPENT || limitOf(row, err.cause ?? err, Date.now()) !== null;
+    const at = limit ? this.host.rotation?.freeAt(row.id, accountsOf(external), model) : null;
+    return at ? new NourideError(err.code, err.message, err.userMessage, { cause: err.cause, retryAt: at }) : err;
   }
 
   /** The model a turn runs on, by the word its CLI takes: this chat's, else the pack's, else the CLI's own. */

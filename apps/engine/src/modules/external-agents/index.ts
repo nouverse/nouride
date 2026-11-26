@@ -45,8 +45,9 @@ import { LentTools } from "./lent-tools.ts";
 import { CliLogin, type LoginView, type SignIn } from "./login.ts";
 import { openOnBox, returnAddress } from "./callback.ts";
 import { KeptParts } from "./parts.ts";
-import { AccountRotation, type LimitsFile } from "./rotation.ts";
-import type { AccountUse } from "./use.ts";
+import { AccountRotation, accountsOf, type LimitsFile } from "./rotation.ts";
+import { AccountUses, type UseSeen } from "./account-use.ts";
+import { fullest, type AccountUse } from "./use.ts";
 import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
@@ -131,6 +132,8 @@ export interface ExternalAgentsDeps {
   openOnBox?: (url: URL) => Promise<string>;
   /** Runs a CLI's status words as the agent. */
   run?: typeof runCommand;
+  /** How an account's use is asked of its maker (`account-use.ts`). Absent: the runtime's. */
+  fetch?: typeof fetch;
   scan?: (row: CliRow) => Promise<ScannedCli>;
   /** The newest version of each CLI's package, as the npm registry says (0.8.24). Absent: nothing is said of it. */
   newest?: Pick<NewestVersions, "of">;
@@ -187,6 +190,8 @@ export class ExternalAgents implements RunnerHost {
   private readonly parts = new KeptParts();
   /** Which account each agent is on, and the accounts at a limit: an agent moved to its next (`rotation.ts`). */
   readonly rotation: AccountRotation;
+  /** Each account's use, asked of its maker or said by its CLI (`account-use.ts`). */
+  private readonly uses: AccountUses;
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
   /** What a followed session's commands started, kept together to be sorted at its work's end. */
@@ -223,6 +228,17 @@ export class ExternalAgents implements RunnerHost {
     this.efforts = new OfferedModels(deps.efforts);
     this.accounts = new CliAccounts(deps.accounts ?? {});
     this.rotation = new AccountRotation({ usable: (row, account) => this.accounts.token(row, account) !== undefined, record: (action, details) => deps.audit?.record({ action, actor: "nouride:system", details }), ...(deps.limits ? { file: deps.limits } : {}), ...(deps.now ? { now: deps.now } : {}) });
+    this.uses = new AccountUses({
+      sharedToken: (row, account) => this.accounts.token(row, account),
+      folderOf: (row, agentId, account) => (row.profileEnv ? profileDirOf(this.privateDir(agentId), row.id, account) : this.privateDir(agentId)),
+      readAs: async (agentId, path) => {
+        const out = await (deps.run ?? runCommand)(["cat", "--", path], { cwd: "/", env: { PATH: "/usr/bin:/bin" }, timeoutMs: 10_000, maxOutputBytes: 256 * 1024, agent: agentId });
+        return out.exitCode === 0 ? out.stdout : undefined;
+      },
+      running: (cli, account) => [...this.running].filter(([agentId, connection]) => !connection.closed && connection.row.id === cli && this.rotation.accountOf(agentId) === account).map(([, connection]) => connection),
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
+    });
     this.ownWords = new OwnWords((chat) => this.onOwnWords?.(chat), deps.quietMs);
     this.left = new LeftRunning(deps.leftRunning, deps.commandsUnder ?? commandsRunningUnder);
     this.groups = new SessionGroups(deps.groupOs ?? MACHINE_GROUPS);
@@ -247,13 +263,24 @@ export class ExternalAgents implements RunnerHost {
     return this.deps.rows?.() ?? BUILT_IN_CLIS;
   }
 
-  /** The account's use as the agent's running CLI last said it (`use.ts`): what a turn's end reads to move on early. */
+  /** The account's fullest limit as the agent's running CLI last said it (`use.ts`): what a turn's end reads to move on early. */
   accountUse(agentId: string): AccountUse | null {
-    return this.running.get(agentId)?.accountUse ?? null;
+    return fullest(this.running.get(agentId)?.accountUse?.use ?? null, (this.deps.now ?? Date.now)());
   }
 
   row(id: string): CliRow | undefined {
     return this.rows().find((row) => row.id === id);
+  }
+
+  /**
+   * An account's use as last read or said (`account-use.ts`), read from the sign-in of the agents on it; and a window
+   * of it used up is marked, so no agent sends a message there to be refused until it starts again (`rotation.ts`).
+   */
+  async useOf(row: CliRow, account: string, agents: readonly LoadedAgent[]): Promise<UseSeen | null> {
+    const on = agents.filter((agent) => agent.config.external?.cli === row.id && accountsOf(agent.config.external).includes(account)).map((agent) => agent.config.id);
+    const seen = await this.uses.of(row, account, on);
+    this.rotation.seen(row, account, seen?.use ?? null);
+    return seen;
   }
 
   /** The turn's brain for an external agent; null for any other, which the executor answers. */
@@ -457,6 +484,9 @@ export class ExternalAgents implements RunnerHost {
     const secrets = this.deps.secretsFor(agentId, [row.command, ...row.args]);
     // The account this turn runs on: the one it is on, or its next where that is at a limit for the turn's model. The
     // folder stays `profile`, the first; a CLI on another account is started again as one whose secrets changed is.
+    // An agent with accounts to move between reads the one it is on first, at most every few minutes: a window used up
+    // since its last turn, elsewhere too, moves it before a message is refused there.
+    if (model !== undefined && row.readUse && accountsOf(external).length > 1) await this.useOf(row, this.rotation.accountOf(agentId) ?? accountsOf(external)[0]!, [agent]);
     const account = this.rotation.accountFor(row, { id: agentId, name: agent.config.displayName, external }, model);
     const stamp = `${secretsStamp(secrets)}|${account}`;
     const current = this.running.get(agentId);

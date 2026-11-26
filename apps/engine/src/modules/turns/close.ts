@@ -245,6 +245,9 @@ export function keptSentence(closed: ClosedTurn): string | null {
  */
 const RETRY_PROMISE = `I'll try again in a few minutes, or say "continue".`;
 
+/** The same, for a turn held until the limit it was refused for ends, which what it was told says. */
+const HELD_PROMISE = `I'll go on by myself once that limit ends, or say "continue".`;
+
 /**
  * The words that promise was made in before a turn's record carried the mark, and the only trace of one made then.
  * Never reworded, whatever `RETRY_PROMISE` becomes: a turn that failed under them minutes before the update that
@@ -254,8 +257,9 @@ const RETRY_PROMISE = `I'll try again in a few minutes, or say "continue".`;
 const RETRY_PROMISE_BEFORE_THE_MARK = `I'll try again in a few minutes, or say "continue".`;
 
 /** The same, for a turn its provider ended that will be tried again by itself — `pipeline/provider-resume.ts`. */
-export function retrySentence(closed: ClosedTurn): string {
-  return closed.done.length + closed.cut.length > 0 ? `What I did so far is kept, and ${RETRY_PROMISE}` : RETRY_PROMISE;
+export function retrySentence(closed: ClosedTurn, held = false): string {
+  const promise = held ? HELD_PROMISE : RETRY_PROMISE;
+  return closed.done.length + closed.cut.length > 0 ? `What I did so far is kept, and ${promise}` : promise;
 }
 
 /**

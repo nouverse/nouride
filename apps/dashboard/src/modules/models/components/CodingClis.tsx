@@ -28,6 +28,7 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { byInstaller, setUpMessage } from "@/commons/lib/set-up";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { ExperimentalNote } from "@/commons/components/agents/ExperimentalCli";
+import { AccountUse } from "./AccountUse";
 
 const ACCOUNT_NAME = /^[a-z0-9][a-z0-9-]{0,23}$/;
 /**
@@ -217,6 +218,7 @@ function AccountRow({ cli, account, admin, signing, onSignIn, onChanged }: { cli
       {account.limits?.map((limit) => (
         <p key={limit} className="text-warning text-xs" data-account-limit>{limit.replaceAll("`", "")}</p>
       ))}
+      <AccountUse cli={cli.id} account={account.name} />
       {account.agents.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
           {account.agents.map((agent) => (

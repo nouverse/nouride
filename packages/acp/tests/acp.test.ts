@@ -71,6 +71,24 @@ describe("the handshake", () => {
   });
 });
 
+describe("a method of the agent's own", () => {
+  test("is asked by its name with what it is given, and answered as the agent answers it", async () => {
+    let client!: AcpClient;
+    const asked: unknown[] = [];
+    const agent = new AcpPeer(
+      { send: (line) => later(() => client.receive(line)) },
+      { request: async (method, params) => (asked.push([method, params]), { config: { creditUsagePercent: 25 } }) },
+    );
+    client = new AcpClient({ transport: { send: (line) => later(() => agent.receive(line)) }, permission: async () => ({ outcome: "cancelled" }) });
+    expect(await client.extension("_x.ai/billing")).toEqual({ config: { creditUsagePercent: 25 } });
+    expect(await client.extension("_x.ai/billing", { period: "current" })).toEqual({ config: { creditUsagePercent: 25 } });
+    expect(asked).toEqual([
+      ["_x.ai/billing", {}],
+      ["_x.ai/billing", { period: "current" }],
+    ]);
+  });
+});
+
 describe("a prompt", () => {
   test("its updates arrive in order while it runs, then why it stopped; another session's go to unclaimed", async () => {
     const { client, unclaimed } = pair({

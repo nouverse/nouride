@@ -9,7 +9,7 @@
  * with its secret still kept could not be told from a failed delete without them.
  */
 
-import type { AgentCli, CliAccountsView, CliLoginView, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
+import type { AgentCli, CliAccountUse, CliAccountsView, CliLoginView, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
 import { PROFILE_NAME } from "@nouride/persona";
 import { EXTERNAL_PERMISSIONS, LLM_EFFORTS, type ExternalAgentConfig, type LoadedAgent } from "@nouride/shared";
 import type { ExternalSettings } from "@/modules/setup/external-agent.ts";
@@ -119,6 +119,19 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     if (!deps.externalAgents) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
     return c.json({ clis: await deps.externalAgents.accountList(deps.registry.all(), c.req.query("fresh") === "1") } satisfies { clis: CliAccountsView[] });
+  });
+
+  /**
+   * An account's use, asked of its maker at most every few minutes or as a CLI on it last said it (`account-use.ts`):
+   * on its own, so the list of accounts does not wait on every maker. Null where it is not known.
+   */
+  control.get("/cli-accounts/:cli/:name/use", async (c) => {
+    if (!deps.externalAgents) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
+    if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
+    const row = deps.externalAgents.row(c.req.param("cli"));
+    if (!row) return c.json({ error: `no coding CLI "${c.req.param("cli")}" here` }, 404);
+    const seen = await deps.externalAgents.useOf(row, c.req.param("name"), deps.registry.all());
+    return c.json({ use: seen?.use ?? null, at: seen?.at ?? null } satisfies CliAccountUse);
   });
 
   /** An account added by name, before any agent uses it. Admin only. */

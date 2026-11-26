@@ -41,6 +41,7 @@ function app(wayBack: string | null = null, moved?: { accounts?: string[]; on?: 
         (seen.push(`remove ${cli} ${name}`),
         name === "spare" ? { ok: true, tokenRemoved: true } : name === "stuck" ? { ok: true, tokenRemoved: false, tokenError: "read-only file system" } : { ok: false, error: "Coder uses it", users: ["Coder"] }),
     },
+    useOf: async (row: { id: string }, name: string, agents: LoadedAgent[]) => (seen.push(`use ${row.id} ${name} ${agents.length}`), name === "team" ? { use: { limits: [] }, at: 5 } : null),
     startAccountLogin: (cli: string, name: string, actor: string) => (seen.push(`account login ${cli} ${name} by ${actor}`), login),
     row: (id: string) => (id === "codex" || id === "claude-code" ? { id, profileEnv: "CODEX_HOME", ...(moved?.saysUse ? { use: { meta: "m", windows: "w", used: "u", resets: "r" } } : {}) } : undefined),
     profiles: async (agent: LoadedAgent, fresh: boolean) => (seen.push(`profiles ${agent.config.id}${fresh ? " fresh" : ""}`), [{ name: "work", inUse: true, signedIn: false, reason: "Codex is not signed in" }]),
@@ -208,6 +209,14 @@ describe("coding-CLI accounts (0.8.1)", () => {
     expect((await call("POST", "/cli-accounts/claude-code/team/login/answer", { text: "CODE" })).status).toBe(200);
     expect((await call("POST", "/cli-accounts/claude-code/team/login/stop")).status).toBe(200);
     expect(seen).toEqual(["accounts 2 fresh", "add claude-code team", "add claude-code Bad", "remove claude-code team", "account login claude-code team by cli", "view @claude-code/team", "answer @claude-code/team CODE", "stop @claude-code/team"]);
+  });
+
+  test("an account's use is asked on its own, with every agent the account may have; not known is null, a CLI not here is refused", async () => {
+    const { call, seen } = app();
+    expect(await (await call("GET", "/cli-accounts/claude-code/team/use")).json()).toEqual({ use: { limits: [] }, at: 5 });
+    expect(await (await call("GET", "/cli-accounts/codex/work/use")).json()).toEqual({ use: null, at: null });
+    expect((await call("GET", "/cli-accounts/cursor/work/use")).status).toBe(404);
+    expect(seen).toEqual(["use claude-code team 2", "use codex work 2"]);
   });
 
   test("an account added and removed is audited with who did it, and whether its token went — what failed is not (0.8.9)", async () => {

@@ -67,7 +67,7 @@ export const LONG_FUNCTIONS: Record<string, Record<string, Budget>> = {
   "apps/engine/src/modules/web/control/routes/chat.ts": { registerChatRoutes: { lines: 263, why: ROUTES("dashboard chat's") } },
   "apps/engine/src/modules/web/control/routes/cron.ts": { registerCronRoutes: { lines: 172, why: ROUTES("schedule's") } },
   "apps/engine/src/modules/web/control/routes/diagnostics.ts": { registerDiagnosticRoutes: { lines: 172, why: ROUTES("diagnostic") } },
-  "apps/engine/src/modules/web/control/routes/external-agents.ts": { registerExternalAgentRoutes: { lines: 199, why: ROUTES("coding CLIs'") } },
+  "apps/engine/src/modules/web/control/routes/external-agents.ts": { registerExternalAgentRoutes: { lines: 207, why: ROUTES("coding CLIs'") } },
   "apps/engine/src/modules/web/control/routes/knowledge.ts": { registerKnowledgeRoutes: { lines: 251, why: ROUTES("knowledge base's") } },
   "apps/engine/src/modules/web/control/routes/mcp.ts": { registerMcpRoutes: { lines: 154, why: ROUTES("MCP library's") } },
   "apps/engine/src/modules/web/control/routes/memory.ts": { registerMemoryRoutes: { lines: 176, why: ROUTES("memory") } },

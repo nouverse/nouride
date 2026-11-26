@@ -34,6 +34,19 @@ const CLIS: CliAccountsView[] = [
   { id: "mine", name: "Mine", installed: false, install: "download mine-acp from mine.example.test onto the PATH", shared: false, canLogin: false, accounts: [] },
 ];
 
+const NOW = Date.now();
+/** The team account's use: its 5-hour window, and Codex-like a limit with two windows. */
+const TEAM_USE = {
+  use: {
+    limits: [
+      { id: "five_hour", label: "5-hour", windows: [{ usedPercent: 44.4, minutes: 300, resetsAt: NOW + 2 * 3_600_000 + 60_000 }] },
+      { id: "plan", label: "Plan", windows: [{ usedPercent: 95, minutes: 300, resetsAt: null }, { usedPercent: 12, minutes: 10_080, resetsAt: null }] },
+    ],
+    creditsLeft: false,
+  },
+  at: NOW - 3 * 60_000,
+};
+
 function serve(clis: CliAccountsView[] = CLIS): { posted: string[] } {
   const posted: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -44,6 +57,8 @@ function serve(clis: CliAccountsView[] = CLIS): { posted: string[] } {
     }
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
     if (path === "/api/control/cli-accounts") return json({ clis });
+    if (path === "/api/control/cli-accounts/claude-code/team/use") return json(TEAM_USE);
+    if (path.endsWith("/use")) return json({ use: null, at: null });
     if (path === "/api/control/status") return json({ orchestrator: "nouva", agents: [{ id: "nouva", displayName: "Nouva" }], gateways: [] });
     if (path.endsWith("/login")) return json({ login: { running: true, output: "Open https://claude.example.test/x\n", links: ["https://claude.example.test/x"], exitCode: null, signedIn: false } });
     return json({ error: "not found" }, 404);
@@ -81,6 +96,25 @@ const plainText = (host: HTMLElement) => {
 };
 
 describe("Coding CLIs on the Models page", () => {
+  test("each account says how much of its plan is used, as its maker last said, or that it is not known", async () => {
+    serve();
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => host.querySelectorAll("[data-account-use]").length === 2, 2_000, "each account's use");
+      const [team, work] = [...host.querySelectorAll("[data-account-use]")];
+      const lines = [...team!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim());
+      expect(lines).toEqual(["5-hour44% used, starts again in 2 h", "Plan, 5 hours95% used", "Plan, weekly12% used", "No credits left beyond these limits.", "Read 3 min ago."]);
+      expect([...team!.querySelectorAll("progress")].map((bar) => [bar.getAttribute("value"), bar.className.includes("progress-warning")])).toEqual([
+        ["44.4", false],
+        ["95", true],
+        ["12", false],
+      ]);
+      expect(work!.textContent).toBe("How much of its plan is used is not known.");
+    } finally {
+      unmount();
+    }
+  });
+
   test("a CLI not yet tried on a real account says so on its card, and only on its card", async () => {
     serve([...CLIS, { id: "grok", name: "Grok Build", maker: "xAI", experimental: true, installed: true, install: "curl x.example.test | bash", shared: false, canLogin: true, accounts: [] }]);
     const { host, unmount } = await mount();

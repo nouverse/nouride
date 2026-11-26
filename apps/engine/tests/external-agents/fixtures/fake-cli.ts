@@ -42,7 +42,7 @@
  *
  * `FAKE_LIMITED`, a list of tokens: started with one of them in `FAKE_TOKEN`, as a shared account's token reaches a real
  * CLI, every prompt is refused as an account at its limit is: the limit said as a message, then a refusal whose data is
- * `{ errorKind: "rate_limit" }`. `FAKE_LIMITED_AFTER=step`: after one step of work. Each prompt goes to stderr as
+ * `{ errorKind: "rate_limit" }`, with `rateLimit.resetsAt` where `FAKE_LIMIT_RESETS` says it, in seconds. `FAKE_LIMITED_AFTER=step`: after one step of work. Each prompt goes to stderr as
  * `prompted-as:<token> in <the profile folder's name>`.
  *
  * `FAKE_USE`, JSON by token (`{"tok-first":0.93}`): started with that token, each prompt says how much of its account's
@@ -271,7 +271,8 @@ const server = new AcpServer({
           channel.update({ sessionUpdate: "tool_call_update", toolCallId: "l1", status: "completed", content: [{ type: "content", content: { type: "text", text: "clean" } }] });
         }
         channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "You have hit your limit." } });
-        throw new AcpError(-32603, "Internal error: You have hit your limit.", { errorKind: "rate_limit" });
+        const resets = process.env.FAKE_LIMIT_RESETS;
+        throw new AcpError(-32603, "Internal error: You have hit your limit.", { errorKind: "rate_limit", ...(resets ? { rateLimit: { resetsAt: Number(resets) } } : {}) });
       }
       channel.update({ sessionUpdate: "agent_thought_chunk", content: { type: "text", text: "Looking first." } });
       channel.update({ sessionUpdate: "tool_call", toolCallId: "t1", title: "echo hi", kind: "execute", name: "Bash", status: "in_progress" });

@@ -102,12 +102,11 @@ export interface CliRow {
    */
   limit?: { key: string; value: string; resets?: string };
   /**
-   * Where its connector says how much of the account's limits is used, in a session update's `_meta`: the key there,
-   * the map of the limits' windows under it, and in each window the share used, from 0 to 1, and when it starts again,
-   * in seconds since 1970. Read as it is written, so an agent that asked to (`[external] move_at`) moves to its next
-   * account before a message is refused. Absent: it says nothing of the kind.
+   * What its connector says of the account's use in a session update while it works, read into the one shape
+   * (`CliUse`): so an agent that asked to (`[external] move_at`) moves to its next account before a message is refused,
+   * and the account's card shows it between reads. Null: the update says none. Absent: it says nothing of the kind.
    */
-  use?: { meta: string; windows: string; used: string; resets: string };
+  use?: (update: unknown, now: number) => CliUse | null;
   /**
    * Where its connector says that a tool call is not the agent's own but a helper's that the CLI started itself (a
    * subagent), in the call's `_meta`: the key there, and under it the field that names the call that started the
@@ -181,7 +180,7 @@ export type UseReader =
       kind: "http";
       method: "GET" | "POST";
       url: string;
-      /** The token, from the first of these that holds one. */
+      /** The token, sent as `Authorization: Bearer`, from the first of these that holds one. */
       token: readonly UseToken[];
       headers?: Readonly<Record<string, string>>;
       /** Headers whose values are read from the profile folder's files, as a token is. */
