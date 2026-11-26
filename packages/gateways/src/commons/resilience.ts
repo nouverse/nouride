@@ -482,6 +482,21 @@ export abstract class BaseGateway implements Gateway {
   }
 
   /**
+   * One more connect after `ms`, out of the retry budget: not counted against it, not slowed by its having run out, and
+   * in place of any reconnect already waiting. For a platform that said the session is over, asked once more before
+   * that is believed (WhatsApp's logout, `channels/whatsapp/gateway.ts`). A stop ends it, as it ends any reconnect.
+   */
+  protected connectOnceMore(reason: string, ms: number): void {
+    if (this.stopping) return;
+    clearInterval(this.healthTimer);
+    clearTimeout(this.reconnectTimer);
+    clearTimeout(this.stableTimer);
+    this.stableTimer = undefined;
+    this.setStatus("reconnecting", reason);
+    this.reconnectTimer = setTimeout(contained(this.log, "a reconnect attempt threw", () => this.attemptConnect()), ms);
+  }
+
+  /**
    * Call while connecting, when the platform's answer makes the connect wait: asked to come back later, an error of
    * its own, not reachable (`connect-wait.ts`). `untilMs` where the platform named when. Only while it is not up: a
    * platform that slows a connection already working is another matter, and its sends say so themselves.

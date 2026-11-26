@@ -13,7 +13,7 @@
  * directory is not being persisted, which is the failure this is built to avoid.
  */
 
-import { join, randomUuid, removePath, renamePath, statFile, tempDir, writeBytesSync } from "@nouride/runtime";
+import { join, randomUuid, removePath, tempDir, writeBytesSync } from "@nouride/runtime";
 import {
   BRIDGE_PROTOCOL_VERSION,
   contained,
@@ -29,6 +29,7 @@ import { BaseGateway, type GatewayIdentity, deliverInParts, UndeliverableError }
 import { whatsappEnvelope, whatsappSenderId } from "./envelope.ts";
 import { fetchWhatsAppFile } from "./media.ts";
 import { NumberItself } from "./number.ts";
+import { clearLogin } from "./login-folder.ts";
 import { toWhatsAppText } from "./format.ts";
 
 /**
@@ -250,32 +251,24 @@ export class WhatsAppGateway extends BaseGateway {
    * and the bridge started on an empty folder, which shows a new code to scan. Never for a number still linked, pairing
    * or being tried again: removing a login that works is `logoutAndStop`'s.
    *
-   * Moved first, then removed: a folder removed part of the way (a file it may not delete) left a login neither old nor
-   * new. A folder that cannot be moved leaves the number started again as it was, and says so. What the old link left
-   * goes with it: the old phone's addresses, which another phone's link would go on taking for its own, and the replies
+   * The folder is cleared all or nothing (`login-folder.ts`); one that cannot be leaves the number started again as it
+   * was, and says so. What the old link left goes with it: the old phone's addresses, which another phone's link would go on taking for its own, and the replies
    * held while it was logged out, which would go out from that other account to the old one's chats.
    */
   async linkAgain(): Promise<{ ok: true } | { ok: false; refused: boolean; reason: string }> {
     if (!this.isLoggedOut()) return { ok: false, refused: true, reason: "this number is not logged out from its phone" };
     await this.stop();
-    const folder = this.options.sessionDir;
-    const aside = `${folder}.logged-out-${Date.now()}`;
-    try {
-      if (statFile(folder)) renamePath(folder, aside);
-    } catch (err) {
+    const cleared = clearLogin(this.options.sessionDir);
+    if (!cleared.ok) {
       await this.start();
-      return { ok: false, refused: false, reason: `its old login could not be moved away: ${err instanceof Error ? err.message : String(err)}` };
+      return { ok: false, refused: false, reason: cleared.reason };
     }
+    // Out of the way, and no login of any connection's: what is left is said, for whoever cleans the folder.
+    if (cleared.left) this.log.warn("the old login was moved away and could not be removed", { path: cleared.left });
     const held = this.dropHeld();
     if (held > 0) this.log.warn("replies held while the number was logged out are not sent from its new link", { count: held });
     this.itself = new NumberItself();
     this.logoutChecked = false;
-    try {
-      removePath(aside);
-    } catch (err) {
-      // Out of the way, and no login of any connection's: what is left is said, for whoever cleans the folder.
-      this.log.warn("the old login was moved away and could not be removed", { path: aside, error: String(err) });
-    }
     await this.start();
     return { ok: true };
   }
@@ -706,15 +699,16 @@ export class WhatsAppGateway extends BaseGateway {
         /**
          * One signal is checked with the old login before the number is said to be logged out. The bridge keeps the
          * login on a 401, since WhatsApp once sent one to a working link 26 seconds after it was scanned (`connection.ts`);
-         * kept and never tried, the number stayed stopped. So it is tried once more, as a reconnect held back for
-         * `LOGOUT_CHECK_MS`: a link that works comes back with no scan, and nothing was said of it; a number really logged
-         * out says so again, and only then is it `dead`, told to its admins, and `isLoggedOut`. A stop ends the try with
-         * the reconnect it is, so a logout asked for is never tried again.
+         * kept and never tried, the number stayed stopped. So it is tried once more after `LOGOUT_CHECK_MS`, one connect
+         * out of the retry budget (`connectOnceMore`: a budget spent on an outage neither slows it to the slow tries nor
+         * tells anyone it is unreachable): a link that works comes back with no scan, and nothing was said of it; a number
+         * really logged out says so again, and only then is it `dead`, told to its admins, and `isLoggedOut`. A stop ends
+         * the try with the reconnect it is, so a logout asked for is never tried again.
          */
         if (!this.logoutChecked) {
           this.logoutChecked = true;
           this.log.warn("WhatsApp ended this number's link: its old login is tried once more before it is said to be logged out");
-          this.handleDisconnect("WhatsApp ended the link: its old login is tried once more", this.options.logoutCheckMs ?? LOGOUT_CHECK_MS);
+          this.connectOnceMore("WhatsApp ended the link: its old login is tried once more", this.options.logoutCheckMs ?? LOGOUT_CHECK_MS);
           return;
         }
         this.log.warn("whatsapp session expired; the phone must scan a new code");

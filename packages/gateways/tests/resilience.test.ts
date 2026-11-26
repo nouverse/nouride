@@ -75,6 +75,11 @@ class FakeGateway extends BaseGateway {
     this.handleDisconnect(reason);
   }
 
+  /** One connect more, out of the retry budget: what WhatsApp asks for after one logout signal. */
+  onceMore(ms: number): void {
+    this.connectOnceMore("asked once more", ms);
+  }
+
   /** The same, for a failure that cannot be retried until something on the far side expires. */
   dropWithSettle(settleMs: number): void {
     this.handleDisconnect("conflict", settleMs);
@@ -250,6 +255,39 @@ describe("connecting", () => {
    * restart anything when it does.
    */
   const unreachable = (events: GatewayEvent[]) => events.filter((event) => event.type === "unreachable");
+
+  test("one connect more comes after its own wait out of a spent budget, and nobody is told again it is unreachable", async () => {
+    const gateway = new FakeGateway({ resilience: { maxReconnectAttempts: 2, connectionStableAfterMs: 10_000 } });
+    const events: GatewayEvent[] = [];
+    gateway.onEvent((event) => events.push(event));
+    await gateway.start();
+    await eventually(() => gateway.status === "connected", 4_000, "first connect");
+    for (let cycle = 0; cycle < 4 && unreachable(events).length === 0; cycle += 1) {
+      gateway.dropConnection("409 conflict");
+      await eventually(() => gateway.status === "connected" || unreachable(events).length > 0, 4_000, "cycle to settle");
+    }
+    expect(unreachable(events)).toHaveLength(1);
+    const calls = gateway.connectCalls;
+
+    // In place of the slow try ten minutes away: after its own wait, and the spent budget neither slows nor says it.
+    gateway.onceMore(30);
+    expect(gateway.status).toBe("reconnecting");
+    await eventually(() => gateway.connectCalls === calls + 1, 2_000, "the one connect more");
+    expect(unreachable(events)).toHaveLength(1);
+    await gateway.stop();
+  });
+
+  test("one connect more is not asked of a gateway that is stopping or stopped", async () => {
+    const gateway = new FakeGateway({ resilience: FAST });
+    await gateway.start();
+    await eventually(() => gateway.status === "connected", 4_000, "first connect");
+    await gateway.stop();
+    const calls = gateway.connectCalls;
+    // A logout signal the bridge says on its way out.
+    gateway.onceMore(5);
+    await sleep(50);
+    expect([gateway.connectCalls, gateway.status]).toEqual([calls, "disconnected"]);
+  });
 
   test("a connection that dies immediately does not refill the budget, so the fast loop ends", async () => {
     const gateway = new FakeGateway({
