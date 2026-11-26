@@ -216,6 +216,8 @@ describe("coding-CLI accounts (0.8.1)", () => {
     expect(await (await call("GET", "/cli-accounts/claude-code/team/use")).json()).toEqual({ use: { limits: [] }, at: 5 });
     expect(await (await call("GET", "/cli-accounts/codex/work/use")).json()).toEqual({ use: null, at: null });
     expect((await call("GET", "/cli-accounts/cursor/work/use")).status).toBe(404);
+    // A name that is no account's is no folder's either: refused before anything is read.
+    expect((await call("GET", "/cli-accounts/codex/..%2F..%2Fetc/use")).status).toBe(400);
     expect(seen).toEqual(["use claude-code team 2", "use codex work 2"]);
   });
 

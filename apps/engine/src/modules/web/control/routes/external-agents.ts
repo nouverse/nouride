@@ -130,6 +130,7 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
     const row = deps.externalAgents.row(c.req.param("cli"));
     if (!row) return c.json({ error: `no coding CLI "${c.req.param("cli")}" here` }, 404);
+    if (!PROFILE_NAME.test(c.req.param("name"))) return c.json({ error: "an account's name is lowercase letters, digits and dashes, at most 24" }, 400);
     const seen = await deps.externalAgents.useOf(row, c.req.param("name"), deps.registry.all());
     return c.json({ use: seen?.use ?? null, at: seen?.at ?? null } satisfies CliAccountUse);
   });
