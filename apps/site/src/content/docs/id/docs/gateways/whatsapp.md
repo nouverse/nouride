@@ -71,7 +71,8 @@ tiap nomor adalah satu koneksi lagi yang dijaga tetap terbuka ke WhatsApp.
 
 Kalau WhatsApp memutus tautan sebuah nomor, Nouride mencoba login lamanya sekali lagi sekitar dua
 puluh detik kemudian: WhatsApp pernah memutus tautan yang masih jalan, dan yang begitu nyambung lagi
-tanpa scan. Nomor yang benar-benar ter-logout dari HP-nya bilang begitu lagi, dan kartunya, di
+tanpa scan, tanpa ada yang dikabari. Nomor yang benar-benar ter-logout dari HP-nya bilang begitu lagi,
+admin-nya dikabari, dan kartunya, di
 **Connections** milik agent-nya, bilang nomor itu ter-logout, dengan tombol **Link again** buat admin:
 login lamanya dihapus dan kode baru muncul di situ, buat di-scan dari HP yang memegang nomor itu.
 Balasan yang tertahan selama ter-logout gak dikirim dari tautan baru, yang bisa jadi HP lain.

@@ -83,7 +83,7 @@ function PairingState({ gatewayId }: { gatewayId: string }) {
   if (pairing.data?.loggedOut) return <LoggedOut gatewayId={gatewayId} />;
 
   // WhatsApp ended the link once: its old login is tried again before the number is said to be logged out.
-  if (pairing.data?.status === "dead" && !qr) {
+  if (pairing.data?.tryingAgain) {
     return (
       <div className="flex items-center gap-2.5 py-4 text-xs font-medium text-base-content/65" data-checking-link>
         <Loader2 size={15} className="animate-spin text-primary" /> WhatsApp ended this number's link. Trying it once more…

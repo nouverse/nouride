@@ -108,7 +108,7 @@ async function running(id: string) {
     bridges.push(bridge);
     return bridge.channel;
   };
-  const gateway = new WhatsAppGateway({ id, platform: "whatsapp", sessionDir: saved.sessionDir!, encryptionKey: (await secrets.resolve(saved.encryptionKeySecret!))!, agentId: saved.agent!, openChannel, logoutCheckMs: 10 });
+  const gateway = new WhatsAppGateway({ id, platform: "whatsapp", sessionDir: saved.sessionDir!, encryptionKey: (await secrets.resolve(saved.encryptionKeySecret!))!, agentId: saved.agent!, openChannel, logoutCheckMs: 150, resilience: { reconnectBackoffMs: 1, reconnectBackoffMaxMs: 5 } });
   started.push(gateway);
   gateways.set(id, gateway as unknown as Gateway);
   await gateway.start();
@@ -145,15 +145,15 @@ describe("a second WhatsApp number", () => {
     shop.says({ type: "qr", qr: "2@the-shop's-code" });
     await eventually(() => main.gateway.isLinked() && shop.gateway.pairingCode() !== null);
 
-    expect(await pairing("whatsapp:main")).toEqual({ status: 200, body: { status: "connected", linked: true, loggedOut: false, qr: null } });
+    expect(await pairing("whatsapp:main")).toEqual({ status: 200, body: { status: "connected", linked: true, loggedOut: false, tryingAgain: false, qr: null } });
     expect(await pairing("whatsapp:shop")).toMatchObject({ status: 200, body: { linked: false, qr: "2@the-shop's-code" } });
 
     // Scanned: its code is gone and it is linked, the first as it was.
     shop.says({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "62822@s.whatsapp.net" });
     await eventually(() => shop.gateway.isLinked());
     expect([(await pairing("whatsapp:shop")).body, (await pairing("whatsapp:main")).body]).toEqual([
-      { status: "connected", linked: true, loggedOut: false, qr: null },
-      { status: "connected", linked: true, loggedOut: false, qr: null },
+      { status: "connected", linked: true, loggedOut: false, tryingAgain: false, qr: null },
+      { status: "connected", linked: true, loggedOut: false, tryingAgain: false, qr: null },
     ]);
   });
 
@@ -189,13 +189,13 @@ describe("a number logged out from its phone", () => {
       shop.says({ type: "status", status: "disconnected", reason: "logged out" });
     };
     endsTheLink();
-    await eventually(() => shop.gateway.status === "dead");
-    expect((await pairing("whatsapp:shop")).body).toEqual({ status: "dead", linked: false, loggedOut: false, qr: null });
+    await eventually(() => shop.gateway.isTryingAgain());
+    expect((await pairing("whatsapp:shop")).body).toEqual({ status: "reconnecting", linked: false, loggedOut: false, tryingAgain: true, qr: null });
     await eventually(() => shop.opened() === 2);
     // Said again to the old login: logged out from the phone. No code comes, and the page is told why.
     endsTheLink();
     await eventually(() => shop.gateway.isLoggedOut());
-    expect((await pairing("whatsapp:shop")).body).toEqual({ status: "dead", linked: false, loggedOut: true, qr: null });
+    expect((await pairing("whatsapp:shop")).body).toEqual({ status: "dead", linked: false, loggedOut: true, tryingAgain: false, qr: null });
 
     expect(await linkAgain("whatsapp:shop")).toMatchObject({ status: 200, body: { ok: true, id: "whatsapp:shop" } });
     // The old login is gone, a new bridge was started on the empty folder, and its code is the one served.
@@ -203,7 +203,7 @@ describe("a number logged out from its phone", () => {
     expect(shop.opened()).toBe(3);
     shop.says({ type: "qr", qr: "2@a-new-code" });
     await eventually(() => shop.gateway.pairingCode() !== null);
-    expect(await pairing("whatsapp:shop")).toMatchObject({ status: 200, body: { linked: false, loggedOut: false, qr: "2@a-new-code" } });
+    expect(await pairing("whatsapp:shop")).toMatchObject({ status: 200, body: { linked: false, loggedOut: false, tryingAgain: false, qr: "2@a-new-code" } });
     expect(audited).toEqual([{ action: "gateway_link_again", actor: "admin", gatewayId: "whatsapp:shop" }]);
   });
 

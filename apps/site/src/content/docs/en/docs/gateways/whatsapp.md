@@ -68,8 +68,9 @@ other number goes on answering. Nouride sets no limit on how many numbers an ins
 one more connection kept open to WhatsApp.
 
 When WhatsApp ends a number's link, Nouride tries its old login once more about twenty seconds later:
-WhatsApp has ended a link that was working, and that one comes back with no scan. A number that is
-really logged out from its phone says so again, and its card, under its agent's **Connections**, says
+WhatsApp has ended a link that was working, and that one comes back with no scan, with nobody told.
+A number that is really logged out from its phone says so again, its admins are told, and its card,
+under its agent's **Connections**, says
 it was logged out, with **Link again** for an admin: its old login is removed and a new code shows
 there, to scan from the phone that holds the number. Replies held while it was logged out are not
 sent from the new link, which may be another phone's.

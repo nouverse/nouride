@@ -85,6 +85,7 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
       pairingCode?: () => { qr: string; at: number } | null;
       isLinked?: () => boolean;
       isLoggedOut?: () => boolean;
+      isTryingAgain?: () => boolean;
     };
     if (typeof pairable.pairingCode !== "function") {
       return c.json({ error: "this gateway does not pair with a code", plain: "This chat connection does not pair with a code." }, 400);
@@ -96,10 +97,12 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
       linked: pairable.isLinked?.() ?? false,
       // Logged out from its phone: no code comes until it is linked again, so the page says that instead of waiting.
       loggedOut: pairable.isLoggedOut?.() ?? false,
+      // WhatsApp ended the link once, and its old login is being tried again: no code comes for that either.
+      tryingAgain: pairable.isTryingAgain?.() ?? false,
       // Null while connecting and once linked. The dashboard shows those as states of their own
       // rather than as an empty QR.
       ...(code ? { qr: code.qr, at: code.at } : { qr: null }),
-    } satisfies { status: string; linked: boolean; loggedOut: boolean; qr: string | null; at?: number });
+    } satisfies { status: string; linked: boolean; loggedOut: boolean; tryingAgain: boolean; qr: string | null; at?: number });
   });
 
   /**

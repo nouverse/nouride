@@ -13,7 +13,7 @@
  * directory is not being persisted, which is the failure this is built to avoid.
  */
 
-import { join, randomUuid, removePath, tempDir, writeBytesSync } from "@nouride/runtime";
+import { join, randomUuid, removePath, renamePath, statFile, tempDir, writeBytesSync } from "@nouride/runtime";
 import {
   BRIDGE_PROTOCOL_VERSION,
   contained,
@@ -174,10 +174,8 @@ export class WhatsAppGateway extends BaseGateway {
   private expired = false;
   /** Set while `logoutAndStop` waits for the bridge to say the logout reached WhatsApp. */
   private loggedOutSeen: (() => void) | null = null;
-  /** The old login tried once more since the last link, after one logout signal (`checkLogout`). */
+  /** One logout signal heard since the last link, and the old login being tried once more for it (`session_expired`). */
   private logoutChecked = false;
-  /** That try, while it waits to be made. */
-  private logoutCheck: ReturnType<typeof setTimeout> | undefined;
   /**
    * Chats WhatsApp has refused to deliver to, and why.
    *
@@ -236,59 +234,50 @@ export class WhatsAppGateway extends BaseGateway {
 
   /**
    * Whether WhatsApp ended this number's link, logged out from its phone: said twice, the second time to its old login
-   * tried again (`checkLogout`). It waits for `linkAgain` then, not for a scan.
+   * tried again. It waits for `linkAgain` then, not for a scan.
    */
   isLoggedOut(): boolean {
-    return this.expired && this.logoutChecked && this.logoutCheck === undefined;
+    return this.expired && this.logoutChecked && this.status === "dead";
+  }
+
+  /** Whether WhatsApp ended the link once and the old login is being tried again, before anything is said of it. */
+  isTryingAgain(): boolean {
+    return this.logoutChecked && !this.linked && !this.isLoggedOut();
   }
 
   /**
-   * A number logged out from its phone, linked again on a person's word: its old login removed and the bridge started on
-   * an empty folder, which shows a new code to scan. Never for a number still linked, still pairing or still being
-   * checked: removing a login that works is `logoutAndStop`'s.
+   * A number logged out from its phone, linked again on a person's word: its old login moved out of the way and removed,
+   * and the bridge started on an empty folder, which shows a new code to scan. Never for a number still linked, pairing
+   * or being tried again: removing a login that works is `logoutAndStop`'s.
    *
-   * What the old link left goes too. The number may be linked from another phone, whose addresses are not the old one's,
-   * and the old phone's would go on being taken for its own; and the replies held while it was logged out would go out
-   * from that other account to the old one's chats. A folder that cannot be removed leaves the number started again as
-   * it was, and says so, rather than stopped.
+   * Moved first, then removed: a folder removed part of the way (a file it may not delete) left a login neither old nor
+   * new. A folder that cannot be moved leaves the number started again as it was, and says so. What the old link left
+   * goes with it: the old phone's addresses, which another phone's link would go on taking for its own, and the replies
+   * held while it was logged out, which would go out from that other account to the old one's chats.
    */
   async linkAgain(): Promise<{ ok: true } | { ok: false; refused: boolean; reason: string }> {
     if (!this.isLoggedOut()) return { ok: false, refused: true, reason: "this number is not logged out from its phone" };
     await this.stop();
-    const held = this.dropHeld();
-    if (held > 0) this.log.warn("replies held while the number was logged out are not sent from its new link", { count: held });
+    const folder = this.options.sessionDir;
+    const aside = `${folder}.logged-out-${Date.now()}`;
     try {
-      removePath(this.options.sessionDir);
+      if (statFile(folder)) renamePath(folder, aside);
     } catch (err) {
       await this.start();
-      return { ok: false, refused: false, reason: `its old login could not be removed: ${err instanceof Error ? err.message : String(err)}` };
+      return { ok: false, refused: false, reason: `its old login could not be moved away: ${err instanceof Error ? err.message : String(err)}` };
     }
+    const held = this.dropHeld();
+    if (held > 0) this.log.warn("replies held while the number was logged out are not sent from its new link", { count: held });
     this.itself = new NumberItself();
     this.logoutChecked = false;
+    try {
+      removePath(aside);
+    } catch (err) {
+      // Out of the way, and no login of any connection's: what is left is said, for whoever cleans the folder.
+      this.log.warn("the old login was moved away and could not be removed", { path: aside, error: String(err) });
+    }
     await this.start();
     return { ok: true };
-  }
-
-  /**
-   * One logout signal is checked with the old login before the number is said to be logged out. The bridge keeps the
-   * login on a 401, because WhatsApp once sent one to a working link 26 seconds after it was scanned; but kept and never
-   * tried, the number stayed stopped until someone acted. So it is tried once more: a link that works comes back with no
-   * scan, and a number really logged out says so again, and is (`isLoggedOut`). A logout asked for stops the number,
-   * and the stop ends the try with the rest (`disconnect`).
-   */
-  private checkLogout(): void {
-    if (this.logoutChecked) return;
-    this.logoutChecked = true;
-    this.logoutCheck = setTimeout(
-      contained(this.log, "could not try the WhatsApp login again", () => {
-        this.logoutCheck = undefined;
-        void (async () => {
-          await this.stop();
-          await this.start();
-        })().catch((err: unknown) => this.log.warn("could not try the WhatsApp login again", { error: String(err) }));
-      }),
-      this.options.logoutCheckMs ?? LOGOUT_CHECK_MS,
-    );
   }
 
   protected async connect(): Promise<void> {
@@ -337,9 +326,6 @@ export class WhatsAppGateway extends BaseGateway {
   }
 
   protected async disconnect(): Promise<void> {
-    // A stopped number is not tried again: a logout asked for, a link made again, the daemon going down.
-    clearTimeout(this.logoutCheck);
-    this.logoutCheck = undefined;
     const channel = this.channel;
     this.channel = null;
     this.failPending("the gateway is shutting down");
@@ -705,7 +691,7 @@ export class WhatsAppGateway extends BaseGateway {
           // this the reconnect path immediately overwrote the `dead` status the expiry had just set,
           // and the daemon went back to respawning a bridge that can only show a QR.
           if (this.expired) {
-            this.log.warn("not reconnecting: this session needs to be linked again");
+            if (this.isLoggedOut()) this.log.warn("not reconnecting: this session needs to be linked again");
             return;
           }
           this.handleDisconnect(event.reason);
@@ -717,9 +703,22 @@ export class WhatsAppGateway extends BaseGateway {
         this.linked = false;
         this.expired = true;
         this.qrCode = null;
+        /**
+         * One signal is checked with the old login before the number is said to be logged out. The bridge keeps the
+         * login on a 401, since WhatsApp once sent one to a working link 26 seconds after it was scanned (`connection.ts`);
+         * kept and never tried, the number stayed stopped. So it is tried once more, as a reconnect held back for
+         * `LOGOUT_CHECK_MS`: a link that works comes back with no scan, and nothing was said of it; a number really logged
+         * out says so again, and only then is it `dead`, told to its admins, and `isLoggedOut`. A stop ends the try with
+         * the reconnect it is, so a logout asked for is never tried again.
+         */
+        if (!this.logoutChecked) {
+          this.logoutChecked = true;
+          this.log.warn("WhatsApp ended this number's link: its old login is tried once more before it is said to be logged out");
+          this.handleDisconnect("WhatsApp ended the link: its old login is tried once more", this.options.logoutCheckMs ?? LOGOUT_CHECK_MS);
+          return;
+        }
         this.log.warn("whatsapp session expired; the phone must scan a new code");
         this.handleSessionExpired();
-        this.checkLogout();
         return;
 
       case "message": {
