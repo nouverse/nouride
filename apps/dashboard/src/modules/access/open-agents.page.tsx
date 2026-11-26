@@ -39,8 +39,7 @@ import { SenderQuery } from "./sender-line";
 export function limitsSaid(limits: NonNullable<NonNullable<AgentSummary["open"]>["limits"]>, name?: string): string {
   const tokens = limits.maxDailyTokens.toLocaleString("en-US");
   const messages = `${limits.maxDailyMessagesPerPerson.toLocaleString("en-US")} ${limits.maxDailyMessagesPerPerson === 1 ? "message" : "messages"}`;
-  // plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it
-  if (name) return `${name} answers at most ${messages} from one person a day, and uses at most ${tokens} tokens a day.`;
+  if (name) return `${name} answers at most ${messages} from one person a day, and uses at most ${tokens} tokens a day.`; // plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it
   return `At most ${tokens} tokens a day, and ${messages} from one person a day.`; // plain-words-ok: tokens, as above
 }
 
