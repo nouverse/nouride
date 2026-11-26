@@ -44,11 +44,14 @@ ditaruh di tempat yang ditemukan user setiap agent:
 | CLI | Install | Perintah yang dijalankan Nouride |
 |---|---|---|
 | Antigravity | `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, lalu `sudo install -m 755 ~/.local/bin/agy /usr/local/bin/agy` | `agy acp` |
-| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, lalu `sudo ln -sf "$(readlink -f ~/.local/bin/agent)" /usr/local/bin/cursor-agent` | `cursor-agent acp` |
+| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, lalu `sudo rm -rf /opt/cursor-agent && sudo cp -r "$(dirname "$(readlink -f ~/.local/bin/agent)")" /opt/cursor-agent && sudo ln -sf /opt/cursor-agent/cursor-agent /usr/local/bin/cursor-agent` | `cursor-agent --disable-auto-update acp` |
 | Grok Build | `curl -fsSL https://x.ai/cli/install.sh \| bash`, lalu `sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok` | `grok --no-auto-update agent stdio` |
 
-Installer Cursor menamai perintahnya `agent`, dan installer Grok di box yang sama juga, jadi Nouride menjalankan milik
-Cursor dengan nama sendiri, `cursor-agent`. Updater bawaan mereka dimatikan kalau bisa (Antigravity, Grok); Nouride gak
+Installer Cursor menaruhnya di folder home kamu sendiri, yang gak bisa dibaca user para agent, dan menamai perintahnya
+`agent`, sama seperti installer Grok di box yang sama: jadi dia disalin ke `/opt/cursor-agent` dan dijalankan dengan
+nama sendiri, `cursor-agent`. Updater bawaan mereka dimatikan: milik Antigravity lewat sebuah setelan, milik Grok dan
+Cursor lewat sebuah switch di setiap perintah yang dijalankan Nouride (switch Cursor dibaca dari kodenya; bahwa dia
+bertahan saat ada update belum terlihat). Masing-masing di-update dengan menjalankan install-nya lagi. Nouride gak
 mengecek versinya ke registry npm, karena gak ada yang rilis di sana.
 
 - **Linux**, yang di-install pakai `install.sh`: `sudo nouride tools run -- npm i -g @agentclientprotocol/claude-agent-acp`
@@ -157,8 +160,9 @@ dipakai agent selanjutnya.
 - Tiap agent pindah menurut daftarnya sendiri. Agent-agent yang berbagi satu akun sama-sama tahu akun itu kena limit,
   dan masing-masing pindah ke akun berikutnya miliknya; gak ada yang diganti untuk semua agent sekaligus, dan login
   satu agent gak pernah jadi milik agent lain.
-- Kalau semua akun di daftar kena limit, gak ada yang dikirim: model agent itu sendiri yang menjawab pesan tersebut dan
-  menyebut akun mana saja yang habis, dan sampai kapan.
+- Kalau semua akun di daftar kena limit, gak ada yang dikirim. Kalau tiap limit menyebut kapan berakhirnya, pesan itu
+  ditahan sampai yang pertama berakhir, seperti di bawah. Kalau ada yang gak menyebut, model agent itu sendiri yang
+  menjawab pesan tersebut dan menyebut akun mana saja yang habis, dan sampai kapan.
 
 **Sebelum kena limit.** Agent juga bisa pindah sebelum ada pesan yang ditolak. Di tab Brain-nya, di bawah daftar akun,
 nyalakan **Move on before the limit** dan atur berapa bagian dari limit yang terpakai saat dia pindah, awalnya 90%.
@@ -178,8 +182,10 @@ ditawarkan kalau CLI-nya menyebut pemakaian akun.
 **Models → Coding CLIs** menampilkan, di bawah tiap akun, berapa banyak paketnya sudah terpakai: tiap limit dengan
 persentase yang terpakai, sebuah bar, dan kapan limit itu mulai lagi. Nouride menanyakannya ke pembuat akun paling
 sering tiap lima menit, pertanyaan yang sama yang ditanyakan halaman pemakaian CLI-nya, dengan login akun itu sendiri,
-dan di antara pembacaan itu memakai apa yang dikatakan CLI-nya selagi bekerja, kalau dia mengatakannya. Kalau gak ada
-yang mengatakannya, akun itu bertuliskan **How much of its plan is used is not known**.
+dan di antara pembacaan itu memakai apa yang dikatakan CLI-nya selagi bekerja, kalau dia mengatakannya, dan menyebutnya
+begitu. Kalau gak ada yang mengatakannya, akun itu bertuliskan **How much of its plan is used is not known**. CLI yang
+login sekali per agent (Codex, Cursor CLI, Grok Build, Antigravity, atau Claude Code dengan login milik agent sendiri)
+menampilkan pemakaian tiap agent, di bawah namanya: login tiap agent bisa saja akun yang berbeda.
 
 | CLI | Yang ditampilkan |
 |---|---|
@@ -189,15 +195,19 @@ yang mengatakannya, akun itu bertuliskan **How much of its plan is used is not k
 | Grok Build | Kredit paket yang terpakai di periode ini, dibaca dari Grok Build selagi ada agent di akun itu yang berjalan |
 | Antigravity | Belum diketahui: dia belum mengatakan apa pun soal pemakaiannya |
 
-Akun yang limitnya sudah habis, menurut pembuatnya, dilewati sampai limit itu mulai lagi, sebelum ada pesan yang dikirim
-ke sana lalu ditolak. Kalau pembuatnya bilang masih ada kredit di luar limit itu (kredit Codex, extra usage Claude),
-akunnya gak dilewati.
+Akun yang login sekali untuk agent-agentnya dilewati sampai sebuah limit mulai lagi, sebelum ada pesan yang dikirim ke
+sana lalu ditolak, kalau pembuatnya bilang limit itu sudah habis dan gak ada kredit lagi di luarnya (kredit Codex, extra
+usage Claude). Limit milik sebuah model melewatinya hanya untuk model itu. Kalau pembuatnya bilang masih ada kredit, atau
+gak bilang apa-apa soal itu, akunnya gak dilewati: dulu dia menjawab, dan sekarang tetap menjawab. Pembacaan berikutnya
+yang menunjukkan ada ruang lagi (kredit dibeli, extra usage dinyalakan, limit yang mulai lagi lebih awal) membuatnya
+langsung bisa menjawab lagi.
 
 Pesan yang ditolak karena limit akun yang menyebut kapan berakhirnya, saat agent gak punya akun lain untuk lanjut,
 ditahan: chat diberi tahu bahwa agent akan lanjut sendiri begitu limit itu berakhir, dan saat itu dia memang lanjut,
-seolah kamu bilang "continue". Ini tetap tersimpan meski Nouride restart. Pesan itu gak ditahan kalau kamu sudah
-mengatakan sesuatu di chat itu sejak saat itu, atau kalau limitnya baru berakhir lebih dari delapan hari lagi; di situ,
-bilang "continue" sendiri.
+seolah kamu bilang "continue". Ini berlaku entah CLI-nya sudah mulai menjawab atau belum. Ini tetap tersimpan meski
+Nouride restart. Pesan itu gak ditahan kalau kamu sudah mengatakan sesuatu di chat itu sejak saat itu (orang lain di
+sebuah room, atau job terjadwal, gak dihitung), atau kalau limitnya baru berakhir lebih dari delapan hari lagi; di situ,
+bilang "continue" sendiri. CLI yang belum login gak ditahan: itu langsung disebut, dengan kartunya untuk login.
 
 **Models → Coding CLIs** juga menyebut, di bawah tiap akun, limit yang sedang mengenainya atau yang sudah dekat, dan di
 samping agent yang pindah dari akun itu, di mana agent tersebut sekarang. `/status` di chat menyebut akun yang sedang
@@ -412,7 +422,9 @@ modes = { folder = "build", all = "plan" }
 ```
 
 Secret yang dia butuhkan diikat ke perintahnya di `[security.exec_secrets]`; baris ini gak punya `env`. `id` yang sama
-dengan CLI bawaan (`claude-code`, `codex`, `antigravity`, `cursor`, `grok`) ditolak saat dimuat. CLI tambahan jalan sebagai user agent itu sendiri hanya
+dengan CLI bawaan (`claude-code`, `codex`) ditolak saat dimuat. `id` milik CLI bawaan yang ditandai Experimental
+(`antigravity`, `cursor`, `grok`) jadi milikmu: baris kamu dipakai menggantikannya, dan start menyebutnya sekali, sama
+seperti `nouride config check`. CLI tambahan jalan sebagai user agent itu sendiri hanya
 kalau tiap agent punya user sendiri, gak dapat skill, dan login sekali per agent: gak ada akun bersama untuknya.
 [Semua key →](/id/docs/reference/config/#external_clis)
 

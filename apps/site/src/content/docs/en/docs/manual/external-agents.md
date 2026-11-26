@@ -43,12 +43,15 @@ where every agent's user finds them:
 | CLI | Install | The command Nouride starts |
 |---|---|---|
 | Antigravity | `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, then `sudo install -m 755 ~/.local/bin/agy /usr/local/bin/agy` | `agy acp` |
-| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, then `sudo ln -sf "$(readlink -f ~/.local/bin/agent)" /usr/local/bin/cursor-agent` | `cursor-agent acp` |
+| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, then `sudo rm -rf /opt/cursor-agent && sudo cp -r "$(dirname "$(readlink -f ~/.local/bin/agent)")" /opt/cursor-agent && sudo ln -sf /opt/cursor-agent/cursor-agent /usr/local/bin/cursor-agent` | `cursor-agent --disable-auto-update acp` |
 | Grok Build | `curl -fsSL https://x.ai/cli/install.sh \| bash`, then `sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok` | `grok --no-auto-update agent stdio` |
 
-Cursor's installer names its command `agent`, and so does Grok's on the same box, so Nouride starts Cursor's by a name
-of its own, `cursor-agent`. Their own updaters are kept off where they allow it (Antigravity, Grok); Nouride does not
-check their versions against the npm registry, since none ships there.
+Cursor's installer puts it in your own home folder, which the agents' users cannot read, and names its command `agent`,
+as Grok's does on the same box: so it is copied to `/opt/cursor-agent` and started by a name of its own,
+`cursor-agent`. Their own updaters are kept off: Antigravity's by a setting, Grok's and Cursor's by a switch on every
+command Nouride starts them with (Cursor's switch was read in its code; that it holds at an update was not seen yet).
+Each is updated by running its install again. Nouride does not check their versions against the npm registry, since
+none ships there.
 
 - **Linux**, installed with `install.sh`: `sudo nouride tools run -- npm i -g @agentclientprotocol/claude-agent-acp`
   (or `@agentclientprotocol/codex-acp`). `nouride tools run` runs the installer as the daemon's user, puts the program
@@ -150,7 +153,8 @@ The chat gets one line saying which account reached its limit, until when, and w
   restart of Nouride it starts from the top of its list again, on the first account that is not at a limit.
 - Each agent moves by its own list. Agents that share an account all see that it is at its limit, and each goes to its
   own next one; nothing is switched for every agent at once, and one agent's sign-in never becomes another's.
-- When every account in the list is at its limit, nothing is sent: the agent's own model answers that message and says
+- When every account in the list is at its limit, nothing is sent. Where each limit said when it ends, the message is
+  held until the first of them ends, as below. Where one did not, the agent's own model answers that message and says
   which accounts are spent, and until when.
 
 **Before the limit.** An agent can also move on before a message is refused. On its Brain tab, under the accounts,
@@ -170,7 +174,9 @@ sent twice. It is off unless you switch it on, and offered only where the CLI sa
 **Models → Coding CLIs** shows, under each account, how much of its plan is used: each limit with the share of it
 used, a bar, and when it starts again. Nouride asks the account's maker for it at most every five minutes, the same
 question the CLI's own usage page asks, with the account's own sign-in, and between those reads takes what the CLI says
-while it works, where it says it. Where nothing says it, the account reads **How much of its plan is used is not known**.
+while it works, where it says it, and says so. Where nothing says it, the account reads **How much of its plan is used
+is not known**. A CLI that signs in once per agent (Codex, Cursor CLI, Grok Build, Antigravity, or Claude Code on an
+agent's own sign-in) shows each agent's own, under its name: each agent's sign-in may be a different account.
 
 | CLI | What is shown |
 |---|---|
@@ -180,14 +186,18 @@ while it works, where it says it. Where nothing says it, the account reads **How
 | Grok Build | The plan's credits used this period, read from Grok Build while an agent on the account runs |
 | Antigravity | Not known: it says nothing of its use yet |
 
-An account whose limit is used up, as its maker says, is passed over until that limit starts again, before a message
-is sent there to be refused. Where its maker says credits are left beyond the limit (Codex's credits, Claude's extra
-usage), it is not.
+An account signed in once for its agents is passed over until a limit starts again, before a message is sent there to be
+refused, where its maker says that limit is used up and that no credits are left beyond it (Codex's credits, Claude's
+extra usage). A model's own limit passes it over for that model alone. Where the maker says credits are left, or says
+nothing of them, the account is not passed over: it answered before, and still does. A later read that shows room again
+(credits bought, extra usage turned on, a limit that started again early) lets it answer at once.
 
 A message refused for an account's limit that said when it ends, where the agent has no other account to go on with,
 is held: the chat is told the agent goes on by itself once that limit ends, and at that time it does, as if you had
-said "continue". It is kept across a restart. It is not held where you said something in that chat since, or where the
-limit ends more than eight days on; then say "continue" yourself.
+said "continue". This is so whether or not the CLI had begun to answer. It is kept across a restart. It is not held
+where you said something in that chat since (someone else in a room, or a scheduled job, does not count), or where the
+limit ends more than eight days on; then say "continue" yourself. A CLI that is signed out is not held: it is said at
+once, with its card to sign it in.
 
 **Models → Coding CLIs** also says, under an account, each limit it is at or near, and beside an agent that moved off
 it, where that agent is now. `/status` in a chat names the account the agent is on. In the pack it is the one field, as a
@@ -397,7 +407,8 @@ modes = { folder = "build", all = "plan" }
 ```
 
 A secret it needs is bound to its command in `[security.exec_secrets]`; there is no `env` in the row. An `id` a
-built-in CLI has (`claude-code`, `codex`, `antigravity`, `cursor`, `grok`) is refused at load. A CLI you add runs as the agent's own user only where
+built-in CLI has (`claude-code`, `codex`) is refused at load. One of a built-in CLI marked Experimental (`antigravity`,
+`cursor`, `grok`) is yours: your row is kept in its place, and the start says so once, as `nouride config check` does. A CLI you add runs as the agent's own user only where
 each agent has one, gets no skills, and signs in once per agent: there is no shared account for it.
 [Every key →](/en/docs/reference/config/#external_clis)
 
