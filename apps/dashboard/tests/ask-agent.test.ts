@@ -85,6 +85,33 @@ describe("Ask Nouva to set it up", () => {
     }
   });
 
+  test("a file attached in the box and not sent goes with what the box held: the message is sent alone", async () => {
+    answer({ ...AT_REST, ...CLIS, "/chat/upload": { status: 200, body: { files: [{ path: "/srv/uploads/shot.png", name: "shot.png", mimeType: "image/png", bytes: 4 }] } } });
+    dom.localStorage.setItem(LAST_AGENT_KEY, JSON.stringify("nix"));
+    const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_1", chatId: "web-1", messageId: "msg_9", agentId: "nouva" } } });
+    try {
+      await renderPage("/models?tab=clis", async (host) => {
+        await eventually(() => floatButton(host) !== null && ask(host) !== undefined, 3_000, "the page");
+        floatButton(host)!.click();
+        await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nix…", 3_000, "Nix's chat");
+        // A screenshot pasted into Nix's box, and not sent.
+        const paste = new (dom as unknown as typeof globalThis).Event("paste", { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, "clipboardData", { value: { files: [new File([new Uint8Array(4)], "shot.png", { type: "image/png" })] } });
+        boxIn(card())!.dispatchEvent(paste);
+        await eventually(() => (card()?.textContent ?? "").includes("shot.png"), 3_000, "the file attached");
+        ask(host)!.click();
+        await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nouva…" && boxIn(card())!.value === MESSAGE, 3_000, "the message in Nouva's box");
+        await eventually(() => !(card()?.textContent ?? "").includes("shot.png"), 2_000, "the file gone with what the box held");
+        await eventually(() => sendIn(card())?.disabled === false, 2_000, "ready to send");
+        sendIn(card())!.click();
+        await eventually(() => sent(posted.posts).length === 1, 3_000, "sent");
+      });
+      expect(sent(posted.posts).map((post) => post.body)).toEqual([{ text: MESSAGE, sessionId: "ses_1", page: { path: "/dashboard/models?tab=clis", title: "Models" } }]);
+    } finally {
+      posted.restore();
+    }
+  });
+
   test("sent by the person, it goes to the orchestrator's conversation with the page it was asked from", async () => {
     answer({ ...AT_REST, ...CLIS });
     const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_1", chatId: "web-1", messageId: "msg_9", agentId: "nouva" } } });

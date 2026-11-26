@@ -189,9 +189,6 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
   const scrollRef = useRef<HTMLDivElement>(null);
   const streamRef = useRef<HTMLDivElement>(null);
 
-  // A message written for the person to send (`AskAgentButton`): in the box once, never sent from here.
-  useDraft({ draft: draft?.text, onTaken: () => draft?.onTaken(), setInput, textareaRef });
-
   /**
    * Opens at the newest message, follows the answer as it is written, lets go the moment the reader
    * scrolls up, and goes to the end for what they send. All in one place — see the hook.
@@ -200,6 +197,10 @@ export function Conversation({ sessionId, roomChatId, agent, agents: chat, onSes
 
   const attachments = useAttachments();
   const drop = useFileDrop({ onFiles: attachments.add, disabled: !writable });
+
+  // A message written for the person to send (`AskAgentButton`): in the box once, in place of what it held, files
+  // attached included, and never sent from here.
+  useDraft({ draft: draft?.text, onTaken: () => draft?.onTaken(), setInput, onPut: attachments.clear, textareaRef });
 
   /**
    * The `/` menu.
