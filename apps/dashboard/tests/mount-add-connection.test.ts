@@ -20,7 +20,7 @@ const offered = (mine: { platform: string }[]) => platformsToAdd(mine).map((plat
 function daemon(gateways: ReturnType<typeof connection>[]) {
   answer({
     "/gateways": { status: 200, body: { editable: true, groupContextDefault: 20, gateways } },
-    "/gateways/whatsapp%3Anora/pairing": { status: 200, body: { status: "connected", linked: true, qr: null } },
+    "/gateways/whatsapp%3Anora/pairing": { status: 200, body: { status: "connected", linked: true, loggedOut: false, qr: null } },
     "/status": { status: 200, body: { agents: [{ id: "nora", displayName: "Nora", access: "pair" }, { id: "nouva", displayName: "Nouva", access: "pair" }] } },
   });
 }

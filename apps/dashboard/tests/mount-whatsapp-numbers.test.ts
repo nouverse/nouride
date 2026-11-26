@@ -41,8 +41,8 @@ function answers(access: "open" | "pair") {
         gateways: [number("shop", "nora"), number("promo", "nora", { status: "connecting" }), number("home", "nouva"), { id: "telegram:nora", platform: "telegram", name: "nora", agent: "nora", enabled: true, status: "connected", hasCredential: true, tokenSecret: "telegram-nora" }],
       },
     },
-    "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "connected", linked: true, qr: null } },
-    "/gateways/whatsapp%3Apromo/pairing": { status: 200, body: { status: "connecting", linked: false, qr: "2@the-promo-number's-code", at: Date.now() } },
+    "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "connected", linked: true, loggedOut: false, qr: null } },
+    "/gateways/whatsapp%3Apromo/pairing": { status: 200, body: { status: "connecting", linked: false, loggedOut: false, qr: "2@the-promo-number's-code", at: Date.now() } },
     "/status": { status: 200, body: { agents: [{ id: "nora", displayName: "Nora", access }, { id: "nouva", displayName: "Nouva", access: "pair" }] } },
   });
 }
