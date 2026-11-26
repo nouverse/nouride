@@ -7,7 +7,8 @@
  * - `client.ts` — Nouride driving a coding CLI (an external agent): handshake, sessions, a prompt and its updates, a
  *   cancel, and the permission the agent asks for, answered by the caller.
  * - `server.ts` — Nouride's agents served to an editor that speaks ACP.
- * - `agents.ts` — the built-in coding CLIs, as data: how each is started, signed in and pointed at a profile.
+ * - `clis/` — the built-in coding CLIs, one file each, all of one shape (`clis/row.ts`): how each is started, signed in,
+ *   pointed at a profile, and how its account's use is read.
  * - `versions.ts` — where a CLI's version stands against the versions this Nouride was tested with.
  * - `handshake.ts` — what a CLI's handshake lacks of what Nouride uses, read after an update and each week in CI.
  *
@@ -15,7 +16,17 @@
  * what keeps the protocol testable against an in-memory peer, and the package usable by another tool.
  */
 
-export { BUILT_IN_CLIS, helpersUpdate, type CliPreset, type CliRow } from "./agents.ts";
+export {
+  BUILT_IN_CLIS,
+  helpersUpdate,
+  type CliPreset,
+  type CliRow,
+  type CliUse,
+  type UseLimit,
+  type UseReader,
+  type UseToken,
+  type UseWindow,
+} from "./clis/index.ts";
 export { cliStanding, type CliOut, type CliStanding, type CliVersionView } from "./versions.ts";
 export { cliPart, partsNamed, underMinimum, type CliPart, type CliPartKind } from "./parts.ts";
 export { handshakeProblem } from "./handshake.ts";

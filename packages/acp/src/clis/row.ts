@@ -1,13 +1,10 @@
 /**
- * The coding CLIs built in (0.8.1: Claude Code and Codex — omp left out, 2026-10-26: it has no sign-in of its own, only a
- * provider's key; Antigravity taken out, 2026-10-27: its ACP server stopped in its own start-up on the test box, and its
- * CLI has no ACP mode), as data.
- *
- * A row says how the CLI is started in its ACP mode, pointed at a profile, kept from updating itself, put in each of
- * the three presets, signed in on a box with no browser, and how it says it is signed out. Nothing that drives a CLI
- * names one: a person's own CLI is a row of the same shape (`[[external_clis]]`), and gets everything a built-in one
- * does except the promise that it was tried. Each fact here was observed on the CLI's own release (2026-10-26) unless
- * the comment says otherwise.
+ * The shape every coding CLI is held to, built in or a person's own (`[[external_clis]]`): one row says how the CLI is
+ * started in its ACP mode, pointed at a profile, kept from updating itself, put in each of the three presets, signed in
+ * on a box with no browser, how it says it is signed out, and how its account's use is read. Nothing that drives a CLI
+ * names one. A built-in CLI is one file in this folder exporting its row, listed in `index.ts`: adding one is that file
+ * and that line (`docs/CODING_CLIS.md`). Each fact a row states was observed on the CLI's own release unless its
+ * comment says otherwise.
  */
 
 /** The three presets: free in its folder, ask for what is risky, ask for everything. */
@@ -127,6 +124,23 @@ export interface CliRow {
    * a turn.
    */
   ended?: { usage: string };
+  /**
+   * Not yet run on a real account: offered with an Experimental label where CLIs are listed and picked, and it names no
+   * `tested` versions. Its start, its handshake and its sign-in were seen on a machine with no account; a turn was not.
+   */
+  experimental?: true;
+  /**
+   * The sign-in methods its handshake offers that it is told to use, in order, when it refuses a session as signed out
+   * (`authenticate`, the protocol's own): the first one offered is sent and the session asked for again, once. Some CLIs
+   * open no session until told how their sign-in is to be read, even with one kept. Absent: never sent.
+   */
+  authenticate?: readonly string[];
+  /**
+   * How its account's use is asked for at any time, not only as it works: an address its maker answers with the
+   * account's token, or a method of its own over the protocol while it runs. Read into one shape for every CLI
+   * (`CliUse`), by the parse beside it. Absent: what it says while it works (`use`) is all there is.
+   */
+  readUse?: UseReader;
 }
 
 /** Whether an update is of a helper the CLI started itself, as its connector marks one (`CliRow.helper`). */
@@ -137,78 +151,47 @@ export function helpersUpdate(helper: CliRow["helper"], update: object): boolean
   return typeof startedBy === "string" && startedBy !== "";
 }
 
-export const BUILT_IN_CLIS: readonly CliRow[] = [
-  {
-    id: "claude-code",
-    name: "Claude Code",
-    maker: "Anthropic",
-    command: "claude-agent-acp",
-    args: [],
-    install: "npm i -g @agentclientprotocol/claude-agent-acp (Node 22 or later; it carries Claude Code itself)",
-    package: "@agentclientprotocol/claude-agent-acp",
-    // 0.95.0 answered the owner's agents on the box, and 0.100.0 the e2e VM's Claude, each the version there on 2026-11-08.
-    // 0.107.0 on the box since: its handshake check passed, and a turn answered on its default model and on `fable`.
-    tested: { lowest: "0.95.0", highest: "0.107.0" },
-    // The SDK holds Claude Code's own binary, and says its version in a field of its own (0.3.323: "2.1.323").
-    carries: { name: "Claude Code", package: "@anthropic-ai/claude-agent-sdk", field: "claudeCodeVersion" },
-    versionArgs: ["--version"],
-    profileEnv: "CLAUDE_CONFIG_DIR",
-    // v1 pinned: the adapter also serves a draft v2 to a client that asks. No claude.ai connectors: a profile signed in
-    // with a claude.ai account loaded that account's Gmail, Drive and Docs tools — reaching outside Nouride's gate and
-    // audit, where an agent's MCP servers go through it (the live box, 0.8.1; the switch is Claude Code's own).
-    env: { CLAUDE_AGENT_ACP_PROTOCOL: "v1", DISABLE_AUTOUPDATER: "1", ENABLE_CLAUDEAI_MCP_SERVERS: "false" },
-    modes: { folder: "bypassPermissions", risky: "acceptEdits", all: "default" },
-    steering: true,
-    instructionFile: "CLAUDE.md",
-    // CLAUDE_CONFIG_DIR/skills: its user skills, read in any folder — a mission's repository too.
-    skillsDir: "skills",
-    mcpEnvHeaders: true,
-    // Prints a link; the browser cannot reach the box's callback, so it asks for the code the page then shows.
-    login: ["--cli", "auth", "login", "--claudeai"],
-    // Measured on the box (2026-10-26): exit 0 on a signed-in profile, 1 on one never signed in.
-    status: ["--cli", "auth", "status"],
-    // `claude setup-token`: Claude Code's own long-lived sign-in for a machine with no browser, read from the variable.
-    sharedLogin: { args: ["--cli", "setup-token"], env: "CLAUDE_CODE_OAUTH_TOKEN", tokenPrefix: "sk-ant-oat01-" },
-    // A real refusal of 0.107.0 at a model's limit: code -32603, data `{ "errorKind": "rate_limit" }`. A limit that
-    // came with a rate-limit event of its turn adds `rateLimit`, whose `resetsAt` is in seconds; a model's own did not.
-    limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" },
-    // Every `usage_update` of 0.107.0, read on the box: `_meta["_claude/rateLimit"].unifiedWindows` holds
-    // `five_hour` and `seven_day`, each `{ utilization: 0.44, resetsAt: 1794675000, status: "allowed" }`.
-    use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" },
-    // 0.107.0, read in its own source on the box: every update of a subagent's carries
-    // `_meta.claudeCode.parentToolUseId`, the `Agent` call that started it. With no word from the client that it reads
-    // a subagent's work after a prompt, it keeps the prompt open until its background subagents end.
-    helper: { meta: "claudeCode", parent: "parentToolUseId" },
-    // 0.107.0, read in its own source on the box: the usage update it sends at a turn's result is the one that
-    // carries `cost`; those between steps do not.
-    ended: { usage: "cost" },
-    loginNote: "Signs in with a Claude subscription.",
-  },
-  {
-    id: "codex",
-    name: "Codex",
-    maker: "OpenAI",
-    command: "codex-acp",
-    args: [],
-    install: "npm i -g @agentclientprotocol/codex-acp (it carries Codex itself)",
-    package: "@agentclientprotocol/codex-acp",
-    // 2.3.0 on the box, and 2.5.0 the e2e VM's Codex, each the version there on 2026-11-08.
-    // 2.6.0 on the box since: its handshake check passed, and an agent on it answered a turn and one that ran a command.
-    tested: { lowest: "2.3.0", highest: "2.6.0" },
-    carries: { name: "Codex", package: "@openai/codex", field: "version" },
-    versionArgs: ["--version"],
-    // The folder must exist before it starts, or the handshake itself fails.
-    profileEnv: "CODEX_HOME",
-    profileFiles: { "config.toml": 'check_for_update_on_startup = false\ncli_auth_credentials_store = "file"\n' },
-    modes: { folder: "agent-full-access", risky: "agent", all: "read-only" },
-    steering: true,
-    instructionFile: "AGENTS.md",
-    // A person's own override file beside it is read in its place, as Codex's documentation says.
-    profileInstructionFile: "AGENTS.md",
-    // CODEX_HOME/skills: its user skills (its own binary reads them there, 0.164); its `.system` folder is its own.
-    skillsDir: "skills",
-    // A link and a one-time code; device-code sign-in has to be switched on in the ChatGPT account's security settings.
-    login: ["cli", "login", "--device-auth"],
-    loginNote: "Signs in with ChatGPT. Turn on device-code sign-in in your ChatGPT security settings first.",
-  },
-];
+/** One window of a limit: the share used in percent, how long the window is in minutes, and when it starts again in ms. */
+export interface UseWindow {
+  usedPercent: number;
+  minutes: number | null;
+  resetsAt: number | null;
+}
+
+/** A limit of an account: its id and name as the maker says them, the models it counts where it is some models' alone. */
+export interface UseLimit {
+  id: string;
+  label: string;
+  models?: readonly string[];
+  windows: readonly UseWindow[];
+}
+
+/** An account's use, one shape for every CLI: its limits with their windows, and whether credits beyond them are left. */
+export interface CliUse {
+  limits: readonly UseLimit[];
+  creditsLeft?: boolean;
+}
+
+/** Where an account's token is read: a variable its shared sign-in sets, or a file in its profile folder at a path. */
+export type UseToken = { env: string } | { file: string; path: readonly string[] };
+
+/** A request for an account's use, and the parse of its answer into `CliUse` (null: the answer says none). */
+export type UseReader =
+  | {
+      kind: "http";
+      method: "GET" | "POST";
+      url: string;
+      /** The token, from the first of these that holds one. */
+      token: readonly UseToken[];
+      headers?: Readonly<Record<string, string>>;
+      /** Headers whose values are read from the profile folder's files, as a token is. */
+      fileHeaders?: Readonly<Record<string, { file: string; path: readonly string[] }>>;
+      body?: string;
+      parse: (answer: unknown, now: number) => CliUse | null;
+    }
+  | {
+      kind: "acp";
+      /** A method of the CLI's own, asked on a connection that is open. */
+      method: string;
+      parse: (answer: unknown, now: number) => CliUse | null;
+    };
