@@ -172,8 +172,6 @@ export interface PublicConversation {
 export interface AgentPublic {
   conversations: PublicConversation[];
   total: number;
-  /** The people who began them, each once however many they began. */
-  people: number;
   /** The cursor for the next page, or absent on the last. */
   nextBefore?: number;
 }

@@ -2,13 +2,15 @@
  * An open agent's people at a glance, and the way to them: the Senders card's shape, for an agent nobody asks.
  *
  * Counts and a link, not the list: the list, its search, Read, Block and Unblock are on the Open agents page, where each
- * open agent's people are a list of their own. Each count opens that page on this agent. Who wrote is an admin's to
- * read, so the count of them is too; today's and the blocked are anyone's who sees the page.
+ * open agent's people are a list of their own. Each count opens that page on this agent. Its conversations are what
+ * that list counts, one a row, an admin's to read as the list is; today's people, every stranger who reached it today,
+ * and the blocked are anyone's who sees the page. Three measures, each named for what it counts, so one is never read
+ * as another that disagrees with it.
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Ban, CalendarDays, UsersRound } from "lucide-react";
+import { ArrowRight, Ban, CalendarDays, MessagesSquare } from "lucide-react";
 import type { AgentSummary } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { isAdmin, useMe } from "@/commons/lib/session";
@@ -25,7 +27,7 @@ export function OpenPeople({ agent }: { agent: AgentSummary }) {
   const mine = new Set((gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agent.id).map((gateway) => gateway.id));
   const blocked = (access.data?.senders ?? []).filter((sender) => sender.status === "blocked" && mine.has(sender.gatewayId)).length;
   const tiles = [
-    ...(admin ? [{ key: "wrote", label: "Wrote to it", icon: UsersRound, n: wrote.data?.people, tone: "text-primary" }] : []),
+    ...(admin ? [{ key: "conversations", label: "Conversations", icon: MessagesSquare, n: wrote.data?.total, tone: "text-primary" }] : []),
     { key: "today", label: "Wrote today", icon: CalendarDays, n: agent.open?.today?.people, tone: "text-primary" },
     { key: "blocked", label: "Blocked", icon: Ban, n: access.data ? blocked : undefined, tone: "text-error" },
   ];

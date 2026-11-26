@@ -61,8 +61,9 @@ const HISTORY = ok({
 });
 const row = (sessionId: string, gatewayId: string, name: string): PublicConversation => ({ sessionId, gatewayId, chatId: sessionId, kind: "private", sender: { id: sessionId, name, blocked: false }, title: `asked by ${name}`, updatedAt: AT });
 const PUBLIC = {
-  "/agents/nora/public": ok({ conversations: [row("ses_budi", "telegram:nora", "Budi"), row("ses_ani", "whatsapp:shop", "Ani")], total: 2, people: 3 }),
-  "/agents/omar/public": ok({ conversations: [row("ses_joko", "telegram:omar", "Joko")], total: 1, people: 1 }),
+  // Two of her four conversations on the page: what the count card counts is all four.
+  "/agents/nora/public": ok({ conversations: [row("ses_budi", "telegram:nora", "Budi"), row("ses_ani", "whatsapp:shop", "Ani")], total: 4, nextBefore: AT }),
+  "/agents/omar/public": ok({ conversations: [row("ses_joko", "telegram:omar", "Joko")], total: 1 }),
 };
 const house = (...agents: AgentSummary[]) => ({ "/status": statusOf(...agents), "/gateways": GATEWAYS, "/access": ACCESS, "/access/history": HISTORY, ...PUBLIC });
 
@@ -241,7 +242,7 @@ describe("an open agent's own Access tab", () => {
       seen.said = card(host, "People who wrote")!.textContent ?? "";
       seen.pressable = [...card(host, "People who wrote")!.querySelectorAll("button")].map((one) => one.textContent?.trim() ?? "");
     });
-    expect(seen.tiles).toEqual(["wrote Wrote to it3 /dashboard/open-agents?agent=nora", "today Wrote today2 /dashboard/open-agents?agent=nora", "blocked Blocked2 /dashboard/open-agents?agent=nora"]);
+    expect(seen.tiles).toEqual(["conversations Conversations4 /dashboard/open-agents?agent=nora", "today Wrote today2 /dashboard/open-agents?agent=nora", "blocked Blocked2 /dashboard/open-agents?agent=nora"]);
     expect(seen.link).toBe("/dashboard/open-agents?agent=nora");
     expect(seen).toMatchObject({ rows: 0, field: false, senders: false });
     expect(seen.pressable).toEqual([]);

@@ -102,6 +102,12 @@ export interface SessionListOptions {
   notOpenedBy?: readonly string[];
 }
 
+/**
+ * An address's own part in SQL: what comes before an `@` that is not its first character. A WhatsApp number's
+ * `62812@s.whatsapp.net` is `62812`; a Telegram `@name` and an id with no `@` are themselves.
+ */
+const ownPart = (expr: string) => `(CASE WHEN instr(${expr}, '@') > 1 THEN substr(${expr}, 1, instr(${expr}, '@') - 1) ELSE ${expr} END)`;
+
 export class SessionStore {
   constructor(private readonly db: SqliteDb) {}
 
@@ -354,18 +360,6 @@ export class SessionStore {
   }
 
   /**
-   * How many people began them, each once: an open agent's public is listed as conversations, and one person writes in
-   * a private chat and a group, or comes back after one has rolled over. Nobody's conversation counts nobody.
-   */
-  openers(options: Omit<SessionListOptions, "limit" | "before"> = {}): number {
-    const { where, params } = this.filter(options);
-    const row = this.db
-      .prepare<{ n: number }>(`SELECT COUNT(DISTINCT s.opened_by) AS n FROM sessions s ${where}`)
-      .get(...params);
-    return row?.n ?? 0;
-  }
-
-  /**
    * The shared WHERE clause, and why the search reaches into `turn_records`.
    *
    * What the dashboard shows as a conversation's name is the first thing that was asked in it, which
@@ -423,14 +417,16 @@ export class SessionStore {
       // literally. LIKE is case-insensitive for ASCII in SQLite, which is the whole requirement.
       const like = `%${query.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
       const openers = options.queryOpeners;
-      // The opener's address without its platform, so "whatsapp" is not a search every WhatsApp row matches.
+      // A search of people: the chat's id and the opener's address on their own part, without the app's name before
+      // or its domain after (`@s.whatsapp.net`, `@g.us`), which every row of that app holds and no person typed.
+      const chat = openers ? ownPart("s.chat_id") : "s.chat_id";
       const people = openers
-        ? ` OR substr(s.opened_by, instr(s.opened_by, ':') + 1) LIKE ? ESCAPE '\\'${openers.length > 0 ? ` OR s.opened_by IN (${openers.map(() => "?").join(", ")})` : ""}`
+        ? ` OR ${ownPart("substr(s.opened_by, instr(s.opened_by, ':') + 1)")} LIKE ? ESCAPE '\\'${openers.length > 0 ? ` OR s.opened_by IN (${openers.map(() => "?").join(", ")})` : ""}`
         : "";
       clauses.push(
         `((SELECT t.prompt FROM turn_records t WHERE t.session_id = s.id ORDER BY t.rowid LIMIT 1)
             LIKE ? ESCAPE '\\'
-          OR s.chat_id LIKE ? ESCAPE '\\'${people})`,
+          OR ${chat} LIKE ? ESCAPE '\\'${people})`,
       );
       params.push(like, like, ...(openers ? [like, ...openers] : []));
     }

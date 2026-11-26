@@ -27,7 +27,7 @@ const CAN: AgentOpen = { never: null, notes: false, connections: ["telegram:nora
 const withNora = (open: AgentOpen, access: AgentSummary["access"] = "follow") => ({
   "/status": ok({ ...STATUS, orchestrator: "nouva", agents: [STATUS.agents[0]!, { ...STATUS.agents[0]!, id: "nora", displayName: "Nora", access, open }] }),
   // Nobody has written to it, unless a test says who did.
-  "/agents/nora/public": ok({ conversations: [], total: 0, people: 0 }),
+  "/agents/nora/public": ok({ conversations: [], total: 0 }),
 });
 const card = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("section")].find((one) => one.querySelector("h2, h3")?.textContent?.trim() === "Who can write to this agent") ?? host;
 const drawn = (host: HTMLElement) => eventually(() => host.querySelector('[data-access-answer="open"]') !== null, 3_000, "the card");
@@ -368,7 +368,7 @@ describe("the people who wrote to it", () => {
   const rows = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("[data-public-row]")];
 
   test("are listed on the Open agents page with what they first asked, each read as any conversation is; a blocked sender is marked, and has no Block", async () => {
-    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3, people: 3 }) });
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3 }) });
     const seen = { said: [] as string[], read: [] as (string | null)[], block: [] as boolean[] };
     await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => rows(host).length === 3, 3_000, "the rows");
@@ -451,7 +451,7 @@ describe("the people who wrote to it", () => {
       ...withNora(OPEN, "open"),
       "/agents/nora/public?q=kopi": ok({ conversations: [SITI], total: 1 }),
       "/agents/nora/public?q=zzz": ok({ conversations: [], total: 0 }),
-      "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3, people: 3 }),
+      "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3 }),
     });
     const requests = asked();
     const seen = { found: [] as string[], nobody: "", cleared: [] as string[], field: "x" };
@@ -521,7 +521,7 @@ describe("the people who wrote to it", () => {
   });
 
   test("nobody yet is said, with nothing to search; an operator is told whose the list is; and a closed agent has no list there", async () => {
-    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [], total: 0, people: 0 }) });
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [], total: 0 }) });
     let said = "";
     let field = true;
     await renderPage("/open-agents?agent=nora", async (host) => {
@@ -532,7 +532,7 @@ describe("the people who wrote to it", () => {
     expect(said).toContain("People who wrote");
     expect(field).toBe(false);
     // An operator: the card says the list is an admin's, and nobody's conversation is asked for or drawn.
-    answer({ ...withNora(OPEN, "open"), "/auth/me": ok({ ...ME, role: "operator", user: { ...ME.user, role: "operator" } }), "/agents/nora/public": ok({ conversations: [BUDI], total: 1, people: 1 }) });
+    answer({ ...withNora(OPEN, "open"), "/auth/me": ok({ ...ME, role: "operator", user: { ...ME.user, role: "operator" } }), "/agents/nora/public": ok({ conversations: [BUDI], total: 1 }) });
     let operator = { said: "", rows: -1 };
     await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => host.textContent?.includes("Only an admin reads who wrote to it") === true, 3_000, "the operator's card");
@@ -540,7 +540,7 @@ describe("the people who wrote to it", () => {
     });
     expect(operator.rows).toBe(0);
     // Closed: none of its people there, and the page says where they are now.
-    answer({ ...withNora(CAN), "/agents/nora/public": ok({ conversations: [BUDI], total: 1, people: 1 }) });
+    answer({ ...withNora(CAN), "/agents/nora/public": ok({ conversations: [BUDI], total: 1 }) });
     let closed = { said: "", rows: -1 };
     await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => host.textContent?.includes("No agent is open to everyone") === true, 3_000, "the empty page");
