@@ -463,8 +463,8 @@ agents' commands may use, whichever is lower, at least 1 and at most 4), and it 
 
 ## `[[external_clis]]`
 
-A coding CLI you add for [external agents](/en/docs/manual/external-agents/), beside the two built in, `claude-code`
-and `codex`. One table per CLI:
+A coding CLI you add for [external agents](/en/docs/manual/external-agents/), beside the five built in: `claude-code`,
+`codex`, and the three marked Experimental, `antigravity`, `cursor` and `grok`. One table per CLI:
 
 ```toml
 [[external_clis]]
@@ -491,7 +491,7 @@ Per agent, in its pack's `config.toml`:
 
 ```toml
 [external]
-cli = "claude-code"                 # required: claude-code, codex or an [[external_clis]] id
+cli = "claude-code"                 # required: a built-in CLI's id or an [[external_clis]] id
 profile = "default"                 # the account: lowercase, digits and "-", up to 24 (the default); or a list,
                                     # ["work", "second"]: it goes on with the next when one reaches its limit
 move_at = 90                        # with several accounts: move on once this percent of a limit is used (1 to 99);

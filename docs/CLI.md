@@ -523,7 +523,7 @@ nouride agents update claude-code  # to the newest version out, checked before i
 nouride agents update claude-code 0.95.0   # the way back, after a version failed its check
 ```
 
-`scan` runs each CLI's version command — the two built in, Claude Code and Codex, and every `[[external_clis]]` row
+`scan` runs each CLI's version command — the five built in (Claude Code, Codex, and Antigravity, Cursor CLI and Grok Build, marked Experimental), and every `[[external_clis]]` row
 — and prints which are installed, each with the command that starts it, and how to install the others. A built-in CLI
 is named by what it runs on (0.8.38), read from the files installed: the CLI's own version in the adapter that carries
 it ("Claude Code 2.1.323, in claude-agent-acp 0.107.0"), then Node against what the adapter asks for, a warning where

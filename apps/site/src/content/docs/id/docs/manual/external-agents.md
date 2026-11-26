@@ -1,6 +1,6 @@
 ---
 title: Agent Eksternal
-description: Agent yang dijawab oleh CLI coding (Claude Code, Codex, atau yang kamu tambahkan sendiri), dengan channel, misi, dan approval dari Nouride; plus agent Nouride di editor kamu.
+description: Agent yang dijawab oleh CLI coding (Claude Code, Codex, Antigravity, Cursor CLI, Grok Build, atau yang kamu tambahkan sendiri), dengan channel, misi, dan approval dari Nouride; plus agent Nouride di editor kamu.
 ---
 
 **Agent eksternal** adalah agent Nouride yang giliran kerjanya dijawab oleh CLI coding. Kamu ngobrol dengannya seperti
@@ -18,8 +18,15 @@ Ada dua bawaan: **Claude Code** dari Anthropic dan **Codex** dari OpenAI. Nourid
 
 Tiap adapter membawa CLI aslinya, login pakai login CLI itu sendiri, jadi langganan Claude atau ChatGPT kamu dipakai
 dengan cara yang didukung pembuatnya, bukan lewat akal-akalan: Nouride gak mengubahnya jadi API, gak meniru CLI-nya, dan
-gak menyerahkan login-nya ke program lain. Apa yang boleh dilakukan sebuah langganan tetap ditentukan oleh ketentuan
-pembuatnya.
+gak menyerahkan login-nya ke program lain. Satu-satunya yang Nouride tanyakan dengan login itu adalah berapa banyak
+pemakaian akunnya, pertanyaan yang sama yang ditanyakan halaman pemakaian CLI itu ke pembuatnya. Apa yang boleh
+dilakukan sebuah langganan tetap ditentukan oleh ketentuan pembuatnya.
+
+Tiga lagi sudah bawaan, masing-masing bicara ACP sendiri, tanpa adapter: **Antigravity** dari Google (`agy`),
+**Cursor CLI**, dan **Grok Build** dari xAI (`grok`). Ketiganya ditandai **Experimental**: masing-masing sudah di-install,
+dijalankan, dan dimintai sesi di box Linux tanpa akun, tapi belum ada yang menjawab satu giliran pun di akun sungguhan.
+Dashboard menyebutnya di samping nama mereka, di daftar CLI dan di tempat CLI sebuah agent dipilih. Mereka bisa saja
+gak menjawab, atau menjawab sebagian; laporkan lewat issue kalau ada yang gak jalan.
 
 ## Meng-install CLI
 
@@ -30,6 +37,19 @@ itu sendiri:
 |---|---|---|---|
 | Claude Code | `@agentclientprotocol/claude-agent-acp` | `claude-agent-acp` | Node 22 ke atas |
 | Codex | `@agentclientprotocol/codex-acp` | `codex-acp` | npm |
+
+Tiga yang ditandai Experimental di-install dengan skrip pembuatnya sendiri, sebagai user yang menjalankannya, lalu
+ditaruh di tempat yang ditemukan user setiap agent:
+
+| CLI | Install | Perintah yang dijalankan Nouride |
+|---|---|---|
+| Antigravity | `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, lalu `sudo install -m 755 ~/.local/bin/agy /usr/local/bin/agy` | `agy acp` |
+| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, lalu `sudo ln -sf "$(readlink -f ~/.local/bin/agent)" /usr/local/bin/cursor-agent` | `cursor-agent acp` |
+| Grok Build | `curl -fsSL https://x.ai/cli/install.sh \| bash`, lalu `sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok` | `grok --no-auto-update agent stdio` |
+
+Installer Cursor menamai perintahnya `agent`, dan installer Grok di box yang sama juga, jadi Nouride menjalankan milik
+Cursor dengan nama sendiri, `cursor-agent`. Updater bawaan mereka dimatikan kalau bisa (Antigravity, Grok); Nouride gak
+mengecek versinya ke registry npm, karena gak ada yang rilis di sana.
 
 - **Linux**, yang di-install pakai `install.sh`: `sudo nouride tools run -- npm i -g @agentclientprotocol/claude-agent-acp`
   (atau `@agentclientprotocol/codex-acp`). `nouride tools run` menjalankan installer sebagai user daemon, menaruh
@@ -109,6 +129,12 @@ menyimpan tab Brain sebuah agent itu urusan admin. Login-nya jalan di box, dan h
   lewat `nouride agents login <id>`, di folder-nya sendiri. Dia mencetak link dan kode sekali pakai: buka link-nya,
   login ke ChatGPT, ketik kodenya di halaman OpenAI, dan login-nya selesai sendiri. Login device-code harus dinyalakan
   dulu, di pengaturan keamanan akun ChatGPT kamu.
+- **Antigravity** (Experimental) login dengan akun Google yang berlangganan Google AI Pro atau Ultra, sekali per agent,
+  di tab **Brain**-nya: `agy acp --login` mencetak link, dan kamu tempel balik kode yang ditampilkan halaman Google.
+- **Cursor CLI** (Experimental) login dengan akun Cursor, sekali per agent: `cursor-agent login` mencetak link untuk
+  dibuka; login-nya selesai sendiri.
+- **Grok Build** (Experimental) login dengan akun Grok yang berlangganan SuperGrok atau X Premium+, sekali per agent:
+  `grok login --device-code` mencetak link dan kode untuk diketik di halaman xAI.
 
 CLI yang kamu tambahkan sendiri login pakai kata-kata `login`-nya sendiri. Kalau login lewat browser-nya berakhir di
 halaman di box yang gak bisa dibuka dari mesin kamu, tempel balik alamat halaman itu, dan Nouride membukanya di box.
@@ -147,7 +173,33 @@ ditawarkan kalau CLI-nya menyebut pemakaian akun.
   sampai angkanya sendiri tercapai.
 - Kalau semua akun lain juga sudah dekat limit, atau sudah kena, agent tetap di tempatnya sampai limit itu sendiri.
 
-**Models → Coding CLIs** menyebut, di bawah tiap akun, limit yang sedang mengenainya atau yang sudah dekat, dan di
+### Berapa banyak pemakaian sebuah akun
+
+**Models → Coding CLIs** menampilkan, di bawah tiap akun, berapa banyak paketnya sudah terpakai: tiap limit dengan
+persentase yang terpakai, sebuah bar, dan kapan limit itu mulai lagi. Nouride menanyakannya ke pembuat akun paling
+sering tiap lima menit, pertanyaan yang sama yang ditanyakan halaman pemakaian CLI-nya, dengan login akun itu sendiri,
+dan di antara pembacaan itu memakai apa yang dikatakan CLI-nya selagi bekerja, kalau dia mengatakannya. Kalau gak ada
+yang mengatakannya, akun itu bertuliskan **How much of its plan is used is not known**.
+
+| CLI | Yang ditampilkan |
+|---|---|
+| Claude Code | Limit lima jam dan mingguan, dan limit mingguan milik sebuah model kalau ada |
+| Codex | Limit pendek dan mingguan, dan apakah masih ada kredit di luar limit itu |
+| Cursor CLI | Pemakaian paket di siklus tagihan ini, dipisah antara Auto dan model bernama kalau Cursor memisahkannya |
+| Grok Build | Kredit paket yang terpakai di periode ini, dibaca dari Grok Build selagi ada agent di akun itu yang berjalan |
+| Antigravity | Belum diketahui: dia belum mengatakan apa pun soal pemakaiannya |
+
+Akun yang limitnya sudah habis, menurut pembuatnya, dilewati sampai limit itu mulai lagi, sebelum ada pesan yang dikirim
+ke sana lalu ditolak. Kalau pembuatnya bilang masih ada kredit di luar limit itu (kredit Codex, extra usage Claude),
+akunnya gak dilewati.
+
+Pesan yang ditolak karena limit akun yang menyebut kapan berakhirnya, saat agent gak punya akun lain untuk lanjut,
+ditahan: chat diberi tahu bahwa agent akan lanjut sendiri begitu limit itu berakhir, dan saat itu dia memang lanjut,
+seolah kamu bilang "continue". Ini tetap tersimpan meski Nouride restart. Pesan itu gak ditahan kalau kamu sudah
+mengatakan sesuatu di chat itu sejak saat itu, atau kalau limitnya baru berakhir lebih dari delapan hari lagi; di situ,
+bilang "continue" sendiri.
+
+**Models → Coding CLIs** juga menyebut, di bawah tiap akun, limit yang sedang mengenainya atau yang sudah dekat, dan di
 samping agent yang pindah dari akun itu, di mana agent tersebut sekarang. `/status` di chat menyebut akun yang sedang
 dipakai agent. Di pack-nya, ini satu field yang sama, berupa daftar, dengan angkanya di sampingnya:
 
@@ -193,6 +245,9 @@ lewat **Use for …**), dan yang ditulis ke `[external]` di `config.toml` agent:
 | Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` |
 | Ask when risky | `risky` | `acceptEdits` | `agent` |
 | Ask for everything | `all` | `default` | `read-only` |
+
+Antigravity, Cursor CLI, dan Grok Build belum punya mode yang diatur Nouride: mereka mulai di mode mereka sendiri, dan
+setiap izin yang mereka minta lewat approval Nouride.
 
 *Free in its folder* gak nanya apa-apa, termasuk sebelum push, POST, atau `ssh`. Preset ini bebas hanya kalau tiap agent
 punya user sendiri, yaitu service Linux dengan helper `nouride-run`, di mana sistem operasi menjaga CLI dari semua yang
@@ -357,7 +412,7 @@ modes = { folder = "build", all = "plan" }
 ```
 
 Secret yang dia butuhkan diikat ke perintahnya di `[security.exec_secrets]`; baris ini gak punya `env`. `id` yang sama
-dengan CLI bawaan (`claude-code`, `codex`) ditolak saat dimuat. CLI tambahan jalan sebagai user agent itu sendiri hanya
+dengan CLI bawaan (`claude-code`, `codex`, `antigravity`, `cursor`, `grok`) ditolak saat dimuat. CLI tambahan jalan sebagai user agent itu sendiri hanya
 kalau tiap agent punya user sendiri, gak dapat skill, dan login sekali per agent: gak ada akun bersama untuknya.
 [Semua key →](/id/docs/reference/config/#external_clis)
 

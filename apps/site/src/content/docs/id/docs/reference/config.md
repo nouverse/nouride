@@ -476,8 +476,8 @@ dashboard juga. [Misi →](/id/docs/manual/missions/)
 
 ## `[[external_clis]]`
 
-CLI coding yang kamu tambahkan untuk [agent eksternal](/id/docs/manual/external-agents/), di samping dua yang bawaan,
-`claude-code` dan `codex`. Satu tabel per CLI:
+CLI coding yang kamu tambahkan untuk [agent eksternal](/id/docs/manual/external-agents/), di samping lima yang bawaan:
+`claude-code`, `codex`, dan tiga yang ditandai Experimental, `antigravity`, `cursor`, dan `grok`. Satu tabel per CLI:
 
 ```toml
 [[external_clis]]
@@ -505,7 +505,7 @@ Per agent, di `config.toml` pack-nya:
 
 ```toml
 [external]
-cli = "claude-code"                 # wajib: claude-code, codex, atau id [[external_clis]]
+cli = "claude-code"                 # wajib: id CLI bawaan atau id [[external_clis]]
 profile = "default"                 # akunnya: huruf kecil, angka, dan "-", maks 24 (default); atau daftar,
                                     # ["work", "second"]: lanjut ke akun berikutnya begitu satu kena limit
 move_at = 90                        # dengan beberapa akun: pindah begitu sekian persen limit terpakai (1 sampai 99);

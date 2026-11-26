@@ -2640,7 +2640,7 @@ Every key people change, with its default and what it does, is in `config.exampl
 | `[cron]` | the scheduler (§8) |
 | `[skills]`, `[skills.learning]` | skills switched off for every agent; skill learning (§12.4) |
 | `[missions]` | long work an agent finishes alone (0.8.0): how many run at once for one agent and on the box, and the hours, turns and tokens one works before it asks to continue (§13.5) |
-| `[[external_clis]]` | coding CLIs added for external agents beside the two built in, Claude Code and Codex (0.8.1, §4.4); read at the next start |
+| `[[external_clis]]` | coding CLIs added for external agents beside the built-in ones: Claude Code and Codex (0.8.1, §4.4), Antigravity, Cursor CLI and Grok Build (Experimental); read at the next start |
 
 ---
 

@@ -372,7 +372,7 @@ export const EXTERNAL_PERMISSIONS = ["folder", "risky", "all"] as const;
 export type ExternalPermissions = (typeof EXTERNAL_PERMISSIONS)[number];
 
 /**
- * A coding CLI the person adds (`[[external_clis]]` in config.toml, 0.8.1), beside the two built in: what starts its
+ * A coding CLI the person adds (`[[external_clis]]` in config.toml, 0.8.1), beside the built-in ones: what starts its
  * ACP mode, and what Nouride says and does around it. The shape of `@nouride/acp`'s `CliRow`, which it is used as.
  */
 export interface ExternalCliConfig {
@@ -392,7 +392,7 @@ export interface ExternalCliConfig {
 
 /** `[external]` in a pack: this agent's turns are answered by a coding CLI over the Agent Client Protocol (0.8.1). */
 export interface ExternalAgentConfig {
-  /** Which CLI: a built-in row's id (`claude-code`, `codex`) or one in `[[external_clis]]`. */
+  /** Which CLI: a built-in row's id (`claude-code`, `codex`, `antigravity`, `cursor`, `grok`) or one in `[[external_clis]]`. */
   cli: string;
   /** The profile — the CLI's sign-in and settings folder, inside the agent's own — it uses. Absent: `default`. */
   profile?: string;
