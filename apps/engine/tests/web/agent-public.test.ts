@@ -190,6 +190,54 @@ describe("an open agent's page", () => {
   });
 });
 
+describe("a person looked for on an open agent's page", () => {
+  const found = async (h: Awaited<ReturnType<typeof house>>, query: string) => {
+    const listed = (await h.ask(`/agents/nora/public?q=${encodeURIComponent(query)}`)).body as unknown as AgentPublic;
+    return { chats: listed.conversations.map((one) => one.chatId), total: listed.total };
+  };
+
+  test("by the name their app gave, whatever its case", async () => {
+    const h = await house();
+    expect(await found(h, "santoso")).toEqual({ chats: ["7001"], total: 1 });
+    expect(await found(h, "BUDI")).toEqual({ chats: ["7001"], total: 1 });
+  });
+
+  test("by their number, in a private chat and in a group, where the chat's own id is not theirs", async () => {
+    const h = await house();
+    expect(await found(h, "62812")).toEqual({ chats: ["62812@s.whatsapp.net"], total: 1 });
+    expect(await found(h, "9009")).toEqual({ chats: ["-200"], total: 1 });
+    // The app's name in the address is not a number of anybody's: it would find every row of that app.
+    expect(await found(h, "telegram")).toEqual({ chats: [], total: 0 });
+  });
+
+  test("by what they first asked; and a search that finds nobody is an empty page", async () => {
+    const h = await house();
+    expect(await found(h, "kopi")).toEqual({ chats: ["62812@s.whatsapp.net"], total: 1 });
+    expect((await h.ask("/agents/nora/public?q=nobody")).body).toEqual({ conversations: [], total: 0 });
+    // Only words, of nothing: the whole list.
+    expect((await found(h, "   ")).total).toBe(3);
+  });
+
+  test("what is found comes a page at a time too, counted as found", async () => {
+    const h = await house();
+    // "op": Budi's "when do you open?" and Siti's "kopi", newest first; not the group's question.
+    const first = (await h.ask("/agents/nora/public?q=op&limit=1")).body as unknown as AgentPublic;
+    expect({ shown: first.conversations.map((one) => one.chatId), total: first.total, more: typeof first.nextBefore }).toEqual({ shown: ["62812@s.whatsapp.net"], total: 2, more: "number" });
+    const next = (await h.ask(`/agents/nora/public?q=op&limit=1&before=${first.nextBefore}`)).body as unknown as AgentPublic;
+    expect({ shown: next.conversations.map((one) => one.chatId), total: next.total }).toEqual({ shown: ["7001"], total: 2 });
+    // A full page may have more after it, as any page does: the next one, asked, has none.
+    const last = (await h.ask(`/agents/nora/public?q=op&limit=1&before=${next.nextBefore}`)).body as unknown as AgentPublic;
+    expect(last.conversations).toEqual([]);
+  });
+
+  test("the household's own list is searched as before: by what was asked and the chat, not by who opened it", async () => {
+    const h = await house();
+    // "u1" is the admin's address on the dashboard, in no question and no chat id of theirs.
+    expect(((await h.ask("/sessions?whose=everyone&q=u1")).body.total as number)).toBe(0);
+    expect(chats((await h.ask("/sessions?whose=everyone&q=gaji")).body)).toEqual(["web:dashboard web-g"]);
+  });
+});
+
 describe("the lists of chats leave an open agent's public out", () => {
   test("everybody's conversations, the groups, and the chats a report can be sent to: the household's alone", async () => {
     const h = await house();

@@ -5,6 +5,8 @@
  * listed with everybody's chats they would bury the household's own, and nobody in People would be beside them. They are
  * left out of those lists (`openAgentsOn`) and listed here, for an admin: who wrote, what they first asked, when,
  * and whether they are blocked. A row is opened as any conversation is, and its sender blocked on the Access routes.
+ * `q` looks for a person among them, by name, number or what they first asked: an open agent's public can be many
+ * people, more than a page holds.
  *
  * Registered before `routes/agents.ts`, whose `/agents/:id/:action` would take `public` as an action.
  */
@@ -23,13 +25,18 @@ export function registerAgentPublicRoutes(control: ControlApp, deps: ControlDeps
     if (!deps.registry.get(agentId)) return c.json({ error: `no agent "${agentId}"` }, 404);
     const limit = clampNumber(c.req.query("limit"), 30, 1, 100);
     const before = clampNumber(c.req.query("before"), 0, 0, Number.MAX_SAFE_INTEGER);
+    const words = (c.req.query("q") ?? "").trim().slice(0, 200);
     // Its own connections while it is open: closed, it has no public, and what it said then is among everybody's chats.
-    const options = { agentId, gateways: openAgentsOn(deps).find((open) => open.agentId === agentId)?.gateways ?? [] };
-    const sessions = deps.sessions?.list({ ...options, limit, ...(before > 0 ? { before } : {}) }) ?? [];
-    const titles = deps.turns?.titles() ?? new Map<string, string>();
+    const gateways = openAgentsOn(deps).find((open) => open.agentId === agentId)?.gateways ?? [];
+    const names = new Map(gateways.map((gatewayId) => [gatewayId, deps.openDoor?.names(agentId, gatewayId) ?? new Map<string, string>()]));
     // `opened_by` is `<platform>:<their id>`: the id is what the connection knows them by.
     const senderOf = (openedBy: string | undefined) => (openedBy ? openedBy.slice(openedBy.indexOf(":") + 1) : null);
-    const names = new Map([...new Set(sessions.map((session) => session.gatewayId))].map((gatewayId) => [gatewayId, deps.openDoor?.names(agentId, gatewayId) ?? new Map<string, string>()]));
+    // A person is looked for by the name their app gave, which is kept beside the door and not with the conversation.
+    const named = (wanted: string) =>
+      [...names].flatMap(([gatewayId, known]) => [...known].filter(([, name]) => name.toLocaleLowerCase().includes(wanted)).map(([id]) => `${gatewayId.slice(0, gatewayId.indexOf(":"))}:${id}`));
+    const options = { agentId, gateways, ...(words ? { query: words, queryOpeners: [...new Set(named(words.toLocaleLowerCase()))] } : {}) };
+    const sessions = deps.sessions?.list({ ...options, limit, ...(before > 0 ? { before } : {}) }) ?? [];
+    const titles = deps.turns?.titles() ?? new Map<string, string>();
     const conversations = sessions.map((session): PublicConversation => {
       const id = senderOf(session.openedBy);
       return {

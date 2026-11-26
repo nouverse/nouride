@@ -233,6 +233,11 @@ aplikasi apa, apa yang pertama mereka tanyakan, dan kapan. **Read** membuka perc
 menahan pengirim itu mulai pesan berikutnya. Kartu di atasnya menyebut berapa yang sudah terpakai hari
 itu.
 
+Daftarnya di-scroll di dalam kartunya, jadi halaman agent yang ramai tetap pendek. Untuk mencari
+seseorang, ketik nama, nomor, atau kata dari pertanyaan pertama mereka, lalu tekan **Search** (atau
+Enter): pencariannya mencakup semua percakapan yang disimpan agent itu, bukan cuma yang tampil di layar.
+**Clear** menampilkan semuanya lagi.
+
 Percakapan itu gak masuk ke daftar chat kamu sendiri, dan hilang saat percakapan seumurnya hilang
 (`retention.session_days`), termasuk file-nya.
 

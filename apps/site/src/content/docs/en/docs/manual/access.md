@@ -214,6 +214,10 @@ code. They are on the agent's own **Access** tab, under **People who wrote**: wh
 they first asked and when. **Read** opens the conversation; **Block** keeps that sender out from their
 next message. The card above it says what was used of the day.
 
+The list scrolls inside its card, so a busy agent's page stays short. To find someone, type a name, a
+number or words from what they first asked, and press **Search** (or Enter): it looks through every
+conversation the agent keeps, not only the ones on screen. **Clear** brings everyone back.
+
 Those conversations are kept out of your own list of chats, and go when conversations of their age do
 (`retention.session_days`), files included.
 
