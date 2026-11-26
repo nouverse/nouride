@@ -134,7 +134,18 @@ a bot for an event. It is the agent that is open, never the install. Your other 
 strangers to pair.
 
 On the agent's **Access** page, pick **Open to everyone**, the fourth choice under *Who can write to
-this agent*. It says what it means before you take it, then asks for two numbers:
+this agent*. It says what it means before you take it:
+
+- Anyone who finds it can write to it, and it answers in your name. People may try to talk it into
+  saying things you would not, so keep anything private out of its persona files, its notes and what
+  you open to everyone.
+- Every answer is paid from your model account; the two numbers below are how you keep that in check.
+- What people send it is kept on this server, with its chats.
+- If it has a WhatsApp number, that number is at risk: see [the caution on the WhatsApp
+  page](/en/docs/gateways/whatsapp/#a-number-for-each-agent). The form says it too, and so does the
+  Access page while it stays open.
+
+Then it asks for two numbers:
 
 - **Most tokens it may use in a day.** Everything it spends counts, whoever it answered. When the day's
   tokens are used it tells people it is closed until tomorrow, in a sentence you may write yourself, and

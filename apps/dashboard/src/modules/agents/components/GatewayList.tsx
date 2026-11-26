@@ -20,6 +20,7 @@ import { RestartNeeded } from "@/commons/components/box/RestartNeeded";
 import { Details } from "@/commons/components/ui/Details";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { WhatsAppRisk } from "@/modules/agents/components/WhatsAppRisk";
 
 export function GatewayList({ agentId }: { agentId: string }) {
   const queryClient = useQueryClient();
@@ -269,6 +270,8 @@ function GatewayForm({
   onSaved: () => void;
 }) {
   const meta = PLATFORMS.find((entry) => entry.id === platform);
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const answersAnyone = status.data?.agents.find((agent) => agent.id === agentId)?.access === "open";
   const [name, setName] = useState(existing?.name ?? defaultConnectionName(agentId));
   const [token, setToken] = useState("");
   const [enabled, setEnabled] = useState(existing?.enabled ?? true);
@@ -317,6 +320,8 @@ function GatewayForm({
           <span>{meta.note}</span>
         </div>
       )}
+      {/* Before a number is added, what it risks: more where its agent answers anyone. */}
+      {platform === "whatsapp" && !existing ? <WhatsAppRisk open={answersAnyone} /> : null}
 
       <Field
         label="Name for This Connection"

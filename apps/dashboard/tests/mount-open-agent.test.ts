@@ -107,7 +107,12 @@ describe("a closed agent", () => {
     expect(seen.unsaved).toBe(0);
     // What it means, before it is taken: where, what it may say, what it can do, and that it keeps nothing.
     expect(seen.form).toContain("Anyone who finds it can write to it on Telegram (nora), WhatsApp (shop), with no code for you to approve.");
-    expect(seen.form).toContain("It may say whatever its persona files and its notes hold.");
+    expect(seen.form).toContain("It answers in your name, and people may try to talk it into saying things you would not.");
+    expect(seen.form).toContain("Every answer is paid from your model account");
+    expect(seen.form).toContain("What people send it is kept on this server");
+    // It has a WhatsApp number: what opening it may cost the number, before it is opened.
+    expect(seen.form).toContain("About WhatsAppThis agent answers anyone. That is the riskiest way to use a WhatsApp number");
+    expect(seen.form).toContain("Nouride connects to WhatsApp unofficially");
     expect(seen.form).toContain("Its other tools are switched off, whatever its Tools list says.");
     expect(seen.form).toContain("It remembers nothing a chat tells it");
     expect(seen.form).toContain("there is no starting value");

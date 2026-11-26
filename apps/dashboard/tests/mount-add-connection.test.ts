@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { platformsToAdd } from "../src/modules/agents/components/gateway-platforms.ts";
-import { answer, buttons, press, renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, buttons, overrides, press, renderPage, useMountHarness } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -85,5 +85,27 @@ describe("the Connections page", () => {
       has = buttons(host);
     });
     expect(has).not.toContain("Add Connection");
+  });
+});
+
+describe("adding a WhatsApp number", () => {
+  test("the form says what the number risks before it is saved, and more where its agent answers anyone", async () => {
+    const said: Record<string, string> = {};
+    for (const access of ["pair", "open"]) {
+      daemon([connection("telegram", "nora", "nora")]);
+      overrides["/status"] = { status: 200, body: { agents: [{ id: "nora", displayName: "Nora", access }, { id: "nouva", displayName: "Nouva", access: "pair" }] } };
+      await renderPage("/agents/nora/gateways", async (host) => {
+        await eventually(() => buttons(host).includes("Add Connection"), 3_000, "the button");
+        press(host, "Add Connection");
+        await eventually(() => menu().includes("WhatsApp"), 3_000, "the menu");
+        ([...document.body.querySelectorAll('[role="menu"] button')].find((item) => item.textContent?.trim() === "WhatsApp") as HTMLElement).click();
+        await eventually(() => host.querySelector("[data-whatsapp-risk]") !== null || document.body.querySelector("[data-whatsapp-risk]") !== null, 3_000, "the note");
+        said[access] = (host.querySelector("[data-whatsapp-risk]") ?? document.body.querySelector("[data-whatsapp-risk]"))!.textContent ?? "";
+      });
+    }
+    expect(said.pair).toContain("Nouride connects to WhatsApp unofficially");
+    expect(said.pair).toContain("Use a number you can afford to lose");
+    expect(said.pair).not.toContain("This agent answers anyone");
+    expect(said.open).toContain("This agent answers anyone. That is the riskiest way to use a WhatsApp number");
   });
 });
