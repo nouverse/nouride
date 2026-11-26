@@ -31,11 +31,15 @@ describe("an account's use, read from what its maker answers", () => {
         { id: "seven_day_opus", label: "Weekly, opus", models: ["opus"], windows: [{ usedPercent: 100, minutes: 10_080, resetsAt: Date.parse("2026-12-01T00:00:00Z") }] },
         { id: "weekly_fable", label: "Weekly, Fable", models: ["Fable"], windows: [{ usedPercent: 80, minutes: 10_080, resetsAt: Date.parse("2026-12-02T00:00:00Z") }] },
       ],
+      // Extra usage said off: nothing goes on past a window.
+      creditsLeft: false,
     });
   });
 
   test("Claude: with extra usage turned on, credits are left beyond the windows; and what it says while it works, in the same shape", () => {
     expect(claudeUse({ five_hour: { utilization: 100, resets_at: "2026-11-27T12:00:00Z" }, extra_usage: { is_enabled: true } })?.creditsLeft).toBe(true);
+    // Not said: not known.
+    expect(claudeUse({ five_hour: { utilization: 100, resets_at: "2026-11-27T12:00:00Z" } })?.creditsLeft).toBeUndefined();
     expect(claudeSaid({ _meta: { "_claude/rateLimit": { unifiedWindows: { five_hour: { utilization: 0.44, resetsAt: 1_795_700_000 }, seven_day_opus: { utilization: 1.2, resetsAt: 1_796_000_000 }, odd_one: { utilization: 0.1, resetsAt: 1_796_000_000 } } } } })).toEqual({
       limits: [
         { id: "five_hour", label: "5-hour", windows: [{ usedPercent: 44, minutes: 300, resetsAt: 1_795_700_000_000 }] },

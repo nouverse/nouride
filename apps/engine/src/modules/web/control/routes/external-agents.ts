@@ -16,6 +16,7 @@ import type { ExternalSettings } from "@/modules/setup/external-agent.ts";
 import { EFFORT_CHOICES, isEffortChoice } from "@/modules/setup/agent-effort.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
+import type { UseSeen } from "@/modules/external-agents/account-use.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { INCOMPLETE, NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
@@ -131,8 +132,9 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     const row = deps.externalAgents.row(c.req.param("cli"));
     if (!row) return c.json({ error: `no coding CLI "${c.req.param("cli")}" here` }, 404);
     if (!PROFILE_NAME.test(c.req.param("name"))) return c.json({ error: "an account's name is lowercase letters, digits and dashes, at most 24" }, 400);
-    const seen = await deps.externalAgents.useOf(row, c.req.param("name"), deps.registry.all());
-    return c.json({ use: seen?.use ?? null, at: seen?.at ?? null } satisfies CliAccountUse);
+    const { seen, agents } = await deps.externalAgents.useOf(row, c.req.param("name"), deps.registry.all());
+    const view = (one: UseSeen | null) => ({ use: one?.use ?? null, at: one?.at ?? null, ...(one?.said ? { said: true } : {}) });
+    return c.json({ ...view(seen), ...(agents ? { agents: agents.map((agent) => ({ id: agent.id, ...view(agent.seen) })) } : {}) } satisfies CliAccountUse);
   });
 
   /** An account added by name, before any agent uses it. Admin only. */

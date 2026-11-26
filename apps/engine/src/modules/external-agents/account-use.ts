@@ -8,6 +8,10 @@
  * for that one request and kept nowhere; never for a model call. Answers are parsed into one shape (`CliUse`) by the
  * row, so the Models page shows every CLI's the same way and the account rotation reads it before a turn is refused.
  *
+ * Read as the account is signed in: an account signed in once for all its agents (a shared token) is read once, with
+ * that token; where each agent signs in by itself (Codex, Cursor, a Claude agent signed in alone), each agent's own
+ * sign-in is its own use, read from its folder alone, and never said of another agent's.
+ *
  * A read is taken as it stands for five minutes, a failed one too: a page opened again and again asks once.
  */
 
@@ -22,10 +26,11 @@ export const USE_FRESH_MS = 5 * 60_000;
 /** How long a maker, or a CLI, is given to answer. */
 const ASK_MS = 10_000;
 
-/** An account's use, and when it was read or said. */
+/** An account's use, and when it was read or said; `said`: as its CLI said it while it worked, not read of its maker. */
 export interface UseSeen {
   use: CliUse;
   at: number;
+  said?: true;
 }
 
 /** A CLI running on the account: asked a method of its own, and what it last said of the account's use. */
@@ -41,13 +46,16 @@ export interface AccountUseDeps {
   folderOf: (row: CliRow, agentId: string, account: string) => string;
   /** A file's text, read as the agent whose file it is; undefined where it is not there or cannot be read. */
   readAs: (agentId: string, path: string) => Promise<string | undefined>;
-  /** The CLIs running on the account now. */
-  running: (cli: string, account: string) => RunningOnAccount[];
+  /** The CLIs running on the account now; with `agentId`, that agent's alone. */
+  running: (cli: string, account: string, agentId?: string) => RunningOnAccount[];
   fetch?: typeof fetch;
   now?: () => number;
 }
 
 type FileAt = { file: string; path: readonly string[] };
+
+/** Where a read is kept: the account's, or one agent's own sign-in on it. */
+const keyOf = (row: CliRow, account: string, agent: string | undefined) => `${row.id}|${account}${agent === undefined ? "" : `|${agent}`}`;
 type HttpReader = Extract<UseReader, { kind: "http" }>;
 
 const valueAt = (value: unknown, path: readonly string[]): unknown =>
@@ -65,25 +73,34 @@ export class AccountUses {
 
   /**
    * The account's use: asked of its maker where its row says how and the last read is five minutes old, else the last
-   * read; and what a CLI on it said while it worked, where that is newer. `agents`: the agents on the account, whose
-   * folders its sign-in is read from. Null: not known.
+   * read; and what a CLI on it said while it worked, where that is newer. `agent`: that agent's own sign-in on the
+   * account, where each signs in by itself; absent, the account's shared one. Null: not known.
    */
-  async of(row: CliRow, account: string, agents: readonly string[]): Promise<UseSeen | null> {
-    const key = `${row.id}|${account}`;
+  async of(row: CliRow, account: string, agent?: string): Promise<UseSeen | null> {
+    const key = keyOf(row, account, agent);
     const last = this.read.get(key);
-    const read = row.readUse && (!last || this.now() - last.at >= USE_FRESH_MS) ? await this.ask(key, row, row.readUse, account, agents) : (last?.seen ?? null);
+    const read = row.readUse && (!last || this.now() - last.at >= USE_FRESH_MS) ? await this.ask(key, row, row.readUse, account, agent) : (last?.seen ?? null);
+    return this.newer(read, row, account, agent);
+  }
+
+  /** What is known of it now, asking nobody: the last read, or what a CLI on it said since. */
+  known(row: CliRow, account: string, agent?: string): UseSeen | null {
+    return this.newer(this.read.get(keyOf(row, account, agent))?.seen ?? null, row, account, agent);
+  }
+
+  private newer(read: UseSeen | null, row: CliRow, account: string, agent: string | undefined): UseSeen | null {
     const said = this.deps
-      .running(row.id, account)
+      .running(row.id, account, agent)
       .map((cli) => cli.accountUse)
       .reduce<UseSeen | null>((newest, seen) => (seen && (!newest || seen.at > newest.at) ? seen : newest), null);
-    return said && (!read || said.at > read.at) ? said : read;
+    return said && (!read || said.at > read.at) ? { ...said, said: true } : read;
   }
 
   /** One read at a time for an account: a second asker waits for the first's answer. */
-  private ask(key: string, row: CliRow, reader: UseReader, account: string, agents: readonly string[]): Promise<UseSeen | null> {
+  private ask(key: string, row: CliRow, reader: UseReader, account: string, agent: string | undefined): Promise<UseSeen | null> {
     const going = this.asking.get(key);
     if (going) return going;
-    const asking = this.readOnce(row, reader, account, agents)
+    const asking = this.readOnce(row, reader, account, agent)
       .catch((err: unknown) => {
         // The error's words, never the request's: its headers hold the token.
         log.info("an account's use could not be read", { cli: row.id, account, error: err instanceof Error ? err.name : "error" });
@@ -100,12 +117,12 @@ export class AccountUses {
     return asking;
   }
 
-  private async readOnce(row: CliRow, reader: UseReader, account: string, agents: readonly string[]): Promise<CliUse | null> {
+  private async readOnce(row: CliRow, reader: UseReader, account: string, agent: string | undefined): Promise<CliUse | null> {
     if (reader.kind === "acp") {
-      const cli = this.deps.running(row.id, account)[0];
+      const cli = this.deps.running(row.id, account, agent)[0];
       return cli ? reader.parse(await cli.ask(reader.method, ASK_MS), this.now()) : null;
     }
-    const signedIn = await this.credentials(row, reader, account, agents);
+    const signedIn = await this.credentials(row, reader, account, agent);
     if (!signedIn) return null;
     const res = await (this.deps.fetch ?? fetch)(reader.url, {
       method: reader.method,
@@ -121,17 +138,17 @@ export class AccountUses {
   }
 
   /**
-   * The token, and the headers read beside it: a shared account's kept token where the row names its variable, else
-   * each agent's sign-in files in turn, the first agent that has one.
+   * The token, and the headers read beside it: for the shared sign-in, its kept token where the row names its variable;
+   * for one agent's own, that agent's sign-in files, and no other's.
    */
-  private async credentials(row: CliRow, reader: HttpReader, account: string, agents: readonly string[]): Promise<{ token: string; headers: Record<string, string> } | null> {
+  private async credentials(row: CliRow, reader: HttpReader, account: string, agent: string | undefined): Promise<{ token: string; headers: Record<string, string> } | null> {
     for (const from of reader.token) {
       if ("env" in from) {
-        const token = from.env === row.sharedLogin?.env ? this.deps.sharedToken(row, account) : undefined;
+        const token = agent === undefined && from.env === row.sharedLogin?.env ? this.deps.sharedToken(row, account) : undefined;
         if (token) return { token, headers: {} };
         continue;
       }
-      for (const agentId of agents) {
+      for (const agentId of agent === undefined ? [] : [agent]) {
         const files = new Map<string, Promise<unknown>>();
         const valueOf = async (at: FileAt): Promise<string | undefined> => {
           if (!files.has(at.file)) files.set(at.file, this.json(agentId, join(this.deps.folderOf(row, agentId, account), at.file)));

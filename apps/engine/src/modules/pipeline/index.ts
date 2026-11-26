@@ -420,8 +420,11 @@ export class Pipeline {
     return scheduleProviderResume(
       turn,
       {
-        resume: (taken) => this.wakes.resumeTurn(taken, "provider"),
-        movedOn: (taken, since) => this.deps.turns?.startedInChatSince(taken.gatewayId, taken.chatId, since) ?? false,
+        resume: (taken) => this.wakes.resumeTurn(taken, taken.retryAt === undefined ? "provider" : "held"),
+        movedOn: (taken, since) =>
+          (taken.retryAt !== undefined && taken.senderId
+            ? this.deps.turns?.spokeInChatSince(taken.gatewayId, taken.chatId, taken.senderId, since)
+            : this.deps.turns?.startedInChatSince(taken.gatewayId, taken.chatId, since)) ?? false,
         stopping: () => this.turnContext.paused,
         ...(this.deps.providerResumeMs === undefined ? {} : { delayMs: this.deps.providerResumeMs }),
       },

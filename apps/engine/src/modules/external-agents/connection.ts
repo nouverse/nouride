@@ -23,6 +23,11 @@ export type ChildrenOf = (pid: number) => number[];
 
 /** How many of the CLI's last stderr lines are kept. */
 const STDERR_KEPT = 30;
+/**
+ * How long a CLI is given to take the sign-in method it is told: one with a sign-in kept answers at once. A choice of
+ * this code, not something a CLI said.
+ */
+const AUTHENTICATE_MS = 15_000;
 
 /**
  * Why an agent's CLI cannot answer, in words for wherever its status is shown: not installed, not signed in, or what
@@ -73,6 +78,8 @@ export class CliConnection {
   private handshake: InitializeResult | null = null;
   /** The sign-in method this process was told (`CliRow.authenticate`), once: a CLI keeps it for its later sessions. */
   private told: string | null = null;
+  /** How long a CLI told its sign-in method is given to take it (`signedIn`). */
+  authenticateMs = AUTHENTICATE_MS;
   private readonly stderr: string[] = [];
   private readonly sessions = new Map<string, string>();
   /** What Nouride last set each session to, by session id: a change on the Brain tab is set again where it differs. */
@@ -242,6 +249,10 @@ export class CliConnection {
    * handshake offers (`CliRow.authenticate`) and asked once more. Cursor's and Grok Build's CLIs open no session until
    * told how their kept sign-in is to be read, signed in or not: refused, a CLI that has a sign-in kept answered as one
    * that had none. Told once a process; a refusal after it is the CLI's answer, said as signed out.
+   *
+   * Told with a short wait: signed out, Grok Build's CLI never answered `cached_token` (40 seconds and more, in a
+   * container with no account), and Antigravity's and Cursor's answered with an error. Either way the CLI is not signed
+   * in, and the turn is told so at once, to sign it in on its card, not after the protocol's minute and a half.
    */
   private async signedIn<T>(open: () => Promise<T>): Promise<T> {
     try {
@@ -251,7 +262,12 @@ export class CliConnection {
       const method = this.told === null && err instanceof AcpError && err.code === AUTH_REQUIRED ? this.row.authenticate?.find((id) => offered.has(id)) : undefined;
       if (!method) throw err;
       this.told = method;
-      await this.need().authenticate(method);
+      try {
+        await this.need().authenticate(method, this.authenticateMs);
+      } catch (refused) {
+        log.info("an external agent's CLI did not take its sign-in method: it is signed out", { agent_id: this.agentId, cli: this.row.id, method, code: refused instanceof AcpError ? refused.code : null });
+        throw err;
+      }
       log.info("an external agent's CLI was told its sign-in method", { agent_id: this.agentId, cli: this.row.id, method });
       return await open();
     }

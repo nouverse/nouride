@@ -78,7 +78,9 @@ export function brainFor(external: ExternalBrains | undefined, agent: LoadedAgen
         return await cli.run(req);
       } catch (err) {
         typing?.stop();
-        if (said || req.signal?.aborted) throw err;
+        // A limit that said when it ends is held until then, as the person is told (`provider-resume.ts`): the model
+        // answers only where nothing says when the CLI can again.
+        if (said || req.signal?.aborted || (err instanceof NourideError && err.retryAt !== undefined)) throw err;
         const why = err instanceof NourideError ? err.userMessage : err instanceof Error ? err.message : String(err);
         const note = `_${agent.config.external?.cli ?? "Its CLI"} could not answer: ${why.replace(/\.$/, "")}. ${agent.config.displayName}'s own model answered this time._\n\n`;
         deps.onActivity?.("note", `the CLI could not answer; the agent's model answers this turn: ${why}`);

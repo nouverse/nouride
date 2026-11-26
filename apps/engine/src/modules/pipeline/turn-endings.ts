@@ -63,7 +63,7 @@ export async function endEarly(
     input.cause.kind === "error" &&
     input.retryable === true &&
     input.turnId !== undefined &&
-    ctx.resumeLater?.({ id: input.turnId, agentId: input.agentId, gatewayId: input.envelope.gatewayId, chatId: input.envelope.chatId, prompt: input.prompt, messageId: input.envelope.id, ...(input.retryAt === undefined ? {} : { retryAt: input.retryAt }) }) === true;
+    ctx.resumeLater?.({ id: input.turnId, agentId: input.agentId, gatewayId: input.envelope.gatewayId, chatId: input.envelope.chatId, prompt: input.prompt, messageId: input.envelope.id, senderId: input.envelope.senderId, ...(input.retryAt === undefined ? {} : { retryAt: input.retryAt }) }) === true;
   // Work another agent handed over, ended with nobody to take it up: the room is offered a way on (`way-on.ts`).
   const wayOn = !retrying && wayOnFor(ctx, input);
   const told = (ending: ClosedTurn): string =>

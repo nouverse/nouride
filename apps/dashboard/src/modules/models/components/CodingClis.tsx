@@ -218,7 +218,7 @@ function AccountRow({ cli, account, admin, signing, onSignIn, onChanged }: { cli
       {account.limits?.map((limit) => (
         <p key={limit} className="text-warning text-xs" data-account-limit>{limit.replaceAll("`", "")}</p>
       ))}
-      <AccountUse cli={cli.id} account={account.name} />
+      <AccountUse cli={cli.id} account={account.name} names={Object.fromEntries(account.agents.map((agent) => [agent.id, agent.name]))} />
       {account.agents.length > 0 ? (
         <ul className="flex flex-wrap gap-2">
           {account.agents.map((agent) => (

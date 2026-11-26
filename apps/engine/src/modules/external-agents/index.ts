@@ -134,6 +134,8 @@ export interface ExternalAgentsDeps {
   run?: typeof runCommand;
   /** How an account's use is asked of its maker (`account-use.ts`). Absent: the runtime's. */
   fetch?: typeof fetch;
+  /** How long a CLI is given to take the sign-in method it is told (`connection.ts`). Absent: fifteen seconds. */
+  authenticateMs?: number;
   scan?: (row: CliRow) => Promise<ScannedCli>;
   /** The newest version of each CLI's package, as the npm registry says (0.8.24). Absent: nothing is said of it. */
   newest?: Pick<NewestVersions, "of">;
@@ -235,7 +237,8 @@ export class ExternalAgents implements RunnerHost {
         const out = await (deps.run ?? runCommand)(["cat", "--", path], { cwd: "/", env: { PATH: "/usr/bin:/bin" }, timeoutMs: 10_000, maxOutputBytes: 256 * 1024, agent: agentId });
         return out.exitCode === 0 ? out.stdout : undefined;
       },
-      running: (cli, account) => [...this.running].filter(([agentId, connection]) => !connection.closed && connection.row.id === cli && this.rotation.accountOf(agentId) === account).map(([, connection]) => connection),
+      running: (cli, account, agent) =>
+        [...this.running].filter(([agentId, connection]) => !connection.closed && connection.row.id === cli && this.rotation.accountOf(agentId) === account && (agent === undefined || agentId === agent)).map(([, connection]) => connection),
       ...(deps.fetch ? { fetch: deps.fetch } : {}),
       ...(deps.now ? { now: deps.now } : {}),
     });
@@ -273,14 +276,33 @@ export class ExternalAgents implements RunnerHost {
   }
 
   /**
-   * An account's use as last read or said (`account-use.ts`), read from the sign-in of the agents on it; and a window
-   * of it used up is marked, so no agent sends a message there to be refused until it starts again (`rotation.ts`).
+   * An account's use as last read or said (`account-use.ts`), as it is signed in. Signed in once for all its agents:
+   * read with that sign-in, and a window of it used up is marked, so no agent sends a message there to be refused
+   * until it starts again (`rotation.ts`). Where each agent signs in by itself: each agent's own, marking nothing, as
+   * an agent on its own sign-in has no other account to move to.
    */
-  async useOf(row: CliRow, account: string, agents: readonly LoadedAgent[]): Promise<UseSeen | null> {
-    const on = agents.filter((agent) => agent.config.external?.cli === row.id && accountsOf(agent.config.external).includes(account)).map((agent) => agent.config.id);
-    const seen = await this.uses.of(row, account, on);
-    this.rotation.seen(row, account, seen?.use ?? null);
-    return seen;
+  async useOf(row: CliRow, account: string, agents: readonly LoadedAgent[]): Promise<{ seen: UseSeen | null; agents?: { id: string; seen: UseSeen | null }[] }> {
+    if (this.sharedSignIn(row, account)) {
+      const seen = await this.uses.of(row, account);
+      this.rotation.seen(row, account, seen?.use ?? null);
+      return { seen };
+    }
+    const own = agents.filter((agent) => agent.config.external?.cli === row.id && (agent.config.external.profile ?? "default") === account);
+    return { seen: null, agents: await Promise.all(own.map(async (agent) => ({ id: agent.config.id, seen: await this.uses.of(row, account, agent.config.id) }))) };
+  }
+
+  private sharedSignIn(row: CliRow, account: string): boolean {
+    return Boolean(row.sharedLogin) && this.accounts.token(row, account) !== undefined;
+  }
+
+  /**
+   * What is known of a shared account's use, marked at once; a read that is due runs beside the turn, never before it,
+   * and is marked when it lands.
+   */
+  private useKnown(row: CliRow, account: string): void {
+    if (!row.readUse || !this.sharedSignIn(row, account)) return;
+    this.rotation.seen(row, account, this.uses.known(row, account)?.use ?? null);
+    void this.uses.of(row, account).then((seen) => this.rotation.seen(row, account, seen?.use ?? null), () => undefined);
   }
 
   /** The turn's brain for an external agent; null for any other, which the executor answers. */
@@ -484,9 +506,9 @@ export class ExternalAgents implements RunnerHost {
     const secrets = this.deps.secretsFor(agentId, [row.command, ...row.args]);
     // The account this turn runs on: the one it is on, or its next where that is at a limit for the turn's model. The
     // folder stays `profile`, the first; a CLI on another account is started again as one whose secrets changed is.
-    // An agent with accounts to move between reads the one it is on first, at most every few minutes: a window used up
-    // since its last turn, elsewhere too, moves it before a message is refused there.
-    if (model !== undefined && row.readUse && accountsOf(external).length > 1) await this.useOf(row, this.rotation.accountOf(agentId) ?? accountsOf(external)[0]!, [agent]);
+    // An agent with accounts to move between acts on what is known of the one it is on, and has it read again beside
+    // the turn: a window used up since, elsewhere too, moves it before a message is refused there.
+    if (model !== undefined && accountsOf(external).length > 1) this.useKnown(row, this.rotation.accountOf(agentId) ?? accountsOf(external)[0]!);
     const account = this.rotation.accountFor(row, { id: agentId, name: agent.config.displayName, external }, model);
     const stamp = `${secretsStamp(secrets)}|${account}`;
     const current = this.running.get(agentId);
@@ -504,6 +526,7 @@ export class ExternalAgents implements RunnerHost {
       const lent = row.mcpEnvHeaders && this.deps.mcpUrl?.() ? this.lent.env(agentId) : {};
       const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, account), ...lent } });
       const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now, this.deps.childrenOf ?? ownChildren);
+      if (this.deps.authenticateMs !== undefined) connection.authenticateMs = this.deps.authenticateMs;
       connection.onOwnWords = (sessionId, update) => {
         // What a helper the CLI started does behind a turn is not the agent's word: it wakes no chat and is in no
         // turn. The agent's own, once the helper has ended, is.

@@ -51,6 +51,7 @@
  *
  * `FAKE_TAKES`, JSON, is what it says at its handshake it takes in a prompt (`{"image":true}`); unset, text alone.
  *
+ * `FAKE_AUTH=hangs` or `refuses`: told a method signed out, it never answers, or refuses it at once.
  * `FAKE_AUTH_METHODS`, a list of ids: the sign-in methods its handshake offers. `FAKE_NEEDS_TOLD`: one of them, which
  * it must be told (`authenticate`) before it opens a session, as Cursor's and Grok Build's CLIs must; each method it is
  * told goes to stderr as `told:<id>`.
@@ -106,6 +107,9 @@ const server = new AcpServer({
   handlers: {
     authenticate: async (methodId) => {
       process.stderr.write(`told:${methodId}\n`);
+      // Signed out: one CLI never answers the method (Grok Build's), another refuses it at once (Cursor's).
+      if (process.env.FAKE_AUTH === "hangs") await new Promise(() => {});
+      if (process.env.FAKE_AUTH === "refuses") throw new Error("Failed to open browser for login");
       told = methodId;
     },
     newSession: async ({ cwd, mcpServers }) => {

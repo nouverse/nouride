@@ -30,6 +30,8 @@ export interface LimitMark {
    * refused. Kept under `ANY_MODEL`, and read only by an agent that asked to move on early (`move_at`).
    */
   near?: number;
+  /** Marked from the account's use as its maker said it, not a refusal: a later word that it has room lifts it. */
+  read?: true;
 }
 
 /** The model a mark of nearness is kept under: the limit it is near is the account's, whatever model runs. */
@@ -109,7 +111,7 @@ export interface RotationDeps {
   usable: (row: CliRow, account: string) => boolean;
   now?: () => number;
   /** Each mark and each move, for the audit log. */
-  record?: (action: "cli_account_limited" | "cli_account_moved" | "cli_account_near", details: Record<string, unknown>) => void;
+  record?: (action: "cli_account_limited" | "cli_account_moved" | "cli_account_near" | "cli_account_room", details: Record<string, unknown>) => void;
 }
 
 export class AccountRotation {
@@ -240,8 +242,6 @@ export class AccountRotation {
   used(row: CliRow, agent: { id: string; external: ExternalAgentConfig }, use: AccountUse | null): void {
     const moveAt = agent.external.moveAt;
     const accounts = accountsOf(agent.external);
-    // Used up: the account's, for every agent on it, whatever this one asked.
-    if (use && use.used >= 1 && use.until > this.now()) this.full(row.id, this.on.get(agent.id) ?? accounts[0]!, use.until);
     if (moveAt === undefined || accounts.length < 2 || !use || use.until <= this.now() || use.used * 100 < moveAt) return;
     const account = this.on.get(agent.id) ?? accounts[0]!;
     const key = `${row.id}|${account}|${ANY_MODEL}`;
@@ -252,28 +252,48 @@ export class AccountRotation {
   }
 
   /**
-   * An account's use as last read or said: a window of the account's own used up, with no credits said to be left
-   * beyond it, marks the account at its limit for every model until that window starts again, for every agent on it.
-   * A model's own limit is left to its refusal: what the maker calls a model is not the id a turn runs on.
+   * A shared account's use as last read or said. Only where its maker says no credits are left beyond its limits: a
+   * window used up marks the account at its limit until it starts again, for every agent on it; a model's own window,
+   * that model alone (by the name the maker gives it, which a turn on another id never meets). With credits left, or
+   * none said, nothing is marked: such an account answered before, and still does. And a mark made so is lifted by a
+   * later word that its window has room: credits left, a share below the end, an end already past.
    */
   seen(row: CliRow, account: string, use: CliUse | null): void {
+    if (!use) return;
     const now = this.now();
-    if (!use || use.creditsLeft === true) return;
-    const ends = use.limits
-      .filter((limit) => !limit.models?.length)
-      .flatMap((limit) => limit.windows)
-      .filter((window) => window.usedPercent >= 100 && window.resetsAt !== null && window.resetsAt > now)
-      .map((window) => window.resetsAt!);
-    if (ends.length > 0) this.full(row.id, account, Math.max(...ends));
-  }
-
-  /** The account marked used up until `until`, said once for each end. */
-  private full(cli: string, account: string, until: number): void {
-    const key = `${cli}|${account}|${EVERY_MODEL}`;
-    if (this.kept[key]?.until === until) return;
-    this.kept = { ...this.kept, [key]: { until, known: true } };
-    this.deps.file?.save(this.kept);
-    this.deps.record?.("cli_account_limited", { cli, account, model: EVERY_MODEL, until, known: true, read: true });
+    const full = new Map<string, number>();
+    const said = new Set<string>();
+    for (const limit of use.limits) {
+      const models = limit.models?.length ? limit.models : [EVERY_MODEL];
+      for (const window of limit.windows) {
+        for (const model of models) {
+          said.add(model);
+          if (window.usedPercent >= 100 && window.resetsAt !== null && window.resetsAt > now) full.set(model, Math.max(full.get(model) ?? 0, window.resetsAt));
+        }
+      }
+    }
+    const prefix = `${row.id}|${account}|`;
+    let kept = this.kept;
+    for (const [key, mark] of Object.entries(kept)) {
+      const model = key.startsWith(prefix) ? key.slice(prefix.length) : null;
+      if (model === null || !mark.read) continue;
+      if (use.creditsLeft === true || (said.has(model) && !full.has(model))) {
+        const { [key]: _lifted, ...rest } = kept;
+        kept = rest;
+        this.deps.record?.("cli_account_room", { cli: row.id, account, model });
+      }
+    }
+    if (use.creditsLeft === false) {
+      for (const [model, until] of full) {
+        if (kept[`${prefix}${model}`]?.until === until) continue;
+        kept = { ...kept, [`${prefix}${model}`]: { until, known: true, read: true } };
+        this.deps.record?.("cli_account_limited", { cli: row.id, account, model, until, known: true, read: true });
+      }
+    }
+    if (kept !== this.kept) {
+      this.kept = kept;
+      this.deps.file?.save(kept);
+    }
   }
 
   /**

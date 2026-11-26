@@ -1,9 +1,11 @@
 /**
  * How much of a coding-CLI account's plan is used, as its maker or its CLI last said: each limit, the share of it used
  * and when it starts again. Asked on its own once the accounts are listed, so a maker slow to answer holds up nothing.
+ * Where each agent on the account signs in by itself, each agent's own, under its name.
  */
 
 import { useQuery } from "@tanstack/react-query";
+import type { CliAccountUse } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
 import { ago, inTime } from "@/commons/lib/format";
 
@@ -16,10 +18,24 @@ function lengthWords(minutes: number | null): string {
   return `${minutes} minutes`;
 }
 
-export function AccountUse({ cli, account }: { cli: string; account: string }) {
+export function AccountUse({ cli, account, names }: { cli: string; account: string; names: Readonly<Record<string, string>> }) {
   const query = useQuery({ queryKey: ["cli-account-use", cli, account], queryFn: () => api.cliAccountUse(cli, account), staleTime: 5 * 60_000, retry: false });
   if (query.isPending || query.isError) return null;
-  const { use, at } = query.data;
+  if (!query.data.agents) return <UseLines seen={query.data} />;
+  return (
+    <div className="space-y-2" data-account-use-each>
+      {query.data.agents.map((agent) => (
+        <div key={agent.id} className="space-y-1">
+          <p className="text-xs font-semibold">{names[agent.id] ?? agent.id}'s own sign-in</p>
+          <UseLines seen={agent} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UseLines({ seen }: { seen: Pick<CliAccountUse, "use" | "at" | "said"> }) {
+  const { use, at, said } = seen;
   if (!use || use.limits.length === 0) {
     return (
       <p className="text-base-content/65 text-xs" data-account-use>
@@ -43,7 +59,7 @@ export function AccountUse({ cli, account }: { cli: string; account: string }) {
         )),
       )}
       {use.creditsLeft === false ? <li className="text-warning text-xs">No credits left beyond these limits.</li> : null}
-      {at ? <li className="text-base-content/65 text-[11px]">Read {ago(at)}.</li> : null}
+      {at ? <li className="text-base-content/65 text-[11px]">{said ? `As the CLI said while it worked, ${ago(at)}.` : `Read ${ago(at)}.`}</li> : null}
     </ul>
   );
 }

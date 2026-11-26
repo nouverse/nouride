@@ -23,7 +23,9 @@
  *
  * A turn refused for a plan's limit that said when it ends (a coding CLI's account, `external-agents/rotation.ts`) is
  * held until then instead (`retryAt`), on the same terms, and its time is on the record too, so a restart in between
- * sets it again. One that ends more than eight days on is not held: the person is told to say "continue".
+ * sets it again. One that ends more than eight days on is not held: the person is told to say "continue". And over
+ * hours, others go on talking in a room, and the daemon starts turns of its own: only the person who asked moving on
+ * makes it theirs again.
  */
 
 import { createLogger } from "@nouride/shared";
@@ -48,6 +50,8 @@ export interface ResumableTurn {
   messageId?: string;
   /** When to take it up, in ms: the end of the limit it was refused for. Absent: a few minutes after it failed. */
   retryAt?: number;
+  /** Who asked: a turn held for hours is theirs again once they say something, not when anybody else does. */
+  senderId?: string;
 }
 
 /**

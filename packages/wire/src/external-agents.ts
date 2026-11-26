@@ -127,10 +127,15 @@ export interface CliAccountView {
   limits?: string[];
 }
 
-/** An account's use as last read of its maker or said by its CLI, and when; `use` null where it is not known. */
+/**
+ * An account's use as last read of its maker or said by its CLI (`said`), and when; `use` null where it is not known.
+ * `agents`: where each agent on the account signs in by itself, each one's own, the account's then null.
+ */
 export interface CliAccountUse {
   use: CliUse | null;
   at: number | null;
+  said?: boolean;
+  agents?: { id: string; use: CliUse | null; at: number | null; said?: boolean }[];
 }
 
 export interface CliAccountsView {

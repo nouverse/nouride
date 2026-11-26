@@ -350,40 +350,83 @@ describe("the marks, where the daemon keeps its state", () => {
 
 describe("a window of the account's used up, read before a message is refused", () => {
   const window = (usedPercent: number, hours: number | null) => ({ usedPercent, minutes: 300, resetsAt: hours === null ? null : NOW + hours * HOUR });
-  const use = (...windows: ReturnType<typeof window>[]) => ({ limits: windows.map((each, index) => ({ id: `w${index}`, label: `w${index}`, windows: [each] })) });
+  const use = (creditsLeft: boolean | undefined, ...windows: ReturnType<typeof window>[]) => ({
+    limits: windows.map((each, index) => ({ id: `w${index}`, label: `w${index}`, windows: [each] })),
+    ...(creditsLeft === undefined ? {} : { creditsLeft }),
+  });
+  const OPUS = (usedPercent: number) => ({ id: "seven_day_opus", label: "Weekly, opus", models: ["opus"], windows: [window(usedPercent, 50)] });
 
-  test("marks the account at its limit for every model until the latest such window starts again, for every agent on it, once", () => {
+  test("on the maker's word that no credits are left, marks the account for every model until its latest full window starts again, once", () => {
     const { turn, said, later } = rotation();
     turn.started("nix", "rina");
-    turn.seen(ROW, "rina", use(window(100, 2), window(100, 30), window(40, 1)));
-    for (const model of ["fable", "opus", OWN_MODEL]) expect(turn.limited("claude-code", "rina", model)).toEqual({ until: NOW + 30 * HOUR, known: true });
-    // Every agent on it moves where it has another account; the chat is told it is at its limit, for no one model.
+    turn.seen(ROW, "rina", use(false, window(100, 2), window(100, 30), window(40, 1)));
+    for (const model of ["fable", "opus", OWN_MODEL]) expect(turn.limited("claude-code", "rina", model)).toEqual({ until: NOW + 30 * HOUR, known: true, read: true });
     expect(turn.accountFor(ROW, NIX, "fable")).toBe("work");
     expect(turn.accountFor(ROW, NOX, "opus")).toBe("spare");
     expect(turn.says("claude-code", "rina")).toEqual(["At its limit: for about 30 hours more."]);
-    turn.seen(ROW, "rina", use(window(100, 30)));
+    turn.seen(ROW, "rina", use(false, window(100, 30)));
     expect(said).toEqual([["cli_account_limited", { cli: "claude-code", account: "rina", model: "**", until: NOW + 30 * HOUR, known: true, read: true }]]);
-    // Once it starts again, the mark is gone.
     later(31 * HOUR);
     expect(turn.limited("claude-code", "rina", "fable")).toBeNull();
     expect(turn.accountFor(ROW, NIX, "fable")).toBe("rina");
   });
 
-  test("as its CLI says it while it works too: a window at its end marks the account, whatever the agent asked", () => {
+  test("a model's own window used up marks that model alone, by the name the maker gives it", () => {
     const { turn } = rotation();
-    turn.started("solo", "rina");
-    turn.used(ROW, SOLO, { used: 1, until: NOW + 3 * HOUR });
-    expect(turn.limited("claude-code", "rina", "fable")).toEqual({ until: NOW + 3 * HOUR, known: true });
-    expect(turn.accountFor(ROW, NIX, "fable")).toBe("work");
+    turn.seen(ROW, "rina", { limits: [{ id: "five_hour", label: "5-hour", windows: [window(20, 2)] }, OPUS(100)], creditsLeft: false });
+    expect(turn.limited("claude-code", "rina", "opus")).toEqual({ until: NOW + 50 * HOUR, known: true, read: true });
+    expect(turn.limited("claude-code", "rina", "sonnet")).toBeNull();
+    expect(turn.accountFor(ROW, NIX, "sonnet")).toBe("rina");
   });
 
-  test("nothing is marked short of the end, for a window with no end or one over, a model's own limit, or credits left beyond it", () => {
+  test("with credits left, or none said, nothing is marked: an account that answered before this still does, whatever its CLI says", () => {
     const { turn, kept } = rotation();
-    turn.seen(ROW, "rina", use(window(99.5, 2), window(100, null), window(100, -1)));
-    turn.seen(ROW, "rina", { limits: [{ id: "opus", label: "Weekly, opus", models: ["opus"], windows: [window(100, 5)] }] });
-    turn.seen(ROW, "rina", { ...use(window(100, 2)), creditsLeft: true });
+    turn.started("nix", "rina");
+    turn.seen(ROW, "rina", use(true, window(100, 2)));
+    turn.seen(ROW, "rina", use(undefined, window(100, 2)));
+    turn.seen(ROW, "rina", { limits: [OPUS(100)] });
+    // The CLI's own word while it works says nothing of credits: as before, only an agent that asked marks it near.
+    turn.used(ROW, NIX, { used: 1, until: NOW + 2 * HOUR });
+    expect(kept()).toEqual({});
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("rina");
+    turn.used(ROW, { ...NIX, external: { ...NIX.external, moveAt: 90 } }, { used: 1, until: NOW + 2 * HOUR });
+    expect(kept()).toEqual({ "claude-code|rina|*": { until: NOW + 2 * HOUR, known: true, near: 1 } });
+  });
+
+  test("nothing is marked short of the end, for a window with no end or one over, or a turn on a model the maker does not name", () => {
+    const { turn, kept } = rotation();
+    turn.seen(ROW, "rina", use(false, window(99.5, 2), window(100, null), window(100, -1)));
     turn.seen(ROW, "rina", null);
     expect(kept()).toEqual({});
+  });
+
+  test("a later word that the window has room lifts a mark made from a read: credits left, a share below the end, an early reset; not a refusal's", async () => {
+    const { turn, kept, said } = rotation();
+    const mark = () => turn.seen(ROW, "rina", use(false, window(100, 3)));
+    mark();
+    turn.seen(ROW, "rina", use(true, window(100, 3)));
+    expect(kept()).toEqual({});
+    mark();
+    // Its CLI saying the window is used up again, credits unsaid, keeps it; saying it is at 40%, lifts it.
+    turn.seen(ROW, "rina", use(undefined, window(100, 3)));
+    expect(Object.keys(kept())).toEqual(["claude-code|rina|**"]);
+    turn.seen(ROW, "rina", use(undefined, window(40, 5)));
+    expect(kept()).toEqual({});
+    mark();
+    turn.seen(ROW, "rina", use(false, window(100, -1)));
+    expect(kept()).toEqual({});
+    // A model's mark is lifted by that model's window alone.
+    turn.seen(ROW, "rina", { limits: [OPUS(100)], creditsLeft: false });
+    turn.seen(ROW, "rina", use(undefined, window(10, 2)));
+    expect(Object.keys(kept())).toEqual(["claude-code|rina|opus"]);
+    turn.seen(ROW, "rina", { limits: [OPUS(30)] });
+    expect(kept()).toEqual({});
+    // A refusal is the CLI's own word that it did not answer: a read does not lift it.
+    turn.started("solo", "rina");
+    turn.refused(ROW, SOLO, await refusal({ errorKind: "rate_limit", rateLimit: { resetsAt: (NOW + HOUR) / 1000 } }), "fable");
+    turn.seen(ROW, "rina", use(true, window(10, 2)));
+    expect(turn.limited("claude-code", "rina", "fable")).toEqual({ until: NOW + HOUR, known: true });
+    expect(said.filter(([action]) => action === "cli_account_room")).toHaveLength(4);
   });
 });
 

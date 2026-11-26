@@ -35,8 +35,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 590,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools and what they made, parts, versions, a turn's account and each account's use, a followed session's leftovers",
+    lines: 604,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools and what they made, parts, versions, a turn's account, use per sign-in, a followed session's leftovers",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
     lines: 420,
@@ -79,7 +79,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "the approval gate: one table and the requests in flight, asked, queued per chat, answered once and kept across a restart, over one set of maps every step reads and writes",
   },
   "apps/engine/src/modules/turns/turns.store.ts": {
-    lines: 480,
+    lines: 485,
     why: "the turn record and its columns, the causes it names, the clause every read of a conversation uses to leave a delegate's own turns out, the queries that use it, its marks: a restart's, public, held",
   },
   "apps/engine/src/modules/missions/missions.ts": {
@@ -123,8 +123,8 @@ export const BUDGET: Record<string, Budget> = {
 /** Test files over `MAX_TEST_CODE_LINES`; new cases go in a file of their own. */
 export const TEST_BUDGET: Record<string, Budget> = {
   "apps/engine/tests/external-agents/runner.test.ts": {
-    lines: 1_010,
-    why: "a CLI's turns against the fake CLI, every case on the one `setup` that starts it: its accounts, their limits and use go through the same service and session as the rest",
+    lines: 1_040,
+    why: "a CLI's turns against the fake CLI, every case on the one `setup` that starts it: its accounts, their limits and use, its sign-in, go through the same service and session as the rest",
   },
   "apps/engine/tests/pipeline/pipeline.test.ts": {
     lines: 3_849,

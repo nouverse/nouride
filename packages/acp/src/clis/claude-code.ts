@@ -58,9 +58,10 @@ export function claudeUse(answer: unknown): CliUse | null {
     if (field(limit, "kind") !== "weekly_scoped" || typeof model !== "string" || used === null) continue;
     limits.push({ id: `weekly_${model.toLowerCase()}`, label: `Weekly, ${model}`, models: [model], windows: [{ usedPercent: percent(used), minutes: 10_080, resetsAt: timeOf(field(limit, "resets_at")) }] });
   }
-  // Extra usage turned on: past a window it goes on, paid for, so a window at its end is not the account spent.
-  const extra = field(answer, "extra_usage", "is_enabled") === true;
-  return limits.length > 0 ? { limits, ...(extra ? { creditsLeft: true } : {}) } : null;
+  // Extra usage turned on: past a window it goes on, paid for, so a window at its end is not the account spent. Said
+  // off, nothing goes on past it. Not said: not known, and nothing is held for it (`rotation.ts`).
+  const extra = field(answer, "extra_usage", "is_enabled");
+  return limits.length > 0 ? { limits, ...(typeof extra === "boolean" ? { creditsLeft: extra } : {}) } : null;
 }
 
 export const claudeCode: CliRow = {

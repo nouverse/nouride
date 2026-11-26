@@ -253,6 +253,21 @@ describe("a turn its provider ended, across a restart", () => {
     expect(owed(Date.now())).toEqual([]);
   });
 
+  test("what drops a held turn is a turn of the person who asked, in that chat: not another's, not one the daemon started", async () => {
+    const made = await pipelineBench({ gateway: new FakeGateway("telegram:nouva") });
+    benches.push(made);
+    const { turns } = made;
+    const since = Date.now() - 1;
+    const begin = (senderId: string, more: Record<string, unknown> = {}) => turns.begin({ sessionId: "ses_nouva:telegram:nouva:819", agentId: "nouva", gatewayId: "telegram:nouva", chatId: "819", senderId, prompt: "hello", ...more });
+    begin("user-2");
+    begin("user-1", { cause: { via: "job", job: "cron_1" } });
+    expect(turns.spokeInChatSince("telegram:nouva", "819", "user-1", since)).toBe(false);
+    expect(turns.startedInChatSince("telegram:nouva", "819", since)).toBe(true);
+    begin("user-1");
+    expect(turns.spokeInChatSince("telegram:nouva", "819", "user-1", since)).toBe(true);
+    expect(turns.spokeInChatSince("telegram:nouva", "818", "user-1", since)).toBe(false);
+  });
+
   test("a turn that promised under the mark is taken up once after a restart, though the words of its promise have changed since", async () => {
     const failing = (async () =>
       new Response(JSON.stringify({ error: { message: "upstream unavailable" } }), { status: 503, headers: { "content-type": "application/json" } })) as unknown as typeof fetch;

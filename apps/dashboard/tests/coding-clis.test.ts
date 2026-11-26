@@ -47,6 +47,9 @@ const TEAM_USE = {
   at: NOW - 3 * 60_000,
 };
 
+/** Coder's own sign-in on Codex: its CLI said it while it worked. */
+const CODER_USE = { limits: [{ id: "codex", label: "Codex", windows: [{ usedPercent: 10, minutes: 300, resetsAt: null }] }] };
+
 function serve(clis: CliAccountsView[] = CLIS): { posted: string[] } {
   const posted: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -58,6 +61,7 @@ function serve(clis: CliAccountsView[] = CLIS): { posted: string[] } {
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
     if (path === "/api/control/cli-accounts") return json({ clis });
     if (path === "/api/control/cli-accounts/claude-code/team/use") return json(TEAM_USE);
+    if (path === "/api/control/cli-accounts/codex/work/use") return json({ use: null, at: null, agents: [{ id: "coder", use: CODER_USE, at: NOW - 60_000, said: true }, { id: "ghost", use: null, at: null }] });
     if (path.endsWith("/use")) return json({ use: null, at: null });
     if (path === "/api/control/status") return json({ orchestrator: "nouva", agents: [{ id: "nouva", displayName: "Nouva" }], gateways: [] });
     if (path.endsWith("/login")) return json({ login: { running: true, output: "Open https://claude.example.test/x\n", links: ["https://claude.example.test/x"], exitCode: null, signedIn: false } });
@@ -100,8 +104,8 @@ describe("Coding CLIs on the Models page", () => {
     serve();
     const { host, unmount } = await mount();
     try {
-      await eventually(() => host.querySelectorAll("[data-account-use]").length === 2, 2_000, "each account's use");
-      const [team, work] = [...host.querySelectorAll("[data-account-use]")];
+      await eventually(() => host.querySelectorAll("[data-account-use]").length === 3, 2_000, "each account's use");
+      const [team, coder, ghost] = [...host.querySelectorAll("[data-account-use]")];
       const lines = [...team!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim());
       expect(lines).toEqual(["5-hour44% used, starts again in 2 h", "Plan, 5 hours95% used", "Plan, weekly12% used", "No credits left beyond these limits.", "Read 3 min ago."]);
       expect([...team!.querySelectorAll("progress")].map((bar) => [bar.getAttribute("value"), bar.className.includes("progress-warning")])).toEqual([
@@ -109,7 +113,11 @@ describe("Coding CLIs on the Models page", () => {
         ["95", true],
         ["12", false],
       ]);
-      expect(work!.textContent).toBe("How much of its plan is used is not known.");
+      // Codex signs in once per agent: each agent's own sign-in, under its name, said as its CLI's word where it was.
+      const each = host.querySelector("[data-account-use-each]")!;
+      expect([...each.querySelectorAll(":scope > div > p:first-child")].map((name) => name.textContent)).toEqual(["Coder's own sign-in", "ghost's own sign-in"]);
+      expect(ghost!.textContent).toBe("How much of its plan is used is not known.");
+      expect([...coder!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Codex10% used", "As the CLI said while it worked, 1 min ago."]);
     } finally {
       unmount();
     }

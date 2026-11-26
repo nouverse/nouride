@@ -444,6 +444,16 @@ export abstract class TurnStore {
     return row?.prompt.trim() || null;
   }
 
+  /**
+   * Whether this person said anything in this chat after `since`: a turn of theirs, not one the daemon started or
+   * another's. What a turn held for hours waits on (`provider-resume.ts`): in a room, others go on talking meanwhile.
+   */
+  spokeInChatSince(gatewayId: string, chatId: string, senderId: string, since: number): boolean {
+    return Boolean(
+      this.db.prepare<{ n: number }>(`SELECT 1 AS n FROM turn_records WHERE gateway_id = ? AND chat_id = ? AND sender_id = ? AND cause IS NULL AND started_at > ? LIMIT 1`).get(gatewayId, chatId, senderId, since),
+    );
+  }
+
   /** Whether anything started in this chat after `since` — a person who has moved on since a turn failed. */
   startedInChatSince(gatewayId: string, chatId: string, since: number): boolean {
     return Boolean(this.db.prepare<{ n: number }>(`SELECT 1 AS n FROM turn_records WHERE gateway_id = ? AND chat_id = ? AND started_at > ? AND ${OWN} LIMIT 1`).get(gatewayId, chatId, since));

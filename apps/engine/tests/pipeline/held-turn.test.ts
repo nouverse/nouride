@@ -19,17 +19,21 @@ afterEach(async () => {
 const LIMIT = "Every account of Nouva is at its limit: work (for about 3 hours more).";
 
 /**
- * An external agent's brain refused for its accounts' limit until `until` once, and answering after. It has said a word
- * first, as a CLI refused mid-turn has: a turn with nothing said yet goes to the agent's own model instead (`brain.ts`).
+ * An external agent's brain refused for its accounts' limit until `until` once, and answering after: having said a word
+ * first, as a CLI refused mid-turn has, or nothing, as one refused before it began.
  */
-function cliRefusedUntil(until: () => number | undefined) {
+/** What each turn of the external agent was asked, in order. */
+const asked: string[] = [];
+
+function cliRefusedUntil(until: () => number | undefined, silent = false) {
   let refused = 0;
   const cli = {
     runnerFor: (_agent: LoadedAgent, d: ExecutorDeps): TurnBrain => ({
       run: async (req) => {
+        asked.push(typeof req.userMessage.content === "string" ? req.userMessage.content : JSON.stringify(req.userMessage.content));
         if (refused === 0) {
           refused += 1;
-          d.onText?.("Looking first.");
+          if (!silent) d.onText?.("Looking first.");
           const at = until();
           throw new NourideError("external_accounts_spent", LIMIT, LIMIT, at === undefined ? {} : { retryAt: at });
         }
@@ -43,8 +47,8 @@ function cliRefusedUntil(until: () => number | undefined) {
   return cli;
 }
 
-async function bench(until: () => number | undefined): Promise<Bench> {
-  const made = await pipelineBench({ agentToml: '[llm]\nprovider = "test"\n\n[external]\ncli = "fake"\n', deps: { externalAgents: cliRefusedUntil(until), providerResumeMs: 10 } });
+async function bench(until: () => number | undefined, silent = false): Promise<Bench> {
+  const made = await pipelineBench({ agentToml: '[llm]\nprovider = "test"\n\n[external]\ncli = "fake"\n', deps: { externalAgents: cliRefusedUntil(until, silent), providerResumeMs: 10 } });
   cleanups.push(made.dispose);
   made.pipeline.attach();
   return made;
@@ -63,6 +67,56 @@ describe("a turn refused for a limit that said when it ends", () => {
     expect(made.gateway.sent.some((sent) => sent.text.includes("went on"))).toBe(false);
     await eventually(() => made.gateway.sent.some((sent) => sent.text.includes("went on")), 5_000, "the turn taken up after the limit's end");
     expect(Date.now()).toBeGreaterThanOrEqual(at);
+  });
+
+  test("refused before it said anything, as every account spent is before a message is sent: held all the same, not given to the model", async () => {
+    let at = 0;
+    const made = await bench(() => (at = Date.now() + 300), true);
+    made.gateway.receive(envelope({ id: "m1", text: "push the fix", timestamp: Date.now() }));
+    await eventually(() => made.gateway.sent.length > 0, 5_000, "the refusal told");
+    expect(made.gateway.sent.map((sent) => sent.text)).toEqual([`${LIMIT} I'll go on by myself once that limit ends, or say "continue".`]);
+    expect(made.db.prepare<{ retry_at: number | null }>("SELECT retry_at FROM turn_records WHERE message_id = 'm1'").get()!.retry_at).toBe(at);
+    await eventually(() => made.gateway.sent.some((sent) => sent.text.includes("went on")), 5_000, "the turn taken up after the limit's end");
+    expect(Date.now()).toBeGreaterThanOrEqual(at);
+  });
+
+  test("one that said nothing of when it ends, refused before a word, goes to the agent's own model as before", async () => {
+    const made = await bench(() => undefined, true);
+    made.gateway.receive(envelope({ id: "m1", text: "push the fix", timestamp: Date.now() }));
+    await eventually(() => made.gateway.sent.length > 0, 5_000, "something told");
+    expect(made.gateway.lastText()).toContain("own model answered this time");
+  });
+
+  test("is taken up with words for a limit's end, not a provider's few minutes", async () => {
+    asked.splice(0);
+    const made = await bench(() => Date.now() + 200);
+    made.gateway.receive(envelope({ id: "m1", text: "push the fix", timestamp: Date.now() }));
+    await eventually(() => made.gateway.sent.some((sent) => sent.text.includes("went on")), 5_000, "the turn taken up");
+    expect(asked.at(-1)).toContain(`Your plan's limit stopped you while you were working on "push the fix", and that limit has ended now.`);
+    expect(asked.at(-1)).not.toContain("few minutes");
+  });
+
+  test("someone else in the chat meanwhile does not drop it; the person who asked saying something does", async () => {
+    const others = await bench(() => Date.now() + 400);
+    others.gateway.receive(envelope({ id: "m1", text: "push the fix", timestamp: Date.now() }));
+    await eventually(() => others.gateway.sent.length > 0, 5_000, "the refusal told");
+    others.gateway.receive(envelope({ id: "m2", senderId: "user-2", senderName: "Mira", text: "what's the weather", timestamp: Date.now() }));
+    // Mira answered, and the held turn taken up after the end all the same: two answers.
+    await eventually(() => others.gateway.sent.filter((sent) => sent.text.includes("went on")).length === 2, 5_000, "the held turn taken up beside Mira's");
+
+    const same = await bench(() => Date.now() + 400);
+    // When the hold's time came, it asked whether the person spoke since: what tells a hold let go from one not yet due.
+    const spoke = same.turns.spokeInChatSince.bind(same.turns);
+    let asked = false;
+    same.turns.spokeInChatSince = (...args) => ((asked = true), spoke(...args));
+    same.gateway.receive(envelope({ id: "m1", text: "push the fix", timestamp: Date.now() }));
+    await eventually(() => same.gateway.sent.length > 0, 5_000, "the refusal told");
+    same.gateway.receive(envelope({ id: "m2", text: "never mind, do the docs", timestamp: Date.now() }));
+    await eventually(() => same.gateway.sent.some((sent) => sent.text.includes("went on")), 5_000, "the new message answered");
+    // At the end: the person moved on, so it is theirs, and nothing is taken up for them.
+    await eventually(() => asked, 5_000, "the hold's time come");
+    await same.pipeline.idle();
+    expect(same.gateway.sent.filter((sent) => sent.text.includes("went on"))).toHaveLength(1);
   });
 
   test("a limit that did not say when it ends is not held: the person is told to say continue, as before", async () => {
