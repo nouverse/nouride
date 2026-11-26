@@ -12,7 +12,7 @@ import { describe, expect, test } from "bun:test";
 import type { AgentOpen, AgentSummary, ChatListPayload, PublicConversation } from "@nouride/wire";
 import { OPEN_TO_EVERYONE } from "../src/commons/components/agents/AgentName.tsx";
 import { limitsSaid } from "../src/modules/access/open-agents.page.tsx";
-import { answer, dropdown, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
+import { answer, dropdown, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -69,7 +69,9 @@ const house = (...agents: AgentSummary[]) => ({ "/status": statusOf(...agents), 
 
 const tab = (host: HTMLElement, label: string) => ([...host.querySelectorAll<HTMLElement>('[role="tab"]')].find((one) => one.textContent?.trim().startsWith(label)) as HTMLElement).click();
 const tabs = (host: HTMLElement) => [...host.querySelectorAll('[role="tab"]')].map((one) => one.textContent?.replace(/\s+/g, "").trim());
-const people = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("[data-public-row]")].map((one) => one.dataset.publicRow);
+const people = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("[data-public-conversations] > li")].map((one) => one.dataset.row);
+/** The page's own list under its tabs, by the title it starts with. */
+const listCard = (host: HTMLElement, starts: string) => [...host.querySelectorAll<HTMLElement>("section")].find((one) => one.querySelector("h2, h3")?.textContent?.startsWith(starts));
 const text = (host: HTMLElement) => host.textContent ?? "";
 /** Every address under `/agents/` the page asks for from here, by path. */
 function asking() {
@@ -147,29 +149,38 @@ describe("the Access page", () => {
 });
 
 describe("the Open agents page", () => {
-  test("one open agent: no picker; what it used today and its limits, the people who wrote, and its own blocked, unblocked there", async () => {
+  test("is the Access page's template: its rules, then the tabs, the filter and the agent in the row that stays, and the tab's list", async () => {
     answer(house(NOUVA, NORA));
     const calls = asking();
-    const seen = { picker: true, today: "", rows: [] as unknown[], blocked: "", title: "", where: "" };
+    const seen = { options: [] as string[], today: "", tabs: [] as unknown[], rows: [] as unknown[], filter: "", blocked: "", title: "", where: {} as Record<string, unknown> };
     try {
       await renderPage("/open-agents", async (host, app) => {
-        await eventually(() => people(host).length === 2 && text(host).includes("Siti Rude"), 3_000, "the page");
-        seen.picker = host.querySelector("[data-open-picker]") !== null;
+        await eventually(() => people(host).length === 2 && tabs(host).join() === "Wrote4,Letin1,Blocked2", 3_000, "the page");
+        seen.tabs = tabs(host);
         seen.today = host.querySelector("[data-open-today]")?.textContent ?? "";
         seen.rows = people(host);
-        const blocked = [...host.querySelectorAll<HTMLElement>("section")].find((one) => one.querySelector("h2, h3")?.textContent?.startsWith("Blocked ("))!;
+        // The filter and the tabs in the one row that stays at the top, as on the Access page.
+        const row = host.querySelector<HTMLElement>("[data-sticky-bar]");
+        seen.filter = row?.querySelector('input[placeholder="Filter people"]') && row.querySelector('[role="tablist"]') ? "in the row" : "elsewhere";
+        // The picker is there with one open agent too, as Access's is: hers alone, and no "All".
+        seen.options = await dropdown(host, "Agent").open();
+        tab(host, "Blocked");
+        await eventually(() => listCard(host, "Blocked (") !== undefined, 2_000, "Blocked");
+        const blocked = listCard(host, "Blocked (")!;
         seen.blocked = blocked.textContent ?? "";
-        const unblock = [...blocked.querySelectorAll<HTMLButtonElement>("li")].find((one) => one.textContent?.includes("Siti Rude"))!.querySelector("button")!;
+        const unblock = [...blocked.querySelectorAll<HTMLElement>("li")].find((one) => one.textContent?.includes("Siti Rude"))!.querySelector("button")!;
         seen.title = unblock.getAttribute("title") ?? "";
         unblock.click();
         await eventually(() => calls.asked.some((one) => one.startsWith("POST /access/unblock")), 2_000, "the unblock");
-        seen.where = JSON.stringify(app.search());
+        seen.where = app.search();
       });
     } finally {
       calls.restore();
     }
-    expect(seen.picker).toBe(false);
-    expect(seen.today).toBe("1,200 of 200,000 tokens used today; 2 people have written, 5 messages answered.At most 200,000 tokens a day, and 30 messages from one person a day. They are changed on its Access tab.");
+    expect(seen.tabs).toEqual(["Wrote4", "Letin1", "Blocked2"]);
+    expect(seen.filter).toBe("in the row");
+    expect(seen.options).toEqual(["Nora"]);
+    expect(seen.today).toBe("1,200 of 200,000 tokens used today; 2 people have written, 5 messages answered.At most 200,000 tokens a day, and 30 messages from one person a day. Change them on its Access tab.");
     expect(seen.rows).toEqual(["ses_budi", "ses_ani"]);
     // Hers alone: Nouva's blocked spammer is the Access page's.
     expect(seen.blocked).toContain("Blocked (2)");
@@ -177,9 +188,32 @@ describe("the Open agents page", () => {
     expect(seen.blocked).not.toContain("Spam Account");
     expect(seen.title).toBe("Answer them again: their next message is answered, as anyone's is while this agent is open.");
     expect(calls.asked).toContain("POST /access/unblock?gateway=whatsapp%3Ashop&sender=62812%40s.whatsapp.net");
+    // The tab kept in the address, as Access keeps its own.
+    expect(seen.where).toEqual({ tab: "blocked" });
     // Only her list was asked for.
     expect([...new Set(calls.asked.filter((one) => !one.startsWith("POST")))]).toEqual(["/agents/nora/public"]);
     expect(limitsSaid({ ...LIMITS, maxDailyMessagesPerPerson: 1 })).toBe("At most 200,000 tokens a day, and 1 message from one person a day.");
+  });
+
+  test("the filter in the row narrows the tab that is open, as the Access page's does", async () => {
+    answer(house(NOUVA, NORA));
+    const seen = { wrote: [] as unknown[], none: "", blocked: "" };
+    await renderPage("/open-agents", async (host) => {
+      await eventually(() => people(host).length === 2, 3_000, "the rows");
+      type(host.querySelector<HTMLInputElement>('input[placeholder="Filter people"]')!, "ani");
+      await eventually(() => people(host).length === 1, 2_000, "narrowed");
+      seen.wrote = people(host);
+      type(host.querySelector<HTMLInputElement>('input[placeholder="Filter people"]')!, "zzz");
+      await eventually(() => text(host).includes("Nothing matches “zzz”."), 2_000, "nobody");
+      seen.none = text(host);
+      type(host.querySelector<HTMLInputElement>('input[placeholder="Filter people"]')!, "siti");
+      tab(host, "Blocked");
+      await eventually(() => listCard(host, "Blocked (") !== undefined, 2_000, "Blocked");
+      seen.blocked = listCard(host, "Blocked (")!.textContent ?? "";
+    });
+    expect(seen.wrote).toEqual(["ses_ani"]);
+    expect(seen.blocked).toContain("Siti Rude");
+    expect(seen.blocked).not.toContain("Bot Spammer");
   });
 
   test("two open agents: one at a time, picked by name and kept in the address, never their people in one list", async () => {
@@ -187,16 +221,17 @@ describe("the Open agents page", () => {
     const calls = asking();
     const seen = { options: [] as string[], first: [] as unknown[], firstBlocked: "", then: [] as unknown[], thenBlocked: "", search: {} as Record<string, unknown> };
     try {
-      await renderPage("/open-agents", async (host, app) => {
+      await renderPage("/open-agents?tab=wrote", async (host, app) => {
         await eventually(() => people(host).length === 2, 3_000, "Nora's people");
         const picker = dropdown(host, "Agent");
         seen.options = await picker.open();
         seen.first = people(host);
-        seen.firstBlocked = text(host);
         await picker.pick("Omar");
-        await eventually(() => people(host).join() === "ses_joko" && text(host).includes("Omar Troll"), 3_000, "Omar's people");
+        await eventually(() => people(host).join() === "ses_joko", 3_000, "Omar's people");
         seen.then = people(host);
-        seen.thenBlocked = text(host);
+        tab(host, "Blocked");
+        await eventually(() => text(host).includes("Omar Troll"), 3_000, "Omar's blocked");
+        seen.thenBlocked = listCard(host, "Blocked (")!.textContent ?? "";
         seen.search = app.search();
       });
     } finally {
@@ -204,24 +239,23 @@ describe("the Open agents page", () => {
     }
     expect(seen.options).toEqual(["Nora", "Omar"]);
     expect(seen.first).toEqual(["ses_budi", "ses_ani"]);
-    expect(seen.firstBlocked).not.toContain("Omar Troll");
     expect(seen.then).toEqual(["ses_joko"]);
     expect(seen.thenBlocked).not.toContain("Bot Spammer");
-    expect(seen.thenBlocked).not.toContain("asked by Budi");
-    expect(seen.search).toEqual({ agent: "omar" });
+    expect(seen.thenBlocked).not.toContain("Siti Rude");
+    expect(seen.search).toEqual({ agent: "omar", tab: "blocked" });
     // Each agent's list asked of its own address, never one for both.
     expect([...new Set(calls.asked)]).toEqual(["/agents/nora/public", "/agents/omar/public"]);
   });
 
-  test("no agent open: it says so and where one is opened, with no list and no picker", async () => {
+  test("no agent open: it says so and where one is opened, with no list, no tabs and no picker", async () => {
     answer(house(NOUVA, NIX));
-    let seen = { said: "", rows: -1, picker: true };
+    let seen = { said: "", rows: -1, tabs: [] as unknown[], picker: true };
     await renderPage("/open-agents", async (host) => {
       await eventually(() => text(host).includes("No agent is open to everyone"), 3_000, "the empty page");
-      seen = { said: text(host), rows: people(host).length, picker: host.querySelector("[data-open-picker]") !== null };
+      seen = { said: text(host), rows: people(host).length, tabs: tabs(host), picker: host.querySelector('button[aria-haspopup="listbox"]') !== null };
     });
     expect(seen.said).toContain("An admin opens an agent to everyone on that agent's own Access tab.");
-    expect(seen).toMatchObject({ rows: 0, picker: false });
+    expect(seen).toMatchObject({ rows: 0, tabs: [], picker: false });
   });
 });
 
@@ -242,8 +276,13 @@ describe("an open agent's own Access tab", () => {
       seen.said = card(host, "People who wrote")!.textContent ?? "";
       seen.pressable = [...card(host, "People who wrote")!.querySelectorAll("button")].map((one) => one.textContent?.trim() ?? "");
     });
-    expect(seen.tiles).toEqual(["conversations Conversations4 /dashboard/open-agents?agent=nora", "today Wrote today2 /dashboard/open-agents?agent=nora", "blocked Blocked2 /dashboard/open-agents?agent=nora"]);
-    expect(seen.link).toBe("/dashboard/open-agents?agent=nora");
+    // Each opens the page on the tab it counts.
+    expect(seen.tiles).toEqual([
+      "conversations Conversations4 /dashboard/open-agents?agent=nora&tab=wrote",
+      "today Wrote today2 /dashboard/open-agents?agent=nora&tab=wrote",
+      "blocked Blocked2 /dashboard/open-agents?agent=nora&tab=blocked",
+    ]);
+    expect(seen.link).toBe("/dashboard/open-agents?agent=nora&tab=wrote");
     expect(seen).toMatchObject({ rows: 0, field: false, senders: false });
     expect(seen.pressable).toEqual([]);
     expect(seen.said).toContain("Who wrote to Nora while it is open, and who it keeps out.");

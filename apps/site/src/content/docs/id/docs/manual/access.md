@@ -231,33 +231,35 @@ Orang yang menulis ke agent yang terbuka gak ada di halaman Access: gak ada yang
 yang terbuka gak punya siapa pun yang menunggu, disetujui, atau ditolak di sana, ia gak ada di daftar agent
 halaman itu, dan pengirim di koneksinya gak masuk daftar atau hitungan mana pun, termasuk jumlah permintaan
 di menu dan di Home. Halaman itu gak menampilkan siapa pun sampai ia tahu agent mana yang terbuka, dan bilang
-begitu kalau Nouride gak memberi tahu. Sebagai gantinya, tiap
-agent yang terbuka punya halaman sendiri: **Settings → Open agents**, di sebelah Access. Halaman itu
-menampilkan satu agent sekali waktu, dipilih dari namanya kalau yang terbuka lebih dari satu, dan gak
-pernah menggabungkan orang dari dua agent dalam satu daftar.
+begitu kalau Nouride gak memberi tahu. Satu baris di sana menunjukkan di mana mereka: **Settings → Open
+agents**, di sebelah Access.
 
-Untuk agent yang dipilih, isinya:
+Halaman itu dibuat seperti halaman Access. Di bawah judulnya, dua baris untuk agent yang dipilih: berapa
+yang terpakai hari ini, dan dua batasnya, dengan jalan untuk mengubahnya di tab **Access** agent itu sendiri.
+Lalu baris yang tetap di atas layar: tiga tab, filter, dan agent-nya. Pilihan agent-nya hanya berisi agent
+yang terbuka untuk siapa saja, tanpa "All": satu agent sekali waktu, dan gak pernah menggabungkan orang dari
+dua agent dalam satu daftar.
 
-- di mana ia bisa dihubungi, berapa yang terpakai hari ini, dan dua batasnya (diubah di tab **Access**
-  agent itu sendiri);
-- **People who wrote**: siapa, di aplikasi apa, apa yang pertama mereka tanyakan, dan kapan. **Read**
+- **Wrote**: percakapannya dengan orang yang gak kamu kenal, satu baris masing-masing: siapa (namanya, atau
+  alamatnya), "in a group" kalau di grup, aplikasinya, apa yang pertama mereka tanyakan, dan kapan. **Read**
   membuka percakapannya; **Block** menahan pengirim itu mulai pesan berikutnya. Hanya admin yang bisa
-  membacanya.
-- **Let in by name**: siapa pun yang sudah diizinkan masuk di koneksinya lewat kode atau daftar sebelum
-  agent itu dibuka, dan id yang diizinkan pengaturan server di salah satu koneksinya, dengan **Revoke** dan
-  **Block**. Mereka bukan orang asing baginya: mereka dijawab sebagai orang yang kamu izinkan, dan tetap
-  begitu setelah agent itu ditutup. Gak ditampilkan kalau gak ada.
-- **Blocked**: orang yang ditahan di koneksinya, dengan **Unblock**. Setelah di-unblock, pesan
-  berikutnya dijawab, seperti pesan siapa pun selama agent itu terbuka, dan daftar orang yang menulis
-  langsung menunjukkannya.
+  membacanya; **Show more** membaca yang berikutnya di bawah yang sudah tampil.
+- **Let in**: siapa pun yang sudah diizinkan masuk di koneksinya lewat kode atau daftar sebelum agent itu
+  dibuka, dan id yang diizinkan pengaturan server di salah satu koneksinya, dengan **Revoke** dan **Block**.
+  Mereka bukan orang asing baginya: mereka dijawab sebagai orang yang kamu izinkan, dan tetap begitu setelah
+  agent itu ditutup.
+- **Blocked**: orang yang ditahan di koneksinya, dengan **Unblock**. Setelah di-unblock, pesan berikutnya
+  dijawab, seperti pesan siapa pun selama agent itu terbuka, dan **Wrote** langsung menunjukkannya.
 
-Daftar orang yang menulis di-scroll di dalam kartunya, jadi halaman agent yang ramai tetap pendek. Untuk
-mencari seseorang, ketik nama, nomor, atau kata dari pertanyaan pertama mereka, lalu tekan **Search**
-(atau Enter): pencariannya mencakup semua percakapan yang disimpan agent itu, bukan cuma yang tampil di
-layar. **Clear** menampilkan semuanya lagi.
+Filter-nya mempersempit tab yang sedang terbuka, seperti di halaman Access. Kalau sebuah tab punya lebih
+banyak dari yang dikirim, baris di atas daftarnya bilang begitu: ketik nama, nomor, atau (di **Wrote**) kata
+dari pertanyaan pertama mereka, lalu tekan **Search everyone**, yang mencari di semuanya, di koneksi agent itu
+sendiri; **Show the newest** mengembalikan daftarnya. Pencarian yang masih berjalan, atau yang gak kembali,
+dikatakan begitu, gak pernah dijawab dengan daftar yang sebelumnya.
 
 Tab **Access** agent itu sendiri menyimpan kartu pendek sebagai ganti daftarnya: berapa percakapannya dengan
-orang yang menulis, berapa orang yang menulis hari ini, berapa yang diblokir, dan **Open the list**. Di
+orang yang menulis, berapa orang yang menulis hari ini, berapa yang diblokir, dan **Open the list**, masing-masing
+membuka tabnya di Open agents. Di
 daftar Agents, di halamannya, dan di daftar chat, kata **Open** ada di sebelah namanya.
 
 Percakapan itu gak masuk ke daftar chat kamu sendiri, dan hilang saat percakapan seumurnya hilang

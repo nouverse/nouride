@@ -49,7 +49,7 @@ Memory            agent notes · people · timeline · shared · proposals · se
 People            who is who across platforms ([[people]])
 Groups            the rooms the agents talk in: each group, channel, thread and dashboard room
 Access            who may talk to the agents: pending · approved · denied · blocked · history
-Open agents       the agents anyone may write to, one at a time: today and its limits · who wrote · let in by name · blocked
+Open agents       the agents anyone may write to, one at a time, on Access's template: today and its limits · Wrote · Let in · Blocked
 Models            Model providers: endpoint, wire format, credential · Coding CLIs: each CLI,
                   its accounts and the agents on each, a shared account's sign-in
 LLM Gateway       the in-process Nougate's console — only on an edition that carries it
@@ -84,10 +84,14 @@ code ran out. The tab counts its own senders and links to the page filtered to i
 
 **An agent open to everyone is not on it (0.8.48).** Nobody asks such an agent for a code, so it has nobody pending,
 approved or denied, and the strangers who wrote to it are no other agent's business. The Access page leaves it out of
-its agent filter and leaves its connections' senders out of every tab and count; **Open agents**, beside it in
-Settings, lists them one agent at a time, never two agents' people in one list: what it used today and its limits,
-who wrote (search, Read, Block, an admin's), and its blocked with Unblock. The agent's own Access tab counts them in
-the Senders card's shape and links there. The word **Open** stands beside such an agent's name wherever the
+its agent filter and leaves its connections' senders out of every tab and count, with one line pointing to **Open
+agents**, beside it in Settings. That page is the Access page's template (rule lines, the sticky row with tabs, filter
+and agent picker, the tab's `ListCard` in `SenderLine` rows), one agent at a time with no "All", never two agents'
+people in one list: what it used today and its limits as rule lines, then **Wrote** (its conversations, Read, Block,
+Show more, an admin's), **Let in** (let in by name before it was opened, Revoke, Block) and **Blocked** (Unblock).
+The filter narrows the open tab; **Search everyone** asks the daemon, on the agent's own connections only (`GET
+/access?on=`), and a search on its way or failed is said as that. The agent's own Access tab counts them in the
+Senders card's shape and links to the tab each count is. The word **Open** stands beside such an agent's name wherever the
 orchestrator's crown would: the Agents list, its page's header, the chat list. Closed again, it is back on Access.
 
 Moving them under the agent also made a failure mode unrepresentable. A connection is created from

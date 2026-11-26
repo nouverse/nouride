@@ -18,8 +18,17 @@ const senderQuery = (gatewayId: string, senderId: string) =>
   `gateway=${encodeURIComponent(gatewayId)}&sender=${encodeURIComponent(senderId)}`;
 
 export const accessApi = {
-  /** `find`: the approved whose id or name holds it, where more are approved than a listing holds. */
-  access: (find?: string) => request<AccessListing>(`${control}/access${find ? `?q=${encodeURIComponent(find)}` : ""}`),
+  /**
+   * `find`: the approved whose id or name holds it, where more are approved than a listing holds. `on`: these
+   * connections' rows only, for a page that shows one agent's and searches its own.
+   */
+  access: (find?: string, on?: readonly string[]) => {
+    const params = new URLSearchParams();
+    if (find) params.set("q", find);
+    for (const id of on ?? []) params.append("on", id);
+    const asked = params.toString();
+    return request<AccessListing>(`${control}/access${asked ? `?${asked}` : ""}`);
+  },
   /** Turn pairing on or off. Live — the next inbound message is judged by the new mode, no restart. */
   setAccessMode: (mode: AccessMode) => post<{ ok: true; mode: AccessMode }>(`${control}/access/mode`, { mode }),
   /** An admin's: it hands them every agent, and "who they are" can hand them somebody's memory. */

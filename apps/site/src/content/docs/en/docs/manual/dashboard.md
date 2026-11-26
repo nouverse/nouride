@@ -72,7 +72,7 @@ Settings
     Web Search      where agents search: free sources, Brave, Exa, SearXNG, own (admin)
   People and sign-in
     Access          who may talk to the agents: Pending · Approved · Denied · Blocked · History
-    Open agents     the agents anyone may write to, one at a time: who wrote, who is blocked
+    Open agents     the agents anyone may write to, one at a time: who wrote, who was let in, who is blocked
     Users           accounts and roles (Pro editions)                         (admin)
     My Account      username, name, password
   This box

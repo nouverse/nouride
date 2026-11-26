@@ -73,7 +73,7 @@ Settings
     Web Search      tempat agent mencari: sumber gratis, Brave, Exa, SearXNG, sendiri (admin)
   People and sign-in
     Access          siapa yang boleh bicara dengan agent: Pending · Approved · Denied · Blocked · History
-    Open agents     agent yang boleh ditulis siapa saja, satu per satu: siapa yang menulis, siapa yang diblokir
+    Open agents     agent yang boleh ditulis siapa saja, satu per satu: siapa yang menulis, yang diizinkan, yang diblokir
     Users           akun dan peran (edisi Pro)                                (admin)
     My Account      username, nama, password
   This box

@@ -26,28 +26,29 @@ export function OpenPeople({ agent }: { agent: AgentSummary }) {
 
   const mine = new Set((gateways.data?.gateways ?? []).filter((gateway) => gateway.agent === agent.id).map((gateway) => gateway.id));
   const blocked = (access.data?.senders ?? []).filter((sender) => sender.status === "blocked" && mine.has(sender.gatewayId)).length;
+  // Each opens the page on the tab it counts.
   const tiles = [
-    ...(admin ? [{ key: "conversations", label: "Conversations", icon: MessagesSquare, n: wrote.data?.total, tone: "text-primary" }] : []),
-    { key: "today", label: "Wrote today", icon: CalendarDays, n: agent.open?.today?.people, tone: "text-primary" },
-    { key: "blocked", label: "Blocked", icon: Ban, n: access.data ? blocked : undefined, tone: "text-error" },
+    ...(admin ? [{ key: "conversations", label: "Conversations", icon: MessagesSquare, n: wrote.data?.total, tone: "text-primary", tab: "wrote" as const }] : []),
+    { key: "today", label: "Wrote today", icon: CalendarDays, n: agent.open?.today?.people, tone: "text-primary", tab: "wrote" as const },
+    { key: "blocked", label: "Blocked", icon: Ban, n: access.data ? blocked : undefined, tone: "text-error", tab: "blocked" as const },
   ];
 
   return (
     <Card
       title="People who wrote"
-      description={`Who wrote to ${name} while it is open, and who it keeps out. The list, with a search, Read and Block, is on Open agents.`}
+      description={`Who wrote to ${name} while it is open, and who it keeps out. The lists, with Read, Block and Unblock, are on Open agents.`}
       actions={
-        <Link to="/open-agents" search={{ agent: agent.id }} className="btn btn-ghost btn-sm rounded-xl gap-1.5 text-primary">
+        <Link to="/open-agents" search={{ agent: agent.id, tab: "wrote" }} className="btn btn-ghost btn-sm rounded-xl gap-1.5 text-primary">
           Open the list <ArrowRight size={14} aria-hidden="true" />
         </Link>
       }
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" data-open-people>
-        {tiles.map(({ key, label, icon: Icon, n, tone }) => (
+        {tiles.map(({ key, label, icon: Icon, n, tone, tab }) => (
           <Link
             key={key}
             to="/open-agents"
-            search={{ agent: agent.id }}
+            search={{ agent: agent.id, tab }}
             data-open-tile={key}
             className="rounded-xl border border-base-content/[0.08] bg-base-100 p-4 transition-all hover:border-primary/40 active:scale-[0.98]"
           >

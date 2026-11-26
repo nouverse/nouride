@@ -52,8 +52,10 @@ export function AccessModeSwitch() {
   // Older daemons do not report this field; assume they can edit rather than showing a dead switch.
   const editable = access.data.editable !== false;
   const writable = canWrite(me.data ?? null);
-  // As the Access page counts them: an open agent's requests are not there to approve.
-  const pending = access.data.senders.filter((sender) => sender.status === "pending" && !openConnections.onOpen(sender.gatewayId)).length;
+  // As the Access page counts them: an open agent's requests are not there to approve. Counted once it is known whose
+  // they are, as Home's count is: before that, an open agent's would be counted for a moment.
+  const pending =
+    openConnections.known || openConnections.failed ? access.data.senders.filter((sender) => sender.status === "pending" && !openConnections.onOpen(sender.gatewayId)).length : 0;
 
   return (
     <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-5 shadow-soft space-y-4">

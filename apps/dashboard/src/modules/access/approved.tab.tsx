@@ -67,16 +67,43 @@ function PersonTag({ name }: { name: string | undefined }) {
 const covers = (entry: string, sender: SenderRecord) => entry === sender.senderId || entry === `${sender.gatewayId}:${sender.senderId}`;
 
 /**
- * More approved than the page was sent, or a search among all of them: said, with the way to the rest. A list let in
- * from a file may be thousands, and the page holds the newest of them.
+ * More in a list than the page was sent, or a search among all of them: said, with the way to the rest. A list let in
+ * from a file may be thousands, and an open agent's people as many; the page holds the newest of them. `foundSaid` is
+ * what a search found, and `typeWhat` what to type to find one, in the list's own words. A search still on its way, or
+ * one that did not come back, is said as that, never with the list from before as its answer; the way back to the
+ * newest stays either way.
  */
-function MoreApproved({ shown, total, found, typed, onFind }: { shown: number; total: number; found: string; typed: string; onFind: (text: string) => void }) {
+export function MoreListed({
+  shown,
+  total,
+  found,
+  typed,
+  onFind,
+  foundSaid,
+  typeWhat = "an id or a name",
+  searching = "done",
+}: {
+  shown: number;
+  total: number;
+  found: string;
+  typed: string;
+  onFind: (text: string) => void;
+  foundSaid: (found: string) => string;
+  typeWhat?: string;
+  /** Where a search of everyone is: on its way, back, or not come back. */
+  searching?: SearchState;
+}) {
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-base-content/[0.04] px-3 py-2 text-xs text-base-content/75" data-approved-more>
-      <span>
-        {found
-          ? `Everyone approved whose id or name holds “${found}”.`
-          : `The newest ${shown.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} are listed. To find another, type an id or a name in the filter, then search everyone.`}
+      <span className="flex items-center gap-2">
+        {found && searching === "looking" ? <span className="loading loading-spinner loading-xs" aria-hidden="true" /> : null}
+        {!found
+          ? `The newest ${shown.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} are listed. To find another, type ${typeWhat} in the filter, then search everyone.`
+          : searching === "looking"
+            ? `Looking among everyone for “${found}”…`
+            : searching === "failed"
+              ? `The search for “${found}” did not come back. Show the newest, or search again.`
+              : foundSaid(found)}
       </span>
       {found ? (
         <button type="button" className={BUTTON.plain} onClick={() => onFind("")}>
@@ -91,6 +118,9 @@ function MoreApproved({ shown, total, found, typed, onFind }: { shown: number; t
   );
 }
 
+/** Where a search of everyone is: on its way, back, or not come back. */
+export type SearchState = "looking" | "done" | "failed";
+
 export function ApprovedTab({
   senders,
   allowlist,
@@ -101,6 +131,7 @@ export function ApprovedTab({
   onFind,
   gateways,
   letInOn,
+  searching = "done",
 }: {
   senders: SenderRecord[];
   /** How many are approved in all: more than `senders` once a list was let in from a file. */
@@ -120,6 +151,8 @@ export function ApprovedTab({
    * opened, which is what they are to it, rather than as the install's approved.
    */
   letInOn?: string;
+  /** A search of everyone on its way, or not come back: nothing listed is its answer then. */
+  searching?: SearchState;
 }) {
   const me = useMe();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -146,7 +179,7 @@ export function ApprovedTab({
     <div className="space-y-6">
       {dialog}
       <ListCard
-        title={`${letInOn ? "Let in by name" : "Approved"} (${total.toLocaleString("en-US")})`}
+        title={`${letInOn ? "Let in by name" : "Approved"}${found && searching !== "done" ? "" : ` (${total.toLocaleString("en-US")})`}`}
         // Another card stands under this one: a long list is cut short, and opens in full with one press.
         maxHeight="max-h-[32rem]"
         description={
@@ -159,9 +192,19 @@ export function ApprovedTab({
         {...search}
       >
         <ErrorNote error={answer.error} />
-        {onFind && (found || total > senders.length) ? <MoreApproved shown={senders.length} total={total} found={found} typed={query} onFind={onFind} /> : null}
-        {senders.length === 0 && (found || total === 0) ? (
-          <EmptyState pose="security" title={found ? "Nobody approved matches that" : "Nobody approved yet"} />
+        {onFind && (found || total > senders.length) ? (
+          <MoreListed
+            shown={senders.length}
+            total={total}
+            found={found}
+            typed={query}
+            onFind={onFind}
+            searching={searching}
+            foundSaid={(words) => `Everyone ${letInOn ? "let in" : "approved"} whose id or name holds “${words}”.`}
+          />
+        ) : null}
+        {found && searching !== "done" ? null : senders.length === 0 && (found || total === 0) ? (
+          <EmptyState pose="security" title={found ? `Nobody ${letInOn ? "let in" : "approved"} matches that` : letInOn ? "Nobody was let in by name" : "Nobody approved yet"} />
         ) : senders.length === 0 ? null : visible.length === 0 ? (
           <NoMatch query={query} />
         ) : (
@@ -216,37 +259,45 @@ export function ApprovedTab({
       </ListCard>
 
       {/* Only when the config names anybody: an install that never wrote an id needs no card saying so. */}
-      {allowlist.length > 0 ? (
-        <Card
-          title="Always allowed"
-          description="These exact accounts are answered without a pairing code, each on the connection named, and nobody else is. They are set in the server's settings, not here, and a block on this page still wins over them."
-        >
-          {/* For whoever runs the server: where they are set, and how one becomes managed here (0.8.19, plain words). */}
-          <Details className="mb-3">
-            <p>
-              Set in <code>config.toml</code> by exact id. To manage one here instead, run <code>nouride access allow</code> for it and
-              take it out of the file.
-            </p>
-          </Details>
-          <ul className="flex flex-wrap gap-2">
-            {allowlist.map((id) => {
-              const who = configPerson(id, known);
-              const blockedOn = blocked.filter((sender) => covers(id, sender)).map((sender) => sender.gatewayId);
-              return (
-                <li
-                  key={id}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-base-200 border border-base-content/10 text-xs font-mono font-medium text-base-content/85"
-                  title={who ? `${who}, by People` : "Not linked to anybody in People"}
-                >
-                  <ShieldCheck size={13} className={blockedOn.length > 0 ? "text-error" : "text-success"} /> {id}
-                  {who ? <span className="font-sans font-semibold text-base-content"> · {who}</span> : null}
-                  {blockedOn.length > 0 ? <span className="badge badge-xs badge-error font-mono">blocked on {blockedOn.join(", ")}</span> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      ) : null}
+      {allowlist.length > 0 ? <AlwaysAllowed allowlist={allowlist} blocked={blocked} known={known} /> : null}
     </div>
+  );
+}
+
+/**
+ * The ids the server's settings let in without asking, each on the connection named: its own card under the list of
+ * the approved, since they are set there and not here. A block on the page still wins over one, and its chip says so.
+ */
+function AlwaysAllowed({ allowlist, blocked, known }: { allowlist: string[]; blocked: SenderRecord[]; known: readonly PersonRecord[] }) {
+  return (
+    <Card
+      title="Always allowed"
+      description="These exact accounts are answered without a pairing code, each on the connection named, and nobody else is. They are set in the server's settings, not here, and a block on this page still wins over them."
+    >
+      {/* For whoever runs the server: where they are set, and how one becomes managed here (0.8.19, plain words). */}
+      <Details className="mb-3">
+        <p>
+          Set in <code>config.toml</code> by exact id. To manage one here instead, run <code>nouride access allow</code> for it and
+          take it out of the file.
+        </p>
+      </Details>
+      <ul className="flex flex-wrap gap-2">
+        {allowlist.map((id) => {
+          const who = configPerson(id, known);
+          const blockedOn = blocked.filter((sender) => covers(id, sender)).map((sender) => sender.gatewayId);
+          return (
+            <li
+              key={id}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-base-200 border border-base-content/10 text-xs font-mono font-medium text-base-content/85"
+              title={who ? `${who}, by People` : "Not linked to anybody in People"}
+            >
+              <ShieldCheck size={13} className={blockedOn.length > 0 ? "text-error" : "text-success"} /> {id}
+              {who ? <span className="font-sans font-semibold text-base-content"> · {who}</span> : null}
+              {blockedOn.length > 0 ? <span className="badge badge-xs badge-error font-mono">blocked on {blockedOn.join(", ")}</span> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

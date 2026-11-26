@@ -212,28 +212,32 @@ on talk nobody addressed to it.
 The people who write to an open agent are not on the Access page: nobody was asked for a code, so an open
 agent has nobody waiting, approved or denied there, it is not among the page's agents, and its connections'
 senders are in none of its lists or counts, nor in the count of requests in the menu and on Home. The page lists
-nobody until it knows which agents are open, and says so if Nouride does not tell it. Each open agent has a page
-of its own instead: **Settings →
-Open agents**, beside Access. It shows one agent at a time, picked by name when more than one is open, and
-never puts two agents' people in one list.
+nobody until it knows which agents are open, and says so if Nouride does not tell it. One line on it points to
+where they are: **Settings → Open agents**, beside Access.
 
-For the agent picked, it shows:
+That page is built as the Access page is. Under its title, two lines for the agent picked: what it used today, and
+its two limits, with the way to change them on its own **Access** tab. Then the row that stays at the top of the
+window: three tabs, the filter, and the agent. The picker lists only the agents open to everyone, with no "All": one
+agent at a time, and never two agents' people in one list.
 
-- where it is reached, what it used today and its two limits (changed on its own **Access** tab);
-- **People who wrote**: who, on which app, what they first asked and when. **Read** opens the
-  conversation; **Block** keeps that sender out from their next message. An admin's to read.
-- **Let in by name**: whoever was let in on its connections by a code or a list before it was opened, and any
-  id the server's settings let in on one of them, with **Revoke** and **Block**. They are not strangers to it:
-  they are answered as people you let in, and keep that when it is closed. Not shown when there are none.
-- **Blocked**: the people kept out of its connections, with **Unblock**. Unblocked, their next message is
-  answered, as anyone's is while the agent is open, and the list of people who wrote says so at once.
+- **Wrote**: its conversations with people you do not know, a row each: who (their name, or their address), "in a
+  group" where it was one, the app, what they first asked and when. **Read** opens the conversation; **Block** keeps
+  that sender out from their next message. An admin's to read; **Show more** reads the next under the ones listed.
+- **Let in**: whoever was let in on its connections by a code or a list before it was opened, and any id the
+  server's settings let in on one of them, with **Revoke** and **Block**. They are not strangers to it: they are
+  answered as people you let in, and keep that when it is closed.
+- **Blocked**: the people kept out of its connections, with **Unblock**. Unblocked, their next message is answered,
+  as anyone's is while the agent is open, and **Wrote** says so at once.
 
-The list of people who wrote scrolls inside its card, so a busy agent's page stays short. To find someone,
-type a name, a number or words from what they first asked, and press **Search** (or Enter): it looks
-through every conversation the agent keeps, not only the ones on screen. **Clear** brings everyone back.
+The filter narrows the tab that is open, as it does on the Access page. Where a tab has more than it was sent, the
+line above its list says so: type a name, a number or (on **Wrote**) words from what they first asked, and press
+**Search everyone**, which looks through every one the agent has, on its own connections; **Show the newest** brings
+the list back. A search still on its way, or one that did not come back, is said as that, never answered with the
+list from before.
 
-The agent's own **Access** tab keeps a short card in place of the list: how many conversations it has had
-with people who wrote, how many people wrote today, how many are blocked, and **Open the list**. In the
+The agent's own **Access** tab keeps a short card in place of the lists: how many conversations it has had
+with people who wrote, how many people wrote today, how many are blocked, and **Open the list**, each opening
+its tab on Open agents. In the
 Agents list, on its page and in the chat list, the word **Open** stands beside its name.
 
 Those conversations are kept out of your own list of chats, and go when conversations of their age do

@@ -17,6 +17,7 @@ export function SenderLine({
   badge,
   actions,
   children,
+  rowId,
 }: {
   sender: Pick<SenderRecord, "gatewayId" | "senderId" | "senderName">;
   agent?: string | undefined;
@@ -25,9 +26,11 @@ export function SenderLine({
   actions?: ReactNode;
   /** A second line under the row, the width of the list — the person picker, while it is open. */
   children?: ReactNode;
+  /** What the row is, where that is not the sender alone: a conversation, on the Open agents page. */
+  rowId?: string;
 }) {
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-1 last:pb-1">
+    <li className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-1 last:pb-1" data-row={rowId}>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-bold text-sm text-base-content">
