@@ -52,12 +52,12 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
         {missing.length > 0 ? (
           <div className="space-y-1 text-xs">
             <p className="text-base-content/65">
-              Not set up on this server yet: {missing.map(cliLabel).join(", ")}. The Models page, under Coding CLIs, can ask for one.
+              Not set up on this server yet: {missing.map((cli) => `${cliLabel(cli)}${cli.experimental ? " (Experimental)" : ""}`).join(", ")}. The Models page, under Coding CLIs, can ask for one.
             </p>
             <Details>
               <ul className="text-base-content/70 space-y-1">
                 {missing.map((cli) => (
-                  <li key={cli.id} className="break-all"><span className="font-semibold">{cliLabel(cli)}</span>: {cli.install}</li>
+                  <li key={cli.id} className="break-all"><span className="font-semibold">{cliLabel(cli)}</span>{cli.experimental ? <> <ExperimentalBadge /></> : null}: {cli.install}</li>
                 ))}
               </ul>
             </Details>

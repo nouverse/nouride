@@ -50,6 +50,9 @@ const SIGNED_IN: CliProfile[] = [
   { name: "home", inUse: false, signedIn: false, reason: "Codex is not signed in — sign in on the agent's Brain tab" },
 ];
 
+/** Whether the scan says the agent's CLI is built in but not yet run on a real account. */
+let experimental = false;
+
 function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfile[] = NOT_SIGNED_IN, accounts?: unknown): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -63,7 +66,7 @@ function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfi
     if (path === "/api/control/cli-accounts" && accounts) return json(accounts);
     if (path === "/api/control/agents/coder/cli/profiles") return json({ profiles, separate: true, models: MODELS });
     if (path === "/api/control/status") return json({ agents: [{ id: "coder", displayName: "Coder" }], gateways: [] });
-    if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "0.9.1", install: "npm i -g", login: true }] });
+    if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "0.9.1", install: "npm i -g", login: true, ...(experimental ? { experimental: true } : {}) }] });
     return json({ error: "not found" }, 404);
   }) as typeof fetch;
   return { posted };
@@ -104,6 +107,23 @@ function type(input: HTMLInputElement, text: string): void {
 }
 
 const button = (host: HTMLElement, text: string) => [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === text) as HTMLButtonElement | undefined;
+
+describe("an agent's coding CLI marked Experimental", () => {
+  test("is said on its page, in the same words as on the Models page; a tried one says nothing of it", async () => {
+    for (const marked of [false, true]) {
+      experimental = marked;
+      serve("admin");
+      const { host, unmount } = await mount();
+      try {
+        const note = host.querySelector("[data-cli-experimental-note]");
+        expect(note?.textContent?.replace(/\s+/g, " ").trim() ?? null).toBe(marked ? "Experimental Codex has not yet been tried on a real account here. It may not answer, or answer only in part." : null);
+      } finally {
+        unmount();
+        experimental = false;
+      }
+    }
+  });
+});
 
 describe("the accounts an agent goes on with when its account reaches its limit", () => {
   /** A CLI whose accounts are signed in once for every agent: two signed in, one not. */

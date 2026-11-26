@@ -316,4 +316,15 @@ describe("what a CLI runs on, in `agents scan` and `doctor`", () => {
     await scanClis({ get: async () => ({ room: { enough: true, bytes: 0, needs: 0 }, clis: [own] }) } as unknown as Client);
     expect(lines).toEqual(["● mine Mine · mine-acp 1.0.0"]);
   });
+
+  test("a CLI built in but not yet run on a real account is said to be Experimental, installed or not", async () => {
+    const grok: ScannedCli = { id: "grok", name: "Grok Build", command: "grok", install: "curl x.example.test | bash", login: true, installed: true, version: "1.0.92", experimental: true };
+    await scanClis({ get: async () => ({ room: { enough: true, bytes: 0, needs: 0 }, clis: [grok, { ...grok, id: "cursor", name: "Cursor CLI", installed: false }] }) } as unknown as Client);
+    expect(lines).toEqual([
+      "● grok Grok Build · grok 1.0.92 Experimental",
+      "    Not yet tried on a real account: it may not answer, or answer only in part.",
+      "○ cursor Cursor CLI, not installed: curl x.example.test | bash Experimental",
+      "    Not yet tried on a real account: it may not answer, or answer only in part.",
+    ]);
+  });
 });

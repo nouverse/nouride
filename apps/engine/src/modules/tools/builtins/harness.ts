@@ -46,7 +46,7 @@ export interface HarnessToolOptions {
   providers: () => { name: string; kind: string; baseUrl: string; hasCredential: boolean }[];
   audit?: AuditPort;
   /** The coding CLIs this install knows, and whether each is installed here (0.8.1). Absent: no external agents. */
-  clis?: () => Promise<{ id: string; name: string; installed: boolean; install: string }[]>;
+  clis?: () => Promise<{ id: string; name: string; installed: boolean; install: string; experimental?: true }[]>;
   /** The link to a new external agent's sign-in, where one goes into this chat (`web/links.ts`). None: the way there, in words. */
   linkFor?: LinkFor;
   /** The install's default model and the orchestrator's, for a new agent's `[llm]` (`externalAgentLlm`). */
@@ -132,7 +132,7 @@ export function createAgentCreateTool(options: HarnessToolOptions): Tool {
             type: "object",
             description: "A coding CLI installed here answers it instead of a model. Omit for one Nouride runs.",
             properties: {
-              cli: { type: "string", description: "Its id, from `nouride agents scan`" },
+              cli: { type: "string", description: "Its id, from `nouride agents scan`. One it says is Experimental was not yet run on a real account: tell the person before you pick it." },
               profile: { type: "string", description: "The CLI account it answers with, e.g. default" },
               model: { type: "string", description: "The CLI's own model, as the CLI names it; omit for the CLI's default" },
             },
@@ -207,7 +207,7 @@ export function createAgentCreateTool(options: HarnessToolOptions): Tool {
       if (!llmModel && !defaults.model.trim()) return fail("This install has no default model: give `model`, with its `provider`. `nouride provider` lists the profiles.");
       if (!llmProvider && !defaults.provider.trim()) return fail(`This install has no default provider: give \`provider\` with \`model\`; the providers are ${options.providers().map((p) => p.name).join(", ")}.`);
       // A CLI that is not installed here could not answer it: said before anything is written, with how to install it.
-      let cli: { name: string } | undefined;
+      let cli: { name: string; experimental?: true } | undefined;
       if (external) {
         const clis = (await options.clis?.()) ?? [];
         const row = clis.find((candidate) => candidate.id === external.cli);
@@ -282,7 +282,9 @@ export function createAgentCreateTool(options: HarnessToolOptions): Tool {
       // An external agent answers nothing until its CLI is signed in — on its Brain tab, so the code never passes a chat.
       const signIn = external
         ? ` It answers with ${cli?.name ?? external.cli} on the account "${external.profile ?? "default"}", and cannot until that is signed in. Sign in at ` +
-          `${options.linkFor?.(ctx, { kind: "agent-cli", agentId: id }) ?? `the dashboard, Agents → ${displayName} → Brain`} and finish it there; never ask for the code in a chat.`
+          `${options.linkFor?.(ctx, { kind: "agent-cli", agentId: id }) ?? `the dashboard, Agents → ${displayName} → Brain`} and finish it there; never ask for the code in a chat.` +
+          // Built in, not yet run on a real account: the person is told, as the dashboard tells them.
+          (cli?.experimental ? ` ${cli.name} is marked Experimental: it was not yet run on a real account, so it may not answer, or answer only in part. Tell the person so.` : "")
         : "";
       return ok(
         `Created agent "${id}" (${displayName})${args.enable === true ? " and enabled it" : `, disabled. Turn it on with the \`nouride\` tool: {"args": ["agent", "enable", "${id}"]}`}. ` +

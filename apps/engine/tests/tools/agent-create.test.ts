@@ -149,6 +149,7 @@ describe("agent_create, an external agent or a look (0.8.1)", () => {
   const clis = async () => [
     { id: "claude-code", name: "Claude Code", installed: true, install: "npm i -g @agentclientprotocol/claude-agent-acp" },
     { id: "codex", name: "Codex", installed: false, install: "npm i -g @agentclientprotocol/codex-acp" },
+    { id: "grok", name: "Grok Build", installed: true, install: "curl x.example.test | bash", experimental: true as const },
   ];
   const make = (llm: Parameters<typeof createAgentCreateTool>[0]["llm"] = LLM) =>
     createAgentCreateTool({ registry: { get: () => undefined, reload: async () => {} } as unknown as AgentRegistry, agentsDir, providers: () => [], clis, linkFor: linksFor({ dashboard: () => ({ publicUrl: "https://agents.example.com/" }), hasAccount: () => true }), llm });
@@ -161,6 +162,15 @@ describe("agent_create, an external agent or a look (0.8.1)", () => {
     expect(result.content).toContain('answers with Claude Code on the account "work"');
     expect(result.content).toContain("https://agents.example.com/dashboard/agents/helper/cli");
     expect(result.content).toContain("never ask for the code in a chat");
+  });
+
+  test("on a CLI marked Experimental: made all the same, and the orchestrator told to say it was not yet run on a real account", async () => {
+    const tried = await make().execute({ ...args, external: { cli: "claude-code" } }, ctx);
+    expect(String(tried.content)).not.toContain("Experimental");
+    rmSync(join(agentsDir, "helper"), { recursive: true, force: true });
+    const result = await make().execute({ ...args, external: { cli: "grok" } }, ctx);
+    expect(result.isError).toBe(false);
+    expect(result.content).toContain("Grok Build is marked Experimental: it was not yet run on a real account, so it may not answer, or answer only in part. Tell the person so.");
   });
 
   test("on a CLI not installed here: refused with how to install it, and nothing written", async () => {

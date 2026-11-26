@@ -18,8 +18,11 @@ export async function scanClis(client: Client): Promise<void> {
   for (const cli of clis) {
     // The CLI's own version and its connector's, each named: the connector's alone read as the CLI's.
     const named = cli.installed ? cliNamed(cli) : null;
-    if (cli.installed) say(`${GREEN}●${RESET} ${BOLD}${cli.id}${RESET} ${DIM}${named ?? `${cli.name} · ${cli.command}${cli.version ? ` ${cli.version}` : ""}`}${RESET}`);
-    else say(`${DIM}○ ${cli.id} ${cli.name}, not installed: ${cli.install}${RESET}`);
+    // Built in, but not yet run on a real account: said beside its name, as the dashboard says it.
+    const experimental = cli.experimental ? ` ${YELLOW}Experimental${RESET}` : "";
+    if (cli.installed) say(`${GREEN}●${RESET} ${BOLD}${cli.id}${RESET} ${DIM}${named ?? `${cli.name} · ${cli.command}${cli.version ? ` ${cli.version}` : ""}`}${RESET}${experimental}`);
+    else say(`${DIM}○ ${cli.id} ${cli.name}, not installed: ${cli.install}${RESET}${experimental}`);
+    if (cli.experimental) say(`    ${DIM}Not yet tried on a real account: it may not answer, or answer only in part.${RESET}`);
     const standing = cliVersionLine(cli);
     if (standing) say(`    ${cliVersionWarns(cli) ? YELLOW : DIM}${standing}${RESET}`);
     if (cli.installed) for (const line of cliPartsLines(cli)) say(`    ${line.level === "warn" ? YELLOW : DIM}${line.message}${RESET}`);
