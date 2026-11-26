@@ -696,9 +696,8 @@ describe("an expired session", () => {
     rmSync(folder, { recursive: true, force: true });
   });
 
-  test("an old login that cannot be moved away is left whole, and the number started again as it was", async () => {
-    // Root moves what it likes: there is nothing to refuse it here.
-    if (process.getuid?.() === 0) return;
+  // Root moves what it likes: there is nothing to refuse it there.
+  test.skipIf(process.getuid?.() === 0)("an old login that cannot be moved away (a mount of its own) is emptied where it is, and linked again", async () => {
     const parent = mkdtempSync(join(tmpdir(), "wa-link-again-"));
     const folder = join(parent, "whatsapp-shop");
     mkdirSync(folder);
@@ -706,22 +705,57 @@ describe("an expired session", () => {
     await gateway.start();
     await linked();
     await loggedOutFromItsPhone();
-    // Nothing can be moved out of, or into, the folder it is in.
+    // Nothing can be moved out of the folder it is in; what is in it can be removed.
+    chmodSync(parent, 0o555);
+    try {
+      expect(await gateway.linkAgain()).toEqual({ ok: true });
+      expect([existsSync(folder), existsSync(join(folder, "creds.enc"))]).toEqual([true, false]);
+      expect(bridges.length).toBe(3);
+    } finally {
+      chmodSync(parent, 0o755);
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  test.skipIf(process.getuid?.() === 0)("an old login that can be neither moved nor emptied is said, and the number started again as it was", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "wa-link-again-"));
+    const folder = join(parent, "whatsapp-shop");
+    mkdirSync(folder);
+    const { gateway, bridges, loggedOutFromItsPhone, linked } = onItsOwnFolder(folder);
+    await gateway.start();
+    await linked();
+    await loggedOutFromItsPhone();
+    chmodSync(folder, 0o555);
     chmodSync(parent, 0o555);
     try {
       const result = await gateway.linkAgain();
-      expect(result.ok).toBe(false);
-      expect(result).toMatchObject({ refused: false });
-      // Whole: not a file of it removed.
+      expect(result).toMatchObject({ ok: false, refused: false });
       expect(existsSync(join(folder, "creds.enc"))).toBe(true);
       // Started again, not left stopped.
       expect(bridges.length).toBe(3);
       expect(gateway.status).not.toBe("disconnected");
     } finally {
       chmodSync(parent, 0o755);
+      chmodSync(folder, 0o755);
       rmSync(parent, { recursive: true, force: true });
     }
   });
+
+  test("a login folder written with a slash at its end is moved beside itself, not into itself", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "wa-link-again-"));
+    const folder = join(parent, "whatsapp-shop");
+    mkdirSync(folder);
+    const { gateway, loggedOutFromItsPhone, linked } = onItsOwnFolder(`${folder}/`);
+    await gateway.start();
+    await linked();
+    await loggedOutFromItsPhone();
+    expect(await gateway.linkAgain()).toEqual({ ok: true });
+    // Moved away whole and removed, as any folder is: not emptied where it is, which is for a folder that cannot move.
+    expect(existsSync(folder)).toBe(false);
+    expect(readdirSync(parent)).toEqual([]);
+    rmSync(parent, { recursive: true, force: true });
+  });
+
 });
 
 describe("inbound messages", () => {
