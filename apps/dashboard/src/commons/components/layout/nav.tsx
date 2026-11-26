@@ -32,6 +32,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Globe,
   Target,
   UserCog,
   Users,
@@ -146,6 +147,8 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
     group: "People and sign-in",
     items: [
       { to: "/access", label: "Access", icon: ShieldCheck, badge: AccessBadge, about: "Who may talk to the agents, and who is asking to." },
+      // Beside Access: the agents nobody asks for a code, and the people who wrote to each, one agent at a time.
+      { to: "/open-agents", label: "Open agents", icon: Globe, about: "The agents anyone may write to: who wrote to each, and who it keeps out." },
       { to: "/users", label: "Users", icon: Users, adminOnly: true, about: "Who can sign in to this dashboard." },
       { to: "/account", label: "My Account", icon: UserCog, about: "Your name and your password." },
     ],

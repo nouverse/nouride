@@ -227,19 +227,35 @@ menghabiskan harinya untuk obrolan yang gak ditujukan kepadanya.
 
 ### Siapa yang menulis
 
-Orang yang menulis ke agent yang terbuka gak ada di daftar mana pun di halaman Access: gak ada yang
-diminta kode. Mereka ada di tab **Access** agent itu sendiri, di bawah **People who wrote**: siapa, di
-aplikasi apa, apa yang pertama mereka tanyakan, dan kapan. **Read** membuka percakapannya; **Block**
-menahan pengirim itu mulai pesan berikutnya. Kartu di atasnya menyebut berapa yang sudah terpakai hari
-itu.
+Orang yang menulis ke agent yang terbuka gak ada di halaman Access: gak ada yang diminta kode, jadi agent
+yang terbuka gak punya siapa pun yang menunggu, disetujui, atau ditolak di sana, ia gak ada di daftar agent
+halaman itu, dan pengirim di koneksinya gak masuk daftar atau hitungan mana pun. Sebagai gantinya, tiap
+agent yang terbuka punya halaman sendiri: **Settings → Open agents**, di sebelah Access. Halaman itu
+menampilkan satu agent sekali waktu, dipilih dari namanya kalau yang terbuka lebih dari satu, dan gak
+pernah menggabungkan orang dari dua agent dalam satu daftar.
 
-Daftarnya di-scroll di dalam kartunya, jadi halaman agent yang ramai tetap pendek. Untuk mencari
-seseorang, ketik nama, nomor, atau kata dari pertanyaan pertama mereka, lalu tekan **Search** (atau
-Enter): pencariannya mencakup semua percakapan yang disimpan agent itu, bukan cuma yang tampil di layar.
-**Clear** menampilkan semuanya lagi.
+Untuk agent yang dipilih, isinya:
+
+- di mana ia bisa dihubungi, berapa yang terpakai hari ini, dan dua batasnya (diubah di tab **Access**
+  agent itu sendiri);
+- **People who wrote**: siapa, di aplikasi apa, apa yang pertama mereka tanyakan, dan kapan. **Read**
+  membuka percakapannya; **Block** menahan pengirim itu mulai pesan berikutnya. Hanya admin yang bisa
+  membacanya.
+- **Blocked**: orang yang ditahan di koneksinya, dengan **Unblock**. Setelah di-unblock, pesan
+  berikutnya dijawab, seperti pesan siapa pun selama agent itu terbuka.
+
+Daftar orang yang menulis di-scroll di dalam kartunya, jadi halaman agent yang ramai tetap pendek. Untuk
+mencari seseorang, ketik nama, nomor, atau kata dari pertanyaan pertama mereka, lalu tekan **Search**
+(atau Enter): pencariannya mencakup semua percakapan yang disimpan agent itu, bukan cuma yang tampil di
+layar. **Clear** menampilkan semuanya lagi.
+
+Tab **Access** agent itu sendiri menyimpan kartu pendek sebagai ganti daftarnya: berapa orang yang menulis
+ke agent itu, berapa hari ini, berapa yang diblokir, dan **Open the list**. Di daftar Agents, di halamannya,
+dan di daftar chat, kata **Open** ada di sebelah namanya.
 
 Percakapan itu gak masuk ke daftar chat kamu sendiri, dan hilang saat percakapan seumurnya hilang
-(`retention.session_days`), termasuk file-nya.
+(`retention.session_days`), termasuk file-nya. Kalau ditutup lagi, agent itu dan pengirim di koneksinya
+kembali ke halaman Access.
 
 Dari terminal, `nouride config check` dan `nouride doctor` menyebut agent mana yang terbuka, di koneksi
 mana dan dalam batas berapa.

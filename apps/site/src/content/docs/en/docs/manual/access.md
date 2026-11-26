@@ -209,17 +209,31 @@ on talk nobody addressed to it.
 
 ### Who wrote
 
-The people who write to an open agent are in none of the Access page's lists: nobody was asked for a
-code. They are on the agent's own **Access** tab, under **People who wrote**: who, on which app, what
-they first asked and when. **Read** opens the conversation; **Block** keeps that sender out from their
-next message. The card above it says what was used of the day.
+The people who write to an open agent are not on the Access page: nobody was asked for a code, so an open
+agent has nobody waiting, approved or denied there, it is not among the page's agents, and its connections'
+senders are in none of its lists or counts. Each open agent has a page of its own instead: **Settings →
+Open agents**, beside Access. It shows one agent at a time, picked by name when more than one is open, and
+never puts two agents' people in one list.
 
-The list scrolls inside its card, so a busy agent's page stays short. To find someone, type a name, a
-number or words from what they first asked, and press **Search** (or Enter): it looks through every
-conversation the agent keeps, not only the ones on screen. **Clear** brings everyone back.
+For the agent picked, it shows:
+
+- where it is reached, what it used today and its two limits (changed on its own **Access** tab);
+- **People who wrote**: who, on which app, what they first asked and when. **Read** opens the
+  conversation; **Block** keeps that sender out from their next message. An admin's to read.
+- **Blocked**: the people kept out of its connections, with **Unblock**. Unblocked, their next message is
+  answered, as anyone's is while the agent is open.
+
+The list of people who wrote scrolls inside its card, so a busy agent's page stays short. To find someone,
+type a name, a number or words from what they first asked, and press **Search** (or Enter): it looks
+through every conversation the agent keeps, not only the ones on screen. **Clear** brings everyone back.
+
+The agent's own **Access** tab keeps a short card in place of the list: how many people wrote to it, how
+many today, how many are blocked, and **Open the list**. In the Agents list, on its page and in the chat
+list, the word **Open** stands beside its name.
 
 Those conversations are kept out of your own list of chats, and go when conversations of their age do
-(`retention.session_days`), files included.
+(`retention.session_days`), files included. Closed again, the agent and its connections' senders are back
+on the Access page.
 
 From a terminal, `nouride config check` and `nouride doctor` say which agents are open, on which
 connections and within which numbers.

@@ -11,8 +11,9 @@
 import { describe, expect, test } from "bun:test";
 import type { AgentOpen, AgentSummary, PublicConversation } from "@nouride/wire";
 import { openOn } from "../src/modules/access/open-agents.tsx";
-import { answersFrom, limitTyped, OPEN_MEANS, reachedOn, todaySaid } from "../src/modules/agents/components/OpenToEveryone.tsx";
-import { whoWrote } from "../src/modules/agents/components/PublicConversations.tsx";
+import { answersFrom, limitTyped, OPEN_MEANS } from "../src/modules/agents/components/OpenToEveryone.tsx";
+import { reachedOn, todaySaid } from "../src/commons/lib/open-agent.ts";
+import { whoWrote } from "../src/modules/access/people-who-wrote.tsx";
 import { answer, buttons, enabled, press, recordPosts, renderPage, type, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
@@ -26,11 +27,10 @@ const CAN: AgentOpen = { never: null, notes: false, connections: ["telegram:nora
 const withNora = (open: AgentOpen, access: AgentSummary["access"] = "follow") => ({
   "/status": ok({ ...STATUS, orchestrator: "nouva", agents: [STATUS.agents[0]!, { ...STATUS.agents[0]!, id: "nora", displayName: "Nora", access, open }] }),
   // Nobody has written to it, unless a test says who did.
-  "/agents/nora/public": ok({ conversations: [], total: 0 }),
+  "/agents/nora/public": ok({ conversations: [], total: 0, people: 0 }),
 });
 const card = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("section")].find((one) => one.querySelector("h2, h3")?.textContent?.trim() === "Who can write to this agent") ?? host;
 const drawn = (host: HTMLElement) => eventually(() => host.querySelector('[data-access-answer="open"]') !== null, 3_000, "the card");
-const drawn_card = drawn;
 /** One of the four answers: its radio, and what the card shows of each as `label: chosen|not, disabled|free`. */
 const answerOf = (host: HTMLElement, value: string) => host.querySelector<HTMLInputElement>(`[data-access-answer="${value}"] input`)!;
 const answers = (host: HTMLElement) =>
@@ -299,14 +299,18 @@ describe("an open agent", () => {
 describe("where else an open agent is said", () => {
   const OPEN: AgentOpen = { ...CAN, limits: { maxDailyTokens: 200_000, maxDailyMessagesPerPerson: 30, closedReply: null }, today: { tokens: 0, estimated: false, people: 0, messages: 0 } };
 
-  test("the Access page, which lists who was let in, names the agents that answer anyone and where: nobody of theirs is in its lists", async () => {
+  test("the Access page, which lists who was let in, names the agents that answer anyone and where, and leads to their own list", async () => {
     answer(withNora(OPEN, "open"));
     let said = "";
+    let links: (string | null)[] = [];
     await renderPage("/access", async (host) => {
       await eventually(() => host.querySelector("[data-open-agents]") !== null, 3_000, "the line");
       said = host.querySelector("[data-open-agents]")?.textContent ?? "";
+      links = [...host.querySelectorAll("[data-open-agents] a")].map((link) => link.getAttribute("href"));
     });
-    expect(said).toBe("Open to everyone, with no code: Nora on Telegram (nora), WhatsApp (shop). Whoever writes to it is not in the lists below: nobody was asked for a code.");
+    expect(said).toBe("Open to everyone, with no code: Nora on Telegram (nora), WhatsApp (shop). Who writes to it is not in these lists: it has a list of its own on Open agents.");
+    // Its name opens its own list; "Open agents" the page.
+    expect(links).toEqual(["/dashboard/open-agents?agent=nora", "/dashboard/open-agents"]);
     expect(openOn({ open: { ...OPEN, connections: [] } })).toBe("with no connection of its own yet");
     // No agent open: no line.
     answer(withNora(CAN));
@@ -363,10 +367,10 @@ describe("the people who wrote to it", () => {
   const GROUP = row("ses_group", { kind: "group", sender: { id: "9009", name: null, blocked: false }, title: "are you a bot?" });
   const rows = (host: HTMLElement) => [...host.querySelectorAll<HTMLElement>("[data-public-row]")];
 
-  test("are listed on its Access page with what they first asked, each read as any conversation is; a blocked sender is marked, and has no Block", async () => {
-    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3 }) });
+  test("are listed on the Open agents page with what they first asked, each read as any conversation is; a blocked sender is marked, and has no Block", async () => {
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3, people: 3 }) });
     const seen = { said: [] as string[], read: [] as (string | null)[], block: [] as boolean[] };
-    await renderPage("/agents/nora/access", async (host) => {
+    await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => rows(host).length === 3, 3_000, "the rows");
       seen.said = rows(host).map((one) => one.textContent ?? "");
       seen.read = rows(host).map((one) => one.querySelector("a")?.getAttribute("href") ?? null);
@@ -389,7 +393,7 @@ describe("the people who wrote to it", () => {
     answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [BUDI], total: 1 }) });
     const posted = recordPosts({ "/access/block": ok({ ok: true }) });
     let asked = "";
-    await renderPage("/agents/nora/access", async (host) => {
+    await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => rows(host).length === 1, 3_000, "the row");
       press(rows(host)[0]!, "Block");
       await eventually(() => host.ownerDocument.body.textContent?.includes("Block Budi Santoso?") === true, 2_000, "the question");
@@ -417,7 +421,7 @@ describe("the people who wrote to it", () => {
     answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: first, total: 3, nextBefore: 1234 }), "/agents/nora/public?before=1234": ok({ conversations: [row("ses_b", { title: "the last one" })], total: 3 }) });
     let shown: string[] = [];
     let offered = "";
-    await renderPage("/agents/nora/access", async (host) => {
+    await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => rows(host).length === 2, 3_000, "the first page");
       offered = buttons(host).find((label) => label.startsWith("Show more")) ?? "";
       press(host, offered);
@@ -447,12 +451,12 @@ describe("the people who wrote to it", () => {
       ...withNora(OPEN, "open"),
       "/agents/nora/public?q=kopi": ok({ conversations: [SITI], total: 1 }),
       "/agents/nora/public?q=zzz": ok({ conversations: [], total: 0 }),
-      "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3 }),
+      "/agents/nora/public": ok({ conversations: [GROUP, SITI, BUDI], total: 3, people: 3 }),
     });
     const requests = asked();
     const seen = { found: [] as string[], nobody: "", cleared: [] as string[], field: "x" };
     try {
-      await renderPage("/agents/nora/access", async (host) => {
+      await renderPage("/open-agents?agent=nora", async (host) => {
         await eventually(() => rows(host).length === 3 && finder(host) !== null, 3_000, "the rows and the field");
         type(finder(host)!, "ko");
         type(finder(host)!, "kopi");
@@ -494,7 +498,7 @@ describe("the people who wrote to it", () => {
     });
     let scroller = { classes: "", rows: 0, more: false };
     let shown: string[] = [];
-    await renderPage("/agents/nora/access", async (host) => {
+    await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => rows(host).length === 2 && finder(host) !== null, 3_000, "the rows");
       // The whole list read to its end first: a search after it is a list of its own, from its first page.
       more(host)!.click();
@@ -516,25 +520,33 @@ describe("the people who wrote to it", () => {
     expect(shown).toEqual(["ses_a0", "ses_a1", "ses_b"]);
   });
 
-  test("nobody yet is said, with nothing to search; and an operator, or a closed agent's page, has no such list", async () => {
-    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [], total: 0 }) });
+  test("nobody yet is said, with nothing to search; an operator is told whose the list is; and a closed agent has no list there", async () => {
+    answer({ ...withNora(OPEN, "open"), "/agents/nora/public": ok({ conversations: [], total: 0, people: 0 }) });
     let said = "";
     let field = true;
-    await renderPage("/agents/nora/access", async (host) => {
+    await renderPage("/open-agents?agent=nora", async (host) => {
       await eventually(() => host.textContent?.includes("Nobody has written to it yet.") === true, 3_000, "the empty line");
       said = host.textContent ?? "";
       field = finder(host) !== null;
     });
     expect(said).toContain("People who wrote");
     expect(field).toBe(false);
-    for (const override of [{ ...withNora(OPEN, "open"), "/auth/me": ok({ ...ME, role: "operator", user: { ...ME.user, role: "operator" } }) }, withNora(CAN)]) {
-      answer({ ...override, "/agents/nora/public": ok({ conversations: [BUDI], total: 1 }) });
-      let drawn = true;
-      await renderPage("/agents/nora/access", async (host) => {
-        await drawn_card(host);
-        drawn = host.textContent?.includes("People who wrote") === true;
-      });
-      expect(drawn).toBe(false);
-    }
+    // An operator: the card says the list is an admin's, and nobody's conversation is asked for or drawn.
+    answer({ ...withNora(OPEN, "open"), "/auth/me": ok({ ...ME, role: "operator", user: { ...ME.user, role: "operator" } }), "/agents/nora/public": ok({ conversations: [BUDI], total: 1, people: 1 }) });
+    let operator = { said: "", rows: -1 };
+    await renderPage("/open-agents?agent=nora", async (host) => {
+      await eventually(() => host.textContent?.includes("Only an admin reads who wrote to it") === true, 3_000, "the operator's card");
+      operator = { said: host.textContent ?? "", rows: rows(host).length };
+    });
+    expect(operator.rows).toBe(0);
+    // Closed: none of its people there, and the page says where they are now.
+    answer({ ...withNora(CAN), "/agents/nora/public": ok({ conversations: [BUDI], total: 1, people: 1 }) });
+    let closed = { said: "", rows: -1 };
+    await renderPage("/open-agents?agent=nora", async (host) => {
+      await eventually(() => host.textContent?.includes("No agent is open to everyone") === true, 3_000, "the empty page");
+      closed = { said: host.textContent ?? "", rows: rows(host).length };
+    });
+    expect(closed.rows).toBe(0);
+    expect(closed.said).toContain("nora is not open to everyone now, so who writes to it is on the Access page.");
   });
 });

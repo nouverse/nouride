@@ -3,7 +3,7 @@
  *
  * Whoever writes to such an agent is in none of this page's lists: they were never asked for a code, so nobody was
  * approved. Without this line the page would say "only those approved are answered" beside a bot that answers anyone.
- * Nothing is drawn where no agent is open.
+ * Each agent's name opens its own list on the Open agents page. Nothing is drawn where no agent is open.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -31,13 +31,17 @@ export function OpenAgents() {
         {open.map((agent, index) => (
           <span key={agent.id}>
             {index > 0 ? "; " : ""}
-            <Link to="/agents/$agentId/access" params={{ agentId: agent.id }} className="link link-primary">
+            <Link to="/open-agents" search={{ agent: agent.id }} className="link link-primary">
               {agent.displayName || agent.id}
             </Link>{" "}
             {openOn(agent)}
           </span>
         ))}
-        . Whoever writes to {open.length === 1 ? "it" : "them"} is not in the lists below: nobody was asked for a code.
+        . Who writes to {open.length === 1 ? "it is not in these lists: it has" : "them is not in these lists: each has"} a list of its own on{" "}
+        <Link to="/open-agents" className="link link-primary">
+          Open agents
+        </Link>
+        .
       </span>
     </p>
   );

@@ -9,6 +9,10 @@
  * Five tabs, the shape of a request's life: **Pending** (waiting, and the code runs out), **Approved**
  * (in), **Denied** (no for now, with the time left), **Blocked** (no until unblocked), **History**
  * (everything answered, from the audit log). Each list scrolls inside its own card, as Skills' do.
+ *
+ * An agent open to everyone is not on it: nobody asks it for a code, so none of the five is its, and its people are a
+ * list of their own, one agent at a time, on the Open agents page. Its connections' rows are left out of every tab and
+ * count, and it is not offered as a filter; closed again, its rows are back here by themselves.
  */
 
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
@@ -47,15 +51,26 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
   /** One filter for whichever tab is open, in the row that stays at the top of the window. */
   const [query, setQuery] = useState("");
 
+  const daemon = useQuery({ queryKey: ["status"], queryFn: api.status });
   const agentOf = (gatewayId: string) => gateways.data?.gateways.find((gateway) => gateway.id === gatewayId)?.agent;
   const orchestrator = useOrchestrator();
-  const agents = useOrchestratorFirst([...new Set((gateways.data?.gateways ?? []).map((gateway) => gateway.agent).filter((agent): agent is string => Boolean(agent)))].sort(), (id) => id);
-  const inScope = (gatewayId: string) => !search.agent || agentOf(gatewayId) === search.agent;
+  /** The agents open to everyone, and the connections they own: neither is this page's (`/open-agents`). */
+  const open = new Set((daemon.data?.agents ?? []).filter((agent) => agent.access === "open").map((agent) => agent.id));
+  const onOpen = (gatewayId: string) => {
+    const agent = agentOf(gatewayId);
+    return agent !== undefined && open.has(agent);
+  };
+  const agents = useOrchestratorFirst([...new Set((gateways.data?.gateways ?? []).map((gateway) => gateway.agent).filter((agent): agent is string => Boolean(agent) && !open.has(agent!)))].sort(), (id) => id);
+  const inScope = (gatewayId: string) => !onOpen(gatewayId) && (!search.agent || agentOf(gatewayId) === search.agent);
   const senders = (access.data?.senders ?? []).filter((sender) => inScope(sender.gatewayId));
   const by = (status: string) => senders.filter((sender) => sender.status === status);
   const [pending, approved, denied, blocked] = [by("pending"), by("approved"), by("denied"), by("blocked")];
-  // Everyone approved, where the page shows all agents' and was sent only the newest; else what it holds.
-  const approvedTotal = !search.agent && !found ? Math.max(access.data?.approvedTotal ?? 0, approved.length) : approved.length;
+  // Everyone approved, where the page shows all agents' and was sent only the newest; else what it holds. An open
+  // agent's approved, kept for when it is closed, are not this page's while it is open.
+  const approvedOnOpen = (access.data?.senders ?? []).filter((sender) => sender.status === "approved" && onOpen(sender.gatewayId)).length;
+  const approvedTotal = !search.agent && !found ? Math.max((access.data?.approvedTotal ?? 0) - approvedOnOpen, approved.length) : approved.length;
+  /** A link from before, to an agent that is open now: its people are on its own page. */
+  const pickedOpen = search.agent !== undefined && open.has(search.agent) ? search.agent : null;
   // A bare id is honoured on every connection; a qualified one only on its own.
   const allowlist = (access.data?.allowlist ?? []).filter((id) => {
     const at = id.lastIndexOf(":");
@@ -129,6 +144,16 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
           <SenderQuery.Provider value={{ query, setQuery }}>
           {access.isPending ? (
             <ListLoading />
+          ) : pickedOpen ? (
+            <Card title={`${pickedOpen} is open to everyone`} description="Nobody asks it for a code, so it has nobody waiting, approved or denied here.">
+              <p className="text-sm">
+                Who wrote to it, and who it keeps out, are on{" "}
+                <Link to="/open-agents" search={{ agent: pickedOpen }} className="link link-primary">
+                  Open agents
+                </Link>
+                .
+              </p>
+            </Card>
           ) : tab === "pending" ? (
             <PendingTab senders={pending} agentOf={agentOf} pairingOn={mode !== "allowlist"} />
           ) : tab === "approved" ? (

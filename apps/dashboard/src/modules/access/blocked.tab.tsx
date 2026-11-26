@@ -1,7 +1,8 @@
 /**
  * Who is kept out until somebody says otherwise — "no, until unblocked".
  *
- * Ignored, with no reply, however often they write. Unblock lets them ask again; it lets nobody in.
+ * Ignored, with no reply, however often they write. Unblock lets them ask again; it lets nobody in. On an agent open to
+ * everyone, where nobody asks, it means they are answered again: the Open agents page says so (`whileOpen`).
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ import { ListCard } from "@/commons/components/ui/ListCard";
 import { ago } from "@/commons/lib/format";
 import { BUTTON, NoMatch, SenderLine, byWhom, useSenderFilter } from "./sender-line";
 
-export function BlockedTab({ senders, agentOf }: { senders: SenderRecord[]; agentOf: (gatewayId: string) => string | undefined }) {
+export function BlockedTab({ senders, agentOf, whileOpen = false }: { senders: SenderRecord[]; agentOf: (gatewayId: string) => string | undefined; whileOpen?: boolean }) {
   const me = useMe();
   const queryClient = useQueryClient();
   const unblock = useMutation({
@@ -46,7 +47,7 @@ export function BlockedTab({ senders, agentOf }: { senders: SenderRecord[]; agen
                 <button
                   type="button"
                   className={BUTTON.plain}
-                  title="Let them ask again. Their next message is a new request; it lets nobody in."
+                  title={whileOpen ? "Answer them again: their next message is answered, as anyone's is while this agent is open." : "Let them ask again. Their next message is a new request; it lets nobody in."}
                   disabled={!operator || unblock.isPending}
                   onClick={() => unblock.mutate(sender)}
                 >

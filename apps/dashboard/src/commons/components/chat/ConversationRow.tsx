@@ -107,10 +107,17 @@ export function ConversationRow({
 
 /**
  * A small word after a row's name, the same pill everywhere: what the row is, never a count. An app's name is
- * `PlatformTag`, this size in the app's colour.
+ * `PlatformTag`, this size in the app's colour. `title` says in full what a word as short as "Open" stands for.
  */
-export function RowTag({ children }: { children: ReactNode }) {
-  return <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold leading-none whitespace-nowrap text-secondary">{children}</span>;
+export function RowTag({ children, title }: { children: ReactNode; title?: string }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold leading-none whitespace-nowrap text-secondary"
+      {...(title ? { title, "aria-label": title } : {})}
+    >
+      {children}
+    </span>
+  );
 }
 
 /** The small heading over a part of a list: "Not talked to yet", "Quiet for two weeks or more", a History's "Today". */

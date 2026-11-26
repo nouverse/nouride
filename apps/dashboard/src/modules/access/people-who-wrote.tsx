@@ -1,5 +1,5 @@
 /**
- * The people who wrote to an agent that is open to everyone, on its own Access page.
+ * The people who wrote to an agent that is open to everyone, on the Open agents page.
  *
  * Their conversations are nobody's own, so they are kept out of the list of chats, where they would bury the household's
  * own, and listed here: who wrote, on which app, what they first asked and when. A row opens the conversation as any
@@ -31,7 +31,7 @@ export function whoWrote(conversation: Pick<PublicConversation, "sender" | "kind
   return conversation.kind === "group" ? `${who}, in a group` : who;
 }
 
-export function PublicConversations({ agent }: { agent: AgentSummary }) {
+export function PeopleWhoWrote({ agent }: { agent: AgentSummary }) {
   const me = useMe();
   const admin = isAdmin(me.data ?? null);
   const open = agent.access === "open";
@@ -60,7 +60,7 @@ export function PublicConversations({ agent }: { agent: AgentSummary }) {
       const sender = conversation.sender!;
       const sure = await ask({
         title: `Block ${sender.name ?? sender.id}?`,
-        body: "Their messages are ignored from now on, with no reply, on this connection. What they already wrote stays here. You can unblock them on the Access page.",
+        body: "Their messages are ignored from now on, with no reply, on this connection. What they already wrote stays here. You can unblock them below, under Blocked.",
         confirmLabel: "Block",
       });
       if (sure) await api.answerSender("block", conversation.gatewayId, sender.id);

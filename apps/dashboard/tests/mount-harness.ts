@@ -524,6 +524,7 @@ export const PAGES: [name: string, path: string][] = [
   ["access, denied", "/access?tab=denied"],
   ["access, blocked", "/access?tab=blocked"],
   ["access, history", "/access?tab=history&agent=nouva"],
+  ["open agents", "/open-agents"],
   ["users", "/users"],
   ["logs", "/logs"],
   ["system", "/system"],

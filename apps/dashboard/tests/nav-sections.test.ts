@@ -84,7 +84,8 @@ describe("what a person may see", () => {
   const settings = SETTINGS.flatMap((group) => group.items);
   test("a member sees no admin page, a box's page only on a paired box, the gateway only where it is hosted", () => {
     const shown = (where: Parameters<typeof visible>[1]) => visible(settings, where).map((one) => one.label);
-    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Access", "My Account", "Logs", "Update"]);
+    // Open agents beside Access, as Access is: anyone may see an open agent's limits and its blocked; who wrote is an admin's.
+    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Access", "Open agents", "My Account", "Logs", "Update"]);
     // An admin reaches Logs and Update as tabs of System, in the menu itself: neither is listed a second time under Settings.
     expect(shown({ admin: true, onBox: true, hostsGateway: true })).not.toContain("Logs");
     expect(shown({ admin: true, onBox: true, hostsGateway: true })).not.toContain("Update");

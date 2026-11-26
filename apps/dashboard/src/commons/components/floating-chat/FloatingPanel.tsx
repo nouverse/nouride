@@ -20,7 +20,7 @@ import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
 import { ChatChoice, type FirstChoice } from "@/commons/components/chat/ChatChoice";
 import { ChatLoading } from "@/commons/components/chat/ChatLoading";
 import { Conversation, STATUS_TONES, type ConversationNow } from "@/commons/components/chat/Conversation";
-import { RowTag } from "@/commons/components/chat/ConversationRow";
+import { agentTag } from "@/commons/components/agents/AgentName";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { agentChatLink } from "@/commons/hooks/use-agent-chat";
 import type { useChatAgents } from "@/commons/hooks/use-chat-agents";
@@ -240,9 +240,9 @@ function AgentList({ agents, chat, current, onPick }: { agents: ReturnType<typeo
               <button type="button" aria-current={agent.id === current ? "true" : undefined} className={cn(ROW, agent.id === current && "bg-secondary/10")} onClick={() => onPick(agent.id)}>
                 {face ? <AgentAvatar look={face} name={label} size="xs" /> : null}
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold">{label}</span>
-                    {agent.id === chat.orchestrator ? <RowTag>Orchestrator</RowTag> : null}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="min-w-0 truncate text-sm font-semibold">{label}</span>
+                    {agentTag(agent, chat.orchestrator)}
                   </span>
                   {agent.headline ? <span className="block truncate text-xs text-base-content/65">{agent.headline}</span> : null}
                 </span>

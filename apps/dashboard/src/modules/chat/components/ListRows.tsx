@@ -6,6 +6,7 @@
 
 import type { ChatListGone, ChatListGroup, ChatListLine, ChatListRoom } from "@nouride/wire";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { agentTag } from "@/commons/components/agents/AgentName";
 import { GroupAvatar, MiniAvatars, StackedAvatars } from "@/commons/components/chat/Avatars";
 import { ConversationRow, RowTag } from "@/commons/components/chat/ConversationRow";
 import { PlatformTag } from "@/commons/components/chat/PlatformBadge";
@@ -32,7 +33,7 @@ function AgentRow({ row, data, current, unread }: { row: Extract<ChatRow, { kind
       link={agentChatLink(agent.id, entry?.sessionId)}
       avatar={look ? <AgentAvatar look={look} name={name} size="sm" /> : undefined}
       name={name}
-      tag={agent.id === data.orchestrator ? <RowTag>Orchestrator</RowTag> : undefined}
+      tag={agentTag(agent, data.orchestrator)}
       {...(entry?.at ? { time: shortWhen(entry.at) } : {})}
       line={working ?? (entry?.sessionId ? (entry.last?.text ?? "") : `Say hi to ${name}`)}
       tone={working ? "working" : entry?.sessionId ? "said" : "quiet"}

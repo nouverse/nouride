@@ -23,6 +23,7 @@ import { Sheet } from "@/commons/components/ui/Sheet";
 import type { AgentSummary } from "@nouride/wire";
 import type { Look } from "@/commons/cat/look";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
+import { OpenBadge } from "@/commons/components/agents/AgentName";
 import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
 import { agentModel } from "@/commons/lib/agents";
 import { statusOf } from "@/commons/office/lib/status";
@@ -49,6 +50,7 @@ function AgentLine({ agent, platforms, look, orchestrator }: AgentRow & { look: 
               <Crown size={10} aria-hidden="true" /> orchestrator
             </span>
           ) : null}
+          {agent.access === "open" ? <OpenBadge /> : null}
         </span>
         {/* What answers it, then where it is reached: an external agent's model is its CLI's, on its account. */}
         <span className="mt-0.5 flex min-w-0 items-center gap-x-3 font-mono text-[11px] text-base-content/65">
