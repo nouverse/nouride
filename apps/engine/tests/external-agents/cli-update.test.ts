@@ -43,6 +43,17 @@ describe("a new version's handshake, read for what Nouride uses", () => {
     expect(CLAUDE.env?.DISABLE_AUTOUPDATER).toBe("1");
     expect(BUILT_IN_CLIS.find((row) => row.id === "codex")!.profileFiles?.["config.toml"]).toContain("check_for_update_on_startup = false");
   });
+
+  test("the experimental ones keep their own updaters off too, for every command they are started with", () => {
+    const of = (id: string) => BUILT_IN_CLIS.find((row) => row.id === id)!;
+    expect(of("antigravity").env?.AGY_CLI_DISABLE_AUTO_UPDATE).toBe("true");
+    for (const [id, off] of [["grok", "--no-auto-update"], ["cursor", "--disable-auto-update"]] as const) {
+      const row = of(id);
+      expect({ id, acp: row.args[0], version: row.versionArgs[0], login: row.login?.[0] }).toEqual({ id, acp: off, version: off, login: off });
+    }
+    // Every built-in row says how it keeps its updater off: none is left to update itself under an agent.
+    expect(BUILT_IN_CLIS.map((row) => row.id).sort()).toEqual(["antigravity", "claude-code", "codex", "cursor", "grok"]);
+  });
 });
 
 /** A CLI running for an agent, as the update sees it. */

@@ -30,13 +30,18 @@ export const cursor: CliRow = {
   maker: "Cursor",
   experimental: true,
   command: "cursor-agent",
-  args: ["acp"],
-  install: "curl https://cursor.com/install -fsS | bash, then link its command where every agent's user finds it, by its own name: sudo ln -sf \"$(readlink -f ~/.local/bin/agent)\" /usr/local/bin/cursor-agent",
-  versionArgs: ["--version"],
+  // Its own updater off, by its switch for it (read in its code; it takes it before any command): it is updated the way
+  // it was installed. Seen accepted on `acp`, `login` and `--version` in a Linux container; not yet seen at an update.
+  args: ["--disable-auto-update", "acp"],
+  // Its installer puts it in the installing user's home, which agents' users cannot read, and names it `agent`, as
+  // Grok Build's installer names its own: copied out under its own name, as root's, where every agent's user runs it.
+  install:
+    "curl https://cursor.com/install -fsS | bash, then copy it where every agent's user reaches it, by its own name: sudo rm -rf /opt/cursor-agent && sudo cp -r \"$(dirname \"$(readlink -f ~/.local/bin/agent)\")\" /opt/cursor-agent && sudo ln -sf /opt/cursor-agent/cursor-agent /usr/local/bin/cursor-agent",
+  versionArgs: ["--disable-auto-update", "--version"],
   // Its sign-in prints a link and waits, with no browser opened on the box.
   env: { NO_OPEN_BROWSER: "1" },
   instructionFile: "AGENTS.md",
-  login: ["login"],
+  login: ["--disable-auto-update", "login"],
   loginNote: "Signs in with a Cursor account.",
   authenticate: ["cursor_login"],
   readUse: {

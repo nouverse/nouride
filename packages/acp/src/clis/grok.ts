@@ -37,11 +37,12 @@ export const grok: CliRow = {
   command: "grok",
   args: ["--no-auto-update", "agent", "stdio"],
   install: "curl -fsSL https://x.ai/cli/install.sh | bash, then sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok, so every agent's user finds it",
-  versionArgs: ["--version"],
+  // Its own updater off for every command it is started with, its version and its sign-in too.
+  versionArgs: ["--no-auto-update", "--version"],
   profileEnv: "GROK_HOME",
   instructionFile: "AGENTS.md",
   // A link and a code to confirm on any device.
-  login: ["login", "--device-code"],
+  login: ["--no-auto-update", "login", "--device-code"],
   loginNote: "Signs in with a Grok account on a SuperGrok or X Premium+ plan.",
   // Its sign-in kept by `grok login` first, an API key next, the Grok sign-in it offers when it has neither.
   authenticate: ["cached_token", "xai.api_key", "grok.com"],
