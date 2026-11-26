@@ -9,9 +9,15 @@
 
 import type { HealthPayload } from "@nouride/wire";
 
+/** A connection's own issue, in the daemon's words (`whatsapp:shop: dead`), said as a person reads it. */
+function said(issue: string): string {
+  const stopped = /^(\S+:\S+): dead$/.exec(issue);
+  return stopped ? `The ${stopped[1]} connection stopped and does not come back by itself: see its agent's Connections page.` : issue;
+}
+
 export function healthWarnings(health: Pick<HealthPayload, "issues" | "failedAgents">): string[] {
   return [
-    ...(health.issues ?? []),
+    ...(health.issues ?? []).map(said),
     ...(health.failedAgents ?? []).map((id) => `Agent ${id} did not start: something in its files is wrong. Whoever runs this server needs to fix them, then reload it.`),
   ];
 }
