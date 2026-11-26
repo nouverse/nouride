@@ -10,6 +10,7 @@ import { createLogger } from "@nouride/shared";
 import { GROUP_CONTEXT_MAX, type ConfigurableGatewayName } from "@nouride/shared";
 import { isAbsolute, join, randomBytes, removePath, statFile } from "@nouride/runtime";
 import { removeTomlTable, upsertTomlTable } from "@/modules/config/edit.ts";
+import { readConfigText } from "@/modules/config/global/index.ts";
 import { editConfigFile } from "./file.ts";
 import {
   GATEWAY_PLATFORMS,
@@ -162,7 +163,28 @@ export async function saveGateway(deps: SettingsDeps, input: {
   // the change, and the next save reads its fallbacks — a ws bridge saved a moment ago — off what the loader made of
   // it. The adapter is untouched; that is what `restartRequired` is telling the caller. The connection's own group
   // context is live all the same: the pipeline reads it off the running config per message.
-  const saved = await editConfigFile(deps, (source) => upsertTomlTable(source, `gateways.${platform}.${name}`, values));
+  //
+  // An agent has one connection on each chat app, as its Connections page offers: a second bot or number on an app it
+  // answers on was made from the command line all the same. Only a connection that comes to the agent is refused, new
+  // or given to it; two written into the file by hand are each still edited, and still load. Asked of the file as it
+  // is under the save's lock, not of the running copy: two saves at once each passed a check of the list as it was
+  // before either landed, and the whole-file editor's save is the next boot's, which the running copy does not follow.
+  const held: { id?: string } = {};
+  const saved = await editConfigFile(deps, (source) => {
+    const there = readConfigText(source, deps.configPath).gateways;
+    if (agent && there.find((gateway) => gateway.id === id)?.agent !== agent) {
+      held.id = there.find((gateway) => gateway.platform === platform && gateway.agent === agent)?.id;
+      if (held.id) return { refused: `${agent} already has ${held.id}` };
+    }
+    return upsertTomlTable(source, `gateways.${platform}.${name}`, values);
+  });
+  if (held.id) {
+    return {
+      ok: false,
+      field: "platform",
+      error: `${agent} already has ${held.id}, and an agent has one connection on each chat app: change that one, or remove it first`,
+    };
+  }
   if (!saved.ok) return saved;
   // Stored once the save is through: a save refused above or by the file's own check used to have replaced the
   // working token with the new one all the same.

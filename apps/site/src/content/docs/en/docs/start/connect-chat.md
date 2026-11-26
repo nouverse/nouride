@@ -26,7 +26,9 @@ This is the shorter path, and the one that does not need you to touch a file.
 3. Save, then **restart**: the page offers a **Restart Runtime** button.
 
 An agent has one connection on each chat app. An app it already answers on is not offered again, and with
-all three there is no **Add Connection** button: to change one, use **Edit** on its card.
+all three there is no **Add Connection** button: to change one, use **Edit** on its card. From a terminal,
+`nouride gateway add` refuses a second connection on an app the agent has, and names the one it has. Two already
+written into the config file are left as they are.
 
 The restart is not optional and the dashboard says so: gateway adapters are built at boot, so a saved
 connection is not yet a running one. The page shows "not started" rather than "disconnected" for a

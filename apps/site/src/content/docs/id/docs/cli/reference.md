@@ -196,7 +196,8 @@ percakapan masuk berarti mengakhirinya, jadi tindak lanjutnya dibuat duluan. `ga
 mencetak sisanya (`--token-secret`, `--session-dir`, `--disabled`); gateway barunya tersambung pada
 restart berikutnya. Nomor WhatsApp gak butuh token (`--platform whatsapp --name shop --agent nora`):
 kode yang dipindai ada di halaman Connections agent-nya setelah ia jalan, dan nomor kedua ditambah
-dengan cara yang sama.
+dengan cara yang sama, untuk agent lain. Satu agent punya satu koneksi di tiap aplikasi chat: `gateway add`
+menolak koneksi kedua di aplikasi yang sudah dimilikinya, dan menyebut koneksi yang sudah ada.
 
 `rename` menulis ulang config sekaligus database yang sedang dibuka daemon, itu sebabnya ia menolak
 jalan selama daemon hidup, dan sebabnya ia satu-satunya perintah gateway yang gak lewat control API.
