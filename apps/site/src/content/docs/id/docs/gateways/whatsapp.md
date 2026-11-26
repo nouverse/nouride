@@ -69,6 +69,11 @@ berhenti atau nyambung lagi sendirian; `/health`, `nouride status`, dan dashboar
 dan nomor yang lain tetap menjawab. Nouride gak membatasi berapa nomor yang dipegang satu instalasi:
 tiap nomor adalah satu koneksi lagi yang dijaga tetap terbuka ke WhatsApp.
 
+Nomor yang ter-logout dari HP-nya bilang begitu di kartunya, di **Connections** milik agent-nya,
+dengan tombol **Link again**: login lamanya dihapus dan kode baru muncul di situ, buat di-scan dari HP
+yang memegang nomor itu. Nouride gak melakukannya sendiri, karena satu sinyal logout dari WhatsApp gak
+dianggap sebagai akhir sebuah tautan.
+
 Di grup yang dimasuki dua nomor kamu, pesan yang men-tag satu nomor dijawab agent pemilik nomor itu;
 pesan yang gak men-tag siapa pun dijawab sekali, oleh agent yang memegang instalasi, bukan oleh tiap
 nomor.
