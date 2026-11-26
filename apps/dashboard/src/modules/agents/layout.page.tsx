@@ -5,6 +5,7 @@
  */
 
 import { AgentStatusBadge } from "@/commons/components/agents/agent-status-badge";
+import { OpenBadge } from "@/commons/components/agents/AgentName";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -124,22 +125,25 @@ export default function AgentLayoutPage({ agentId }: { agentId: string }) {
         {/* Header with Title & Action Controls */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-base-content sm:text-3xl">
+            {/* A long name wraps under itself, and the badges go to the next line whole rather than squeezed. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h1 className="min-w-0 text-2xl font-bold tracking-tight text-base-content [overflow-wrap:anywhere] sm:text-3xl">
                 {agent.displayName}
               </h1>
               <AgentStatusBadge agent={agent} />
+              {agent.access === "open" ? <OpenBadge size="sm" /> : null}
               {agent.external ? (
                 <span className="badge badge-sm badge-ghost gap-1 font-mono" title="It answers through this coding CLI, on this model">
                   <Terminal size={11} /> {agentModel(agent)}
                 </span>
               ) : null}
-              {/* One orchestrator at a time: the agent a message reaches when nothing names another — never an external one. */}
+              {/* One orchestrator at a time: the agent a message reaches when nothing names another. Never an external one,
+                  nor one open to everyone, which the daemon refuses too: offered, the press would only be told no. */}
               {status.data?.orchestrator === agent.id ? (
                 <span className="badge badge-sm badge-primary gap-1 font-semibold font-mono">
                   <Crown size={11} /> orchestrator
                 </span>
-              ) : isAdmin(me.data ?? null) && !agent.external ? (
+              ) : isAdmin(me.data ?? null) && !agent.external && agent.access !== "open" ? (
                 <button
                   type="button"
                   className="btn btn-xs btn-ghost rounded-lg gap-1 font-medium text-base-content/65 hover:text-base-content"

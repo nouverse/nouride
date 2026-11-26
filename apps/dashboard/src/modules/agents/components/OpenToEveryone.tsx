@@ -15,7 +15,7 @@ import { useState } from "react";
 import { Globe } from "lucide-react";
 import type { AgentOpen, AgentSummary } from "@nouride/wire";
 import { api } from "@/commons/lib/api";
-import { connectionSaid } from "@/commons/lib/platform";
+import { reachedOn, todaySaid } from "@/commons/lib/open-agent";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
@@ -29,12 +29,6 @@ export const NEVER: Record<NonNullable<AgentOpen["never"]>, string> = {
   orchestrator: "This is the main agent, the one that looks after this server, so it is never opened to everyone. Make another agent for the public, and open that one.",
   cli: "This agent works through a coding tool that brings tools of its own, and those cannot be taken away. So it is never opened to everyone. Open an agent that answers on a model instead.",
 };
-
-/** Where strangers would reach it, as one sentence. */
-export function reachedOn(connections: readonly string[]): string {
-  if (connections.length === 0) return "It has no connection of its own yet, so nobody can reach it. Give it one on its Connections tab first.";
-  return `Anyone who finds it can write to it on ${connections.map(connectionSaid).join(", ")}, with no code for you to approve.`;
-}
 
 /**
  * What it would answer strangers from under Knowledge, as one sentence, or null where the daemon does not say (an
@@ -54,13 +48,6 @@ const onWhatsApp = (connections: readonly string[]): boolean => connections.some
 export function limitTyped(text: string): number | null {
   const value = Number(text.trim());
   return text.trim() !== "" && Number.isInteger(value) && value >= 1 ? value : null;
-}
-
-/** Today against the limit, in one line. */
-export function todaySaid(today: NonNullable<AgentOpen["today"]>, maxDailyTokens: number): string {
-  const tokens = `${today.tokens.toLocaleString("en-US")} of ${maxDailyTokens.toLocaleString("en-US")} tokens used today${today.estimated ? " (part of it counted by Nouride, as an estimate)" : ""}`; // plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it
-  const people = today.people === 0 ? "nobody has written yet" : `${today.people} ${today.people === 1 ? "person has" : "people have"} written, ${today.messages} ${today.messages === 1 ? "message" : "messages"} answered`;
-  return `${tokens}; ${people}.`;
 }
 
 /**

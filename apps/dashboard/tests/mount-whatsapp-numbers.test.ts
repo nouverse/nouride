@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { answer, renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -41,8 +41,8 @@ function answers(access: "open" | "pair") {
         gateways: [number("shop", "nora"), number("promo", "nora", { status: "connecting" }), number("home", "nouva"), { id: "telegram:nora", platform: "telegram", name: "nora", agent: "nora", enabled: true, status: "connected", hasCredential: true, tokenSecret: "telegram-nora" }],
       },
     },
-    "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "connected", linked: true, qr: null } },
-    "/gateways/whatsapp%3Apromo/pairing": { status: 200, body: { status: "connecting", linked: false, qr: "2@the-promo-number's-code", at: Date.now() } },
+    "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "connected", linked: true, loggedOut: false, tryingAgain: false, qr: null } },
+    "/gateways/whatsapp%3Apromo/pairing": { status: 200, body: { status: "connecting", linked: false, loggedOut: false, tryingAgain: false, qr: "2@the-promo-number's-code", at: Date.now() } },
     "/status": { status: 200, body: { agents: [{ id: "nora", displayName: "Nora", access }, { id: "nouva", displayName: "Nouva", access: "pair" }] } },
   });
 }
@@ -112,5 +112,84 @@ describe("a number removed", () => {
 
   test("logged out from its phone: nothing more to do, and nothing said of it", async () => {
     expect(await remove(false)).not.toContain("Linked devices");
+  });
+});
+
+describe("a number logged out from its phone", () => {
+  test("says so, with no code awaited, and is linked again on the person's word: the daemon asked, and the new code shown", async () => {
+    answers("pair");
+    answer({ ...current(), "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "dead", linked: false, loggedOut: true, tryingAgain: false, qr: null } } });
+    const posted = recordPosts({ "/gateways/whatsapp%3Ashop/link-again": { status: 200, body: { ok: true, id: "whatsapp:shop", status: "connecting" } } });
+    try {
+      await renderPage("/agents/nora/gateways", async (host) => {
+        await eventually(() => cardOf(host, "whatsapp:shop")?.querySelector("[data-logged-out]") != null, 3_000, "the logged-out note");
+        const card = cardOf(host, "whatsapp:shop")!;
+        expect(card.textContent).toContain("This number was logged out from its phone");
+        // Nothing is waited for: no code comes to a number logged out until it is linked again.
+        expect(card.textContent).not.toContain("Getting the QR code");
+        // The other number goes on as it was.
+        expect(cardOf(host, "whatsapp:promo")?.querySelector("[data-logged-out]")).toBeNull();
+
+        // Its next answer is the new link's: a code to scan.
+        answer({ ...current(), "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "connecting", linked: false, loggedOut: false, tryingAgain: false, qr: "2@a-new-code", at: Date.now() } } });
+        [...card.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Link again")!.click();
+        await eventually(() => [...document.body.querySelectorAll("dialog button")].some((button) => button.textContent?.trim() === "Link again"), 3_000, "the question");
+        expect(posted.posts).toEqual([]);
+        [...document.body.querySelectorAll<HTMLButtonElement>("dialog button")].find((button) => button.textContent?.trim() === "Link again")!.click();
+        await eventually(() => posted.posts.length === 1, 3_000, "asked of the daemon");
+        await eventually(() => /Scan with WhatsApp|Link a Device/.test(cardOf(host, "whatsapp:shop")?.textContent ?? ""), 3_000, "the new code");
+        expect(cardOf(host, "whatsapp:shop")?.querySelector("[data-logged-out]")).toBeNull();
+      });
+      expect(posted.posts).toEqual([{ path: "/gateways/whatsapp%3Ashop/link-again", body: {} }]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("asked and not confirmed: nothing is asked of the daemon, and the note stays", async () => {
+    answers("pair");
+    answer({ ...current(), "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "dead", linked: false, loggedOut: true, tryingAgain: false, qr: null } } });
+    const posted = recordPosts();
+    try {
+      await renderPage("/agents/nora/gateways", async (host) => {
+        await eventually(() => cardOf(host, "whatsapp:shop")?.querySelector("[data-logged-out]") != null, 3_000, "the logged-out note");
+        [...cardOf(host, "whatsapp:shop")!.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Link again")!.click();
+        await eventually(() => [...document.body.querySelectorAll("dialog button")].some((button) => button.textContent?.trim() === "Cancel"), 3_000, "the question");
+        [...document.body.querySelectorAll<HTMLButtonElement>("dialog button")].find((button) => button.textContent?.trim() === "Cancel")!.click();
+        await eventually(() => ![...document.body.querySelectorAll("dialog[open]")].length, 3_000, "the question closed");
+        expect(cardOf(host, "whatsapp:shop")?.querySelector("[data-logged-out]")).not.toBeNull();
+      });
+      expect(posted.posts).toEqual([]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("ended once and being tried again: said as that, with nothing to press yet", async () => {
+    answers("pair");
+    answer({ ...current(), "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "reconnecting", linked: false, loggedOut: false, tryingAgain: true, qr: null } } });
+    await renderPage("/agents/nora/gateways", async (host) => {
+      await eventually(() => cardOf(host, "whatsapp:shop")?.querySelector("[data-checking-link]") != null, 3_000, "the check said");
+      const card = cardOf(host, "whatsapp:shop")!;
+      expect(card.textContent).toContain("WhatsApp ended this number's link. Trying it once more");
+      expect(card.textContent).not.toContain("Getting the QR code");
+      expect([...card.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Link again")).toBe(false);
+    });
+  });
+
+  test("for someone who is not an admin: said, and left to an admin to link again", async () => {
+    answers("pair");
+    const me = WIRE["/auth/me"] as { role: string; user: { role: string } };
+    answer({
+      ...current(),
+      "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "dead", linked: false, loggedOut: true, tryingAgain: false, qr: null } },
+      "/auth/me": { status: 200, body: { ...me, role: "operator", user: { ...me.user, role: "operator" } } },
+    });
+    await renderPage("/agents/nora/gateways", async (host) => {
+      await eventually(() => cardOf(host, "whatsapp:shop")?.querySelector("[data-logged-out]") != null, 3_000, "the logged-out note");
+      const card = cardOf(host, "whatsapp:shop")!;
+      expect(card.textContent).toContain("An admin can link it again.");
+      expect([...card.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Link again")).toBe(false);
+    });
   });
 });

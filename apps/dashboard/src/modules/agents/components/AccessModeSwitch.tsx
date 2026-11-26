@@ -14,6 +14,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useOpenConnections } from "@/commons/hooks/use-open-connections";
 import { Link } from "@tanstack/react-router";
 import { Lock, Shield } from "lucide-react";
 import { api } from "@/commons/lib/api";
@@ -41,6 +42,8 @@ export function AccessModeSwitch() {
     },
   });
 
+  const openConnections = useOpenConnections();
+
   // A daemon with no access store, or one we cannot reach, gets no switch at all rather than a dead
   // one: the per-agent Access page is where that condition is explained.
   if (access.error || !access.data) return null;
@@ -49,7 +52,10 @@ export function AccessModeSwitch() {
   // Older daemons do not report this field; assume they can edit rather than showing a dead switch.
   const editable = access.data.editable !== false;
   const writable = canWrite(me.data ?? null);
-  const pending = access.data.senders.filter((sender) => sender.status === "pending").length;
+  // As the Access page counts them: an open agent's requests are not there to approve. Counted once it is known whose
+  // they are, as Home's count is: before that, an open agent's would be counted for a moment.
+  const pending =
+    openConnections.known || openConnections.failed ? access.data.senders.filter((sender) => sender.status === "pending" && !openConnections.onOpen(sender.gatewayId)).length : 0;
 
   return (
     <div className="rounded-[22px] border border-base-content/[0.08] bg-base-100 p-5 shadow-soft space-y-4">

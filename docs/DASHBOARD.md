@@ -36,7 +36,8 @@ Agents            the Office, every agent as a row under it, and New Agent — a
                       preset, the CLI's model, and the model Nouride's own work for it runs on
       Workspace       its own folder in the workspace, with no way out of it — an admin's (0.8.38)
       Connections     the bots and numbers it answers on
-      Access          whether it takes new senders, what it asks before acting, its senders' count
+      Access          whether it takes new senders, what it asks before acting, its senders' count;
+                      open to everyone, its conversations and today's people counted, and the way to its list
       Skills          every skill in the pool, and which of them this agent carries
       MCP             which of the install's MCP servers it uses
       Settings        what one turn may spend, its tools
@@ -48,6 +49,7 @@ Memory            agent notes · people · timeline · shared · proposals · se
 People            who is who across platforms ([[people]])
 Groups            the rooms the agents talk in: each group, channel, thread and dashboard room
 Access            who may talk to the agents: pending · approved · denied · blocked · history
+Open agents       the agents anyone may write to, one at a time, on Access's template, a line back to Access: today and its own limits, by name · Wrote · Let in · Blocked
 Models            Model providers: endpoint, wire format, credential · Coding CLIs: each CLI,
                   its accounts and the agents on each, a shared account's sign-in
 LLM Gateway       the in-process Nougate's console — only on an edition that carries it
@@ -79,6 +81,18 @@ meant visiting all four and joining the results by hand.
 bots, a spammer can tag six, and "who did we block, and who let them in?" is one search across all of
 them. Per agent, the requests waited three clicks behind a name you had to guess while a fifteen-minute
 code ran out. The tab counts its own senders and links to the page filtered to it.
+
+**An agent open to everyone is not on it (0.8.48).** Nobody asks such an agent for a code, so it has nobody pending,
+approved or denied, and the strangers who wrote to it are no other agent's business. The Access page leaves it out of
+its agent filter and leaves its connections' senders out of every tab and count, with one line pointing to **Open
+agents**, beside it in Settings. That page is the Access page's template (rule lines, the sticky row with tabs, filter
+and agent picker, the tab's `ListCard` in `SenderLine` rows), one agent at a time with no "All", never two agents'
+people in one list: what it used today and its limits as rule lines, then **Wrote** (its conversations, Read, Block,
+Show more, an admin's), **Let in** (let in by name before it was opened, Revoke, Block) and **Blocked** (Unblock).
+The filter narrows the open tab; **Search everyone** asks the daemon, on the agent's own connections only (`GET
+/access?on=`), and a search on its way or failed is said as that. The agent's own Access tab counts them in the
+Senders card's shape and links to the tab each count is. The word **Open** stands beside such an agent's name wherever the
+orchestrator's crown would: the Agents list, its page's header, the chat list. Closed again, it is back on Access.
 
 Moving them under the agent also made a failure mode unrepresentable. A connection is created from
 an agent's own page, so the form has nothing to ask about ownership — and there is no longer any way

@@ -16,6 +16,13 @@ describe("the Overview's warnings", () => {
     ]);
   });
 
+  test("a connection stopped for good is said as a person reads it, with where to see it", () => {
+    expect(healthWarnings({ issues: ["whatsapp:shop: dead", "telegram:nouva: reconnecting"] })).toEqual([
+      "The whatsapp:shop connection stopped and does not come back by itself: see its agent's Connections page.",
+      "telegram:nouva: reconnecting",
+    ]);
+  });
+
   test("nothing to say from a daemon with none — or one older than the field", () => {
     expect(healthWarnings({})).toEqual([]);
     expect(healthWarnings({ issues: [] })).toEqual([]);

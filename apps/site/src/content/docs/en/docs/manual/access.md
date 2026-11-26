@@ -209,13 +209,43 @@ on talk nobody addressed to it.
 
 ### Who wrote
 
-The people who write to an open agent are in none of the Access page's lists: nobody was asked for a
-code. They are on the agent's own **Access** tab, under **People who wrote**: who, on which app, what
-they first asked and when. **Read** opens the conversation; **Block** keeps that sender out from their
-next message. The card above it says what was used of the day.
+The people who write to an open agent are not on the Access page: nobody was asked for a code, so an open
+agent has nobody waiting, approved or denied there, it is not among the page's agents, and its connections'
+senders are in none of its lists or counts, nor in the count of requests in the menu and on Home. The page lists
+nobody until it knows which agents are open, and says so if Nouride does not tell it. One line on it points to
+where they are: **Settings → Open agents**, beside Access.
+
+That page is built as the Access page is, and each says where the other is: under its title, one line leads back to
+**Access**, for the agents that ask for a code. Then two lines for the agent picked, by its name: what it used today,
+and its two limits (each agent has its own), with the way to change them on its own **Access** tab. Then the row that
+stays at the top of the window: three tabs, the filter, and the agent. The picker lists only the agents open to everyone, with no "All": one
+agent at a time, and never two agents' people in one list.
+
+- **Wrote**: its conversations with people you do not know, a row each: who (their name, or their address), "in a
+  group" where it was one, the app, what they first asked and when. **Read** opens the conversation; **Block** keeps
+  that sender out from their next message. An admin's to read; **Show more** reads the next under the ones listed.
+- **Let in**: whoever was let in on its connections by a code or a list before it was opened, and any id the
+  server's settings let in on one of them, with **Revoke** and **Block**. They are not strangers to it: they are
+  answered as people you let in, and keep that when it is closed.
+- **Blocked**: the people kept out of its connections, with **Unblock**. Unblocked, their next message is answered,
+  as anyone's is while the agent is open, and **Wrote** says so at once.
+
+The filter narrows the tab that is open, as it does on the Access page. Where a tab has more than it was sent, the
+line above its list says so: type a name, a number or (on **Wrote**) words from what they first asked, and press
+**Search everyone**, which looks through every one the agent has, on its own connections; **Show the newest** brings
+the list back. A search still on its way, or one that did not come back, is said as that, never answered with the
+list from before; and **Let in** and **Blocked** list nobody until the page knows whose connections are whose, and say
+so if Nouride does not tell it. On the Access page, **Search everyone** looks through its own connections too: the
+agent picked, or every one that is not an open agent's.
+
+The agent's own **Access** tab keeps a short card in place of the lists: how many conversations it has had
+with people who wrote, how many people wrote today, how many are blocked, and **Open the list**, each opening
+its tab on Open agents. In the
+Agents list, on its page and in the chat list, the word **Open** stands beside its name.
 
 Those conversations are kept out of your own list of chats, and go when conversations of their age do
-(`retention.session_days`), files included.
+(`retention.session_days`), files included. Closed again, the agent and its connections' senders are back
+on the Access page.
 
 From a terminal, `nouride config check` and `nouride doctor` say which agents are open, on which
 connections and within which numbers.

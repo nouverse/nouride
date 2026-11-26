@@ -79,6 +79,12 @@ export interface SessionListOptions {
   agentId?: string;
   /** Matched against the conversation's opening question and its chat id. */
   query?: string;
+  /**
+   * With `query`, a search of people too: a conversation whose opener's address holds the words, or whose opener is one
+   * of these (`opened_by`: those whose name holds them, where names are kept). An open agent's page lists strangers, who
+   * are looked for by name or number; the household's list is searched by what was asked, and does not pass it.
+   */
+  queryOpeners?: readonly string[];
   /** Leave out one connection's conversations — the missions' own, which are not a person's chats. */
   notGateway?: string;
   /** Only one connection's conversations: an agent's newest in the dashboard, past a busy bot's chats elsewhere. */
@@ -95,6 +101,12 @@ export interface SessionListOptions {
   /** Only the conversations none of these opened, or nobody did: the ones nobody in People is known for. */
   notOpenedBy?: readonly string[];
 }
+
+/**
+ * An address's own part in SQL: what comes before an `@` that is not its first character. A WhatsApp number's
+ * `62812@s.whatsapp.net` is `62812`; a Telegram `@name` and an id with no `@` are themselves.
+ */
+const ownPart = (expr: string) => `(CASE WHEN instr(${expr}, '@') > 1 THEN substr(${expr}, 1, instr(${expr}, '@') - 1) ELSE ${expr} END)`;
 
 export class SessionStore {
   constructor(private readonly db: SqliteDb) {}
@@ -404,12 +416,22 @@ export class SessionStore {
       // Escaped, because `%` and `_` are wildcards and an operator searching for `100%` means it
       // literally. LIKE is case-insensitive for ASCII in SQLite, which is the whole requirement.
       const like = `%${query.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+      const openers = options.queryOpeners;
+      // A search of people: the chat's id and the opener's address on their own part, without the app's name before
+      // or its domain after (`@s.whatsapp.net`, `@g.us`), which every row of that app holds and no person typed. An
+      // address typed whole, `62812@s.whatsapp.net` as the page shows one with no name, is matched whole.
+      const whole = query.indexOf("@") > 0;
+      const own = (expr: string) => (whole ? expr : ownPart(expr));
+      const chat = openers ? own("s.chat_id") : "s.chat_id";
+      const people = openers
+        ? ` OR ${own("substr(s.opened_by, instr(s.opened_by, ':') + 1)")} LIKE ? ESCAPE '\\'${openers.length > 0 ? ` OR s.opened_by IN (${openers.map(() => "?").join(", ")})` : ""}`
+        : "";
       clauses.push(
         `((SELECT t.prompt FROM turn_records t WHERE t.session_id = s.id ORDER BY t.rowid LIMIT 1)
             LIKE ? ESCAPE '\\'
-          OR s.chat_id LIKE ? ESCAPE '\\')`,
+          OR ${chat} LIKE ? ESCAPE '\\'${people})`,
       );
-      params.push(like, like);
+      params.push(like, like, ...(openers ? [like, ...openers] : []));
     }
 
     return { where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "", params };

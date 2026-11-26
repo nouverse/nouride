@@ -32,6 +32,7 @@ export const DASHBOARD_PAGES: readonly (readonly [name: string, path: string])[]
   ["Integrations", "/integrations"],
   ["Web Search", "/web-search"],
   ["Access", "/access"],
+  ["Open agents", "/open-agents"],
   ["Users", "/users"],
   ["My Account", "/account"],
   ["System", "/system"],

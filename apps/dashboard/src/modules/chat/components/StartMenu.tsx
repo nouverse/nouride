@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { MessageSquarePlus, Plus, Users } from "lucide-react";
 import { AgentAvatar } from "@/commons/components/agents/AgentAvatar";
-import { RowTag } from "@/commons/components/chat/ConversationRow";
+import { agentTag } from "@/commons/components/agents/AgentName";
 import { DropdownMenu } from "@/commons/components/ui/DropdownMenu";
 import { PopoverSheet } from "@/commons/components/ui/PopoverSheet";
 import { orchestratorFirst } from "@/commons/lib/agents";
@@ -64,9 +64,9 @@ export function StartMenu({ data }: { data: ChatListData }) {
                 >
                   {look ? <AgentAvatar look={look} name={name} size="xs" /> : null}
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold">{name}</span>
-                      {agent.id === data.orchestrator ? <RowTag>Orchestrator</RowTag> : null}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate text-sm font-semibold">{name}</span>
+                      {agentTag(agent, data.orchestrator)}
                     </span>
                     {agent.headline ? <span className="block truncate text-xs text-base-content/65">{agent.headline}</span> : null}
                   </span>

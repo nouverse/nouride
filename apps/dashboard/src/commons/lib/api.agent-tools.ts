@@ -15,8 +15,14 @@ export const agentToolsApi = {
   setAgentAccess: (id: string, access: "follow" | "pair" | "allowlist") => post<{ ok: true }>(`${control}/agents/${id}/access`, { access }),
   /** Admin only: open an agent to everyone, with the two limits on what strangers may cost it; `knowsItsNotes` where it has notes. */
   openAgent: (id: string, body: { maxDailyTokens: number; maxDailyMessagesPerPerson: number; closedReply?: string; knowsItsNotes?: boolean }) => post<{ ok: true }>(`${control}/agents/${id}/open`, body),
-  /** Admin only: an open agent's conversations with the public, newest first; `before` is the last page's cursor. */
-  agentPublic: (id: string, before?: number) => request<AgentPublic>(`${control}/agents/${id}/public${before ? `?before=${before}` : ""}`),
+  /**
+   * Admin only: an open agent's conversations with the public, newest first; `before` is the last page's cursor, and
+   * `find` looks for a person by name, number or what they first asked.
+   */
+  agentPublic: (id: string, before?: number, find?: string) => {
+    const query = new URLSearchParams({ ...(before ? { before: String(before) } : {}), ...(find ? { q: find } : {}) }).toString();
+    return request<AgentPublic>(`${control}/agents/${id}/public${query ? `?${query}` : ""}`);
+  },
   /** Operator and up: close an agent that is open to everyone. Its limits are kept for the next time. */
   closeAgent: (id: string) => post<{ ok: true }>(`${control}/agents/${id}/close`, {}),
   /** Admin: the agent that answers when nobody is named, and the front desk of rooms. */

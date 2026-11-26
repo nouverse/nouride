@@ -301,10 +301,12 @@ describe("one number's trouble is its own", () => {
     home.linkedAs("62811@s.whatsapp.net");
     await eventually(() => shop.gateway.isLinked() && home.gateway.isLinked());
 
-    // The bridge reports both, for one event.
-    shop.fake.push({ type: "session_expired" });
-    shop.fake.push({ type: "status", status: "disconnected", reason: "logged out" });
-    await eventually(() => !shop.gateway.isLinked());
+    // The bridge reports both, for one event; said again to its old login, the number is logged out from its phone.
+    for (let signal = 0; signal < 2; signal++) {
+      shop.fake.push({ type: "session_expired" });
+      shop.fake.push({ type: "status", status: "disconnected", reason: "logged out" });
+    }
+    await eventually(() => shop.gateway.isLoggedOut());
     expect(shop.gateway.status).not.toBe("reconnecting");
 
     // The other's bridge loses the network and gives up: that one is the daemon's to bring back.

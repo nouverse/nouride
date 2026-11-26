@@ -48,4 +48,19 @@ describe("the box's card", () => {
       expect(card(host)!.getAttribute("href")).toBe("/dashboard/update");
     });
   });
+
+  test("saying there is something to look at, and no update: it leads to Home, where that something is listed", async () => {
+    const HEALTH = RESPONSES["/health"] as Record<string, unknown>;
+    answer({
+      "/update": { status: 200, body: { ...UPDATE, check: { ...UPDATE.check, latest: "0.7.9", newer: false } } },
+      "/health": { status: 200, body: { ...HEALTH, issues: ["whatsapp:shop: dead"] } },
+    });
+    await renderPage("/update", async (host, app) => {
+      await eventually(() => said(host).includes("1 to look at"), 3_000, "the card saying it");
+      expect(card(host)!.getAttribute("href")).toBe("/dashboard/");
+      card(host)!.click();
+      await eventually(() => app.location() === "/", 3_000, "Home");
+      await eventually(() => (host.textContent ?? "").includes("The whatsapp:shop connection stopped"), 3_000, "the thing to look at, listed");
+    });
+  });
 });

@@ -52,7 +52,10 @@ const FIXED_SLEEPS: Record<string, number> = {
   "apps/dashboard": 37,
   // 11 → 12 for a connection that goes on trying slowly once its tries run out (`resilience.test.ts`): one shows a drop
   // its fast tries mend is said to nobody, which no condition can show. The test that lost its end in `dead` gave one up.
-  "packages/gateways": 12,
+  // 12 → 13 (`whatsapp.test.ts`): a WhatsApp logout asked for is shown not to be tried again, which no condition can show.
+  // 13 → 14 (`resilience.test.ts`): one connect more asked of a stopped gateway is shown never to come.
+  // 14 → 16 (`resilience.test.ts`): a failed connect's own reconnect let run before a stop, and shown never to come after.
+  "packages/gateways": 16,
   "packages/llm": 2,
   // 0 → 1 (0.8.1, `acp.test.ts`): a refusal written to a peer already gone shown not to reject unhandled.
   "packages/acp": 1,

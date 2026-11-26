@@ -351,6 +351,16 @@ export abstract class BaseGateway implements Gateway {
     this.setStatus("disconnected");
   }
 
+  /**
+   * The replies held while the connection was down, let go of, for one that is not the same connection any more: a
+   * WhatsApp number linked again, maybe to another account, would send them from it. The count, for the log.
+   */
+  protected dropHeld(): number {
+    const count = this.outboundBuffer.length;
+    this.outboundBuffer = [];
+    return count;
+  }
+
   async send(msg: OutboundMessage): Promise<string[]> {
     if (this._status !== "connected") {
       this.buffer(msg);
@@ -472,6 +482,21 @@ export abstract class BaseGateway implements Gateway {
   }
 
   /**
+   * One more connect after `ms`, out of the retry budget: not counted against it, not slowed by its having run out, and
+   * in place of any reconnect already waiting. For a platform that said the session is over, asked once more before
+   * that is believed (WhatsApp's logout, `channels/whatsapp/gateway.ts`). A stop ends it, as it ends any reconnect.
+   */
+  protected connectOnceMore(reason: string, ms: number): void {
+    if (this.stopping) return;
+    clearInterval(this.healthTimer);
+    clearTimeout(this.reconnectTimer);
+    clearTimeout(this.stableTimer);
+    this.stableTimer = undefined;
+    this.setStatus("reconnecting", reason);
+    this.reconnectTimer = setTimeout(contained(this.log, "a reconnect attempt threw", () => this.attemptConnect()), ms);
+  }
+
+  /**
    * Call while connecting, when the platform's answer makes the connect wait: asked to come back later, an error of
    * its own, not reachable (`connect-wait.ts`). `untilMs` where the platform named when. Only while it is not up: a
    * platform that slows a connection already working is another matter, and its sends say so themselves.
@@ -531,6 +556,8 @@ export abstract class BaseGateway implements Gateway {
   }
 
   private async attemptConnect(): Promise<void> {
+    // A connect whose timer outlived a stop: a stopped gateway stays stopped.
+    if (this.stopping) return;
     this.setStatus("connecting");
     // A connect nothing has answered says so by itself: "connecting" for an hour is not the whole of what is known.
     this.wait.begin(this.resilience.slowConnectMs ?? SLOW_CONNECT_MS, () => this._status === "connecting");
@@ -617,6 +644,8 @@ export abstract class BaseGateway implements Gateway {
 
   private scheduleReconnect(): void {
     if (this.stopping) return;
+    // One reconnect waits at a time: a timer overwritten and not cleared was one a stop could not end.
+    clearTimeout(this.reconnectTimer);
     clearInterval(this.healthTimer);
     // The connection did not hold, so it does not get its retry budget back.
     clearTimeout(this.stableTimer);

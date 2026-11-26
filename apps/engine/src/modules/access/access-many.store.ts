@@ -63,24 +63,34 @@ export function allowMany(
  * The senders as a page or a terminal lists them: everyone asking, denied or blocked, and of the approved the
  * newest `APPROVED_LISTED`, with how many there are in all. A list let in from a file may be ten thousand, and the
  * dashboard asks again every fifteen seconds. `find` narrows the approved to those whose id or name holds it, which
- * is how one beyond the newest is reached.
+ * is how one beyond the newest is reached. `on` narrows every row to these connections: a page that shows one agent's
+ * (an agent open to everyone) searches its own, so the newest it is sent are not the whole install's, crowding its out.
+ * The counts are every connection's either way.
  */
-export function listedRows(db: SqliteDb, status?: AccessStatus, find?: string): { rows: Row[]; approvedTotal: number } {
-  const approvedTotal = db.prepare<{ n: number }>("SELECT COUNT(*) AS n FROM sender_access WHERE status = 'approved'").get()?.n ?? 0;
+export function listedRows(db: SqliteDb, status?: AccessStatus, find?: string, on?: readonly string[]): { rows: Row[]; approvedTotal: number; approvedOn: Record<string, number> } {
+  // How many on each connection too: a page that leaves some connections out (an agent open to everyone, an agent
+  // picked) counts the rest from these, not from the newest it was sent.
+  const approvedOn = Object.fromEntries(
+    db.prepare<{ gateway_id: string; n: number }>("SELECT gateway_id, COUNT(*) AS n FROM sender_access WHERE status = 'approved' GROUP BY gateway_id").all().map((row) => [row.gateway_id, row.n]),
+  );
+  const approvedTotal = Object.values(approvedOn).reduce((sum, n) => sum + n, 0);
   const needle = find?.trim() ? `%${find.trim().replace(/[\\%_]/g, (mark) => `\\${mark}`)}%` : null;
+  // These connections only, where asked; none named is no row.
+  const within = on ? (on.length > 0 ? ` AND gateway_id IN (${on.map(() => "?").join(", ")})` : " AND 0") : "";
+  const onIds = on ?? [];
   const approved =
     status && status !== "approved"
       ? []
       : needle
         ? db
-            .prepare<Row>(`SELECT * FROM sender_access WHERE status = 'approved' AND (sender_id LIKE ? ESCAPE '\\' OR sender_name LIKE ? ESCAPE '\\') ORDER BY resolved_at DESC, sender_id LIMIT ?`)
-            .all(needle, needle, APPROVED_LISTED)
-        : db.prepare<Row>("SELECT * FROM sender_access WHERE status = 'approved' ORDER BY resolved_at DESC, sender_id LIMIT ?").all(APPROVED_LISTED);
+            .prepare<Row>(`SELECT * FROM sender_access WHERE status = 'approved' AND (sender_id LIKE ? ESCAPE '\\' OR sender_name LIKE ? ESCAPE '\\')${within} ORDER BY resolved_at DESC, sender_id LIMIT ?`)
+            .all(needle, needle, ...onIds, APPROVED_LISTED)
+        : db.prepare<Row>(`SELECT * FROM sender_access WHERE status = 'approved'${within} ORDER BY resolved_at DESC, sender_id LIMIT ?`).all(...onIds, APPROVED_LISTED);
   const rest =
     status === "approved"
       ? []
       : status
-        ? db.prepare<Row>("SELECT * FROM sender_access WHERE status = ? ORDER BY requested_at DESC").all(status)
-        : db.prepare<Row>("SELECT * FROM sender_access WHERE status != 'approved' ORDER BY requested_at DESC").all();
-  return { rows: [...rest, ...approved], approvedTotal };
+        ? db.prepare<Row>(`SELECT * FROM sender_access WHERE status = ?${within} ORDER BY requested_at DESC`).all(status, ...onIds)
+        : db.prepare<Row>(`SELECT * FROM sender_access WHERE status != 'approved'${within} ORDER BY requested_at DESC`).all(...onIds);
+  return { rows: [...rest, ...approved], approvedTotal, approvedOn };
 }

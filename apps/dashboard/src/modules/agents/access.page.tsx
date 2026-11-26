@@ -4,7 +4,8 @@
  * The two belong on one page: "who is allowed in" and "what happens once they are" are the same
  * decision seen from either end, and the approval level is the only one of the pair that cannot be set
  * anywhere else — see `ApprovalLevel`. The senders themselves are on the Access page, for every agent at
- * once; here is this agent's count of them, and the way there.
+ * once; here is this agent's count of them, and the way there. An agent open to everyone asks nobody, so it has no
+ * senders: its card counts the people who wrote to it instead, and leads to its list on the Open agents page.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { api } from "@/commons/lib/api";
 import { AccessSummary } from "./components/AccessSummary";
 import { AgentAccessMode } from "./components/AgentAccessMode";
 import { ApprovalLevel } from "./components/ApprovalLevel";
-import { PublicConversations } from "./components/PublicConversations";
+import { OpenPeople } from "./components/OpenPeople";
 import { SecondLook } from "./components/SecondLook";
 
 export default function AgentAccessPage({ agentId }: { agentId: string }) {
@@ -23,9 +24,8 @@ export default function AgentAccessPage({ agentId }: { agentId: string }) {
     <div className="space-y-6">
       {/* Every answer to "who gets in" on one card, open to everyone among them. */}
       {agent ? <AgentAccessMode agent={agent} /> : null}
-      {agent ? <PublicConversations agent={agent} /> : null}
       {/* Beside the switch: both are "who gets in", and what waits there should not be below the fold. */}
-      <AccessSummary agentId={agentId} />
+      {agent ? agent.access === "open" ? <OpenPeople agent={agent} /> : <AccessSummary agentId={agentId} /> : null}
       {agent ? <ApprovalLevel agent={agent} /> : null}
       {agent ? <SecondLook agent={agent} /> : null}
     </div>

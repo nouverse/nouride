@@ -5,11 +5,14 @@
  */
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { CheckCircle2, Loader2, QrCode } from "lucide-react";
+import { CheckCircle2, Link2, Loader2, QrCode, Unlink } from "lucide-react";
 import { api } from "@/commons/lib/api";
+import { isAdmin, useMe } from "@/commons/lib/session";
+import { useConfirm } from "@/commons/components/ui/confirm";
 import { TextLoading } from "@/commons/components/ui/Skeleton";
+import { ErrorNote } from "@/commons/components/ui/ui";
 import { WhatsAppRisk } from "@/modules/agents/components/WhatsAppRisk";
 
 /** One number's link: its state by its own id, and above it what a number of an agent open to everyone should know. */
@@ -77,6 +80,17 @@ function PairingState({ gatewayId }: { gatewayId: string }) {
     );
   }
 
+  if (pairing.data?.loggedOut) return <LoggedOut gatewayId={gatewayId} />;
+
+  // WhatsApp ended the link once: its old login is tried again before the number is said to be logged out.
+  if (pairing.data?.tryingAgain) {
+    return (
+      <div className="flex items-center gap-2.5 py-4 text-xs font-medium text-base-content/65" data-checking-link>
+        <Loader2 size={15} className="animate-spin text-primary" /> WhatsApp ended this number's link. Trying it once more…
+      </div>
+    );
+  }
+
   if (!image) {
     return (
       <div className="flex items-center gap-2.5 py-4 text-xs font-medium text-base-content/65">
@@ -120,6 +134,52 @@ function PairingState({ gatewayId }: { gatewayId: string }) {
           </li>
         </ol>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A number logged out from its phone. Nouride keeps its old login and does not connect again by itself, since one logout
+ * signal from WhatsApp is not taken as the end of a link; so no code would ever come, and the page waited for one with
+ * a spinner and no way out but removing the connection. Linked again on the person's word: a new code, here.
+ */
+function LoggedOut({ gatewayId }: { gatewayId: string }) {
+  const admin = isAdmin(useMe().data ?? null);
+  const queryClient = useQueryClient();
+  const { ask, dialog } = useConfirm();
+  const again = useMutation({
+    mutationFn: async () => {
+      const sure = await ask({
+        title: "Link this number again?",
+        body: "Its old link is removed, and a new QR code shows here. Scan it from the phone that holds this number.",
+        confirmLabel: "Link again",
+      });
+      if (sure) await api.linkAgain(gatewayId);
+      return sure;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["pairing", gatewayId] });
+      await queryClient.invalidateQueries({ queryKey: ["status"] });
+    },
+  });
+  return (
+    <div className="border-warning/30 bg-warning/10 space-y-3 rounded-2xl border p-4" data-logged-out>
+      {dialog}
+      <div className="flex items-start gap-3">
+        <Unlink size={18} className="text-warning mt-0.5 shrink-0" aria-hidden="true" />
+        <div className="text-sm">
+          <p className="font-semibold">This number was logged out from its phone</p>
+          <p className="text-base-content/70 mt-0.5">
+            It stopped, and messages to it are not answered. {admin ? "Link it again to show a new QR code to scan." : "An admin can link it again."}
+          </p>
+        </div>
+      </div>
+      <ErrorNote error={again.error} />
+      {admin ? (
+        <button type="button" className="btn btn-sm btn-primary rounded-xl gap-2" disabled={again.isPending} onClick={() => again.mutate()}>
+          {again.isPending ? <span className="loading loading-spinner loading-xs" /> : <Link2 size={14} aria-hidden="true" />} Link again
+        </button>
+      ) : null}
     </div>
   );
 }

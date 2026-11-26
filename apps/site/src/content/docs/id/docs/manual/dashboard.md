@@ -42,6 +42,7 @@ Agents
         Workspace       folder miliknya sendiri, untuk dilihat-lihat          (admin)
         Connections     bot dan nomor tempat ia menjawab
         Access          apakah ia menerima pengirim baru, seberapa banyak ia bertanya, jumlah pengirimnya
+                        (terbuka untuk semua: jumlah percakapan dan orang hari ini, dan jalan ke daftarnya)
         Skills          semua skill di kumpulan, dan mana yang dibawa agent ini
         Connectors      server MCP instalasi yang dipakai agent ini
         Settings        batas tool dan turn-nya, job senyap, dan tool apa saja yang dimilikinya
@@ -72,6 +73,7 @@ Settings
     Web Search      tempat agent mencari: sumber gratis, Brave, Exa, SearXNG, sendiri (admin)
   People and sign-in
     Access          siapa yang boleh bicara dengan agent: Pending · Approved · Denied · Blocked · History
+    Open agents     agent yang boleh ditulis siapa saja, satu per satu: siapa yang menulis, yang diizinkan, yang diblokir
     Users           akun dan peran (edisi Pro)                                (admin)
     My Account      username, nama, password
   This box

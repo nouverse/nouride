@@ -227,14 +227,49 @@ menghabiskan harinya untuk obrolan yang gak ditujukan kepadanya.
 
 ### Siapa yang menulis
 
-Orang yang menulis ke agent yang terbuka gak ada di daftar mana pun di halaman Access: gak ada yang
-diminta kode. Mereka ada di tab **Access** agent itu sendiri, di bawah **People who wrote**: siapa, di
-aplikasi apa, apa yang pertama mereka tanyakan, dan kapan. **Read** membuka percakapannya; **Block**
-menahan pengirim itu mulai pesan berikutnya. Kartu di atasnya menyebut berapa yang sudah terpakai hari
-itu.
+Orang yang menulis ke agent yang terbuka gak ada di halaman Access: gak ada yang diminta kode, jadi agent
+yang terbuka gak punya siapa pun yang menunggu, disetujui, atau ditolak di sana, ia gak ada di daftar agent
+halaman itu, dan pengirim di koneksinya gak masuk daftar atau hitungan mana pun, termasuk jumlah permintaan
+di menu dan di Home. Halaman itu gak menampilkan siapa pun sampai ia tahu agent mana yang terbuka, dan bilang
+begitu kalau Nouride gak memberi tahu. Satu baris di sana menunjukkan di mana mereka: **Settings → Open
+agents**, di sebelah Access.
+
+Halaman itu dibuat seperti halaman Access, dan masing-masing menunjukkan di mana yang lain: di bawah
+judulnya, satu baris kembali ke **Access**, untuk agent yang meminta kode. Lalu dua baris untuk agent yang
+dipilih, dengan namanya: berapa yang terpakai hari ini, dan dua batasnya (tiap agent punya sendiri), dengan
+jalan untuk mengubahnya di tab **Access** agent itu sendiri. Lalu baris yang tetap di atas layar: tiga tab,
+filter, dan agent-nya. Pilihan agent-nya hanya berisi agent
+yang terbuka untuk siapa saja, tanpa "All": satu agent sekali waktu, dan gak pernah menggabungkan orang dari
+dua agent dalam satu daftar.
+
+- **Wrote**: percakapannya dengan orang yang gak kamu kenal, satu baris masing-masing: siapa (namanya, atau
+  alamatnya), "in a group" kalau di grup, aplikasinya, apa yang pertama mereka tanyakan, dan kapan. **Read**
+  membuka percakapannya; **Block** menahan pengirim itu mulai pesan berikutnya. Hanya admin yang bisa
+  membacanya; **Show more** membaca yang berikutnya di bawah yang sudah tampil.
+- **Let in**: siapa pun yang sudah diizinkan masuk di koneksinya lewat kode atau daftar sebelum agent itu
+  dibuka, dan id yang diizinkan pengaturan server di salah satu koneksinya, dengan **Revoke** dan **Block**.
+  Mereka bukan orang asing baginya: mereka dijawab sebagai orang yang kamu izinkan, dan tetap begitu setelah
+  agent itu ditutup.
+- **Blocked**: orang yang ditahan di koneksinya, dengan **Unblock**. Setelah di-unblock, pesan berikutnya
+  dijawab, seperti pesan siapa pun selama agent itu terbuka, dan **Wrote** langsung menunjukkannya.
+
+Filter-nya mempersempit tab yang sedang terbuka, seperti di halaman Access. Kalau sebuah tab punya lebih
+banyak dari yang dikirim, baris di atas daftarnya bilang begitu: ketik nama, nomor, atau (di **Wrote**) kata
+dari pertanyaan pertama mereka, lalu tekan **Search everyone**, yang mencari di semuanya, di koneksi agent itu
+sendiri; **Show the newest** mengembalikan daftarnya. Pencarian yang masih berjalan, atau yang gak kembali,
+dikatakan begitu, gak pernah dijawab dengan daftar yang sebelumnya; dan **Let in** serta **Blocked** gak
+menampilkan siapa pun sampai halaman itu tahu koneksi mana milik siapa, dan bilang begitu kalau Nouride gak
+memberi tahu. Di halaman Access, **Search everyone** juga mencari di koneksinya sendiri: agent yang dipilih,
+atau semua yang bukan milik agent terbuka.
+
+Tab **Access** agent itu sendiri menyimpan kartu pendek sebagai ganti daftarnya: berapa percakapannya dengan
+orang yang menulis, berapa orang yang menulis hari ini, berapa yang diblokir, dan **Open the list**, masing-masing
+membuka tabnya di Open agents. Di
+daftar Agents, di halamannya, dan di daftar chat, kata **Open** ada di sebelah namanya.
 
 Percakapan itu gak masuk ke daftar chat kamu sendiri, dan hilang saat percakapan seumurnya hilang
-(`retention.session_days`), termasuk file-nya.
+(`retention.session_days`), termasuk file-nya. Kalau ditutup lagi, agent itu dan pengirim di koneksinya
+kembali ke halaman Access.
 
 Dari terminal, `nouride config check` dan `nouride doctor` menyebut agent mana yang terbuka, di koneksi
 mana dan dalam batas berapa.

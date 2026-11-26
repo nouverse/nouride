@@ -197,11 +197,14 @@ describe("the connection", () => {
     await eventually(() => gateway.status === "reconnecting", 2_000, "the drop to reconnect");
   });
 
-  test("an expired session is dead and announced", async () => {
+  test("an expired session is tried once more first, unannounced; said again, it is dead and announced", async () => {
     const { gateway, fake, events } = await connected();
     fake.push({ type: "session_expired" });
+    await eventually(() => gateway.status === "reconnecting", 2_000, "the old login to be tried again");
+    expect(events.some((e) => e.type === "session_expired")).toBe(false);
+    fake.push({ type: "session_expired" });
     await eventually(() => gateway.status === "dead", 2_000, "the expiry to end it");
-    expect(events.some((e) => e.type === "session_expired")).toBe(true);
+    expect(events.filter((e) => e.type === "session_expired")).toHaveLength(1);
   });
 
   test("relinked after expiring, a drop is a reconnect again", async () => {
@@ -215,6 +218,7 @@ describe("the connection", () => {
   test("a fresh bridge after an expiry is not still expired", async () => {
     const channels: ReturnType<typeof fakeChannel>[] = [];
     const { gateway } = await connected({ channels });
+    channels.at(-1)!.push({ type: "session_expired" });
     channels.at(-1)!.push({ type: "session_expired" });
     await eventually(() => gateway.status === "dead", 2_000, "the expiry to end it");
     await gateway.start();
