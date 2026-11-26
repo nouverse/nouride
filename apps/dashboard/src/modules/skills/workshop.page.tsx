@@ -13,6 +13,7 @@
  * pool. Hence tabs over one page rather than two pages.
  *
  *   Live     the pool: what the agents are actually carrying
+ *   Off      the rest of the pool: what no agent is given now (`skillIsLive`)
  *   Pending  the queue, for working through it — opened first when something waits on you
  *   Explore  skills somebody else wrote
  *
@@ -33,7 +34,7 @@ import { ListCard } from "@/commons/components/ui/ListCard";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
-import { PoolList } from "./pool.list";
+import { PoolList, skillIsLive, type UnsavedTexts } from "./pool.list";
 import { DecidedStrip, DraftList } from "./drafts.panel";
 import { SeenPanel } from "./seen.panel";
 import { LearningSettingsPanel } from "./learning-settings";
@@ -41,7 +42,7 @@ import { ExplorePanel } from "./explore.panel";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
 
-type Tab = "live" | "pending" | "explore";
+type Tab = "live" | "off" | "pending" | "explore";
 
 export default function SkillWorkshopPage() {
   const me = useMe();
@@ -54,6 +55,19 @@ export default function SkillWorkshopPage() {
   // narrowed one while you looked at the other would hide what you were looking for.
   const [pendingQuery, setPendingQuery] = useState("");
   const [poolQuery, setPoolQuery] = useState("");
+  // A skill's text typed and not saved, kept by the page: a switch that moves its row to the other list, or empties the
+  // list it was in, takes the row and the list away, and the typing went with them.
+  const [texts, setTexts] = useState<Record<string, string>>({});
+  const unsaved: UnsavedTexts = {
+    texts,
+    keep: (name, next) =>
+      setTexts((was) => {
+        const kept = { ...was };
+        if (next === null) delete kept[name];
+        else kept[name] = next;
+        return kept;
+      }),
+  };
 
   const skills = catalog.data?.skills ?? [];
   const pending = drafts.data?.pending ?? [];
@@ -65,7 +79,10 @@ export default function SkillWorkshopPage() {
   const names = new Map(skills.flatMap((skill) => skill.agents.map((agent) => [agent.id, agent.displayName] as const)));
   const agentName = (id: string) => names.get(id) ?? id;
 
-  const visibleSkills = useTextFilter(skills, poolQuery, (skill) => [skill.name, skill.description]);
+  // One pool, two lists: what some agent is offered, and what none is. A switch on a row moves it to the other list.
+  const live = skills.filter(skillIsLive);
+  const off = skills.filter((skill) => !skillIsLive(skill));
+  const visibleSkills = useTextFilter(tab === "off" ? off : live, poolQuery, (skill) => [skill.name, skill.description]);
   const visiblePending = useTextFilter(pending, pendingQuery, (draft) => [draft.name, draft.description, draft.triggerReason, draft.agentId]);
 
   if (catalog.isPending) {
@@ -74,7 +91,7 @@ export default function SkillWorkshopPage() {
 
   const showPending = tab === "pending";
   const explore = tab === "explore" ? <ExplorePanel editable={editable} onReview={() => setTab("pending")} /> : null;
-  const showPool = tab === "live";
+  const showPool = tab === "live" || tab === "off";
 
   return (
     <div className="space-y-6 *:animate-fade">
@@ -102,7 +119,8 @@ export default function SkillWorkshopPage() {
       >
         <SegmentedTabs
           tabs={[
-            { value: "live" as Tab, label: "Live", after: <Count n={skills.length} /> },
+            { value: "live" as Tab, label: "Live", after: <Count n={live.length} /> },
+            { value: "off" as Tab, label: "Off", after: <Count n={off.length} /> },
             // The only count worth colouring: it is the one that means somebody has to do something.
             { value: "pending" as Tab, label: "Pending", after: <Count n={pending.length} highlight={pending.length > 0} /> },
             // Skills somebody else wrote. Installing one lands it on Pending, so it sits beside it.
@@ -142,17 +160,28 @@ export default function SkillWorkshopPage() {
       {showPending ? <SeenPanel editable={editable} agentName={agentName} /> : null}
 
       {showPool ? (
-        <ListCard title={`${skills.length} skill${skills.length === 1 ? "" : "s"} live`}>
+        <ListCard
+          title={tab === "off" ? `${off.length} skill${off.length === 1 ? "" : "s"} turned off` : `${live.length} skill${live.length === 1 ? "" : "s"} live`}
+          description={
+            tab === "off"
+              ? "Skills no agent is given right now. One marked Off for every agent comes back with its power button; any other, by switching it on for an agent that can use it."
+              : undefined
+          }
+        >
           {skills.length === 0 ? (
             <EmptyState
               pose="star"
               title="The pool is empty"
               description="An agent writes one when it works out how to do something, or you can find one on the Explore tab."
             />
+          ) : tab === "off" && off.length === 0 ? (
+            <p className="py-6 text-center text-sm text-base-content/65">Every skill is given to at least one agent.</p>
+          ) : tab === "live" && live.length === 0 ? (
+            <p className="py-6 text-center text-sm text-base-content/65">No agent is given a skill right now. They are under Off.</p>
           ) : visibleSkills.length === 0 ? (
             <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{poolQuery}”.</p>
           ) : (
-            <PoolList skills={visibleSkills} editable={editable} />
+            <PoolList skills={visibleSkills} editable={editable} unsaved={unsaved} />
           )}
           {/* Where the pool is kept, for whoever runs the server (0.8.19): it was the card's description. */}
           {catalog.data?.poolDir ? (

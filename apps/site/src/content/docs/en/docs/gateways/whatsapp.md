@@ -71,12 +71,18 @@ In a group that two of your numbers are in, a message that tags one number is th
 to answer; one that tags nobody is answered once, by the agent that holds the install, not by each
 number.
 
-:::caution[A number that answers strangers]
+:::caution[What a number risks]
+Nouride connects to WhatsApp unofficially, the way WhatsApp Web does (through Baileys, an open-source
+library), not through WhatsApp's official Business API. WhatsApp may restrict or ban a number it sees
+acting like a bot: answering many people it does not know, sending a lot, or replying to a broadcast. A
+ban cannot be undone from Nouride, and the number's chats may be lost. Use a number you can afford to
+lose, not your personal one, and see [error 463](#error-463-the-failure-that-reads-like-a-bug) for
+what a restriction looks like.
+
 An agent that is [open to everyone](/en/docs/manual/access/#an-agent-open-to-everyone) answers anyone
-who writes to its number. WhatsApp may restrict or close a number that answers many people it does
-not know: Nouride is linked to the number the way WhatsApp Web is, not through the service WhatsApp
-sells to businesses. Use a number you can afford to lose, and see [error 463](#error-463-the-failure-that-reads-like-a-bug)
-for what a restriction looks like.
+who writes to its number: the riskiest way to use one. Start it with low daily limits. The dashboard
+says all this where you add a number, where you open an agent that has one, and on an open agent's
+Access page and number.
 :::
 
 ## The bridge

@@ -65,20 +65,23 @@ describe("an agent with two WhatsApp numbers", () => {
       expect(cardOf(host, "whatsapp:promo")?.textContent).not.toContain("Device Linked");
       expect(host.textContent).not.toContain("whatsapp:home");
       // Nothing is said of strangers for an agent that is not open.
-      expect(host.querySelector("[data-open-number-note]")).toBeNull();
+      expect(host.querySelector("[data-whatsapp-risk]")).toBeNull();
     });
   });
 
   test("open to everyone: each of its numbers says what that may cost the number, and its Telegram bot does not", async () => {
     answers("open");
     await renderPage("/agents/nora/gateways", async (host) => {
-      await eventually(() => host.querySelectorAll("[data-open-number-note]").length === 2, 3_000, "the note on both numbers");
-      const said = cardOf(host, "whatsapp:shop")?.querySelector("[data-open-number-note]")?.textContent?.replace(/\s+/g, " ").trim();
-      expect(said).toBe(
-        "This agent answers anyone who writes to it. WhatsApp may restrict or close a number that answers many people it does not know: Nouride is linked to this number the way WhatsApp Web is, not through the service WhatsApp sells to businesses. A number you can afford to lose is the safer one to use here.",
-      );
-      expect(cardOf(host, "whatsapp:promo")?.querySelector("[data-open-number-note]")).not.toBeNull();
-      expect(cardOf(host, "telegram:nora")?.querySelector("[data-open-number-note]")).toBeNull();
+      await eventually(() => host.querySelectorAll("[data-whatsapp-risk]").length === 2, 3_000, "the note on both numbers");
+      const said = [...(cardOf(host, "whatsapp:shop")?.querySelectorAll("[data-whatsapp-risk] li") ?? [])].map((item) => item.textContent?.replace(/\s+/g, " ").trim());
+      expect(said).toEqual([
+        "This agent answers anyone. That is the riskiest way to use a WhatsApp number, so start with low daily limits.",
+        "Nouride connects to WhatsApp unofficially, the way WhatsApp Web does (through Baileys), not through WhatsApp's official Business API.",
+        "WhatsApp may restrict or ban a number it sees acting like a bot: answering many people it doesn't know, sending a lot, or replying to a broadcast. A ban can't be undone from here, and the number's chats may be lost.",
+        "Use a number you can afford to lose, not your personal one.",
+      ]);
+      expect(cardOf(host, "whatsapp:promo")?.querySelector("[data-whatsapp-risk]")).not.toBeNull();
+      expect(cardOf(host, "telegram:nora")?.querySelector("[data-whatsapp-risk]")).toBeNull();
     });
   });
 });

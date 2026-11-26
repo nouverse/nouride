@@ -275,6 +275,7 @@ own approves everything waiting, or the Skills Workshop, whose tabs are one work
 | Tab | Shows |
 |---|---|
 | **Live** | the pool: what the agents are actually carrying. Opened first when nothing waits on you |
+| **Off** | the skills no agent is given right now: switched off for every agent, switched on for none, or on only for an agent that cannot use them (a coding CLI without a tool they need, an agent turned off). One marked *Off for every agent* comes back with its power button; any other, by switching it on for an agent that can use it |
 | **Pending** | the queue, plus what was recently decided, and under it what learning holds and did lately. Opened first when something waits on you |
 | **Explore** | Nouverse's list of public skills, its picks first, with one search over it. Installing one puts it on Pending |
 
@@ -296,7 +297,7 @@ its reason. "Looked, and found nothing to write down: a question answered, nothi
 done again is one line that says how often, "(7 times)", with the newest shown. This is where to look
 when you expected a skill and none came.
 
-**How often a skill is read** is on its row in **Live**: "read 12 times, 3 times since it was
+**How often a skill is read** is on its row, under **Live** or **Off**: "read 12 times, 3 times since it was
 changed". The second number is how often it was opened since learning last changed it, which is what
 says a lesson written into it is being used. Reads are counted from 0.8.42 on.
 

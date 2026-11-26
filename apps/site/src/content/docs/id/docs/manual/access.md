@@ -145,7 +145,18 @@ bantuan, bot untuk sebuah acara. Yang terbuka itu agent-nya, bukan instalasinya.
 tetap meminta orang asing untuk pairing.
 
 Di halaman **Access** agent itu, pilih **Open to everyone**, pilihan keempat di bagian *Who can write
-to this agent*. Ia menjelaskan artinya sebelum kamu ambil, lalu meminta dua angka:
+to this agent*. Ia menjelaskan artinya sebelum kamu ambil:
+
+- Siapa pun yang menemukannya bisa menulis ke dia, dan dia menjawab atas namamu. Orang bisa mencoba
+  membujuknya mengatakan hal yang gak akan kamu katakan, jadi jauhkan apa pun yang pribadi dari file
+  persona-nya, catatannya, dan apa yang kamu buka untuk semua orang.
+- Setiap jawaban dibayar dari akun model-mu; dua angka di bawah adalah cara kamu mengendalikannya.
+- Apa yang dikirim orang ke dia disimpan di server ini, bersama chat-nya.
+- Kalau dia punya nomor WhatsApp, nomor itu berisiko: lihat [peringatan di halaman
+  WhatsApp](/id/docs/gateways/whatsapp/#satu-nomor-untuk-tiap-agent). Form-nya juga mengatakannya,
+  begitu juga halaman Access selama dia terbuka.
+
+Lalu ia meminta dua angka:
 
 - **Token terbanyak yang boleh dipakainya dalam sehari.** Semua yang ia habiskan dihitung, siapa pun
   yang dijawabnya. Begitu jatah hari itu habis, ia memberi tahu orang bahwa ia tutup sampai besok,

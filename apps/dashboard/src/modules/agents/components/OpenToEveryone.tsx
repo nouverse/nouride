@@ -19,6 +19,7 @@ import { connectionSaid } from "@/commons/lib/platform";
 import { canWrite, isAdmin, useMe } from "@/commons/lib/session";
 import { ErrorNote } from "@/commons/components/ui/ui";
 import { useSaved } from "@/commons/hooks/use-saved";
+import { WhatsAppRisk } from "./WhatsAppRisk";
 
 /** What the choice says of itself where an agent may take it. */
 export const OPEN_MEANS = "Anyone who finds it is answered with no code, like a shop's front desk. It answers from what you opened to everyone under Knowledge, and nothing else.";
@@ -45,6 +46,9 @@ export function answersFrom(collections: readonly string[] | undefined): string 
   if (collections.length === 0) return "Nothing under Knowledge is opened to everyone for it yet, so it answers from its persona files and its notes alone.";
   return `It answers strangers from ${collections.length === 1 ? "this collection" : "these collections"} under Knowledge, opened to everyone: ${collections.join(", ")}.`;
 }
+
+/** Whether one of its connections is a WhatsApp number: opening it puts that number at risk (`WhatsAppRisk`). */
+const onWhatsApp = (connections: readonly string[]): boolean => connections.some((id) => id.startsWith("whatsapp:"));
 
 /** A whole number of 1 or more, as typed; null for anything else. */
 export function limitTyped(text: string): number | null {
@@ -113,12 +117,15 @@ function OpenForm({ agent, open, onClose }: { agent: AgentSummary; open: AgentOp
       {!isOpen ? (
         <ul className="list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-base-content/80">
           <li>{reachedOn(open.connections)}</li>
-          <li>It may say whatever its persona files and its notes hold. Read them as a stranger would.</li>
+          <li>It answers in your name, and people may try to talk it into saying things you would not. Keep anything private out of its persona files, its notes and what you open to everyone.</li>
           {answersFrom(open.collections) ? <li data-open-collections>{answersFrom(open.collections)}</li> : null}
           <li>While it is open it can only search and read what you opened to everyone under Knowledge, read a file someone sends it, and send a file from that knowledge. Its other tools are switched off, whatever its Tools list says.</li>
           <li>It remembers nothing a chat tells it, and knows nothing about you or the people you let in.</li>
+          <li>Every answer is paid from your model account: the daily limits below are how you keep that in check.</li>
+          <li>What people send it is kept on this server, with its chats.</li>
         </ul>
       ) : null}
+      {onWhatsApp(open.connections) ? <WhatsAppRisk open /> : null}
 
       <div className="flex flex-wrap items-start gap-4">
         {number("Most tokens it may use in a day", tokens, setTokens, maxDailyTokens !== null) /* plain-words-ok: tokens, the unit a model's use is billed in, as the spend limits name it */}
@@ -209,6 +216,11 @@ export function OpenDetails({ agent, open, choosing, onDone }: { agent: AgentSum
           {open.today && open.limits ? <span className="text-base-content/65 mt-1 block text-xs">{todaySaid(open.today, open.limits.maxDailyTokens)}</span> : null}
         </span>
       </p>
+      {onWhatsApp(open.connections) ? (
+        <div className="mt-3">
+          <WhatsAppRisk open />
+        </div>
+      ) : null}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {admin ? (
           <button type="button" className="btn btn-sm" onClick={() => setEditing(true)}>

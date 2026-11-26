@@ -73,12 +73,18 @@ Di grup yang dimasuki dua nomor kamu, pesan yang men-tag satu nomor dijawab agen
 pesan yang gak men-tag siapa pun dijawab sekali, oleh agent yang memegang instalasi, bukan oleh tiap
 nomor.
 
-:::caution[Nomor yang menjawab orang asing]
-Agent yang [terbuka untuk semua orang](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang)
-menjawab siapa pun yang menulis ke nomornya. WhatsApp bisa membatasi atau menutup nomor yang menjawab
-banyak orang yang gak dikenalnya: Nouride tertaut ke nomor itu seperti WhatsApp Web, bukan lewat
-layanan yang dijual WhatsApp untuk bisnis. Pakai nomor yang kamu rela kehilangan, dan lihat
+:::caution[Risiko sebuah nomor]
+Nouride tersambung ke WhatsApp secara tidak resmi, seperti WhatsApp Web (lewat Baileys, library
+open-source), bukan lewat Business API resmi WhatsApp. WhatsApp bisa membatasi atau mem-ban nomor yang
+dilihatnya bertingkah seperti bot: menjawab banyak orang yang gak dikenalnya, mengirim banyak pesan, atau
+membalas siaran. Ban gak bisa dibatalkan dari Nouride, dan chat di nomor itu bisa hilang. Pakai nomor
+yang kamu rela kehilangan, bukan nomor pribadimu, dan lihat
 [error 463](#error-463-kegagalan-yang-kelihatan-seperti-bug) untuk seperti apa pembatasan itu.
+
+Agent yang [terbuka untuk semua orang](/id/docs/manual/access/#agent-yang-terbuka-untuk-semua-orang)
+menjawab siapa pun yang menulis ke nomornya: cara paling berisiko memakai sebuah nomor. Mulai dengan
+batas harian yang rendah. Dashboard mengatakan semua ini saat kamu menambah nomor, saat membuka agent yang
+punya nomor, dan di halaman Access serta nomor milik agent yang terbuka.
 :::
 
 ## Bridge-nya

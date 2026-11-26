@@ -197,6 +197,7 @@ them lying. But they are one *workflow*: you judge a draft by what is already in
 | Tab | Shows |
 |---|---|
 | **Live** | the pool: what the agents are actually carrying — opened first when nothing waits on you |
+| **Off** | what no agent is given now, by the catalog's `offered` per agent: switched off for every agent (`[skills] off`), on for none, or on only for an agent that cannot use it (a coding CLI without a tool it needs, an agent turned off); a row switched off for every agent says so, since its "x/N on" are the agents' own switches kept for when it comes back, and its power button is the way back |
 | **Pending** | the queue, plus what was recently decided, for working through it — opened first when something waits |
 | **Explore** | opens on Nouverse's list of public skills, its picks first, and searches it on a button (0.8.38), as MCP's Explore does its catalog; ClawHub's most downloaded and the hubs themselves when Nouverse's list does not answer; a GitHub repository by its address; installing one makes it a pending draft, adjusted to Nouride's frontmatter, with nothing run |
 

@@ -11,7 +11,7 @@ import { eventually } from "./wait.ts";
 
 useMountHarness();
 
-const row = (id: string, displayName: string, extra: Record<string, unknown> = {}) => ({ id, displayName, enabled: true, decided: false, missingTools: [], ...extra });
+const row = (id: string, displayName: string, extra: Record<string, unknown> = {}) => ({ id, displayName, enabled: true, decided: false, missingTools: [], offered: !extra.notForCli, ...extra });
 
 test("never given a tool the skill needs: a quiet mark, not a yellow \"!\" to fix", async () => {
   const nouride = {

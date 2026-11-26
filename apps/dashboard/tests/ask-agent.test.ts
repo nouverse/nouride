@@ -1,9 +1,9 @@
 /**
  * "Ask Nouva to set it up" (0.8.19): where the dashboard cannot do a thing and the orchestrator can, the button opens
  * the chat over the page, with the orchestrator and a message written in the box, for the person to read and send.
- * Never sent by the page: `?initialMessage=` once sent itself again on every reload. And never at the cost of what the
- * person had written: the message goes under it. Through the whole app, from the Models page's Coding CLIs card, where
- * it is first used.
+ * Never sent by the page: `?initialMessage=` once sent itself again on every reload. The message replaces what the box
+ * held: put under it, the ask from the page before sat over this one and the two went as one request. Through the whole
+ * app, from the Models page's Coding CLIs card, where it is first used.
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -58,28 +58,55 @@ describe("Ask Nouva to set it up", () => {
     }
   });
 
-  test("what the person had written in the box is kept, with the message under it, whichever agent the chat was on", async () => {
+  test("what the box held, an ask from another page, is replaced by the message, whichever agent the chat was on", async () => {
     answer({ ...AT_REST, ...CLIS });
     dom.localStorage.setItem(LAST_AGENT_KEY, JSON.stringify("nix"));
     const posted = recordPosts();
     try {
       await renderPage("/models?tab=clis", async (host) => {
         await eventually(() => floatButton(host) !== null && ask(host) !== undefined, 3_000, "the page");
-        // The chat is open on Nix, with something half written.
+        // The chat is open on Nix, holding the ask another page wrote there and nobody sent.
         floatButton(host)!.click();
         await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nix…", 3_000, "Nix's chat");
-        type(boxIn(card())!, "before I forget: the printer");
+        type(boxIn(card())!, "Update Claude Code on this server: run `nouride cli update claude-code`, and tell me how it went.");
         await eventually(() => sendIn(card())?.disabled === false, 2_000, "typed");
         // Pressed as a browser presses it: the button on the page has the focus, outside the open chat.
         ask(host)!.focus();
         ask(host)!.click();
-        // The orchestrator is asked, as the button says; what was written came along, and the message is under it.
+        // The orchestrator is asked, as the button says, and the box holds this page's message alone.
         await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nouva…", 3_000, "Nouva's chat");
-        await eventually(() => boxIn(card())!.value === `before I forget: the printer\n${MESSAGE}`, 2_000, "both in the box");
+        await eventually(() => boxIn(card())!.value === MESSAGE, 2_000, "the message alone in the box");
         // And the caret is brought to it, from the page.
         await eventually(() => focused() === boxIn(card()), 2_000, "the box focused, from the page");
       });
       expect(sent(posted.posts)).toEqual([]);
+    } finally {
+      posted.restore();
+    }
+  });
+
+  test("a file attached in the box and not sent goes with what the box held: the message is sent alone", async () => {
+    answer({ ...AT_REST, ...CLIS, "/chat/upload": { status: 200, body: { files: [{ path: "/srv/uploads/shot.png", name: "shot.png", mimeType: "image/png", bytes: 4 }] } } });
+    dom.localStorage.setItem(LAST_AGENT_KEY, JSON.stringify("nix"));
+    const posted = recordPosts({ "/chat/send": { status: 200, body: { sessionId: "ses_1", chatId: "web-1", messageId: "msg_9", agentId: "nouva" } } });
+    try {
+      await renderPage("/models?tab=clis", async (host) => {
+        await eventually(() => floatButton(host) !== null && ask(host) !== undefined, 3_000, "the page");
+        floatButton(host)!.click();
+        await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nix…", 3_000, "Nix's chat");
+        // A screenshot pasted into Nix's box, and not sent.
+        const paste = new (dom as unknown as typeof globalThis).Event("paste", { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, "clipboardData", { value: { files: [new File([new Uint8Array(4)], "shot.png", { type: "image/png" })] } });
+        boxIn(card())!.dispatchEvent(paste);
+        await eventually(() => (card()?.textContent ?? "").includes("shot.png"), 3_000, "the file attached");
+        ask(host)!.click();
+        await eventually(() => boxIn(card())?.getAttribute("placeholder") === "Message Nouva…" && boxIn(card())!.value === MESSAGE, 3_000, "the message in Nouva's box");
+        await eventually(() => !(card()?.textContent ?? "").includes("shot.png"), 2_000, "the file gone with what the box held");
+        await eventually(() => sendIn(card())?.disabled === false, 2_000, "ready to send");
+        sendIn(card())!.click();
+        await eventually(() => sent(posted.posts).length === 1, 3_000, "sent");
+      });
+      expect(sent(posted.posts).map((post) => post.body)).toEqual([{ text: MESSAGE, sessionId: "ses_1", page: { path: "/dashboard/models?tab=clis", title: "Models" } }]);
     } finally {
       posted.restore();
     }

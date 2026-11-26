@@ -51,6 +51,8 @@ interface CatalogEntry {
     missingTools: string[];
     /** A coding CLI's agent: tools it is never given (`neverForCli`) — the skill is not its, whatever its switch says. */
     notForCli?: string[];
+    /** Given the skill now (`offeredTo`): what the Workshop's Live and Off lists are split by. */
+    offered: boolean;
   }[];
   lastUsedAt: number | null;
   reads: number;
@@ -497,6 +499,17 @@ function toolsGap(agent: LoadedAgent, skill: Skill): { missingTools: string[]; n
 }
 
 /**
+ * Whether the agent is given the skill now, which is what the Workshop's Live and Off lists are split by. Its own switch
+ * is not enough: a skill off for every agent is given to none, an agent turned off runs nothing, and a coding CLI is
+ * given only the skills whose every tool it holds or is lent (`syncSkills`), where an agent Nouride runs is given one it
+ * lacks a tool for, marked unavailable.
+ */
+function offeredTo(agent: LoadedAgent, skill: PoolSkill, enabled: boolean, gap: ReturnType<typeof toolsGap>): boolean {
+  if (skill.offGlobally || !enabled || agent.config.enabled === false) return false;
+  return !agent.config.external || (gap.missingTools.length === 0 && gap.notForCli === undefined);
+}
+
+/**
  * Everything in the pool and everything built in, as one list, by the prompt's rules (`agentSkillPool`): a pool skill
  * shadows a built-in of the same name, so the Workshop offers no row the prompt would never render. States are
  * applied per agent later.
@@ -533,15 +546,20 @@ async function catalog(deps: ControlDeps, agents: LoadedAgent[]): Promise<Catalo
      * one thing somebody looking at this page needs.
      */
     offGlobally: skill.offGlobally,
-    agents: agents.map((agent) => ({
-      id: agent.config.id,
-      displayName: agent.config.displayName,
-      enabled: skillEnabled(agent.config.skills, skill, agent.config.id),
-      ...toolsGap(agent, skill),
-      // Whether the agent's `skills.toml` says anything about it, so the Workshop can tell "on
-      // because nobody has decided" from "on because somebody chose that".
-      decided: skill.name in agent.config.skills,
-    })),
+    agents: agents.map((agent) => {
+      const enabled = skillEnabled(agent.config.skills, skill, agent.config.id);
+      const gap = toolsGap(agent, skill);
+      return {
+        id: agent.config.id,
+        displayName: agent.config.displayName,
+        enabled,
+        ...gap,
+        // Whether the agent's `skills.toml` says anything about it, so the Workshop can tell "on
+        // because nobody has decided" from "on because somebody chose that".
+        decided: skill.name in agent.config.skills,
+        offered: offeredTo(agent, skill, enabled, gap),
+      };
+    }),
     lastUsedAt: usage.get(skill.path)?.readAt ?? null,
     reads: usage.get(skill.path)?.reads ?? 0,
     readsSinceChange: usage.get(skill.path)?.readsSinceChange ?? 0,

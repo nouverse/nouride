@@ -292,6 +292,7 @@ alur kerja:
 | Tab | Menampilkan |
 |---|---|
 | **Live** | kumpulannya: apa yang benar-benar dibawa para agent. Dibuka duluan kalau tidak ada yang menunggu kamu |
+| **Off** | skill yang sedang tidak diberikan ke agent mana pun: dimatikan untuk semua agent, tidak dinyalakan untuk siapa pun, atau hanya nyala untuk agent yang tidak bisa memakainya (coding CLI tanpa tool yang dibutuhkan, agent yang dimatikan). Yang bertanda *Off for every agent* kembali lewat tombol daya-nya; yang lain, dengan menyalakannya untuk agent yang bisa memakainya |
 | **Pending** | antreannya, plus yang baru-baru ini diputuskan, dan di bawahnya apa yang sedang ditahan dan dilakukan proses belajar. Dibuka duluan kalau ada yang menunggu kamu |
 | **Explore** | daftar skill publik milik Nouverse, pilihannya di depan, dengan satu pencarian di atasnya. Memasang salah satunya menaruhnya di Pending |
 
@@ -313,7 +314,7 @@ question answered, nothing done." Hal yang sama dilakukan lagi jadi satu baris y
 kali, "(7 times)", dengan yang terbaru ditampilkan. Di sinilah tempat melihat kalau kamu mengharapkan
 sebuah skill dan gak ada yang muncul.
 
-**Seberapa sering sebuah skill dibaca** ada di barisnya di **Live**: "read 12 times, 3 times since it
+**Seberapa sering sebuah skill dibaca** ada di barisnya, di **Live** atau **Off**: "read 12 times, 3 times since it
 was changed". Angka kedua adalah berapa kali ia dibuka sejak terakhir diubah oleh proses belajar, dan
 itulah yang menunjukkan pelajaran yang ditulis ke dalamnya memang dipakai. Pembacaan dihitung sejak
 0.8.42.

@@ -48,7 +48,7 @@ Agents
         Look            kucingnya di Office
   Workspace         tempat para agent bekerja: folder tiap agent, dan folder bersama   (admin)
 
-Skills              Skills Workshop: Live · Pending · Explore
+Skills              Skills Workshop: Live · Off · Pending · Explore
 Connectors          server MCP instalasi: Installed · Explore, saklar per agent
 Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, dan graph
@@ -206,7 +206,7 @@ Kebanyakan halaman punya tombol di header-nya, **Ask** dan nama orchestrator-mu:
 Agents, *to make an automation* di Automations, *to change it* di halaman satu automation, *to add a model* di Models, dan seterusnya. Tombol itu membuka chat di atas halaman yang sedang kamu buka, dengan orchestrator-mu, dan menaruh
 permintaan untuk halaman itu di kotaknya, dengan bagian kosong (…) untuk yang kamu mau. Kamu tetap di halaman itu.
 Lengkapi lalu kirim: tidak ada yang terkirim sebelum kamu menekan kirim, dan agent tetap minta izin untuk hal yang
-berisiko. Kalau kamu sudah menulis sesuatu di kotaknya, permintaannya ditambahkan di bawahnya. Tombolnya ada untuk
+berisiko. Apa pun yang sudah ada di kotaknya diganti oleh permintaan itu, termasuk permintaan dari halaman lain. Tombolnya ada untuk
 yang boleh chat (admin atau operator), dan hanya kalau orchestrator sudah dipilih. Di HP tulisannya **Ask Nouva**.
 
 ## Automations

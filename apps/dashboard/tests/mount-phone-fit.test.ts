@@ -28,7 +28,7 @@ const skill = {
   missing: [],
   needsTools: ["exec", "web_fetch", "web_search", "read"],
   offGlobally: false,
-  agents: [{ id: "nouva", displayName: "Nouva", enabled: true, decided: false, missingTools: [] }],
+  agents: [{ id: "nouva", displayName: "Nouva", enabled: true, decided: false, missingTools: [], offered: true }],
   lastUsedAt: null,
 };
 

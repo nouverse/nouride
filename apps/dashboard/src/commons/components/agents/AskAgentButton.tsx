@@ -6,7 +6,8 @@
  *
  * The chat it opens is the one that floats over the page (`lib/floating-chat.ts`), so the person stays on the page
  * they are asking about, and the agent is told which page that is. It went to the Chats page, and the page asked
- * about was left behind. What the box already holds is kept, the message under it (`withDraft`). Drawn once the
+ * about was left behind. The message replaces what the box held (`useDraft`): put under it, the ask from the page
+ * before sat over this one, and the two went as one request. Drawn once the
  * orchestrator is known, since its name is on the button: "Ask your orchestrator" asks a person to know the word.
  * Not for a viewer, who may read the dashboard but send nothing, a chat message included, and has no floating chat.
  *

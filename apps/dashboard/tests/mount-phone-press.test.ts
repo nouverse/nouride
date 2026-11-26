@@ -207,7 +207,7 @@ describe("what a page draws only once it has something to show", () => {
 
   test("the Skills page's chips, one an agent, each pressed to switch the skill for it", async () => {
     let chips: string[][] = [];
-    const agent = (id: string, displayName: string, extra: Record<string, unknown> = {}) => ({ id, displayName, enabled: true, decided: false, missingTools: [], ...extra });
+    const agent = (id: string, displayName: string, extra: Record<string, unknown> = {}) => ({ id, displayName, enabled: true, decided: false, missingTools: [], offered: extra.enabled !== false, ...extra });
     const skill = {
       name: "pdf", description: "Read a PDF.", scope: "shared", path: "/srv/nouride/skills/pdf/SKILL.md", requires: [], missing: [], needsTools: ["read"], offGlobally: false, lastUsedAt: null,
       agents: [agent("nouva", "Nouva"), agent("nero", "Nero", { enabled: false }), agent("nix", "Nix", { missingTools: ["read"] })],

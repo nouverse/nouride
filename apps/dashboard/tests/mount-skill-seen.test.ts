@@ -40,7 +40,7 @@ describe("the words", () => {
   });
 });
 
-const agent = { id: "nexa", displayName: "Nexa", enabled: true, decided: false, missingTools: [] };
+const agent = { id: "nexa", displayName: "Nexa", enabled: true, decided: false, missingTools: [], offered: true };
 const CATALOG = ok({
   skills: [{ name: "pdf", description: "Read a PDF.", scope: "shared", path: "/srv/skills/pdf/SKILL.md", requires: [], missing: [], needsTools: [], offGlobally: false, lastUsedAt: 1_795_000_000_000, reads: 12, readsSinceChange: 3, agents: [agent] }],
   software: [],

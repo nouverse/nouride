@@ -47,7 +47,7 @@ Agents
         Look            its cat in the Office
   Workspace         where the agents work: each agent's own folder, and the one they share   (admin)
 
-Skills              the Skills Workshop: Live · Pending · Explore
+Skills              the Skills Workshop: Live · Off · Pending · Explore
 Connectors          the install's MCP servers: Installed · Explore, a switch per agent
 Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, and a graph
@@ -198,8 +198,8 @@ Agents, *to make an automation* on Automations, *to change it* on one automation
 and so on.
 It opens the chat over the page you are on, with your orchestrator, and puts a request for that page in the box, with
 a gap (…) for what you want. You stay on the page. Finish the request and send it: nothing is sent until you do, and
-the agent still asks before anything risky. If you had already written something in the box, the request is added
-under it. The button is there for whoever may chat (an admin or an operator), and only once an orchestrator is set.
+the agent still asks before anything risky. Whatever was in the box is replaced by the request, an ask from another page
+included. The button is there for whoever may chat (an admin or an operator), and only once an orchestrator is set.
 On a phone it says **Ask Nouva**.
 
 ## Automations
