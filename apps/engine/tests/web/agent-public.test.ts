@@ -162,7 +162,7 @@ describe("an open agent's page", () => {
     const { status, body } = await h.ask("/agents/nora/public");
     expect(status).toBe(200);
     const listed = body as unknown as AgentPublic;
-    expect(listed.total).toBe(3);
+    expect({ total: listed.total, people: listed.people }).toEqual({ total: 3, people: 3 });
     expect(listed.conversations.map((one) => ({ where: `${one.gatewayId} ${one.chatId}`, kind: one.kind, sender: one.sender, title: one.title }))).toEqual([
       { where: "telegram:nora -200", kind: "group", sender: { id: "9009", name: null, blocked: false }, title: "are you a bot?" },
       { where: "whatsapp:shop 62812@s.whatsapp.net", kind: "private", sender: { id: "62812@s.whatsapp.net", name: null, blocked: true }, title: "berapa harga kopi?" },
@@ -182,10 +182,21 @@ describe("an open agent's page", () => {
     expect({ shown: next.conversations.map((one) => one.chatId), more: next.nextBefore }).toEqual({ shown: ["7001"], more: undefined });
   });
 
+  test("counts the people who began them, each once: one who writes in a second chat is still one person", async () => {
+    const h = await house();
+    // Budi again, in a group of his own that Nora's bot was added to: a conversation more, and nobody new.
+    h.said({ agentId: "nora", gatewayId: "telegram:nora", chatId: "-201" }, "7001", "nora, are you there?");
+    const listed = (await h.ask("/agents/nora/public")).body as unknown as AgentPublic;
+    expect({ total: listed.total, people: listed.people }).toEqual({ total: 4, people: 3 });
+    // A search counts the people it found.
+    const found = (await h.ask("/agents/nora/public?q=7001")).body as unknown as AgentPublic;
+    expect({ total: found.total, people: found.people }).toEqual({ total: 2, people: 1 });
+  });
+
   test("is an admin's to read; an agent that is not open has no public, and one that is not there is not found", async () => {
     const h = await house();
     expect(await h.ask("/agents/nora/public", "operator")).toEqual({ status: 403, body: { error: "admin only" } });
-    expect((await h.ask("/agents/nouva/public")).body).toEqual({ conversations: [], total: 0 });
+    expect((await h.ask("/agents/nouva/public")).body).toEqual({ conversations: [], total: 0, people: 0 });
     expect((await h.ask("/agents/ghost/public")).status).toBe(404);
   });
 });
@@ -213,7 +224,7 @@ describe("a person looked for on an open agent's page", () => {
   test("by what they first asked; and a search that finds nobody is an empty page", async () => {
     const h = await house();
     expect(await found(h, "kopi")).toEqual({ chats: ["62812@s.whatsapp.net"], total: 1 });
-    expect((await h.ask("/agents/nora/public?q=nobody")).body).toEqual({ conversations: [], total: 0 });
+    expect((await h.ask("/agents/nora/public?q=nobody")).body).toEqual({ conversations: [], total: 0, people: 0 });
     // Only words, of nothing: the whole list.
     expect((await found(h, "   ")).total).toBe(3);
   });
@@ -258,6 +269,6 @@ describe("the lists of chats leave an open agent's public out", () => {
     const list = (await h.ask("/chat-list?whose=everyone")).body as unknown as ChatListPayload;
     expect(list.groups.map((group) => group.chatId).sort()).toEqual(["-100", "-200", "-300"]);
     expect(((await h.ask("/chats")).body.chats as { chatId: string }[]).map((chat) => chat.chatId).sort()).toEqual(["-200", "7001", "814", "814"]);
-    expect((await h.ask("/agents/nora/public")).body).toEqual({ conversations: [], total: 0 });
+    expect((await h.ask("/agents/nora/public")).body).toEqual({ conversations: [], total: 0, people: 0 });
   });
 });

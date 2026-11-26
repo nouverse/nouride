@@ -354,6 +354,18 @@ export class SessionStore {
   }
 
   /**
+   * How many people began them, each once: an open agent's public is listed as conversations, and one person writes in
+   * a private chat and a group, or comes back after one has rolled over. Nobody's conversation counts nobody.
+   */
+  openers(options: Omit<SessionListOptions, "limit" | "before"> = {}): number {
+    const { where, params } = this.filter(options);
+    const row = this.db
+      .prepare<{ n: number }>(`SELECT COUNT(DISTINCT s.opened_by) AS n FROM sessions s ${where}`)
+      .get(...params);
+    return row?.n ?? 0;
+  }
+
+  /**
    * The shared WHERE clause, and why the search reaches into `turn_records`.
    *
    * What the dashboard shows as a conversation's name is the first thing that was asked in it, which

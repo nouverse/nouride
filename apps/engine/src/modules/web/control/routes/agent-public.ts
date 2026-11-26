@@ -6,7 +6,8 @@
  * left out of those lists (`openAgentsOn`) and listed here, for an admin: who wrote, what they first asked, when,
  * and whether they are blocked. A row is opened as any conversation is, and its sender blocked on the Access routes.
  * `q` looks for a person among them, by name, number or what they first asked: an open agent's public can be many
- * people, more than a page holds.
+ * people, more than a page holds. `people` counts who began them, each once, for the agent's own page, which shows the
+ * count and leaves the list to the Open agents page.
  *
  * Registered before `routes/agents.ts`, whose `/agents/:id/:action` would take `public` as an action.
  */
@@ -52,6 +53,7 @@ export function registerAgentPublicRoutes(control: ControlApp, deps: ControlDeps
     return c.json({
       conversations,
       total: deps.sessions?.count(options) ?? 0,
+      people: deps.sessions?.openers(options) ?? 0,
       ...(sessions.length === limit ? { nextBefore: sessions[sessions.length - 1]!.updatedAt } : {}),
     } satisfies AgentPublic);
   });
