@@ -108,6 +108,25 @@ describe("a second connection on one chat app for one agent", () => {
     expect(await post({ platform: "whatsapp", name: "shop", agent: "nox", enabled: false })).toEqual(SAVED);
   });
 
+  test("two sent at once for one agent on one app: one is saved and the other refused", async () => {
+    // Both arrive before either is written: each read the list as it was, and both were saved, before the check took
+    // the file's lock.
+    const answers = await Promise.all([
+      post({ platform: "whatsapp", name: "one", agent: "nora" }),
+      post({ platform: "whatsapp", name: "two", agent: "nora" }),
+    ]);
+    expect(answers.map((answer) => answer.status).sort()).toEqual([200, 400]);
+    const file = readFileSync(configPath, "utf8");
+    expect((file.match(/agent = "nora"/g) ?? []).length).toBe(1);
+  });
+
+  test("a connection written into the file since the start counts, though the running copy has not followed it", async () => {
+    // The dashboard's whole-file editor saves for the next boot, and the running copy does not follow it.
+    writeFileSync(configPath, `${readFileSync(configPath, "utf8")}\n[gateways.whatsapp.shop]\nenabled = true\nencryption_key = "whatsapp-shop-key"\nagent = "nora"\n`);
+    expect(config.gateways).toEqual([]);
+    expect(await post({ platform: "whatsapp", name: "shop2", agent: "nora" })).toEqual(refusedFor("nora", "whatsapp:shop"));
+  });
+
   test("two written into the file by hand are left as they are: each is still saved", async () => {
     expect(await post({ platform: "whatsapp", name: "main", agent: "nora" })).toEqual(SAVED);
     // The second as a person writes it into the file, and as the next load reads it.
