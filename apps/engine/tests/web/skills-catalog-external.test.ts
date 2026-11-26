@@ -43,3 +43,40 @@ test("an external agent's skill needing the shell or a file tool is not missing 
   expect(row("self-update", "nouva")).toEqual(expect.objectContaining({ missingTools: ["exec"] }));
   expect(row("self-update", "nouva").notForCli).toBeUndefined();
 });
+
+test("a skill is offered to an agent only where it is given: on, not off for every agent, the agent running, a coding CLI holding each tool", async () => {
+  const agentsDir = join(root, "agents-offered");
+  for (const [name, needs] of [["deployment", "exec, read"], ["self-update", "exec, nouride"], ["slides", "send_file"], ["paused", "read"]] as const) {
+    mkdirSync(join(agentsDir, "skills", name), { recursive: true });
+    writeFileSync(join(agentsDir, "skills", name, "SKILL.md"), `---\nname: ${name}\ndescription: ${name}.\nneeds_tools: ${needs}\n---\nDo it.\n`);
+  }
+  const agent = (id: string, more: Record<string, unknown> = {}) => ({ config: { id, displayName: id, enabled: true, skills: {}, tools: { enabled: ["read", "nouride"] }, ...more } });
+  const app = new Hono<{ Variables: { principal: unknown } }>();
+  app.use("*", async (c, next) => {
+    c.set("principal", { kind: "user", actor: "gading", role: "operator" });
+    await next();
+  });
+  registerSkillRoutes(app as never, {
+    ctx: { config: { daemon: { agentsDir }, skills: { off: ["paused"] } } },
+    registry: {
+      all: () => [
+        agent("nouva"),
+        agent("kuro", { external: { cli: "codex" } }),
+        agent("nero", { skills: { deployment: false } }),
+        agent("sleepy", { enabled: false }),
+      ],
+    },
+    audit: { skillReads: () => new Map() },
+  } as never);
+  const { skills } = (await (await app.request("/skills/catalog")).json()) as { skills: { name: string; agents: { id: string; enabled: boolean; offered: boolean; missingTools: string[] }[] }[] };
+  const offered = (skill: string) => Object.fromEntries(skills.find((entry) => entry.name === skill)!.agents.map((entry) => [entry.id, entry.offered]));
+  // Nouride's own agent is given a skill it lacks a tool for, marked unavailable; a coding CLI is given what it can run.
+  expect(offered("deployment")).toEqual({ nouva: true, kuro: true, nero: false, sleepy: false });
+  // One needing a tool no coding CLI is given, and one needing a tool this CLI is not lent: on for Kuro, not given.
+  expect(offered("self-update")).toEqual({ nouva: true, kuro: false, nero: true, sleepy: false });
+  expect(offered("slides")).toEqual({ nouva: true, kuro: false, nero: true, sleepy: false });
+  expect(skills.find((entry) => entry.name === "slides")!.agents.find((entry) => entry.id === "kuro")).toMatchObject({ enabled: true, missingTools: ["send_file"] });
+  // Off for every agent: given to none, whatever each one's own switch says.
+  expect(offered("paused")).toEqual({ nouva: false, kuro: false, nero: false, sleepy: false });
+  expect(skills.find((entry) => entry.name === "paused")!.agents.every((entry) => entry.enabled)).toBe(true);
+});

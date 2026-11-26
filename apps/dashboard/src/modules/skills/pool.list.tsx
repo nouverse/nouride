@@ -29,12 +29,19 @@ export const readsSaid = (reads: number, sinceChange: number): string =>
   `read ${reads === 1 ? "once" : `${reads} times`}${sinceChange < reads ? `, ${sinceChange === 0 ? "not yet" : sinceChange === 1 ? "once" : `${sinceChange} times`} since it was changed` : ""}`;
 
 /**
- * Whether some agent is offered the skill: on for at least one, and not switched off for every agent. The rest are
+ * Whether some agent is given the skill now, by the daemon's word (`offered`): an agent's own switch on is not enough
+ * where the skill is off for every agent, the agent is turned off, or a coding CLI lacks a tool it needs. The rest are
  * listed apart, under Off, so the pool's live list is what the agents are actually carrying.
  */
-export const skillIsLive = (skill: CatalogSkill): boolean => !skill.offGlobally && skill.agents.some((agent) => agent.enabled);
+export const skillIsLive = (skill: CatalogSkill): boolean => skill.agents.some((agent) => agent.offered);
 
-export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editable: boolean }) {
+/** A skill's text as typed and not saved, by name, and a write to it: null takes the name out. */
+export interface UnsavedTexts {
+  texts: Record<string, string>;
+  keep: (name: string, next: string | null) => void;
+}
+
+export function PoolList({ skills, editable, unsaved }: { skills: CatalogSkill[]; editable: boolean; unsaved: UnsavedTexts }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const { ask, dialog } = useConfirm();
@@ -138,6 +145,8 @@ export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editabl
             onToggle={(agent, enabled) => toggle.mutate({ skill: skill.name, agent, enabled })}
             onDelete={() => void confirmDelete(skill)}
             onToggleGlobal={() => void confirmGlobal(skill)}
+            text={unsaved.texts[skill.name] ?? null}
+            onText={(next) => unsaved.keep(skill.name, next)}
           />
         ))}
       </ul>
@@ -159,7 +168,12 @@ function SkillRow({
   onDelete,
   onToggleGlobal,
   switching,
+  text,
+  onText,
 }: {
+  /** Its text as typed and not saved, kept by the page (`UnsavedTexts`); null when nothing is. */
+  text: string | null;
+  onText: (next: string | null) => void;
   /** The agent whose switch for this skill is being saved, which spins. */
   switching?: string;
   skill: CatalogSkill;
@@ -201,7 +215,11 @@ function SkillRow({
             ) : null}
             {/* Its "3/8 on" are the agents' own switches, kept for when it is switched back on: without this, a row
                 under Off saying three agents have it on reads as a mistake. */}
-            {skill.offGlobally ? <span className="badge badge-warning badge-sm shrink-0 font-mono">Off for every agent</span> : null}
+            {skill.offGlobally ? (
+              <span className="badge badge-warning badge-sm shrink-0 font-mono" title="Its power button, at the end of the row, switches it back on: each agent's own switch then decides.">
+                Off for every agent
+              </span>
+            ) : null}
             {skill.missing.length > 0 ? (
               <span className={`badge badge-warning badge-sm gap-1 font-mono ${BADGE_WRAPS}`}>
                 <TriangleAlert size={11} /> needs {skill.missing.join(", ")}
@@ -288,7 +306,7 @@ function SkillRow({
 
       {expanded ? (
         <>
-          <SkillSource name={skill.name} editable={editable && skill.scope !== "builtin"} />
+          <SkillSource name={skill.name} editable={editable && skill.scope !== "builtin"} text={text} setText={onText} />
           <SkillFiles name={skill.name} editable={editable && skill.scope !== "builtin"} />
         </>
       ) : null}
@@ -374,21 +392,20 @@ function SkillAgents({
  * Not preloaded with the catalogue: a body is a few KB and a pool of thirty would make the page's
  * first render carry everything nobody asked to read.
  */
-function SkillSource({ name, editable }: { name: string; editable: boolean }) {
+function SkillSource({ name, editable, text, setText }: { name: string; editable: boolean; text: string | null; setText: (next: string | null) => void }) {
   const queryClient = useQueryClient();
   const source = useQuery({
     queryKey: ["skill-source", name],
     queryFn: () => api.skillSource(name),
     retry: false,
   });
-  /**
-   * `null` until somebody types, then the local copy.
-   *
-   * Dropped on save so the box shows what the daemon actually wrote — it rewrites the frontmatter,
-   * stamping `updated:` and forcing `name:` back to the directory, so what comes back is not byte
-   * for byte what was sent and the editor should not pretend otherwise.
-   */
-  const [text, setText] = useState<string | null>(null);
+  /*
+    `text` is null until somebody types, then the local copy, kept by the page.
+
+    Dropped on save so the box shows what the daemon actually wrote — it rewrites the frontmatter,
+    stamping `updated:` and forcing `name:` back to the directory, so what comes back is not byte
+    for byte what was sent and the editor should not pretend otherwise.
+  */
   const save = useMutation({
     mutationFn: (next: string) => api.saveSkillSource(name, next),
     onSuccess: async () => {

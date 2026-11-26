@@ -13,7 +13,7 @@
  * pool. Hence tabs over one page rather than two pages.
  *
  *   Live     the pool: what the agents are actually carrying
- *   Off      the rest of the pool: switched off for every agent, or on for none
+ *   Off      the rest of the pool: what no agent is given now (`skillIsLive`)
  *   Pending  the queue, for working through it — opened first when something waits on you
  *   Explore  skills somebody else wrote
  *
@@ -34,7 +34,7 @@ import { ListCard } from "@/commons/components/ui/ListCard";
 import { SearchInput } from "@/commons/components/ui/SearchInput";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { useTextFilter } from "@/commons/lib/use-text-filter";
-import { PoolList, skillIsLive } from "./pool.list";
+import { PoolList, skillIsLive, type UnsavedTexts } from "./pool.list";
 import { DecidedStrip, DraftList } from "./drafts.panel";
 import { SeenPanel } from "./seen.panel";
 import { LearningSettingsPanel } from "./learning-settings";
@@ -55,6 +55,19 @@ export default function SkillWorkshopPage() {
   // narrowed one while you looked at the other would hide what you were looking for.
   const [pendingQuery, setPendingQuery] = useState("");
   const [poolQuery, setPoolQuery] = useState("");
+  // A skill's text typed and not saved, kept by the page: a switch that moves its row to the other list, or empties the
+  // list it was in, takes the row and the list away, and the typing went with them.
+  const [texts, setTexts] = useState<Record<string, string>>({});
+  const unsaved: UnsavedTexts = {
+    texts,
+    keep: (name, next) =>
+      setTexts((was) => {
+        const kept = { ...was };
+        if (next === null) delete kept[name];
+        else kept[name] = next;
+        return kept;
+      }),
+  };
 
   const skills = catalog.data?.skills ?? [];
   const pending = drafts.data?.pending ?? [];
@@ -149,7 +162,11 @@ export default function SkillWorkshopPage() {
       {showPool ? (
         <ListCard
           title={tab === "off" ? `${off.length} skill${off.length === 1 ? "" : "s"} turned off` : `${live.length} skill${live.length === 1 ? "" : "s"} live`}
-          description={tab === "off" ? "Switched off for every agent, or on for none. Switch one on for an agent and it is live again." : undefined}
+          description={
+            tab === "off"
+              ? "Skills no agent is given right now. One marked Off for every agent comes back with its power button; any other, by switching it on for an agent that can use it."
+              : undefined
+          }
         >
           {skills.length === 0 ? (
             <EmptyState
@@ -158,13 +175,13 @@ export default function SkillWorkshopPage() {
               description="An agent writes one when it works out how to do something, or you can find one on the Explore tab."
             />
           ) : tab === "off" && off.length === 0 ? (
-            <p className="py-6 text-center text-sm text-base-content/65">Every skill is on for at least one agent.</p>
+            <p className="py-6 text-center text-sm text-base-content/65">Every skill is given to at least one agent.</p>
           ) : tab === "live" && live.length === 0 ? (
-            <p className="py-6 text-center text-sm text-base-content/65">No agent has a skill switched on. They are under Off.</p>
+            <p className="py-6 text-center text-sm text-base-content/65">No agent is given a skill right now. They are under Off.</p>
           ) : visibleSkills.length === 0 ? (
             <p className="py-6 text-center text-sm text-base-content/65">Nothing matches “{poolQuery}”.</p>
           ) : (
-            <PoolList skills={visibleSkills} editable={editable} />
+            <PoolList skills={visibleSkills} editable={editable} unsaved={unsaved} />
           )}
           {/* Where the pool is kept, for whoever runs the server (0.8.19): it was the card's description. */}
           {catalog.data?.poolDir ? (

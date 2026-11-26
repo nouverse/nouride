@@ -27,6 +27,11 @@ export interface CatalogSkill {
     missingTools: string[];
     /** A coding CLI's agent: tools no coding CLI is ever given, so the skill is not its (0.8.13). */
     notForCli?: string[];
+    /**
+     * Given the skill now: its switch on, the skill not off for every agent, the agent not turned off, and for a coding
+     * CLI every tool the skill needs held or lent. What the Workshop's Live and Off lists are split by.
+     */
+    offered: boolean;
   }[];
   lastUsedAt: number | null;
   /** Times it was read, counted from the release that began counting; and how many of them since learning last changed it. */

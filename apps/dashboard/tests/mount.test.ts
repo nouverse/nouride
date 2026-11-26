@@ -218,7 +218,7 @@ describe("pages that keep their lists in bounds", () => {
 describe("Skills lists", () => {
   const skill = (name: string, description: string) => ({
     name, description, scope: "shared", path: `/srv/nouride/.nouride/agents/skills/${name}/SKILL.md`, requires: [], missing: [],
-    needsTools: [], offGlobally: false, agents: [{ id: "nouva", displayName: "Nouva", enabled: true, decided: true, missingTools: [] }], lastUsedAt: null,
+    needsTools: [], offGlobally: false, agents: [{ id: "nouva", displayName: "Nouva", enabled: true, decided: true, missingTools: [], offered: true }], lastUsedAt: null,
   });
   const fixtures = {
     "/skills/catalog": { skills: [skill("pdf-tools", "Work with PDF files"), skill("deploy-k8s", "Ship to Kubernetes")], software: {}, poolDir: "/srv/skills", editable: true },
