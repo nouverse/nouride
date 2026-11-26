@@ -1,15 +1,16 @@
 /**
- * `[[external_clis]]` (0.8.1): a coding CLI the person adds for external agents, beside the two built in — Claude Code
- * and Codex.
+ * `[[external_clis]]` (0.8.1): a coding CLI the person adds for external agents, beside the built-in ones.
  *
  * Read field by field, as the other open sections are: a row starts a program as the agent's user, so a misspelled key
  * is warned about and a wrong type refused at load, naming the entry — not found at the agent's first turn as a CLI
- * that "is not installed". An id a built-in row has is refused: the built-in one was tried, and a row of the same name
- * that is not would read as if it were. No `env`: a secret the CLI needs is bound to its command in
+ * that "is not installed". An id a tried built-in row has is refused: the built-in one was tried, and a row of the same
+ * name that is not would read as if it were. An id of a built-in row still marked experimental is the person's: theirs
+ * may well be older than the built-in one, and a daemon that stopped at the upgrade over it would break what worked, so
+ * theirs is kept in its place, said at load (and so by `config check`). No `env`: a secret the CLI needs is bound to its command in
  * `[security.exec_secrets]`, which never puts a value in this file.
  */
 
-import { BUILT_IN_CLIS } from "@nouride/acp";
+import { BUILT_IN_CLIS, type CliRow } from "@nouride/acp";
 import { ConfigError, createLogger, EXTERNAL_PERMISSIONS, type ExternalCliConfig, type ExternalPermissions } from "@nouride/shared";
 import { isPlainObject, requireString } from "./merge.ts";
 
@@ -33,12 +34,19 @@ export function parseExternalClis(raw: unknown): ExternalCliConfig[] {
   return rows;
 }
 
+/** Every CLI this install knows: the built-in ones, a person's own in the place of one of the same id, then the rest of theirs. */
+export function cliRows(own: readonly ExternalCliConfig[]): CliRow[] {
+  return [...BUILT_IN_CLIS.filter((row) => !own.some((mine) => mine.id === row.id)), ...own];
+}
+
 function parseRow(entry: unknown, at: string): ExternalCliConfig {
   if (!isPlainObject(entry)) throw new ConfigError(`${at} must be a table`);
   const id = requireString(entry.id, `${at} id`)?.trim();
   if (!id || !ID.test(id)) throw new ConfigError(`${at} id must be lowercase letters, digits and "-", up to 32: it is what a pack's [external] cli names`);
   const where = `[[external_clis]] "${id}"`;
-  if (BUILT_IN_CLIS.some((row) => row.id === id)) throw new ConfigError(`${where} is a built-in CLI's id: remove the entry, or give yours another id`);
+  const builtIn = BUILT_IN_CLIS.find((row) => row.id === id);
+  if (builtIn && !builtIn.experimental) throw new ConfigError(`${where} is a built-in CLI's id: remove the entry, or give yours another id`);
+  if (builtIn) log.warn("a coding CLI of yours has the id of one built in, marked Experimental: yours is kept in its place", { cli: id, built_in: builtIn.name });
   for (const key of Object.keys(entry)) if (!KEYS.has(key)) log.warn("unknown config key ignored", { key: `${where} ${key}` });
 
   const command = requireString(entry.command, `${where} command`)?.trim();

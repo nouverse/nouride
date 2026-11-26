@@ -4,7 +4,6 @@
  * beside a chat. Nothing runs until an external agent's first turn; the idle sweep is a minute's look at an empty map.
  */
 
-import { BUILT_IN_CLIS } from "@nouride/acp";
 import type { ProjectSkills } from "@nouride/persona";
 import type { GlobalConfig } from "@nouride/shared";
 import { totalMemoryBytes, type CommandIsolation } from "@nouride/runtime";
@@ -12,6 +11,7 @@ import type { SecretStore } from "@nouride/secrets";
 import { cliAccountsState, cliLeftRunningState, cliLimitsState, cliNewestState, externalEffortsState, externalInstructionsState, externalModelsState, externalSessionsState, externalVersionsState } from "@/commons/daemon-state.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
 import type { AuditPort } from "@/commons/audit.store.ts";
+import { cliRows } from "@/modules/config/global/external-clis.ts";
 import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { NewestVersions } from "@/modules/external-agents/newest.ts";
 import { MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts";
@@ -21,7 +21,7 @@ import type { ChildEnv } from "@/modules/tools/exec-secrets.ts";
 export function startExternalAgents(params: { config: GlobalConfig; state: StateRows; childEnv: ChildEnv; notes: () => NotesStore; port?: () => number | undefined; commands: CommandIsolation; secrets: SecretStore; audit: AuditPort; projectSkills: ProjectSkills; agentsOn: (cliId: string) => string[] }): ExternalAgents {
   const externalAgents = new ExternalAgents({
     // Read at each use, so a reload that adds a row is seen by the next agent load and turn.
-    rows: () => [...BUILT_IN_CLIS, ...params.config.externalClis],
+    rows: () => cliRows(params.config.externalClis),
     agentsOn: params.agentsOn,
     workspaceDir: () => params.config.daemon.workspaceDir,
     secretsFor: (agentId, argv) => params.childEnv.forCommand(agentId, argv).env,
