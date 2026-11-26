@@ -40,7 +40,8 @@ berikutnya minta scan ulang.
 Satu nomor milik satu agent, seperti bot Telegram: pesan ke nomor itu masuk ke agent itu, dan orang
 diizinkan masuk untuk nomor itu saja, bukan nomor lain. Untuk memberi agent kedua nomornya sendiri,
 tambahkan koneksi kedua dengan namanya sendiri, dari halaman **Connections** agent itu atau dari
-terminal:
+terminal. Satu agent punya satu nomor: nomor kedua untuk agent yang sudah punya ditolak, dengan menyebut
+nomor yang sudah ada.
 
 ```bash
 nouride gateway add --platform whatsapp --name shop --agent nora

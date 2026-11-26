@@ -84,13 +84,15 @@ async function install(over: { account?: ControlDeps["agentAccounts"] } = {}): P
     gatewayStatus: () => new Map(),
     retireGateway: async (id) => (asked.push(`retire ${id}`), { stopped: true, loggedOut: true }),
   });
-  // rex's own connection, a second one of rex's sharing a token with milo's, and milo's.
-  for (const [name, agent] of [["rex", "rex"], ["rex-two", "rex"], ["milo", "milo"]] as const) {
-    const saved = await settings.saveGateway({ platform: "telegram", name, enabled: true, token: BOT_TOKEN, agent, actor: "test" });
+  // rex's own connection, a second one of rex's sharing a token with milo's, and milo's. The second is rex's by a line
+  // written into the file by hand: a save refuses an agent a second connection on one app.
+  for (const [name, agent] of [["rex", "rex"], ["rex-two", undefined], ["milo", "milo"]] as const) {
+    const saved = await settings.saveGateway({ platform: "telegram", name, enabled: true, token: BOT_TOKEN, ...(agent ? { agent } : {}), actor: "test" });
     if (!saved.ok) throw new Error(saved.error);
   }
-  writeFileSync(configPath, readFileSync(configPath, "utf8").replace('[gateways.telegram.rex-two]', "[gateways.telegram.rex-two]").replace(/(\[gateways\.telegram\.rex-two\][^[]*?token = ")telegram-rex-two"/, '$1telegram-milo"'));
+  writeFileSync(configPath, readFileSync(configPath, "utf8").replace('[gateways.telegram.rex-two]', '[gateways.telegram.rex-two]\nagent = "rex"').replace(/(\[gateways\.telegram\.rex-two\][^[]*?token = ")telegram-rex-two"/, '$1telegram-milo"'));
   const two = config.gateways.find((gateway) => gateway.id === "telegram:rex-two")!;
+  two.agent = "rex";
   two.tokenSecret = "telegram-milo";
   await secrets.delete("telegram-rex-two");
 

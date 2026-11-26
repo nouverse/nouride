@@ -38,7 +38,8 @@ useless; a copy *with* it is a working login. Lose the key and the next restart 
 
 A number belongs to one agent, as a Telegram bot does: a message to it goes to that agent, and people
 are let in for that number and no other. To give a second agent its own number, add a second
-connection, with its own name, from that agent's **Connections** page or from a terminal:
+connection, with its own name, from that agent's **Connections** page or from a terminal. An agent has one
+number: a second for an agent that has one is refused, naming the one it has.
 
 ```bash
 nouride gateway add --platform whatsapp --name shop --agent nora

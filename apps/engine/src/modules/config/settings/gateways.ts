@@ -107,6 +107,20 @@ export async function saveGateway(deps: SettingsDeps, input: {
 
   const agent = input.agent?.trim() ?? existing?.agent ?? "";
 
+  // An agent has one connection on each chat app, as its Connections page offers: a second bot or number on an app it
+  // answers on was made from the command line all the same. Only a connection that comes to the agent is refused, new
+  // or given to it; two written into the file by hand are each still edited, and still load.
+  const held = agent && existing?.agent !== agent
+    ? deps.config.gateways.find((gateway) => gateway.platform === platform && gateway.agent === agent)
+    : undefined;
+  if (held) {
+    return {
+      ok: false,
+      field: "platform",
+      error: `${agent} already has ${held.id}, and an agent has one connection on each chat app: change that one, or remove it first`,
+    };
+  }
+
   /**
    * The per-connection group-context override, or nothing to write.
    *

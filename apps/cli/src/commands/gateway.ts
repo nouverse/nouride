@@ -63,7 +63,7 @@ export async function gateway(client: Client, args: string[]): Promise<void> {
           `it is a database migration, not a label change.\n\n` +
           `WhatsApp pairs by QR after it starts: \`nouride gateway\` shows the state. Each number is a\n` +
           `connection of its own, with its own name, its own agent and its own code to scan: add a\n` +
-          `second one the same way.${RESET}`,
+          `second one the same way, for another agent. An agent has one connection on each chat app.${RESET}`,
       );
     }
 
