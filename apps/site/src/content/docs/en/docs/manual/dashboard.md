@@ -47,7 +47,7 @@ Agents
         Look            its cat in the Office
   Workspace         where the agents work: each agent's own folder, and the one they share   (admin)
 
-Skills              the Skills Workshop: Live · Pending · Explore
+Skills              the Skills Workshop: Live · Off · Pending · Explore
 Connectors          the install's MCP servers: Installed · Explore, a switch per agent
 Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, and a graph

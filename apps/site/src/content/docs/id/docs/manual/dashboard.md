@@ -48,7 +48,7 @@ Agents
         Look            kucingnya di Office
   Workspace         tempat para agent bekerja: folder tiap agent, dan folder bersama   (admin)
 
-Skills              Skills Workshop: Live · Pending · Explore
+Skills              Skills Workshop: Live · Off · Pending · Explore
 Connectors          server MCP instalasi: Installed · Explore, saklar per agent
 Memory
   Knowledge & Memory   Knowledge · Agent notes · People · Timeline · Shared · Proposals · Settings, dan graph

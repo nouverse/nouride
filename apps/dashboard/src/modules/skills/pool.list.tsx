@@ -28,6 +28,12 @@ import { TextLoading } from "@/commons/components/ui/Skeleton";
 export const readsSaid = (reads: number, sinceChange: number): string =>
   `read ${reads === 1 ? "once" : `${reads} times`}${sinceChange < reads ? `, ${sinceChange === 0 ? "not yet" : sinceChange === 1 ? "once" : `${sinceChange} times`} since it was changed` : ""}`;
 
+/**
+ * Whether some agent is offered the skill: on for at least one, and not switched off for every agent. The rest are
+ * listed apart, under Off, so the pool's live list is what the agents are actually carrying.
+ */
+export const skillIsLive = (skill: CatalogSkill): boolean => !skill.offGlobally && skill.agents.some((agent) => agent.enabled);
+
 export function PoolList({ skills, editable }: { skills: CatalogSkill[]; editable: boolean }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
@@ -193,6 +199,9 @@ function SkillRow({
                 Built in
               </span>
             ) : null}
+            {/* Its "3/8 on" are the agents' own switches, kept for when it is switched back on: without this, a row
+                under Off saying three agents have it on reads as a mistake. */}
+            {skill.offGlobally ? <span className="badge badge-warning badge-sm shrink-0 font-mono">Off for every agent</span> : null}
             {skill.missing.length > 0 ? (
               <span className={`badge badge-warning badge-sm gap-1 font-mono ${BADGE_WRAPS}`}>
                 <TriangleAlert size={11} /> needs {skill.missing.join(", ")}

@@ -275,6 +275,7 @@ own approves everything waiting, or the Skills Workshop, whose tabs are one work
 | Tab | Shows |
 |---|---|
 | **Live** | the pool: what the agents are actually carrying. Opened first when nothing waits on you |
+| **Off** | the rest of the pool: skills switched off for every agent, and skills no agent has switched on. Switching one on for an agent puts it back on **Live** |
 | **Pending** | the queue, plus what was recently decided, and under it what learning holds and did lately. Opened first when something waits on you |
 | **Explore** | Nouverse's list of public skills, its picks first, with one search over it. Installing one puts it on Pending |
 

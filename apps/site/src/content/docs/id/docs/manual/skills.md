@@ -292,6 +292,7 @@ alur kerja:
 | Tab | Menampilkan |
 |---|---|
 | **Live** | kumpulannya: apa yang benar-benar dibawa para agent. Dibuka duluan kalau tidak ada yang menunggu kamu |
+| **Off** | sisa kumpulannya: skill yang dimatikan untuk semua agent, dan skill yang tidak dinyalakan agent mana pun. Menyalakannya untuk satu agent mengembalikannya ke **Live** |
 | **Pending** | antreannya, plus yang baru-baru ini diputuskan, dan di bawahnya apa yang sedang ditahan dan dilakukan proses belajar. Dibuka duluan kalau ada yang menunggu kamu |
 | **Explore** | daftar skill publik milik Nouverse, pilihannya di depan, dengan satu pencarian di atasnya. Memasang salah satunya menaruhnya di Pending |
 
