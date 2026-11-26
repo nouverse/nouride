@@ -87,6 +87,8 @@ export interface WhatsAppGatewayOptions extends GatewayIdentity {
   resilience?: Partial<GatewayResilienceConfig>;
   /** Opens the transport. Supplied by the engine, which decides where the bridge runs (`gateways/bridge.ts`). */
   openChannel: BridgeChannelFactory;
+  /** How long after one logout signal the old login is tried again (`LOGOUT_CHECK_MS`). A test's own. */
+  logoutCheckMs?: number;
 }
 
 /**
@@ -118,6 +120,12 @@ const LINK_WAIT_MS = 20_000;
  * the bridge's own first tries, short of leaving a chat unanswered for long.
  */
 const LINK_LOST_MS = 3 * 60_000;
+
+/**
+ * How long after one logout signal the old login is tried once more, before the number is said to be logged out: long
+ * enough for WhatsApp to settle after a scan, when it once sent one to a link that was working (`connection.ts`).
+ */
+const LOGOUT_CHECK_MS = 20_000;
 
 /**
  * WhatsApp's own ceiling on a text message.
@@ -166,6 +174,10 @@ export class WhatsAppGateway extends BaseGateway {
   private expired = false;
   /** Set while `logoutAndStop` waits for the bridge to say the logout reached WhatsApp. */
   private loggedOutSeen: (() => void) | null = null;
+  /** The old login tried once more since the last link, after one logout signal (`checkLogout`). */
+  private logoutChecked = false;
+  /** That try, while it waits to be made. */
+  private logoutCheck: ReturnType<typeof setTimeout> | undefined;
   /**
    * Chats WhatsApp has refused to deliver to, and why.
    *
@@ -222,29 +234,61 @@ export class WhatsAppGateway extends BaseGateway {
     return this.linked;
   }
 
-  /** Whether WhatsApp ended this number's link, logged out from its phone: it waits for `linkAgain`, not for a scan. */
+  /**
+   * Whether WhatsApp ended this number's link, logged out from its phone: said twice, the second time to its old login
+   * tried again (`checkLogout`). It waits for `linkAgain` then, not for a scan.
+   */
   isLoggedOut(): boolean {
-    return this.expired;
+    return this.expired && this.logoutChecked && this.logoutCheck === undefined;
   }
 
   /**
    * A number logged out from its phone, linked again on a person's word: its old login removed and the bridge started on
-   * an empty folder, which shows a new code to scan. Never for a number still linked or still pairing: removing a login
-   * that works is `logoutAndStop`'s, and one logout signal alone is not taken as that word (`connection.ts`, `loggedOut`).
+   * an empty folder, which shows a new code to scan. Never for a number still linked, still pairing or still being
+   * checked: removing a login that works is `logoutAndStop`'s.
    *
-   * What the old link taught it goes too. The number may be linked from another phone, whose addresses are not the old
-   * one's, and the old phone's would go on being taken for its own; and a new link is pairing, not a link lost, so
-   * `ping` does not give up on the code being scanned.
+   * What the old link left goes too. The number may be linked from another phone, whose addresses are not the old one's,
+   * and the old phone's would go on being taken for its own; and the replies held while it was logged out would go out
+   * from that other account to the old one's chats. A folder that cannot be removed leaves the number started again as
+   * it was, and says so, rather than stopped.
    */
-  async linkAgain(): Promise<{ ok: true } | { ok: false; reason: string }> {
-    if (!this.expired) return { ok: false, reason: "this number is not logged out from its phone" };
+  async linkAgain(): Promise<{ ok: true } | { ok: false; refused: boolean; reason: string }> {
+    if (!this.isLoggedOut()) return { ok: false, refused: true, reason: "this number is not logged out from its phone" };
     await this.stop();
-    removePath(this.options.sessionDir);
+    const held = this.dropHeld();
+    if (held > 0) this.log.warn("replies held while the number was logged out are not sent from its new link", { count: held });
+    try {
+      removePath(this.options.sessionDir);
+    } catch (err) {
+      await this.start();
+      return { ok: false, refused: false, reason: `its old login could not be removed: ${err instanceof Error ? err.message : String(err)}` };
+    }
     this.itself = new NumberItself();
-    this.everLinked = false;
-    this.unlinkedSince = null;
+    this.logoutChecked = false;
     await this.start();
     return { ok: true };
+  }
+
+  /**
+   * One logout signal is checked with the old login before the number is said to be logged out. The bridge keeps the
+   * login on a 401, because WhatsApp once sent one to a working link 26 seconds after it was scanned; but kept and never
+   * tried, the number stayed stopped until someone acted. So it is tried once more: a link that works comes back with no
+   * scan, and a number really logged out says so again, and is (`isLoggedOut`). A logout asked for stops the number,
+   * and the stop ends the try with the rest (`disconnect`).
+   */
+  private checkLogout(): void {
+    if (this.logoutChecked) return;
+    this.logoutChecked = true;
+    this.logoutCheck = setTimeout(
+      contained(this.log, "could not try the WhatsApp login again", () => {
+        this.logoutCheck = undefined;
+        void (async () => {
+          await this.stop();
+          await this.start();
+        })().catch((err: unknown) => this.log.warn("could not try the WhatsApp login again", { error: String(err) }));
+      }),
+      this.options.logoutCheckMs ?? LOGOUT_CHECK_MS,
+    );
   }
 
   protected async connect(): Promise<void> {
@@ -293,6 +337,9 @@ export class WhatsAppGateway extends BaseGateway {
   }
 
   protected async disconnect(): Promise<void> {
+    // A stopped number is not tried again: a logout asked for, a link made again, the daemon going down.
+    clearTimeout(this.logoutCheck);
+    this.logoutCheck = undefined;
     const channel = this.channel;
     this.channel = null;
     this.failPending("the gateway is shutting down");
@@ -620,6 +667,7 @@ export class WhatsAppGateway extends BaseGateway {
           return;
         }
         this.linked = true;
+        this.logoutChecked = false;
         this.itself.isAlso([event.jid]);
         this.everLinked = true;
         this.unlinkedSince = null;
@@ -671,6 +719,7 @@ export class WhatsAppGateway extends BaseGateway {
         this.qrCode = null;
         this.log.warn("whatsapp session expired; the phone must scan a new code");
         this.handleSessionExpired();
+        this.checkLogout();
         return;
 
       case "message": {

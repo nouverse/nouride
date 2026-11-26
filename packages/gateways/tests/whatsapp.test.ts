@@ -14,7 +14,7 @@ import type { BridgeCommand, BridgeEvent, MessageEnvelope } from "@nouride/share
 import { BRIDGE_PROTOCOL_VERSION } from "@nouride/shared";
 import { maskedNumber, WhatsAppGateway, type BridgeChannel } from "../src/channels/whatsapp/gateway.ts";
 import { eventually, sleep } from "./wait.ts";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -569,8 +569,7 @@ describe("an expired session", () => {
   });
 
   /** A number on a login folder of its own, whose every start is a bridge of its own: what linking again starts. */
-  function onItsOwnFolder() {
-    const folder = mkdtempSync(join(tmpdir(), "wa-link-again-"));
+  function onItsOwnFolder(folder = mkdtempSync(join(tmpdir(), "wa-link-again-"))) {
     writeFileSync(join(folder, "creds.enc"), "the old link");
     const bridges: ReturnType<typeof fakeChannel>[] = [];
     const gateway = new WhatsAppGateway({
@@ -579,6 +578,7 @@ describe("an expired session", () => {
       sessionDir: folder,
       encryptionKey: "a".repeat(64),
       agentId: "nora",
+      logoutCheckMs: 10,
       openChannel: () => {
         const fake = fakeChannel();
         bridges.push(fake);
@@ -586,62 +586,137 @@ describe("an expired session", () => {
       },
     });
     built.push(gateway);
-    return { gateway, folder, bridges, says: (event: BridgeEvent) => bridges.at(-1)!.push(event) };
+    const says = (event: BridgeEvent) => bridges.at(-1)!.push(event);
+    /** WhatsApp's 401 as the bridge says it: both, for one event. */
+    const endsTheLink = () => {
+      says({ type: "session_expired" });
+      says({ type: "status", status: "disconnected", reason: "logged out" });
+    };
+    /** Logged out from its phone: the link ended, the old login tried once more, and ended again. */
+    const loggedOutFromItsPhone = async () => {
+      const before = bridges.length;
+      endsTheLink();
+      await eventually(() => bridges.length === before + 1, 2_000, "the old login tried once more");
+      endsTheLink();
+      await eventually(() => gateway.isLoggedOut(), 2_000, "said to be logged out");
+    };
+    const linked = async (jid = "62822@s.whatsapp.net") => {
+      says({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid });
+      await eventually(() => gateway.isLinked(), 2_000, "linked");
+    };
+    return { gateway, folder, bridges, says, endsTheLink, loggedOutFromItsPhone, linked };
   }
 
-  test("is linked again on a person's word: the old login removed, and a new bridge on the empty folder shows a code", async () => {
-    const { gateway, folder, bridges, says } = onItsOwnFolder();
+  test("one logout signal is tried once more with the old login: a link that works comes back with no scan", async () => {
+    const { gateway, folder, bridges, endsTheLink, linked } = onItsOwnFolder();
     await gateway.start();
+    await linked();
+    endsTheLink();
     await settle();
-    says({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "62822@s.whatsapp.net" });
+    // Not said to be logged out on one signal: WhatsApp has sent one to a link that was working.
+    expect(gateway.isLoggedOut()).toBe(false);
+    await eventually(() => bridges.length === 2, 2_000, "the old login tried once more");
+    await linked();
+    expect([gateway.isLoggedOut(), existsSync(join(folder, "creds.enc"))]).toEqual([false, true]);
+    // Linked again, a later signal is one signal again: tried once more too.
+    endsTheLink();
     await settle();
+    expect(gateway.isLoggedOut()).toBe(false);
+    await eventually(() => bridges.length === 3, 2_000, "tried once more after the next signal");
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  test("said again to the old login, it is logged out, and not tried a third time", async () => {
+    const { gateway, folder, bridges, loggedOutFromItsPhone, linked } = onItsOwnFolder();
+    await gateway.start();
+    await linked();
+    await loggedOutFromItsPhone();
+    // Said to be logged out only once no try is waiting to be made: there is no third.
+    expect([bridges.length, gateway.isLoggedOut(), existsSync(join(folder, "creds.enc"))]).toEqual([2, true, true]);
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  test("a logout asked for is not tried again", async () => {
+    const { gateway, folder, bridges, says, linked } = onItsOwnFolder();
+    await gateway.start();
+    await linked();
+    const out = gateway.logoutAndStop();
+    await eventually(() => bridges[0]!.written.some((command) => command.type === "logout"), 2_000, "the logout sent");
+    says({ type: "session_expired" });
+    expect(await out).toEqual({ loggedOut: true });
+    await sleep(60);
+    expect(bridges.length).toBe(1);
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  test("is linked again on a person's word: the old login removed, and a new bridge on the empty folder shows a code", async () => {
+    const { gateway, folder, bridges, says, endsTheLink, linked } = onItsOwnFolder();
+    await gateway.start();
+    await linked();
 
     // Linked: refused, and the login stays. Removing a login that works is the logout's.
-    expect(await gateway.linkAgain()).toEqual({ ok: false, reason: "this number is not logged out from its phone" });
-    expect([existsSync(join(folder, "creds.enc")), bridges.length]).toEqual([true, 1]);
-
-    says({ type: "session_expired" });
-    says({ type: "status", status: "disconnected", reason: "logged out" });
+    expect(await gateway.linkAgain()).toEqual({ ok: false, refused: true, reason: "this number is not logged out from its phone" });
+    // Ended once, and being tried again: refused too.
+    endsTheLink();
     await settle();
-    expect(gateway.isLoggedOut()).toBe(true);
+    expect((await gateway.linkAgain()).ok).toBe(false);
+    expect(existsSync(join(folder, "creds.enc"))).toBe(true);
+    await eventually(() => bridges.length === 2, 2_000, "the old login tried once more");
+    endsTheLink();
+    await eventually(() => gateway.isLoggedOut(), 2_000, "said to be logged out");
 
     expect(await gateway.linkAgain()).toEqual({ ok: true });
     expect(existsSync(join(folder, "creds.enc"))).toBe(false);
-    // A bridge of its own, greeted as any start greets one, and the old one closed.
-    expect(bridges.length).toBe(2);
-    await eventually(() => bridges[1]!.written.some((command) => command.type === "hello"));
+    // A bridge of its own, greeted as any start greets one.
+    expect(bridges.length).toBe(3);
+    await eventually(() => bridges[2]!.written.some((command) => command.type === "hello"));
     says({ type: "qr", qr: "2@a-new-code" });
     await eventually(() => gateway.pairingCode() !== null);
     expect([gateway.pairingCode()?.qr, gateway.isLoggedOut()]).toEqual(["2@a-new-code", false]);
     rmSync(folder, { recursive: true, force: true });
   });
 
-  test("a number linked again is pairing, not a link lost: the code is not given up on, and the old phone is not its own", async () => {
-    const { gateway, folder, says } = onItsOwnFolder();
+  test("linked again, what the old link left goes: the old phone is not its own, and replies held for it are not sent", async () => {
+    const { gateway, folder, bridges, loggedOutFromItsPhone, linked } = onItsOwnFolder();
     await gateway.start();
-    await settle();
-    says({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "62822@s.whatsapp.net" });
-    await settle();
+    await linked();
     expect(gateway.ownsAddress("62822@s.whatsapp.net")).toBe(true);
-    says({ type: "session_expired" });
-    says({ type: "status", status: "disconnected", reason: "logged out" });
-    await settle();
+    await loggedOutFromItsPhone();
+    // A reply written while it was logged out is held for the link to come back.
+    expect(await gateway.send({ gatewayId: "whatsapp:shop", chatId: "62899@s.whatsapp.net", text: "a reply for the old account's chat" })).toEqual([]);
     await gateway.linkAgain();
-    says({ type: "qr", qr: "2@a-new-code" });
+    // Linked from another phone.
+    await linked("62833@s.whatsapp.net");
     await settle();
-
-    // The old phone's address is no longer taken for this number's own: it may be linked from another phone now.
     expect(gateway.ownsAddress("62822@s.whatsapp.net")).toBe(false);
-    // Long past the time a lost link is given up on, the code being scanned is still healthy.
-    const ping = (gateway as unknown as { ping(): Promise<boolean> }).ping.bind(gateway);
-    const now = Date.now();
-    try {
-      setSystemTime(new Date(now + 10 * 60_000));
-      expect(await ping()).toBe(true);
-    } finally {
-      setSystemTime();
-    }
+    expect(bridges.at(-1)!.written.filter((command) => command.type === "send")).toEqual([]);
     rmSync(folder, { recursive: true, force: true });
+  });
+
+  test("an old login that cannot be removed leaves the number started again as it was, and says so", async () => {
+    // Root removes what it likes: there is nothing to refuse it here.
+    if (process.getuid?.() === 0) return;
+    const parent = mkdtempSync(join(tmpdir(), "wa-link-again-"));
+    const folder = join(parent, "whatsapp-shop");
+    mkdirSync(folder);
+    const { gateway, bridges, loggedOutFromItsPhone, linked } = onItsOwnFolder(folder);
+    await gateway.start();
+    await linked();
+    await loggedOutFromItsPhone();
+    // Its files cannot be removed from it.
+    chmodSync(folder, 0o555);
+    try {
+      const result = await gateway.linkAgain();
+      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({ refused: false });
+      expect(existsSync(join(folder, "creds.enc"))).toBe(true);
+      // Started again, not left stopped.
+      expect(bridges.length).toBe(3);
+      expect(gateway.status).not.toBe("disconnected");
+    } finally {
+      chmodSync(folder, 0o755);
+      rmSync(parent, { recursive: true, force: true });
+    }
   });
 });
 

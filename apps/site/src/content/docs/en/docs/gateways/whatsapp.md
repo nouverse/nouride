@@ -67,10 +67,12 @@ network, stops or reconnects alone; `/health`, `nouride status` and the dashboar
 other number goes on answering. Nouride sets no limit on how many numbers an install holds: each is
 one more connection kept open to WhatsApp.
 
-A number logged out from its phone says so on its card, under its agent's **Connections**, with
-**Link again**: its old login is removed and a new code shows there, to scan from the phone that holds
-the number. Nouride does not do that by itself, since one logout signal from WhatsApp is not taken as
-the end of a link.
+When WhatsApp ends a number's link, Nouride tries its old login once more about twenty seconds later:
+WhatsApp has ended a link that was working, and that one comes back with no scan. A number that is
+really logged out from its phone says so again, and its card, under its agent's **Connections**, says
+it was logged out, with **Link again** for an admin: its old login is removed and a new code shows
+there, to scan from the phone that holds the number. Replies held while it was logged out are not
+sent from the new link, which may be another phone's.
 
 In a group that two of your numbers are in, a message that tags one number is that number's agent's
 to answer; one that tags nobody is answered once, by the agent that holds the install, not by each

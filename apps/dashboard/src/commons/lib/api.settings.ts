@@ -68,7 +68,7 @@ export const settingsApi = {
 
   pairing: (id: string) =>
     // `loggedOut`: logged out from its phone, so no code comes until it is linked again (`linkAgain`).
-    request<{ status: string; linked: boolean; loggedOut?: boolean; qr: string | null; at?: number }>(
+    request<{ status: string; linked: boolean; loggedOut: boolean; qr: string | null; at?: number }>(
       `${control}/gateways/${encodeURIComponent(id)}/pairing`,
     ),
 

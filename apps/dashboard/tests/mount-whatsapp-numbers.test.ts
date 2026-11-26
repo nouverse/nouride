@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { answer, recordPosts, renderPage, useMountHarness } from "./mount-harness.ts";
+import { answer, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -163,5 +163,33 @@ describe("a number logged out from its phone", () => {
     } finally {
       posted.restore();
     }
+  });
+
+  test("ended once and being tried again: said as that, with nothing to press yet", async () => {
+    answers("pair");
+    answer({ ...current(), "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "dead", linked: false, loggedOut: false, qr: null } } });
+    await renderPage("/agents/nora/gateways", async (host) => {
+      await eventually(() => cardOf(host, "whatsapp:shop")?.querySelector("[data-checking-link]") != null, 3_000, "the check said");
+      const card = cardOf(host, "whatsapp:shop")!;
+      expect(card.textContent).toContain("WhatsApp ended this number's link. Trying it once more");
+      expect(card.textContent).not.toContain("Getting the QR code");
+      expect([...card.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Link again")).toBe(false);
+    });
+  });
+
+  test("for someone who is not an admin: said, and left to an admin to link again", async () => {
+    answers("pair");
+    const me = WIRE["/auth/me"] as { role: string; user: { role: string } };
+    answer({
+      ...current(),
+      "/gateways/whatsapp%3Ashop/pairing": { status: 200, body: { status: "dead", linked: false, loggedOut: true, qr: null } },
+      "/auth/me": { status: 200, body: { ...me, role: "operator", user: { ...me.user, role: "operator" } } },
+    });
+    await renderPage("/agents/nora/gateways", async (host) => {
+      await eventually(() => cardOf(host, "whatsapp:shop")?.querySelector("[data-logged-out]") != null, 3_000, "the logged-out note");
+      const card = cardOf(host, "whatsapp:shop")!;
+      expect(card.textContent).toContain("An admin can link it again.");
+      expect([...card.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Link again")).toBe(false);
+    });
   });
 });

@@ -104,19 +104,21 @@ export function registerGatewayRoutes(control: ControlApp, deps: ControlDeps): v
 
   /**
    * A number logged out from its phone, linked again: its old login removed and a new code to scan (`linkAgain`). An
-   * admin's, as adding a connection is, since it removes a login. Refused for one still linked or still pairing.
+   * admin's, as adding a connection is, since it removes a login. Refused for one still linked, pairing or being checked;
+   * a login that could not be removed leaves the number started again as it was, said as that.
    */
   control.post("/gateways/:id/link-again", async (c) => {
     const principal = c.get("principal");
     if (!atLeast(principal, "admin")) return c.json({ error: "admin only" }, 403);
     const id = c.req.param("id");
-    const gateway = deps.ctx.gateways.get(id) as (Gateway & { linkAgain?: () => Promise<{ ok: true } | { ok: false; reason: string }> }) | undefined;
+    const gateway = deps.ctx.gateways.get(id) as (Gateway & { linkAgain?: () => Promise<{ ok: true } | { ok: false; refused: boolean; reason: string }> }) | undefined;
     if (!gateway) return c.json({ error: "no such gateway", plain: "That chat connection is not there any more. Reload the page." }, 404);
     if (typeof gateway.linkAgain !== "function") {
       return c.json({ error: "this gateway does not pair with a code", plain: "This chat connection does not pair with a code." }, 400);
     }
     const result = await gateway.linkAgain();
-    if (!result.ok) return c.json({ error: result.reason, plain: "This number is not logged out, so there is nothing to link again. Reload the page." }, 409);
+    if (!result.ok && result.refused) return c.json({ error: result.reason, plain: "This number is not logged out, so there is nothing to link again. Reload the page." }, 409);
+    if (!result.ok) return c.json({ error: result.reason, plain: "Its old link could not be removed, so it was not linked again. The log says why." }, 500);
     deps.audit.record({ action: "gateway_link_again", actor: principal.actor, gatewayId: id });
     return c.json({ ok: true, id, status: gateway.status } satisfies { ok: true; id: string; status: string });
   });

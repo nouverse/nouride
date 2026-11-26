@@ -351,6 +351,16 @@ export abstract class BaseGateway implements Gateway {
     this.setStatus("disconnected");
   }
 
+  /**
+   * The replies held while the connection was down, let go of, for one that is not the same connection any more: a
+   * WhatsApp number linked again, maybe to another account, would send them from it. The count, for the log.
+   */
+  protected dropHeld(): number {
+    const count = this.outboundBuffer.length;
+    this.outboundBuffer = [];
+    return count;
+  }
+
   async send(msg: OutboundMessage): Promise<string[]> {
     if (this._status !== "connected") {
       this.buffer(msg);
