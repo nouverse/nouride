@@ -59,7 +59,7 @@ function UseLines({ seen }: { seen: Pick<CliAccountUse, "use" | "at" | "said"> }
         )),
       )}
       {use.creditsLeft === false ? <li className="text-warning text-xs">No credits left beyond these limits.</li> : null}
-      {at ? <li className="text-base-content/65 text-[11px]">{said ? `As the CLI said while it worked, ${ago(at)}.` : `Read ${ago(at)}.`}</li> : null}
+      {at ? <li className="text-base-content/65 text-[11px]">{said ? `Said while an agent worked on it, ${ago(at)}.` : `Read ${ago(at)}.`}</li> : null}
     </ul>
   );
 }

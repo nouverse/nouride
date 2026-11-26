@@ -132,7 +132,7 @@ export function createAgentCreateTool(options: HarnessToolOptions): Tool {
             type: "object",
             description: "A coding CLI installed here answers it instead of a model. Omit for one Nouride runs.",
             properties: {
-              cli: { type: "string", description: "Its id, from `nouride agents scan`. One it says is Experimental was not yet run on a real account: tell the person before you pick it." },
+              cli: { type: "string", description: "Its id, from `nouride agents scan`" },
               profile: { type: "string", description: "The CLI account it answers with, e.g. default" },
               model: { type: "string", description: "The CLI's own model, as the CLI names it; omit for the CLI's default" },
             },

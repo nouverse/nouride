@@ -117,7 +117,7 @@ describe("Coding CLIs on the Models page", () => {
       const each = host.querySelector("[data-account-use-each]")!;
       expect([...each.querySelectorAll(":scope > div > p:first-child")].map((name) => name.textContent)).toEqual(["Coder's own sign-in", "ghost's own sign-in"]);
       expect(ghost!.textContent).toBe("How much of its plan is used is not known.");
-      expect([...coder!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Codex10% used", "As the CLI said while it worked, 1 min ago."]);
+      expect([...coder!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Codex10% used", "Said while an agent worked on it, 1 min ago."]);
     } finally {
       unmount();
     }
