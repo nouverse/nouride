@@ -100,6 +100,7 @@ export function ApprovedTab({
   found = "",
   onFind,
   gateways,
+  letInOn,
 }: {
   senders: SenderRecord[];
   /** How many are approved in all: more than `senders` once a list was let in from a file. */
@@ -114,6 +115,11 @@ export function ApprovedTab({
   agentOf: (gatewayId: string) => string | undefined;
   /** The connections a list can be let in on: "Let in a list" is offered where the page hands them over. */
   gateways?: readonly GatewayInstance[];
+  /**
+   * The open agent whose connections these are, on its Open agents page: said as those let in by name before it was
+   * opened, which is what they are to it, rather than as the install's approved.
+   */
+  letInOn?: string;
 }) {
   const me = useMe();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -124,6 +130,8 @@ export function ApprovedTab({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["access"] });
       await queryClient.invalidateQueries({ queryKey: ["access-history"] });
+      // An open agent's people who wrote say who is blocked: theirs is refreshed with it, not half a minute later.
+      await queryClient.invalidateQueries({ queryKey: ["agent-public"] });
     },
   });
   const operator = canWrite(me.data ?? null);
@@ -137,10 +145,14 @@ export function ApprovedTab({
     <div className="space-y-6">
       {dialog}
       <ListCard
-        title={`Approved (${total.toLocaleString("en-US")})`}
+        title={`${letInOn ? "Let in by name" : "Approved"} (${total.toLocaleString("en-US")})`}
         // Another card stands under this one: a long list is cut short, and opens in full with one press.
         maxHeight="max-h-[32rem]"
-        description="Answered by the agent whose connection they wrote to. Each account says which person in People it is."
+        description={
+          letInOn
+            ? `Let in on ${letInOn}'s connections by a code or a list, before it was opened. They are not strangers to it: they are answered as people you let in, and keep that when it is closed. Revoke or block one here.`
+            : "Answered by the agent whose connection they wrote to. Each account says which person in People it is."
+        }
         // An admin's, as letting one person in by a code is: a list hands every agent to everybody on it.
         actions={gateways && isAdmin(me.data ?? null) ? <ImportList gateways={gateways} /> : undefined}
         {...search}

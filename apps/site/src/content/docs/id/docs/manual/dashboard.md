@@ -42,7 +42,7 @@ Agents
         Workspace       folder miliknya sendiri, untuk dilihat-lihat          (admin)
         Connections     bot dan nomor tempat ia menjawab
         Access          apakah ia menerima pengirim baru, seberapa banyak ia bertanya, jumlah pengirimnya
-                        (terbuka untuk semua: berapa yang menulis, dan jalan ke daftarnya)
+                        (terbuka untuk semua: jumlah percakapan dan orang hari ini, dan jalan ke daftarnya)
         Skills          semua skill di kumpulan, dan mana yang dibawa agent ini
         Connectors      server MCP instalasi yang dipakai agent ini
         Settings        batas tool dan turn-nya, job senyap, dan tool apa saja yang dimilikinya

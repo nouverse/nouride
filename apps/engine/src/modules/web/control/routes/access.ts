@@ -59,6 +59,7 @@ export function registerAccessRoutes(control: ControlApp, deps: ControlDeps): vo
       allowlist: deps.ctx.config.security.access.allowlist,
       senders: listed.senders,
       approvedTotal: listed.approvedTotal,
+      approvedOn: listed.approvedOn,
     } satisfies AccessListing);
   });
 

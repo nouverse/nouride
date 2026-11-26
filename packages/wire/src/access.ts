@@ -50,6 +50,11 @@ export interface AccessListing {
   senders: SenderRecord[];
   /** How many are approved in all. More than `senders` holds where a list was let in from a file. Absent from a daemon before it. */
   approvedTotal?: number;
+  /**
+   * How many are approved on each connection, by its id: what a page that leaves some connections out counts the rest
+   * from, past the newest it was sent. Absent from a daemon before it.
+   */
+  approvedOn?: Record<string, number>;
 }
 
 /**

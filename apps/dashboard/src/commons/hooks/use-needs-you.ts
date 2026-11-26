@@ -16,6 +16,7 @@ import { api } from "@/commons/lib/api";
 import type { MissionView } from "@nouride/wire";
 import { waitsForReader } from "@/commons/lib/mission-waits";
 import { canWrite, useMe } from "@/commons/lib/session";
+import { useOpenConnections } from "./use-open-connections";
 import { useWaitingSteps } from "./use-waiting-steps";
 
 export interface NeedsYou {
@@ -48,6 +49,10 @@ export function missionsWaiting<T extends Pick<MissionView, "seen" | "waitKind" 
 export function useNeedsYou(): NeedsYou {
   const approvals = useQuery({ queryKey: ["approvals"], queryFn: api.approvals, refetchInterval: 5_000, retry: false });
   const access = useQuery({ queryKey: ["access"], queryFn: () => api.access(), refetchInterval: 15_000, retry: false });
+  // A request on an agent's connection that is open to everyone is not one: the Access page lists none of them, and a
+  // count of them would point at a list that has nothing. Counted once it is known whose they are; every one, where that
+  // cannot be told, so a real request is never hidden.
+  const opened = useOpenConnections();
   const drafts = useQuery({ queryKey: ["skill-drafts"], queryFn: api.skillDrafts, refetchInterval: 30_000, retry: false });
   const waitingSteps = useWaitingSteps();
   const missions = useQuery({ queryKey: MOVING_MISSIONS, queryFn: () => api.missions(), refetchInterval: 15_000, retry: false });
@@ -72,7 +77,7 @@ export function useNeedsYou(): NeedsYou {
     approvals: approvals.data?.pending?.length ?? 0,
     missions: missionsWaiting(missions.data?.missions ?? []).length,
     steps: waitingSteps.data?.waiting.length ?? 0,
-    requests: (access.data?.senders ?? []).filter((sender) => sender.status === "pending").length,
+    requests: opened.known || opened.failed ? (access.data?.senders ?? []).filter((sender) => sender.status === "pending" && !opened.onOpen(sender.gatewayId)).length : 0,
     skills: drafts.data?.pending?.length ?? 0,
     facts: operator ? (proposals.data?.proposals.length ?? 0) : 0,
   };

@@ -212,6 +212,8 @@ describe("what a page or a terminal lists, once thousands are in", () => {
 
     const page = (await (await app.request("/access")).json()) as AccessListing;
     expect(page.approvedTotal).toBe(APPROVED_LISTED + 100);
+    // Counted on each connection too, every one of them and not only the newest sent.
+    expect(page.approvedOn).toEqual({ [WA]: APPROVED_LISTED + 100 });
     expect(page.senders.filter((one) => one.status === "approved")).toHaveLength(APPROVED_LISTED);
     expect(page.senders.filter((one) => one.status === "pending").map((one) => one.senderId)).toEqual(["555"]);
     // The newest: none of the first hundred, let in a minute earlier.
@@ -224,5 +226,13 @@ describe("what a page or a terminal lists, once thousands are in", () => {
     expect(byId.senders.map((one) => one.senderName)).toEqual(["Bu Rina"]);
     // What is typed is looked for as it is: `%` and `_` match themselves.
     expect(((await (await app.request("/access?status=approved&q=%25")).json()) as AccessListing).senders).toEqual([]);
+
+    // Two let in on another connection, older than every one sent: counted on theirs, whatever the page was sent.
+    clock -= 3_600_000;
+    await imported({ gateway: "telegram:main", senders: ["5550001111", "5550002222"] });
+    const both = (await (await app.request("/access")).json()) as AccessListing;
+    expect(both.approvedOn).toEqual({ [WA]: APPROVED_LISTED + 100, "telegram:main": 2 });
+    expect(both.approvedTotal).toBe(APPROVED_LISTED + 102);
+    expect(both.senders.filter((one) => one.gatewayId === "telegram:main" && one.status === "approved")).toEqual([]);
   });
 });

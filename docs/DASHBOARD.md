@@ -37,7 +37,7 @@ Agents            the Office, every agent as a row under it, and New Agent — a
       Workspace       its own folder in the workspace, with no way out of it — an admin's (0.8.38)
       Connections     the bots and numbers it answers on
       Access          whether it takes new senders, what it asks before acting, its senders' count;
-                      open to everyone, the count of who wrote to it, and the way to its list
+                      open to everyone, its conversations and today's people counted, and the way to its list
       Skills          every skill in the pool, and which of them this agent carries
       MCP             which of the install's MCP servers it uses
       Settings        what one turn may spend, its tools
@@ -49,7 +49,7 @@ Memory            agent notes · people · timeline · shared · proposals · se
 People            who is who across platforms ([[people]])
 Groups            the rooms the agents talk in: each group, channel, thread and dashboard room
 Access            who may talk to the agents: pending · approved · denied · blocked · history
-Open agents       the agents anyone may write to, one at a time: today and its limits · who wrote · blocked
+Open agents       the agents anyone may write to, one at a time: today and its limits · who wrote · let in by name · blocked
 Models            Model providers: endpoint, wire format, credential · Coding CLIs: each CLI,
                   its accounts and the agents on each, a shared account's sign-in
 LLM Gateway       the in-process Nougate's console — only on an edition that carries it

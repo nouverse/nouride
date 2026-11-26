@@ -65,8 +65,13 @@ export function allowMany(
  * dashboard asks again every fifteen seconds. `find` narrows the approved to those whose id or name holds it, which
  * is how one beyond the newest is reached.
  */
-export function listedRows(db: SqliteDb, status?: AccessStatus, find?: string): { rows: Row[]; approvedTotal: number } {
-  const approvedTotal = db.prepare<{ n: number }>("SELECT COUNT(*) AS n FROM sender_access WHERE status = 'approved'").get()?.n ?? 0;
+export function listedRows(db: SqliteDb, status?: AccessStatus, find?: string): { rows: Row[]; approvedTotal: number; approvedOn: Record<string, number> } {
+  // How many on each connection too: a page that leaves some connections out (an agent open to everyone, an agent
+  // picked) counts the rest from these, not from the newest it was sent.
+  const approvedOn = Object.fromEntries(
+    db.prepare<{ gateway_id: string; n: number }>("SELECT gateway_id, COUNT(*) AS n FROM sender_access WHERE status = 'approved' GROUP BY gateway_id").all().map((row) => [row.gateway_id, row.n]),
+  );
+  const approvedTotal = Object.values(approvedOn).reduce((sum, n) => sum + n, 0);
   const needle = find?.trim() ? `%${find.trim().replace(/[\\%_]/g, (mark) => `\\${mark}`)}%` : null;
   const approved =
     status && status !== "approved"
@@ -82,5 +87,5 @@ export function listedRows(db: SqliteDb, status?: AccessStatus, find?: string): 
       : status
         ? db.prepare<Row>("SELECT * FROM sender_access WHERE status = ? ORDER BY requested_at DESC").all(status)
         : db.prepare<Row>("SELECT * FROM sender_access WHERE status != 'approved' ORDER BY requested_at DESC").all();
-  return { rows: [...rest, ...approved], approvedTotal };
+  return { rows: [...rest, ...approved], approvedTotal, approvedOn };
 }

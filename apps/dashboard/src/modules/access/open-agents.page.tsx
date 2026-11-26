@@ -6,8 +6,13 @@
  * never put together with another's, another open agent's included: a picker of the open agents, with no "All". What it
  * used today and its two limits are above the list, since they are what its people cost; the limits are changed on its
  * own Access tab, where it was opened.
+ *
+ * Who was let in by name on its connections before it was opened is here too. They are no strangers to it (the daemon
+ * answers them as anyone let in, beyond its limits and to any agent they name), and the Access page, which leaves an
+ * open agent out, would otherwise show them nowhere while it is open.
  */
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Globe } from "lucide-react";
@@ -18,6 +23,8 @@ import { isAdmin, useMe } from "@/commons/lib/session";
 import { Card, EmptyState, PageHeader } from "@/commons/components/ui/ui";
 import { SearchSelect } from "@/commons/components/ui/SearchSelect";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { ApprovedTab } from "./approved.tab";
+import { approvedCounted } from "./approved-count";
 import { BlockedTab } from "./blocked.tab";
 import { PeopleWhoWrote } from "./people-who-wrote";
 
@@ -52,7 +59,9 @@ function Today({ agent }: { agent: AgentSummary }) {
 export default function OpenAgentsPage({ agent: wanted, onAgent }: { agent: string | undefined; onAgent: (agent: string) => void }) {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
-  const access = useQuery({ queryKey: ["access"], queryFn: () => api.access(), refetchInterval: 15_000, retry: false });
+  /** What was searched for among everyone let in, where they are more than the page was sent. */
+  const [found, setFound] = useState("");
+  const access = useQuery({ queryKey: found ? ["access", found] : ["access"], queryFn: () => api.access(found || undefined), refetchInterval: 15_000, retry: false });
   const me = useMe();
   const admin = isAdmin(me.data ?? null);
 
@@ -61,7 +70,15 @@ export default function OpenAgentsPage({ agent: wanted, onAgent }: { agent: stri
   // A link from before, to an agent that has been closed since: its people are back on the Access page.
   const closed = wanted !== undefined && status.data && !open.some((one) => one.id === wanted) ? wanted : null;
   const agentOf = (gatewayId: string) => gateways.data?.gateways.find((gateway) => gateway.id === gatewayId)?.agent;
-  const blocked = picked ? (access.data?.senders ?? []).filter((sender) => sender.status === "blocked" && agentOf(sender.gatewayId) === picked.id) : [];
+  const its = (gatewayId: string) => picked !== undefined && agentOf(gatewayId) === picked.id;
+  const blocked = picked ? (access.data?.senders ?? []).filter((sender) => sender.status === "blocked" && its(sender.gatewayId)) : [];
+  const letIn = (access.data?.senders ?? []).filter((sender) => sender.status === "approved" && its(sender.gatewayId));
+  const letInTotal = approvedCounted(access.data, letIn.length, { inScope: its, found, wholeInstall: false, onOpen: () => false });
+  // Entries of the config's list named for one of its connections; a bare id is every connection's, not its own.
+  const allowed = (access.data?.allowlist ?? []).filter((id) => {
+    const at = id.lastIndexOf(":");
+    return id.indexOf(":") < at && its(id.slice(0, at));
+  });
 
   return (
     <div className="space-y-6 *:animate-fade">
@@ -110,6 +127,9 @@ export default function OpenAgentsPage({ agent: wanted, onAgent }: { agent: stri
                 <p className="text-base-content/65 text-sm">Only an admin reads who wrote to it, and what they said.</p>
               </Card>
             )}
+            {access.data && (letInTotal > 0 || allowed.length > 0 || found) ? (
+              <ApprovedTab senders={letIn} allowlist={allowed} blocked={blocked} agentOf={agentOf} total={letInTotal} found={found} onFind={setFound} letInOn={picked.displayName || picked.id} />
+            ) : null}
             {access.data ? <BlockedTab senders={blocked} agentOf={agentOf} whileOpen /> : null}
           </div>
         </>

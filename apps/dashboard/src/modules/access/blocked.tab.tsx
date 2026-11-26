@@ -23,6 +23,8 @@ export function BlockedTab({ senders, agentOf, whileOpen = false }: { senders: S
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["access"] });
       await queryClient.invalidateQueries({ queryKey: ["access-history"] });
+      // An open agent's people who wrote say who is blocked: theirs is refreshed with it, not half a minute later.
+      await queryClient.invalidateQueries({ queryKey: ["agent-public"] });
     },
   });
   const operator = canWrite(me.data ?? null);

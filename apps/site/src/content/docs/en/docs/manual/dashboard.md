@@ -41,7 +41,7 @@ Agents
         Workspace       its own folder, to look through                       (admin)
         Connections     the bots and numbers it answers on
         Access          whether it takes new senders, how much it asks before it acts, its senders' count
-                        (open to everyone: how many wrote to it, and the way to its list)
+                        (open to everyone: its conversations and today's people counted, and the way to its list)
         Skills          every skill in the pool, and which of them this agent carries
         Connectors      the install's MCP servers this agent uses
         Settings        its tool and turn budgets, quiet jobs, and which tools it has

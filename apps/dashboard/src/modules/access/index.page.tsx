@@ -12,7 +12,8 @@
  *
  * An agent open to everyone is not on it: nobody asks it for a code, so none of the five is its, and its people are a
  * list of their own, one agent at a time, on the Open agents page. Its connections' rows are left out of every tab and
- * count, and it is not offered as a filter; closed again, its rows are back here by themselves.
+ * count, and it is not offered as a filter; closed again, its rows are back here by themselves. Nothing is listed or
+ * counted until the page knows which agents are open (`useOpenConnections`): before that, theirs could not be told apart.
  */
 
 import { useOrchestrator, useOrchestratorFirst } from "@/commons/components/agents/AgentName";
@@ -36,6 +37,8 @@ import type { AccessSearch, AccessTab } from "./search";
 import { SenderQuery } from "./sender-line";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
+import { useOpenConnections } from "@/commons/hooks/use-open-connections";
+import { approvedCounted } from "./approved-count";
 
 const count = (n: number, tone = "badge-ghost") => (n > 0 ? <span className={`badge badge-xs ${tone} font-semibold`}>{n}</span> : null);
 
@@ -51,24 +54,17 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
   /** One filter for whichever tab is open, in the row that stays at the top of the window. */
   const [query, setQuery] = useState("");
 
-  const daemon = useQuery({ queryKey: ["status"], queryFn: api.status });
-  const agentOf = (gatewayId: string) => gateways.data?.gateways.find((gateway) => gateway.id === gatewayId)?.agent;
   const orchestrator = useOrchestrator();
   /** The agents open to everyone, and the connections they own: neither is this page's (`/open-agents`). */
-  const open = new Set((daemon.data?.agents ?? []).filter((agent) => agent.access === "open").map((agent) => agent.id));
-  const onOpen = (gatewayId: string) => {
-    const agent = agentOf(gatewayId);
-    return agent !== undefined && open.has(agent);
-  };
+  const opened = useOpenConnections();
+  const { agentOf, onOpen } = opened;
+  const open = opened.agents;
   const agents = useOrchestratorFirst([...new Set((gateways.data?.gateways ?? []).map((gateway) => gateway.agent).filter((agent): agent is string => Boolean(agent) && !open.has(agent!)))].sort(), (id) => id);
   const inScope = (gatewayId: string) => !onOpen(gatewayId) && (!search.agent || agentOf(gatewayId) === search.agent);
-  const senders = (access.data?.senders ?? []).filter((sender) => inScope(sender.gatewayId));
+  const senders = opened.known ? (access.data?.senders ?? []).filter((sender) => inScope(sender.gatewayId)) : [];
   const by = (status: string) => senders.filter((sender) => sender.status === status);
   const [pending, approved, denied, blocked] = [by("pending"), by("approved"), by("denied"), by("blocked")];
-  // Everyone approved, where the page shows all agents' and was sent only the newest; else what it holds. An open
-  // agent's approved, kept for when it is closed, are not this page's while it is open.
-  const approvedOnOpen = (access.data?.senders ?? []).filter((sender) => sender.status === "approved" && onOpen(sender.gatewayId)).length;
-  const approvedTotal = !search.agent && !found ? Math.max((access.data?.approvedTotal ?? 0) - approvedOnOpen, approved.length) : approved.length;
+  const approvedTotal = opened.known ? approvedCounted(access.data, approved.length, { inScope, found, wholeInstall: !search.agent, onOpen }) : 0;
   /** A link from before, to an agent that is open now: its people are on its own page. */
   const pickedOpen = search.agent !== undefined && open.has(search.agent) ? search.agent : null;
   // A bare id is honoured on every connection; a qualified one only on its own.
@@ -142,7 +138,14 @@ export default function AccessPage({ search, onSearch }: { search: AccessSearch;
           </StickyBar>
 
           <SenderQuery.Provider value={{ query, setQuery }}>
-          {access.isPending ? (
+          {opened.failed ? (
+            <Card title="Which agents are open is not known">
+              <p className="text-base-content/65 text-sm" data-open-unknown>
+                Nouride did not say which of your agents are open to everyone, so this page cannot leave their people out, and lists
+                nobody. Reload the page to try again.
+              </p>
+            </Card>
+          ) : access.isPending || !opened.known ? (
             <ListLoading />
           ) : pickedOpen ? (
             <Card title={`${pickedOpen} is open to everyone`} description="Nobody asks it for a code, so it has nobody waiting, approved or denied here.">
