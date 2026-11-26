@@ -112,7 +112,7 @@ describe("the New Agent form", () => {
       }
       if (path === "/api/control/setup/presets") return json({ presets: PRESETS, groups: [] });
       if (path === "/api/control/providers") return json({ providers: [{ name: "gate", hasCredential: true }] });
-      if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "claude-code", name: "Claude Code", command: "claude-agent-acp", installed: true, version: "0.95.0", install: "npm i -g x", login: true }, { id: "codex", name: "Codex", command: "codex-acp", installed: false, install: "npm i -g codex-acp", login: true }] });
+      if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "claude-code", name: "Claude Code", command: "claude-agent-acp", installed: true, version: "0.95.0", install: "npm i -g x", login: true }, { id: "codex", name: "Codex", command: "codex-acp", installed: false, install: "npm i -g codex-acp", login: true }, { id: "grok", name: "Grok Build", command: "grok", installed: true, experimental: true, install: "curl x.example.test | bash", login: true }] });
       if (path === "/api/control/cli-accounts") return json({ clis: [{ id: "claude-code", name: "Claude Code", installed: true, install: "", shared: true, canLogin: true, accounts: [{ name: "team", signedIn: true, agents: [] }] }] });
       return json({ ok: false, models: [] });
     }) as typeof fetch;
@@ -137,6 +137,9 @@ describe("the New Agent form", () => {
       // No version on the option: the scan's is the ACP adapter's (0.95.0), not Claude Code's own.
       expect(radio("Claude Code")!.textContent).toContain("Installed. Signs in after it is made.");
       expect(radio("Claude Code")!.textContent).not.toContain("0.95.0");
+      // One not yet tried on a real account is offered with its label; a tried one carries none.
+      expect(radio("Grok Build")!.querySelector("[data-cli-experimental]")?.textContent?.trim()).toBe("Experimental");
+      expect(radio("Claude Code")!.querySelector("[data-cli-experimental]")).toBeNull();
       expect(radio("Codex")).toBeUndefined();
       expect(host.textContent).toContain("Not set up on this server yet: Codex.");
       expect(host.textContent).toContain("Model Name");

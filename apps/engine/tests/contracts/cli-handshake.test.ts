@@ -42,6 +42,13 @@ describe("the newest CLIs' handshake, with no sign-in", () => {
     expect(run.out).toStartWith("✗ codex: it did not answer the handshake");
   });
 
+  test("by default it checks the CLIs the workflow installs from npm; one installed another way is checked by name", () => {
+    const listed = check(["--list"]);
+    expect(listed.code).toBe(0);
+    expect(listed.out.split(" ")).toEqual(BUILT_IN_CLIS.filter((row) => row.package !== undefined).map((row) => row.id));
+    expect(listed.out.split(" ")).not.toContain("grok");
+  });
+
   test("misuse exits 2", () => {
     expect(check(["--only"]).code).toBe(2);
     expect(check(["--only", "nope"]).code).toBe(2);

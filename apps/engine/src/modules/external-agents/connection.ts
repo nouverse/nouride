@@ -72,6 +72,8 @@ export class CliConnection {
   private child: LongLivedProcess | null = null;
   private client: AcpClient | null = null;
   private handshake: InitializeResult | null = null;
+  /** The sign-in method this process was told (`CliRow.authenticate`), once: a CLI keeps it for its later sessions. */
+  private told: string | null = null;
   private readonly stderr: string[] = [];
   private readonly sessions = new Map<string, string>();
   /** What Nouride last set each session to, by session id: a change on the Brain tab is set again where it differs. */
@@ -228,12 +230,32 @@ export class CliConnection {
         log.info("an external agent's kept session could not be reopened; starting a new one", { agent_id: this.agentId, error: String(err) });
       }
     }
-    const { value: opened, born: started } = await this.bornWhile(() => client.newSession(cwd, mcpServers), born !== undefined);
+    const { value: opened, born: started } = await this.bornWhile(() => this.signedIn(() => client.newSession(cwd, mcpServers)), born !== undefined);
     born?.(started);
     this.sessions.set(key, opened.sessionId);
     this.offers(opened.sessionId, opened.configOptions);
     await setUp(opened.sessionId, opened);
     return opened.sessionId;
+  }
+
+  /**
+   * A session asked for, and where the CLI refuses it as signed out, told the sign-in method its row names that its
+   * handshake offers (`CliRow.authenticate`) and asked once more. Cursor's and Grok Build's CLIs open no session until
+   * told how their kept sign-in is to be read, signed in or not: refused, a CLI that has a sign-in kept answered as one
+   * that had none. Told once a process; a refusal after it is the CLI's answer, said as signed out.
+   */
+  private async signedIn<T>(open: () => Promise<T>): Promise<T> {
+    try {
+      return await open();
+    } catch (err) {
+      const offered = new Set((this.handshake?.authMethods ?? []).map((method) => method.id));
+      const method = this.told === null && err instanceof AcpError && err.code === AUTH_REQUIRED ? this.row.authenticate?.find((id) => offered.has(id)) : undefined;
+      if (!method) throw err;
+      this.told = method;
+      await this.need().authenticate(method);
+      log.info("an external agent's CLI was told its sign-in method", { agent_id: this.agentId, cli: this.row.id, method });
+      return await open();
+    }
   }
 
   /** A session's options as the CLI last said them; empty before it said any. */
@@ -297,7 +319,7 @@ export class CliConnection {
    */
   async probe(cwd: string): Promise<NewSessionResult> {
     // Counted as an open: what it starts is not a session's that opens beside it.
-    const { value: opened } = await this.bornWhile(() => this.need().newSession(cwd));
+    const { value: opened } = await this.bornWhile(() => this.signedIn(() => this.need().newSession(cwd)));
     this.lastUsed = this.now();
     // Let go at once: each check left a session open in the agent's live CLI, and a session holds memory there.
     this.letGo(opened.sessionId);

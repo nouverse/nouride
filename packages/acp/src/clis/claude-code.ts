@@ -2,7 +2,40 @@
  * Claude Code, through Anthropic's ACP connector, `claude-agent-acp`, which carries Claude Code itself.
  */
 
-import type { CliRow } from "./row.ts";
+import type { CliRow, CliUse, UseLimit } from "./row.ts";
+import { field, numberOf, percent, timeOf } from "./read.ts";
+
+const WINDOWS: Readonly<Record<string, { label: string; minutes: number }>> = {
+  five_hour: { label: "5-hour", minutes: 300 },
+  seven_day: { label: "Weekly", minutes: 10_080 },
+};
+
+/**
+ * Anthropic's answer for a Claude subscription's use (`/api/oauth/usage`, what Claude Code's own `/usage` reads): each
+ * window's share used in percent and its end, the weekly ones of a model beside the account's own, as keys
+ * (`seven_day_opus`) or as entries of `limits` (`weekly_scoped`, the model named in its scope).
+ */
+export function claudeUse(answer: unknown): CliUse | null {
+  const limits: UseLimit[] = [];
+  const window = (value: unknown, minutes: number) => {
+    const used = numberOf(field(value, "utilization"));
+    return used === null ? null : { usedPercent: percent(used), minutes, resetsAt: timeOf(field(value, "resets_at")) };
+  };
+  for (const [key, value] of Object.entries(answer && typeof answer === "object" ? answer : {})) {
+    const known = WINDOWS[key];
+    const model = !known && key.startsWith("seven_day_") ? key.slice("seven_day_".length) : null;
+    const said = known ? window(value, known.minutes) : model ? window(value, 10_080) : null;
+    if (said) limits.push({ id: key, label: known ? known.label : `Weekly, ${model}`, ...(model ? { models: [model] } : {}), windows: [said] });
+  }
+  const scoped = field(answer, "limits");
+  for (const limit of Array.isArray(scoped) ? scoped : []) {
+    const model = field(limit, "scope", "model", "display_name");
+    const used = numberOf(field(limit, "percent"));
+    if (field(limit, "kind") !== "weekly_scoped" || typeof model !== "string" || used === null) continue;
+    limits.push({ id: `weekly_${model.toLowerCase()}`, label: `Weekly, ${model}`, models: [model], windows: [{ usedPercent: percent(used), minutes: 10_080, resetsAt: timeOf(field(limit, "resets_at")) }] });
+  }
+  return limits.length > 0 ? { limits } : null;
+}
 
 export const claudeCode: CliRow = {
   id: "claude-code",
@@ -49,4 +82,13 @@ export const claudeCode: CliRow = {
   // carries `cost`; those between steps do not.
   ended: { usage: "cost" },
   loginNote: "Signs in with a Claude subscription.",
+  // The account's use at any time, asked of Anthropic with the account's token: a shared one's, else the profile's own.
+  readUse: {
+    kind: "http",
+    method: "GET",
+    url: "https://api.anthropic.com/api/oauth/usage",
+    token: [{ env: "CLAUDE_CODE_OAUTH_TOKEN" }, { file: ".credentials.json", path: ["claudeAiOauth", "accessToken"] }],
+    headers: { "anthropic-beta": "oauth-2025-04-20" },
+    parse: (answer) => claudeUse(answer),
+  },
 };

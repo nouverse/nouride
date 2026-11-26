@@ -51,6 +51,10 @@
  *
  * `FAKE_TAKES`, JSON, is what it says at its handshake it takes in a prompt (`{"image":true}`); unset, text alone.
  *
+ * `FAKE_AUTH_METHODS`, a list of ids: the sign-in methods its handshake offers. `FAKE_NEEDS_TOLD`: one of them, which
+ * it must be told (`authenticate`) before it opens a session, as Cursor's and Grok Build's CLIs must; each method it is
+ * told goes to stderr as `told:<id>`.
+ *
  * `FAKE_EFFORTS`, JSON of each model's efforts (`{"small":["low","high"]}`), adds an effort option filed under ACP's
  * `thought_level` with an id of its own, `reasoning`, whose values follow the model as Claude Code's do: a model change
  * sets the effort back to the model's first. Unset, the CLI offers no effort. An option or value it did not offer is
@@ -80,6 +84,8 @@ const steered = new Map<string, (words: string) => void>();
 /** The handshake's request ids — answered with the steering extension in `steer` mode. */
 const handshakes = new Set<unknown>();
 const text = (blocks: ContentBlock[]) => blocks.map((block) => (block.type === "text" ? block.text : "")).join("");
+/** The sign-in method it was told, where it must be told one (`FAKE_NEEDS_TOLD`). */
+let told: string | null = null;
 
 const server = new AcpServer({
   transport: {
@@ -96,9 +102,15 @@ const server = new AcpServer({
   agentInfo: { name: "fake-cli", version: "9.9.9" },
   mcpCapabilities: { http: true },
   promptCapabilities: JSON.parse(process.env.FAKE_TAKES ?? "{}") as { image?: boolean; audio?: boolean },
+  authMethods: (process.env.FAKE_AUTH_METHODS?.split(",") ?? []).map((id) => ({ id, name: id })),
   handlers: {
+    authenticate: async (methodId) => {
+      process.stderr.write(`told:${methodId}\n`);
+      told = methodId;
+    },
     newSession: async ({ cwd, mcpServers }) => {
       if (mode === "auth" || existsSync(join(process.env.FAKE_HOME ?? "/nonexistent", "signed-out"))) throw authRequired("Authentication required");
+      if (process.env.FAKE_NEEDS_TOLD && told !== process.env.FAKE_NEEDS_TOLD) throw authRequired("Authentication required: no auth method id provided");
       sessions += 1;
       process.stderr.write(`cwd:${cwd}\n`);
       if (mode === "overloaded") process.stderr.write("[mcp] server 'github' not found\n");

@@ -22,6 +22,8 @@ export interface AgentExternal {
 export interface ScannedCli {
   id: string;
   name: string;
+  /** Not yet run on a real account: offered with an Experimental label. */
+  experimental?: true;
   /** Who makes it: "Anthropic". */
   maker?: string;
   command: string;
@@ -128,6 +130,8 @@ export interface CliAccountView {
 export interface CliAccountsView {
   id: string;
   name: string;
+  /** Not yet run on a real account: offered with an Experimental label. */
+  experimental?: true;
   /** Who makes it: "Anthropic". */
   maker?: string;
   installed: boolean;

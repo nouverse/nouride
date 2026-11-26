@@ -34,7 +34,7 @@ const CLIS: CliAccountsView[] = [
   { id: "mine", name: "Mine", installed: false, install: "download mine-acp from mine.example.test onto the PATH", shared: false, canLogin: false, accounts: [] },
 ];
 
-function serve(): { posted: string[] } {
+function serve(clis: CliAccountsView[] = CLIS): { posted: string[] } {
   const posted: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
@@ -43,7 +43,7 @@ function serve(): { posted: string[] } {
       return json({ ok: true, login: { running: true, output: "Open https://claude.example.test/x\n", links: ["https://claude.example.test/x"], exitCode: null, signedIn: false } });
     }
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
-    if (path === "/api/control/cli-accounts") return json({ clis: CLIS });
+    if (path === "/api/control/cli-accounts") return json({ clis });
     if (path === "/api/control/status") return json({ orchestrator: "nouva", agents: [{ id: "nouva", displayName: "Nouva" }], gateways: [] });
     if (path.endsWith("/login")) return json({ login: { running: true, output: "Open https://claude.example.test/x\n", links: ["https://claude.example.test/x"], exitCode: null, signedIn: false } });
     return json({ error: "not found" }, 404);
@@ -81,6 +81,21 @@ const plainText = (host: HTMLElement) => {
 };
 
 describe("Coding CLIs on the Models page", () => {
+  test("a CLI not yet tried on a real account says so on its card, and only on its card", async () => {
+    serve([...CLIS, { id: "grok", name: "Grok Build", maker: "xAI", experimental: true, installed: true, install: "curl x.example.test | bash", shared: false, canLogin: true, accounts: [] }]);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => (host.textContent ?? "").includes("Grok Build"), 2_000, "the experimental CLI");
+      const notes = [...host.querySelectorAll("[data-cli-experimental-note]")];
+      expect(notes.map((note) => note.textContent?.replace(/\s+/g, " ").trim())).toEqual([
+        "Experimental Grok Build has not yet been tried on a real account here. It may not answer, or answer only in part.",
+      ]);
+      expect(host.querySelectorAll("[data-cli-experimental]")).toHaveLength(1);
+    } finally {
+      unmount();
+    }
+  });
+
   test("says the agent runs inside the CLI itself, signed in with its own sign-in — no token swap", async () => {
     serve();
     const { host, unmount } = await mount();

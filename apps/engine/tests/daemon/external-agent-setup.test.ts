@@ -160,7 +160,7 @@ describe("an agent that exists, answered by a coding CLI or by its model again (
     expect(config.daemon.orchestrator).toBe("nouva");
     const before = await readTextFileIfExists(join(root, "agents", "nix", "config.toml"));
     // Refused by the pack's own load: no one field of the page to name.
-    const unknown = await setup.setAnsweredBy({ agentId: "nix", cli: "cursor", actor: "t" });
+    const unknown = await setup.setAnsweredBy({ agentId: "nix", cli: "no-such-cli", actor: "t" });
     expect(unknown).toMatchObject({ ok: false });
     expect(unknown).not.toHaveProperty("field");
     expect(await readTextFileIfExists(join(root, "agents", "nix", "config.toml"))).toBe(before);

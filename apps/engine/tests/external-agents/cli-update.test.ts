@@ -37,8 +37,9 @@ describe("a new version's handshake, read for what Nouride uses", () => {
     expect(handshakeProblem({}, {}, [])).toBeNull();
   });
 
-  test("the built-in CLIs rely on steering, and their own updaters stay off", () => {
-    for (const row of BUILT_IN_CLIS) expect({ id: row.id, steering: row.steering }).toEqual({ id: row.id, steering: true });
+  test("the built-in CLIs that were tried rely on steering, and their own updaters stay off", () => {
+    // An experimental one is driven without steering until a run shows it offers it.
+    for (const row of BUILT_IN_CLIS.filter((one) => !one.experimental)) expect({ id: row.id, steering: row.steering }).toEqual({ id: row.id, steering: true });
     expect(CLAUDE.env?.DISABLE_AUTOUPDATER).toBe("1");
     expect(BUILT_IN_CLIS.find((row) => row.id === "codex")!.profileFiles?.["config.toml"]).toContain("check_for_update_on_startup = false");
   });

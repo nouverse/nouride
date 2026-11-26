@@ -10,16 +10,18 @@ import { readdirSync } from "node:fs";
 import { BUILT_IN_CLIS, cliStanding } from "../src/index.ts";
 
 const FOLDER = new URL("../src/clis/", import.meta.url).pathname;
-const SHAPE_FILES = new Set(["row.ts", "index.ts"]);
+/** The shape, the list, and what the rows' parses share: every other file is one CLI's. */
+const SHAPE_FILES = new Set(["row.ts", "index.ts", "read.ts"]);
 
 describe("the built-in coding CLIs", () => {
   test("are one file each, named by the row's id, and every file of the folder is listed", async () => {
     const files = readdirSync(FOLDER).filter((name) => name.endsWith(".ts") && !SHAPE_FILES.has(name));
     expect(files.map((name) => name.slice(0, -3)).sort()).toEqual(BUILT_IN_CLIS.map((row) => row.id).sort());
     for (const file of files) {
-      const exported = Object.values((await import(`${FOLDER}${file}`)) as Record<string, unknown>);
-      expect(exported).toHaveLength(1);
-      expect(BUILT_IN_CLIS).toContain(exported[0] as (typeof BUILT_IN_CLIS)[number]);
+      // One row each, beside the parses of its answers.
+      const rows = Object.values((await import(`${FOLDER}${file}`)) as Record<string, unknown>).filter((value) => typeof value === "object" && value !== null && "command" in value);
+      expect(rows).toHaveLength(1);
+      expect(BUILT_IN_CLIS).toContain(rows[0] as (typeof BUILT_IN_CLIS)[number]);
     }
   });
 

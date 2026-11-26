@@ -27,6 +27,7 @@ import { Details } from "@/commons/components/ui/Details";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { byInstaller, setUpMessage } from "@/commons/lib/set-up";
 import { ListLoading } from "@/commons/components/ui/Spinner";
+import { ExperimentalNote } from "@/commons/components/agents/ExperimentalCli";
 
 const ACCOUNT_NAME = /^[a-z0-9][a-z0-9-]{0,23}$/;
 /**
@@ -117,6 +118,7 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
       description={cli.shared ? "Each account is signed in once, here, and every agent on it answers with it." : `Each agent on an account signs in once, on its own Brain tab: ${cli.name} has no sign-in to share.`}
     >
       <div className="space-y-3 text-sm">
+        {cli.experimental ? <ExperimentalNote name={cli.name} /> : null}
         {cli.installed ? (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">

@@ -139,6 +139,7 @@ export class CliAccounts {
       views.push({
         id: row.id,
         name: row.name,
+        ...(row.experimental ? { experimental: true as const } : {}),
         ...(row.maker ? { maker: row.maker } : {}),
         installed: scan?.installed ?? false,
         ...(scan?.version ? { version: scan.version } : {}),

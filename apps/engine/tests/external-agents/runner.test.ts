@@ -653,6 +653,24 @@ describe("a turn of an external agent", () => {
     expect(service.unavailable("coder")).toBeNull();
   });
 
+  test("a CLI that opens no session until told its sign-in method is told the first its row names that it offers, once", async () => {
+    // Cursor's and Grok Build's CLIs refuse a session, signed in or not, until told how their kept sign-in is read.
+    const { service, runner, req } = setup({ row: { authenticate: ["not-offered", "cached", "other"], env: { FAKE_AUTH_METHODS: "other,cached", FAKE_NEEDS_TOLD: "cached" } } });
+    expect((await runner.run(req("first"))).text).toContain("first");
+    service.forgetSession("coder", "telegram:coder", "555");
+    expect((await runner.run(req("second"))).text).toContain("second");
+    const connection = await service.connection({ config: { id: "coder", external: { cli: "fake" } }, dir: "" } as unknown as LoadedAgent);
+    expect(await stderrSaid(connection, (line) => line.startsWith("told:"), 1)).toEqual(["told:cached"]);
+    expect((await stderrSaid(connection, (line) => line.startsWith("cwd:"), 2)).length).toBe(2);
+  });
+
+  test("one whose row names no sign-in method, or none it offers, is said signed out as before", async () => {
+    for (const authenticate of [undefined, ["nothing-it-offers"]]) {
+      const { runner, req } = setup({ row: { ...(authenticate ? { authenticate } : {}), env: { FAKE_AUTH_METHODS: "cached", FAKE_NEEDS_TOLD: "cached" } } });
+      await expect(runner.run(req("hello"))).rejects.toThrow("Fake CLI is not signed in. Sign in on the agent's Brain tab");
+    }
+  });
+
   test("a CLI that is not installed says how to install it", async () => {
     const dir = mkdtempSync(join(tmpdir(), "external-missing-"));
     dirs.push(dir);

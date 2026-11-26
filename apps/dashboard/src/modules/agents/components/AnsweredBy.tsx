@@ -12,6 +12,7 @@ import { api } from "@/commons/lib/api";
 import { cliLabel } from "@/commons/lib/api.external-agents";
 import { Field } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
+import { ExperimentalBadge } from "@/commons/components/agents/ExperimentalCli";
 
 const mib = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MiB`;
 
@@ -19,7 +20,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
   const scan = useQuery({ queryKey: ["external-clis"], queryFn: () => api.externalClis(), staleTime: 60_000, retry: false });
   const clis = scan.data?.clis ?? [];
   const missing = clis.filter((cli) => !cli.installed);
-  const option = (key: string, selected: boolean, disabled: boolean, onClick: () => void, icon: React.ReactNode, label: string, detail: string) => (
+  const option = (key: string, selected: boolean, disabled: boolean, onClick: () => void, icon: React.ReactNode, label: string, detail: string, badge?: React.ReactNode) => (
     <button
       key={key}
       type="button"
@@ -29,7 +30,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
       onClick={onClick}
       className={`rounded-xl border p-2.5 text-left transition-all disabled:opacity-60 ${selected ? "border-primary/40 bg-primary/10" : "border-base-content/[0.08] hover:bg-base-200/60"}`}
     >
-      <span className="flex items-center gap-1.5 text-xs font-semibold">{icon} {label}</span>
+      <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">{icon} {label} {badge}</span>
       <span className="mt-0.5 block text-[11px] leading-snug text-base-content/65">{detail}</span>
     </button>
   );
@@ -41,7 +42,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
           {option("model", value === null, false, () => onChange(null), <Cpu size={13} aria-hidden="true" />, "A model", "Nouride's profiles, with fallbacks.")}
           {clis
             .filter((cli) => cli.installed)
-            .map((cli) => option(cli.id, value === cli.id, false, () => onChange(cli.id), <Terminal size={13} aria-hidden="true" />, cliLabel(cli), "Installed. Signs in after it is made."))}
+            .map((cli) => option(cli.id, value === cli.id, false, () => onChange(cli.id), <Terminal size={13} aria-hidden="true" />, cliLabel(cli), "Installed. Signs in after it is made.", cli.experimental ? <ExperimentalBadge /> : undefined))}
         </div>
         {scan.data?.room && !scan.data.room.enough ? (
           <p className="text-warning text-xs">
