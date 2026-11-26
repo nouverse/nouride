@@ -67,9 +67,12 @@ export const settingsApi = {
     request<{ ok: true; restartRequired?: boolean; stillOnThePhone?: boolean }>(`${control}/gateways/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   pairing: (id: string) =>
-    request<{ status: string; linked: boolean; qr: string | null; at?: number }>(
+    // `loggedOut`: logged out from its phone, so no code comes until it is linked again (`linkAgain`).
+    request<{ status: string; linked: boolean; loggedOut?: boolean; qr: string | null; at?: number }>(
       `${control}/gateways/${encodeURIComponent(id)}/pairing`,
     ),
+
+  linkAgain: (id: string) => post<{ ok: true; id: string; status: string }>(`${control}/gateways/${encodeURIComponent(id)}/link-again`, {}),
 
   providers: () =>
     request<{ providers: ProviderProfileView[]; editable: boolean }>(`${control}/providers`),

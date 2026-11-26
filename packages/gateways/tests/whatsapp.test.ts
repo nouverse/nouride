@@ -14,6 +14,9 @@ import type { BridgeCommand, BridgeEvent, MessageEnvelope } from "@nouride/share
 import { BRIDGE_PROTOCOL_VERSION } from "@nouride/shared";
 import { maskedNumber, WhatsAppGateway, type BridgeChannel } from "../src/channels/whatsapp/gateway.ts";
 import { eventually, sleep } from "./wait.ts";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /** A bridge that records what it was told and lets a test push events back. */
 function fakeChannel() {
@@ -563,6 +566,82 @@ describe("an expired session", () => {
     expect(gateway.isLinked()).toBe(false);
 
     await gateway.stop();
+  });
+
+  /** A number on a login folder of its own, whose every start is a bridge of its own: what linking again starts. */
+  function onItsOwnFolder() {
+    const folder = mkdtempSync(join(tmpdir(), "wa-link-again-"));
+    writeFileSync(join(folder, "creds.enc"), "the old link");
+    const bridges: ReturnType<typeof fakeChannel>[] = [];
+    const gateway = new WhatsAppGateway({
+      id: "whatsapp:shop",
+      platform: "whatsapp",
+      sessionDir: folder,
+      encryptionKey: "a".repeat(64),
+      agentId: "nora",
+      openChannel: () => {
+        const fake = fakeChannel();
+        bridges.push(fake);
+        return fake.channel;
+      },
+    });
+    built.push(gateway);
+    return { gateway, folder, bridges, says: (event: BridgeEvent) => bridges.at(-1)!.push(event) };
+  }
+
+  test("is linked again on a person's word: the old login removed, and a new bridge on the empty folder shows a code", async () => {
+    const { gateway, folder, bridges, says } = onItsOwnFolder();
+    await gateway.start();
+    await settle();
+    says({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "62822@s.whatsapp.net" });
+    await settle();
+
+    // Linked: refused, and the login stays. Removing a login that works is the logout's.
+    expect(await gateway.linkAgain()).toEqual({ ok: false, reason: "this number is not logged out from its phone" });
+    expect([existsSync(join(folder, "creds.enc")), bridges.length]).toEqual([true, 1]);
+
+    says({ type: "session_expired" });
+    says({ type: "status", status: "disconnected", reason: "logged out" });
+    await settle();
+    expect(gateway.isLoggedOut()).toBe(true);
+
+    expect(await gateway.linkAgain()).toEqual({ ok: true });
+    expect(existsSync(join(folder, "creds.enc"))).toBe(false);
+    // A bridge of its own, greeted as any start greets one, and the old one closed.
+    expect(bridges.length).toBe(2);
+    await eventually(() => bridges[1]!.written.some((command) => command.type === "hello"));
+    says({ type: "qr", qr: "2@a-new-code" });
+    await eventually(() => gateway.pairingCode() !== null);
+    expect([gateway.pairingCode()?.qr, gateway.isLoggedOut()]).toEqual(["2@a-new-code", false]);
+    rmSync(folder, { recursive: true, force: true });
+  });
+
+  test("a number linked again is pairing, not a link lost: the code is not given up on, and the old phone is not its own", async () => {
+    const { gateway, folder, says } = onItsOwnFolder();
+    await gateway.start();
+    await settle();
+    says({ type: "ready", version: BRIDGE_PROTOCOL_VERSION, jid: "62822@s.whatsapp.net" });
+    await settle();
+    expect(gateway.ownsAddress("62822@s.whatsapp.net")).toBe(true);
+    says({ type: "session_expired" });
+    says({ type: "status", status: "disconnected", reason: "logged out" });
+    await settle();
+    await gateway.linkAgain();
+    says({ type: "qr", qr: "2@a-new-code" });
+    await settle();
+
+    // The old phone's address is no longer taken for this number's own: it may be linked from another phone now.
+    expect(gateway.ownsAddress("62822@s.whatsapp.net")).toBe(false);
+    // Long past the time a lost link is given up on, the code being scanned is still healthy.
+    const ping = (gateway as unknown as { ping(): Promise<boolean> }).ping.bind(gateway);
+    const now = Date.now();
+    try {
+      setSystemTime(new Date(now + 10 * 60_000));
+      expect(await ping()).toBe(true);
+    } finally {
+      setSystemTime();
+    }
+    rmSync(folder, { recursive: true, force: true });
   });
 });
 

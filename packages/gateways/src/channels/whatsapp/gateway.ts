@@ -200,7 +200,7 @@ export class WhatsAppGateway extends BaseGateway {
   }
 
   /** Its own addresses and the groups it is in (`number.ts`): with two numbers, which messages are whose and where. */
-  private readonly itself = new NumberItself();
+  private itself = new NumberItself();
 
   get selfId(): string | undefined {
     return this.itself.phone;
@@ -220,6 +220,31 @@ export class WhatsAppGateway extends BaseGateway {
   /** Whether the session directory already holds working credentials. */
   isLinked(): boolean {
     return this.linked;
+  }
+
+  /** Whether WhatsApp ended this number's link, logged out from its phone: it waits for `linkAgain`, not for a scan. */
+  isLoggedOut(): boolean {
+    return this.expired;
+  }
+
+  /**
+   * A number logged out from its phone, linked again on a person's word: its old login removed and the bridge started on
+   * an empty folder, which shows a new code to scan. Never for a number still linked or still pairing: removing a login
+   * that works is `logoutAndStop`'s, and one logout signal alone is not taken as that word (`connection.ts`, `loggedOut`).
+   *
+   * What the old link taught it goes too. The number may be linked from another phone, whose addresses are not the old
+   * one's, and the old phone's would go on being taken for its own; and a new link is pairing, not a link lost, so
+   * `ping` does not give up on the code being scanned.
+   */
+  async linkAgain(): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (!this.expired) return { ok: false, reason: "this number is not logged out from its phone" };
+    await this.stop();
+    removePath(this.options.sessionDir);
+    this.itself = new NumberItself();
+    this.everLinked = false;
+    this.unlinkedSince = null;
+    await this.start();
+    return { ok: true };
   }
 
   protected async connect(): Promise<void> {
