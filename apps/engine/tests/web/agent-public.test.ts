@@ -213,6 +213,12 @@ describe("a person looked for on an open agent's page", () => {
     expect(await found(h, "s.whatsapp.net")).toEqual({ chats: [], total: 0 });
   });
 
+  test("by the whole address the page shows for one with no name, as it is typed", async () => {
+    const h = await house();
+    expect(await found(h, "62812@s.whatsapp.net")).toEqual({ chats: ["62812@s.whatsapp.net"], total: 1 });
+    expect(await found(h, "62812@lid")).toEqual({ chats: [], total: 0 });
+  });
+
   test("by what they first asked; and a search that finds nobody is an empty page", async () => {
     const h = await house();
     expect(await found(h, "kopi")).toEqual({ chats: ["62812@s.whatsapp.net"], total: 1 });

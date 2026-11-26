@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Globe } from "lucide-react";
 import type { AgentSummary } from "@nouride/wire";
@@ -59,14 +59,17 @@ function Today({ agent }: { agent: AgentSummary }) {
 export default function OpenAgentsPage({ agent: wanted, onAgent }: { agent: string | undefined; onAgent: (agent: string) => void }) {
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const gateways = useQuery({ queryKey: ["gateways"], queryFn: api.gateways });
-  /** What was searched for among everyone let in, where they are more than the page was sent. */
-  const [found, setFound] = useState("");
-  const access = useQuery({ queryKey: found ? ["access", found] : ["access"], queryFn: () => api.access(found || undefined), refetchInterval: 15_000, retry: false });
+  /** What was searched for among everyone let in, where they are more than the page was sent: for the agent it was searched on. */
+  const [search, setSearch] = useState({ agent: "", words: "" });
+  const open = (status.data?.agents ?? []).filter((one) => one.access === "open");
+  const picked = open.find((one) => one.id === wanted) ?? open[0];
+  const found = search.agent === picked?.id ? search.words : "";
+  const setFound = (words: string) => setSearch({ agent: picked?.id ?? "", words });
+  // The cards stay while a search loads, rather than going and coming back.
+  const access = useQuery({ queryKey: found ? ["access", found] : ["access"], queryFn: () => api.access(found || undefined), refetchInterval: 15_000, retry: false, placeholderData: keepPreviousData });
   const me = useMe();
   const admin = isAdmin(me.data ?? null);
 
-  const open = (status.data?.agents ?? []).filter((one) => one.access === "open");
-  const picked = open.find((one) => one.id === wanted) ?? open[0];
   // A link from before, to an agent that has been closed since: its people are back on the Access page.
   const closed = wanted !== undefined && status.data && !open.some((one) => one.id === wanted) ? wanted : null;
   const agentOf = (gatewayId: string) => gateways.data?.gateways.find((gateway) => gateway.id === gatewayId)?.agent;

@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { AgentOpen, AgentSummary, PublicConversation } from "@nouride/wire";
-import { answer, overrides, recordPosts, renderPage, useMountHarness, WIRE } from "./mount-harness.ts";
+import { answer, overrides, recordPosts, renderPage, useMountHarness, WIRE, type, dropdown } from "./mount-harness.ts";
 import { eventually } from "./wait.ts";
 
 useMountHarness();
@@ -96,6 +96,64 @@ describe("an open agent's people let in by name", () => {
     expect(posted.posts.map((one) => one.path)).toEqual(["/access/revoke"]);
   });
 
+  test("more let in than the page was sent, and none of them here: the box to find one is still there, and searches everyone", async () => {
+    // The household's newest fill what the daemon sends: none of Nora's five among them.
+    answer({ ...house(NOUVA, NORA), "/access": ok({ mode: "pair", editable: true, allowlist: [], senders: SENDERS.filter((one) => one.gatewayId !== "telegram:nora" || one.status !== "approved"), approvedTotal: 605, approvedOn: { "telegram:nouva": 600, "telegram:nora": 5 } }) });
+    const seen = { said: "", searched: "" };
+    await renderPage("/open-agents", async (host) => {
+      await eventually(() => card(host, "Let in by name") !== undefined, 3_000, "the let-in card");
+      const letIn = card(host, "Let in by name")!;
+      const box = letIn.querySelector<HTMLInputElement>('input[placeholder="Filter senders"]') ?? host.querySelector<HTMLInputElement>('input[placeholder="Filter senders"]');
+      expect(box).not.toBeNull();
+      seen.said = letIn.textContent ?? "";
+      type(box!, "Rudi");
+      await eventually(() => [...letIn.querySelectorAll<HTMLButtonElement>("button")].some((button) => button.textContent?.includes("Search everyone") && !button.disabled), 2_000, "the search of everyone");
+      overrides["/access?q=Rudi"] = accessOf(SENDERS);
+      [...letIn.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Search everyone"))!.click();
+      await eventually(() => (card(host, "Let in by name")?.textContent ?? "").includes("Rudi Before"), 3_000, "found among everyone");
+      seen.searched = card(host, "Let in by name")?.textContent ?? "";
+    });
+    expect(seen.said).toContain("The newest 0 of 5 are listed.");
+    expect(seen.said).not.toContain("Nobody approved yet");
+    expect(seen.searched).toContain("Rudi Before");
+  });
+
+  test("a search of everyone that is still on its way leaves the cards where they were", async () => {
+    answer(house(NOUVA, NORA));
+    overrides["/access?q=Rudi"] = { ...accessOf(SENDERS), hold: true };
+    let kept = { letIn: false, blocked: false };
+    await renderPage("/open-agents", async (host) => {
+      await eventually(() => card(host, "Let in by name") !== undefined, 3_000, "the let-in card");
+      const letIn = card(host, "Let in by name")!;
+      type(letIn.querySelector<HTMLInputElement>('input[placeholder="Filter senders"]')!, "Rudi");
+      await eventually(() => [...letIn.querySelectorAll<HTMLButtonElement>("button")].some((button) => button.textContent?.includes("Search everyone") && !button.disabled), 2_000, "the search of everyone");
+      [...letIn.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Search everyone"))!.click();
+      await eventually(() => (card(host, "Let in by name")?.querySelector("[data-approved-more]")?.textContent ?? "").includes("“Rudi”"), 3_000, "the search asked");
+      kept = { letIn: card(host, "Let in by name") !== undefined, blocked: card(host, "Blocked (") !== undefined };
+    });
+    expect(kept).toEqual({ letIn: true, blocked: true });
+  });
+
+  test("a search on one open agent's let-in card is that agent's: another's page opens on its own newest", async () => {
+    const OMAR_LET_IN = [...SENDERS, sender("telegram:omar", "3001", "Oki Before", "approved")];
+    answer({ ...house(NOUVA, NORA, OMAR), "/access": ok({ mode: "pair", editable: true, allowlist: [], senders: OMAR_LET_IN, approvedTotal: 622, approvedOn: { ...APPROVED_ON, "telegram:omar": 1 } }) });
+    let seen = "";
+    await renderPage("/open-agents?agent=nora", async (host) => {
+      await eventually(() => card(host, "Let in by name") !== undefined, 3_000, "Nora's let-in card");
+      const letIn = card(host, "Let in by name")!;
+      type(letIn.querySelector<HTMLInputElement>('input[placeholder="Filter senders"]')!, "Rudi");
+      overrides["/access?q=Rudi"] = accessOf(SENDERS);
+      await eventually(() => [...letIn.querySelectorAll<HTMLButtonElement>("button")].some((button) => button.textContent?.includes("Search everyone") && !button.disabled), 2_000, "the search of everyone");
+      [...letIn.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Search everyone"))!.click();
+      await eventually(() => (card(host, "Let in by name")?.querySelector("[data-approved-more]")?.textContent ?? "").includes("“Rudi”"), 3_000, "Nora's search");
+      // Omar, picked as a person picks him.
+      await dropdown(host, "Agent").pick("Omar");
+      await eventually(() => (card(host, "Let in by name")?.textContent ?? "").includes("Oki Before"), 3_000, "Omar's own");
+      seen = card(host, "Let in by name")?.querySelector("[data-approved-more]")?.textContent ?? "";
+    });
+    expect(seen).not.toContain("Rudi");
+  });
+
   test("an open agent nobody was let in on shows no such card", async () => {
     answer(house(NOUVA, NORA, OMAR));
     let seen = { letIn: true, blocked: false };
@@ -163,6 +221,19 @@ describe("a request on an open agent's connection", () => {
     // Sam's alone; Nina asked Nora before she was opened, and Nora answers her now with no code.
     expect(said).toContain("Someone asks to talk to your agents");
     expect(said).not.toContain("2 people ask to talk to your agents");
+  });
+});
+
+describe("Agent Settings' count of who is waiting", () => {
+  test("leaves out a request on an open agent's connection, as the Access page does", async () => {
+    answer(house(NOUVA, NORA));
+    let said = "";
+    await renderPage("/agents/settings", async (host) => {
+      await eventually(() => /sender(s)? waiting/.test(text(host)), 3_000, "the count");
+      said = text(host).match(/\d+ senders? waiting/)?.[0] ?? "";
+    });
+    // Sam asked Nouva; Nina asked Nora before she was opened, and is not on the Access page to approve.
+    expect(said).toBe("1 sender waiting");
   });
 });
 

@@ -92,12 +92,14 @@ export function useSenderFilter<T extends Pick<SenderRecord, "gatewayId" | "send
   agentOf: (gatewayId: string) => string | undefined,
   /** More to match on, where a list shows more — the person in People an account belongs to. */
   also: (sender: T) => (string | null | undefined)[] = () => [],
+  /** More are there than were sent: the box is drawn with none listed, for the words a search of everyone takes. */
+  more = false,
 ) {
   const own = useState("");
   const shared = useContext(SenderQuery);
   const [query, setQuery] = shared ? [shared.query, shared.setQuery] : own;
   const visible = useTextFilter(senders, query, (sender) => [sender.senderName, `${sender.gatewayId}:${sender.senderId}`, agentOf(sender.gatewayId), ...also(sender)]);
-  const search = !shared && senders.length > 0 ? { search: { value: query, onChange: setQuery, placeholder: "Filter senders" } } : {};
+  const search = !shared && (senders.length > 0 || more) ? { search: { value: query, onChange: setQuery, placeholder: "Filter senders" } } : {};
   return { visible, query, search };
 }
 

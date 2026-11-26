@@ -418,10 +418,13 @@ export class SessionStore {
       const like = `%${query.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
       const openers = options.queryOpeners;
       // A search of people: the chat's id and the opener's address on their own part, without the app's name before
-      // or its domain after (`@s.whatsapp.net`, `@g.us`), which every row of that app holds and no person typed.
-      const chat = openers ? ownPart("s.chat_id") : "s.chat_id";
+      // or its domain after (`@s.whatsapp.net`, `@g.us`), which every row of that app holds and no person typed. An
+      // address typed whole, `62812@s.whatsapp.net` as the page shows one with no name, is matched whole.
+      const whole = query.indexOf("@") > 0;
+      const own = (expr: string) => (whole ? expr : ownPart(expr));
+      const chat = openers ? own("s.chat_id") : "s.chat_id";
       const people = openers
-        ? ` OR ${ownPart("substr(s.opened_by, instr(s.opened_by, ':') + 1)")} LIKE ? ESCAPE '\\'${openers.length > 0 ? ` OR s.opened_by IN (${openers.map(() => "?").join(", ")})` : ""}`
+        ? ` OR ${own("substr(s.opened_by, instr(s.opened_by, ':') + 1)")} LIKE ? ESCAPE '\\'${openers.length > 0 ? ` OR s.opened_by IN (${openers.map(() => "?").join(", ")})` : ""}`
         : "";
       clauses.push(
         `((SELECT t.prompt FROM turn_records t WHERE t.session_id = s.id ORDER BY t.rowid LIMIT 1)

@@ -138,7 +138,8 @@ export function ApprovedTab({
   const known = people.data?.people ?? [];
   const personOf = (sender: SenderRecord) => personFor(sender.gatewayId, sender.senderId, known);
   const name = (sender: SenderRecord) => sender.senderName || personOf(sender) || sender.senderId;
-  const { visible, query, search } = useSenderFilter(senders, agentOf, (sender) => [personOf(sender)]);
+  // More let in than were sent, with none of them here: the box is still drawn, or the search of everyone has no words.
+  const { visible, query, search } = useSenderFilter(senders, agentOf, (sender) => [personOf(sender)], Boolean(onFind) && total > senders.length);
   const { ask, dialog } = useConfirm();
 
   return (
@@ -159,9 +160,9 @@ export function ApprovedTab({
       >
         <ErrorNote error={answer.error} />
         {onFind && (found || total > senders.length) ? <MoreApproved shown={senders.length} total={total} found={found} typed={query} onFind={onFind} /> : null}
-        {senders.length === 0 ? (
+        {senders.length === 0 && (found || total === 0) ? (
           <EmptyState pose="security" title={found ? "Nobody approved matches that" : "Nobody approved yet"} />
-        ) : visible.length === 0 ? (
+        ) : senders.length === 0 ? null : visible.length === 0 ? (
           <NoMatch query={query} />
         ) : (
           <ul className="divide-y divide-base-content/[0.08] -my-2">
