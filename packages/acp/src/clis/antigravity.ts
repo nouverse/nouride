@@ -25,4 +25,7 @@ export const antigravity: CliRow = {
   login: ["acp", "--login"],
   loginNote: "Signs in with a Google account on a Google AI Pro or Ultra plan.",
   authenticate: ["oauth-personal"],
+  // What its sign-in wrote that is the sign-in (seen on the live box, 1.5.18, with no keyring): the Google token, and
+  // which sign-in it is. Beside them it wrote its log, which names the Google account, and its conversations' database.
+  signInFiles: [".gemini/antigravity-cli/antigravity-oauth-token", ".gemini/antigravity-cli/cache/acp-auth-state.json"],
 };

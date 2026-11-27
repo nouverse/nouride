@@ -34,20 +34,33 @@ export function signInRoot(row: CliRow, home: string): string {
   return row.profileEnv ? join(home, "profile") : home;
 }
 
-/** Every file of a sign-in under `root`, small ones, but a starting file the agent's folder keeps its own of (`profileFiles`). */
+/** A folder or file of a CLI's own that is never a sign-in: what it keeps of its work, which is each agent's own. */
+const NOT_A_SIGN_IN = /^(logs?|conversations?|sessions?|history|crashes|projects|brain|artifacts)$|\.(db|sqlite3?|log|jsonl|pb)$/i;
+
+/**
+ * The files of a sign-in under `root`, small ones: the row's own list where it has one (`signInFiles`), else every
+ * file but what a CLI keeps of its work and a starting file the agent keeps its own of (`profileFiles`).
+ */
 export function signInFiles(row: CliRow, root: string): SignInFile[] {
   const own = new Set(Object.keys(row.profileFiles ?? {}));
   const out: SignInFile[] = [];
+  const take = (path: string): void => {
+    const at = join(root, ...path.split("/"));
+    if (!fileExistsSync(at)) return;
+    const bytes = readBytesSync(at);
+    if (bytes.byteLength <= LARGEST) out.push({ path, data: Buffer.from(bytes).toString("base64") });
+  };
+  if (row.signInFiles) {
+    for (const path of row.signInFiles) take(path);
+    return out;
+  }
   const walk = (dir: string, prefix: string): void => {
     for (const entry of listDir(dir)) {
       const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-      // A name the copy's lines could not carry; no CLI's sign-in has one.
-      if (/[\t\n\r\\]/.test(path)) continue;
+      // A name the copy's lines could not carry (no CLI's sign-in has one), or what a CLI keeps of its work.
+      if (/[\t\n\r\\]/.test(path) || NOT_A_SIGN_IN.test(entry.name)) continue;
       if (entry.isDirectory) walk(join(dir, entry.name), path);
-      else if (entry.isFile && !own.has(path)) {
-        const bytes = readBytesSync(join(dir, entry.name));
-        if (bytes.byteLength <= LARGEST) out.push({ path, data: Buffer.from(bytes).toString("base64") });
-      }
+      else if (entry.isFile && !own.has(path)) take(path);
     }
   };
   if (fileExistsSync(root)) walk(root, "");

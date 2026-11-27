@@ -135,7 +135,7 @@ describe("the New Agent form", () => {
     try {
       await eventually(() => radio("Claude Code") !== undefined, 2_000, "Claude Code offered");
       // No version on the option: the scan's is the ACP adapter's (0.95.0), not Claude Code's own.
-      expect(radio("Claude Code")!.textContent).toContain("Installed. Signs in after it is made.");
+      expect(radio("Claude Code")!.textContent).toContain("Installed. Answers with the account picked below.");
       expect(radio("Claude Code")!.textContent).not.toContain("0.95.0");
       // One not yet tried on a real account is offered with its label; a tried one carries none.
       expect(radio("Grok Build")!.querySelector("[data-cli-experimental]")?.textContent?.trim()).toBe("Experimental");

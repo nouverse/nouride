@@ -88,6 +88,13 @@ export interface CliRow {
   mcpEnvHeaders?: boolean;
   /** Run in a terminal on the box to sign in: it prints a link, and a code where the flow has one. Absent: none works. */
   login?: readonly string[];
+  /**
+   * Its sign-in's files, under its profile folder (or HOME where it has none), where they are known: the only files an
+   * account signed in on the Models page hands its agents, and takes back renewed (`account-sign-in.ts`). Absent: what
+   * its sign-in wrote, but its databases, logs and conversations. Antigravity's sign-in wrote its conversations'
+   * database too, which, handed to every agent on the account and taken back, would have mixed theirs.
+   */
+  signInFiles?: readonly string[];
   /** Said beside the sign-in, for what the terminal does not cover. */
   loginNote?: string;
   /**

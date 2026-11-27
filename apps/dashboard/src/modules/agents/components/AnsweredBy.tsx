@@ -42,7 +42,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
           {option("model", value === null, false, () => onChange(null), <Cpu size={13} aria-hidden="true" />, "A model", "Nouride's profiles, with fallbacks.")}
           {clis
             .filter((cli) => cli.installed)
-            .map((cli) => option(cli.id, value === cli.id, false, () => onChange(cli.id), <Terminal size={13} aria-hidden="true" />, cliLabel(cli), "Installed. Signs in after it is made.", cli.experimental ? <ExperimentalBadge /> : undefined))}
+            .map((cli) => option(cli.id, value === cli.id, false, () => onChange(cli.id), <Terminal size={13} aria-hidden="true" />, cliLabel(cli), "Installed. Answers with the account picked below.", cli.experimental ? <ExperimentalBadge /> : undefined))}
         </div>
         {scan.data?.room && !scan.data.room.enough ? (
           <p className="text-warning text-xs">

@@ -44,6 +44,8 @@ export const cursor: CliRow = {
   login: ["--disable-auto-update", "login"],
   loginNote: "Signs in with a Cursor account.",
   authenticate: ["cursor_login"],
+  // Its sign-in on a box with no keyring, where its use reader reads the token too.
+  signInFiles: [".config/cursor/auth.json"],
   readUse: {
     kind: "http",
     method: "POST",

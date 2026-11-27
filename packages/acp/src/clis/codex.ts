@@ -50,6 +50,8 @@ export const codex: CliRow = {
   login: ["cli", "login", "--device-auth"],
   loginNote: "Signs in with ChatGPT. Turn on device-code sign-in in your ChatGPT security settings first.",
   // The account's use at any time, asked of OpenAI with the profile's own sign-in and its account.
+  // Its ChatGPT sign-in, `codex login` writes in CODEX_HOME.
+  signInFiles: ["auth.json"],
   readUse: {
     kind: "http",
     method: "GET",
