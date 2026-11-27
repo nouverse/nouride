@@ -210,9 +210,21 @@ describe("a turn of an external agent", () => {
     // An agent its own model answers, or none at all, is held by the approvals.
     expect(service.freeToDelete(agent(undefined, false))).toBe(false);
     expect(service.freeToDelete(undefined)).toBe(false);
-    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask.
+    // A CLI with no `folder` mode, a person's own: what it asks there the preset answers.
     const modeless = new ExternalAgents({ rows: () => [{ ...row(), modes: {} }], workspaceDir: () => "/nonexistent", secretsFor: () => ({}), sessions: { load: () => ({}), save: () => {} } });
-    expect(modeless.freeToDelete(agent("folder"))).toBe(false);
+    expect(modeless.freeToDelete(agent("folder"))).toBe(true);
+  });
+
+  test("on Free in its folder, as its own user, what the CLI still asks is allowed by the preset, the person never asked", async () => {
+    // Antigravity's least asking mode asks before what it cannot undo; an agent set to work unasked asked the person to
+    // write a file in its own folder on the live box.
+    runAgentCommandsThrough({ prefix: () => ["env"], put: () => [] });
+    const { runner, req, steps, asks } = setup({ permissions: "folder", row: { modes: {} } });
+    const result = await runner.run(req("push the fix"));
+    expect(asks).toEqual([]);
+    // (Its instruction file is not written by the stand-in for an agent's own user: said in a note, apart.)
+    expect(steps.filter((step) => !step.startsWith("note:"))).toEqual(["reasoning:Looking first.", "tool:echo hi", "tool_done:Bash ok: hi", "tool:git push", "tool_done:Bash ok"]);
+    expect(result.approvalsRefused).toBe(0);
   });
 
   test("the models the CLI offers are kept as its session said them, and outlive a restart, for the Brain tab to suggest (0.8.1)", async () => {

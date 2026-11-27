@@ -1,8 +1,8 @@
 /**
  * Antigravity, Google's coding CLI (`agy`), in its own ACP mode. Seen on Linux with no account (agy 1.5.18): `agy acp`
  * answers its handshake and offers its sign-ins (`oauth-personal` among them), and refuses a session until signed in;
- * `agy acp --login` prints a Google link and asks for the code pasted back. Not yet run on an account: experimental.
- * A Google AI Pro or Ultra plan is what it answers on.
+ * `agy acp --login` prints a Google link and asks for the code pasted back. Answered on an account on the live box;
+ * still experimental. A Google AI Pro or Ultra plan is what it answers on.
  */
 
 import type { CliRow } from "./row.ts";
@@ -20,6 +20,10 @@ export const antigravity: CliRow = {
   versionArgs: ["--version"],
   // Its own updater off: it is updated the way it was installed, by running the install again.
   env: { AGY_CLI_DISABLE_AUTO_UPDATE: "true" },
+  // The modes its sessions offer (seen on the live box, 1.5.18): `default` asks before edits and commands, `accept-edits`
+  // makes edits in the workspace unasked, `auto` makes edits and safe commands unasked and asks before what it cannot
+  // undo, which Free in its folder answers itself. Its unasked-for-everything is a start flag, not a mode.
+  modes: { folder: "auto", risky: "accept-edits", all: "default" },
   instructionFile: "AGENTS.md",
   // A Google link, then the code from the page it lands on, pasted back.
   login: ["acp", "--login"],

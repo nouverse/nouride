@@ -256,14 +256,16 @@ lewat **Use for …**), dan yang ditulis ke `[external]` di `config.toml` agent:
   Kosong berarti default CLI.
 - **Apa yang boleh dilakukan tanpa nanya**: salah satu dari tiga preset, masing-masing adalah mode CLI itu sendiri:
 
-| Preset | `permissions` | Mode Claude Code | Mode Codex |
-|---|---|---|---|
-| Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` |
-| Ask when risky | `risky` | `acceptEdits` | `agent` |
-| Ask for everything | `all` | `default` | `read-only` |
+| Preset | `permissions` | Mode Claude Code | Mode Codex | Mode Antigravity |
+|---|---|---|---|---|
+| Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` | `auto` |
+| Ask when risky | `risky` | `acceptEdits` | `agent` | `accept-edits` |
+| Ask for everything | `all` | `default` | `read-only` | `default` |
 
-Antigravity, Cursor CLI, dan Grok Build belum punya mode yang diatur Nouride: mereka mulai di mode mereka sendiri, dan
-setiap izin yang mereka minta lewat approval Nouride.
+Cursor CLI dan Grok Build belum punya mode yang diatur Nouride: mereka mulai di mode mereka sendiri. Di *Free in its
+folder*, apa pun yang masih ditanyakan CLI sebelum bertindak langsung diizinkan Nouride tanpa nanya kamu (mode `auto`
+Antigravity masih nanya sebelum hal yang gak bisa dibatalkan); di dua preset lainnya, pertanyaan itu lewat approval
+Nouride.
 
 *Free in its folder* gak nanya apa-apa, termasuk sebelum push, POST, atau `ssh`. Preset ini bebas hanya kalau tiap agent
 punya user sendiri, yaitu service Linux dengan helper `nouride-run`, di mana sistem operasi menjaga CLI dari semua yang

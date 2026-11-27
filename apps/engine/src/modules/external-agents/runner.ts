@@ -294,6 +294,7 @@ export class ExternalTurnRunner {
      * and the folder itself are kept — deleting those is the person's call.
      */
     const deleteScope = req.gatewayId === MISSION_GATEWAY_ID && req.privateDir ? missionDeleteScope(ownFolderOf(req.privateDir, req.chatId), req.workdir) : null;
+    const free = this.host.preset(this.agent.config.external!.permissions) === "folder";
     /** What the CLI asks permission for, asked as the turn's approval, its step announced above the question. */
     const permit = (read: UpdateReader) => async (request: RequestPermissionParams) => {
       read.announce(request.toolCall.toolCallId, request.toolCall.title);
@@ -313,6 +314,7 @@ export class ExternalTurnRunner {
           ...(req.parkApprovalsMs !== undefined ? { waitMs: 0, answerableMs: req.parkApprovalsMs } : {}),
         },
         waiting: (approvalId, tool) => inOrder(() => this.deps.onActivity?.("waiting", `waiting for approval: ${tool}`, { callId: request.toolCall.toolCallId, name: tool, approvalId })),
+        ...(free ? { free } : {}),
         ...(deleteScope ? { deleteScope } : {}),
         allowedAlone: (tool, command, targets) => {
           log.info("a delete inside the mission's folder allowed without asking", { agent_id: agentId, mission: req.chatId, tool, command, targets });

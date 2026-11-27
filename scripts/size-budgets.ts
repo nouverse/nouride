@@ -39,8 +39,8 @@ export const BUDGET: Record<string, Budget> = {
     why: "the service the agents' CLIs run under: connections, sessions, sign-ins (an account's, of token or files), models, lent tools, parts, versions, a turn's account, use per sign-in, leftovers",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
-    lines: 428,
-    why: "one turn of a CLI from its session to its answer: each prompt, its steering, usage, lent calls, helpers, a limit's end, the message kept as sent, its account's renewed sign-in kept after it",
+    lines: 430,
+    why: "one turn of a CLI from its session to its answer: each prompt, its steering, usage, lent calls, helpers, a limit's end, the message kept as sent, its sign-in kept, its preset answering its asks",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 498,
@@ -123,8 +123,8 @@ export const BUDGET: Record<string, Budget> = {
 /** Test files over `MAX_TEST_CODE_LINES`; new cases go in a file of their own. */
 export const TEST_BUDGET: Record<string, Budget> = {
   "apps/engine/tests/external-agents/runner.test.ts": {
-    lines: 1_059,
-    why: "a CLI's turns against the fake CLI, every case on the one `setup` that starts it: its accounts, their limits and use, its sign-in and the keeping of it, through the same service and session",
+    lines: 1_067,
+    why: "a CLI's turns against the fake CLI, every case on the one `setup` that starts it: its accounts, their limits and use, its sign-in kept, its preset's answers, through the same service and session",
   },
   "apps/engine/tests/pipeline/pipeline.test.ts": {
     lines: 3_849,

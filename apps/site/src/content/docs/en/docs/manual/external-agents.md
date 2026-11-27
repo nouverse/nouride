@@ -245,14 +245,15 @@ another is picked with **Use for …**), and what is set in `[external]` in its 
   CLI's default.
 - **What it may do without asking**: one of three presets, each the CLI's own mode:
 
-| Preset | `permissions` | Claude Code's mode | Codex's mode |
-|---|---|---|---|
-| Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` |
-| Ask when risky | `risky` | `acceptEdits` | `agent` |
-| Ask for everything | `all` | `default` | `read-only` |
+| Preset | `permissions` | Claude Code's mode | Codex's mode | Antigravity's mode |
+|---|---|---|---|---|
+| Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` | `auto` |
+| Ask when risky | `risky` | `acceptEdits` | `agent` | `accept-edits` |
+| Ask for everything | `all` | `default` | `read-only` | `default` |
 
-Antigravity, Cursor CLI and Grok Build have no modes Nouride sets yet: they start in their own, and every permission
-they ask for goes through Nouride's approvals.
+Cursor CLI and Grok Build have no modes Nouride sets yet: they start in their own. On *Free in its folder*, whatever a
+CLI still asks before it acts, Nouride allows without asking you (Antigravity's `auto` still asks before what it cannot
+undo); on the other two presets it goes through Nouride's approvals.
 
 *Free in its folder* asks nothing, not before a push, a POST or `ssh` either. It is free only where each agent is its
 own user, a Linux service with the `nouride-run` helper, where the operating system keeps the CLI out of everything

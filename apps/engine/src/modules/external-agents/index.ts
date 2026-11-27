@@ -378,11 +378,13 @@ export class ExternalAgents implements RunnerHost {
     return chosen ?? "folder";
   }
 
-  /** Whether nothing asks before the agent deletes (0.8.8): its CLI in `folder`, where its user's rights are the limit. */
+  /**
+   * Whether nothing asks before the agent deletes (0.8.8): its CLI in `folder`, where its user's rights are the limit,
+   * and what the CLI still asks there the preset answers (`permission.ts`), a CLI with no mode for it too.
+   */
   freeToDelete(agent: LoadedAgent | undefined): boolean {
     const external = agent?.config.external;
-    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask.
-    return external !== undefined && this.preset(external.permissions) === "folder" && this.row(external.cli)?.modes?.folder !== undefined;
+    return external !== undefined && this.preset(external.permissions) === "folder";
   }
 
   keptSession(agentId: string, key: string): string | undefined {
