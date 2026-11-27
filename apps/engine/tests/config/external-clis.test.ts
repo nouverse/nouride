@@ -49,9 +49,12 @@ modes = { folder = "free", all = "ask" }
     expect(row).toMatchObject({ name: "My CLI", profileEnv: "MY_CLI_HOME", instructionFile: "MY.md", login: ["auth", "login"], loginNote: "It prints a code.", status: ["auth", "status"], signedOut: ["please log in"], modes: { folder: "free", all: "ask" } });
   });
 
-  test("of the id a built-in row marked Experimental has is kept in that row's place, said once at load: an install that had one goes on", () => {
+  test("of the id of a row built in after it is kept in that row's place, said once at load: an install that had one goes on", () => {
     said.splice(0);
     {
+      // Antigravity is tried and no longer Experimental: a person's own `antigravity` from before is still theirs.
+      expect(parseExternalClis([{ id: "antigravity", command: "my-agy", args: ["acp"] }])).toMatchObject([{ id: "antigravity", command: "my-agy" }]);
+      said.splice(0);
       // Read as a start reads it, which says what it finds: the config check holds those words and says them too.
       const own = parseExternalClis([{ id: "cursor", name: "My Cursor", command: "my-cursor", args: ["acp"] }]);
       expect(own).toMatchObject([{ id: "cursor", name: "My Cursor", command: "my-cursor" }]);

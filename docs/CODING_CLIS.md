@@ -30,7 +30,9 @@ through Nouride's own gate. Nothing that drives a CLI names one. Everything a CL
      and how its account's use is asked for at any time. `readUse` parses the answer into `CliUse`, the one shape
      every CLI's use is shown and acted on in.
 3. **Mark it `experimental: true` until it has run on a real account.** It is offered with an Experimental label and
-   names no `tested` versions. Once a turn has run on it, take the flag off and record the versions it ran.
+   names no `tested` versions. Once a turn has run on it, take the flag off and record the versions it ran (one its
+   maker's script installs has none to record: the script installs the newest). Give it `ownKept: true` as well: a
+   person may already have a `[[external_clis]]` row of its id, and that row is then kept, not refused at the upgrade.
 4. **Test it.** `packages/acp/tests/clis.test.ts` holds every row to the shape; a parse in `readUse` gets a test with
    the answer its maker sends. Docs: the manual's coding CLIs page in both languages, and the release notes.
 

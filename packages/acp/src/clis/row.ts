@@ -145,6 +145,12 @@ export interface CliRow {
    */
   experimental?: true;
   /**
+   * Built in after its id was free for a person's own `[[external_clis]]` row: an install may hold one, older than this
+   * row perhaps, so theirs is kept in this one's place, said at load, rather than refused at the upgrade, which stopped
+   * the daemon over what worked. Absent: an own row of its id is refused, read as if it were the one tried here.
+   */
+  ownKept?: true;
+  /**
    * The sign-in methods its handshake offers that it is told to use, in order, when it refuses a session as signed out
    * (`authenticate`, the protocol's own): the first one offered is sent and the session asked for again, once. Some CLIs
    * open no session until told how their sign-in is to be read, even with one kept. Absent: never sent.

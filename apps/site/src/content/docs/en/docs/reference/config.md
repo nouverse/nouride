@@ -464,7 +464,7 @@ agents' commands may use, whichever is lower, at least 1 and at most 4), and it 
 ## `[[external_clis]]`
 
 A coding CLI you add for [external agents](/en/docs/manual/external-agents/), beside the five built in: `claude-code`,
-`codex`, and the three marked Experimental, `antigravity`, `cursor` and `grok`. Yours may not take the id of the first
+`codex`, and the three built in since, `antigravity`, `cursor` and `grok`. Yours may not take the id of the first
 two; it may take one of the three, and is then kept in its place, said once at the start. One table per CLI:
 
 ```toml

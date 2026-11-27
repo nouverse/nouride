@@ -40,10 +40,11 @@ describe("the built-in coding CLIs", () => {
     }
   });
 
-  test("a tried one names its package and the versions it ran; an experimental one names none", () => {
+  test("a tried one names its package and the versions it ran; an experimental one, or one its maker's script installs, names none", () => {
     for (const row of BUILT_IN_CLIS) {
-      if (row.experimental) {
-        expect({ id: row.id, tested: row.tested }).toEqual({ id: row.id, tested: undefined });
+      // A script installs its maker's newest, so there is no version to offer an update to: updated by running it again.
+      if (row.experimental || row.script) {
+        expect({ id: row.id, tested: row.tested, package: row.package }).toEqual({ id: row.id, tested: undefined, package: undefined });
         continue;
       }
       expect(row.package).toBeDefined();

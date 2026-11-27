@@ -23,10 +23,10 @@ the sign-in to another program. The one thing Nouride asks with it is how much o
 CLI's own usage page asks its maker. What a subscription allows is still for its maker's terms to say.
 
 Three more are built in, each speaking ACP itself, with no adapter: Google's **Antigravity** (`agy`), **Cursor CLI**
-and xAI's **Grok Build** (`grok`). They are marked **Experimental**: each was installed, started and asked for a session
-on a Linux box with no account, but none has answered a turn on a real account yet. The dashboard says so beside them,
-where CLIs are listed and where an agent's CLI is picked. They may not answer, or answer only in part; say so in an
-issue if one does not.
+and xAI's **Grok Build** (`grok`). Antigravity has been tried on a real account. Cursor CLI and Grok Build are marked
+**Experimental**: each was installed, started and asked for a session on a Linux box with no account, but neither has
+answered a turn on a real account yet. The dashboard says so beside them, where CLIs are listed and where an agent's
+CLI is picked. They may not answer, or answer only in part; say so in an issue if one does not.
 
 ## Installing a CLI
 
@@ -37,7 +37,7 @@ Nouride ships no CLI. Each installs with npm, as its adapter, which carries the 
 | Claude Code | `@agentclientprotocol/claude-agent-acp` | `claude-agent-acp` | Node 22 or later |
 | Codex | `@agentclientprotocol/codex-acp` | `codex-acp` | npm |
 
-The three marked Experimental install with their makers' own scripts. **Set it up** on their cards asks the
+Antigravity, Cursor CLI and Grok Build install with their makers' own scripts. **Set it up** on their cards asks the
 orchestrator, as it does for the two above; by hand it is one command, run as root runs `nouride tools run`:
 
 | CLI | Install | The command Nouride starts |
@@ -126,7 +126,7 @@ five-hour window included. Signing in, and saving an agent's Brain tab, are an a
 - **Codex** prints a link and a one-time code: open the link, sign in to ChatGPT and type the code into OpenAI's page,
   and the sign-in ends by itself. Device-code sign-in has to be switched on first, in your ChatGPT account's security
   settings.
-- **Antigravity** (Experimental) signs in with a Google account on a Google AI Pro or Ultra plan: it prints a link,
+- **Antigravity** signs in with a Google account on a Google AI Pro or Ultra plan: it prints a link,
   and you paste back the code Google's page shows.
 - **Cursor CLI** (Experimental) signs in with a Cursor account: it prints a link to open; the sign-in ends by itself.
 - **Grok Build** (Experimental) signs in with a Grok account on a SuperGrok or X Premium+ plan: it prints a link and a
@@ -414,8 +414,8 @@ modes = { folder = "build", all = "plan" }
 ```
 
 A secret it needs is bound to its command in `[security.exec_secrets]`; there is no `env` in the row. An `id` a
-built-in CLI has (`claude-code`, `codex`) is refused at load. One of a built-in CLI marked Experimental (`antigravity`,
-`cursor`, `grok`) is yours: your row is kept in its place, and the start says so once, as `nouride config check` does. A CLI you add runs as the agent's own user only where
+built-in CLI has (`claude-code`, `codex`) is refused at load. One of the three built in since (`antigravity`, `cursor`,
+`grok`) is yours: your row is kept in its place, and the start says so once, as `nouride config check` does. A CLI you add runs as the agent's own user only where
 each agent has one, gets no skills, and, with a `login`, is signed in on the account like the others.
 [Every key →](/en/docs/reference/config/#external_clis)
 

@@ -34,6 +34,7 @@ export const grok: CliRow = {
   name: "Grok Build",
   maker: "xAI",
   experimental: true,
+  ownKept: true,
   command: "grok",
   args: ["--no-auto-update", "agent", "stdio"],
   install: "nouride agents install grok",

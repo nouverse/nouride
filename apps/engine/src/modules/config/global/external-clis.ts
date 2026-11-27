@@ -3,10 +3,10 @@
  *
  * Read field by field, as the other open sections are: a row starts a program as the agent's user, so a misspelled key
  * is warned about and a wrong type refused at load, naming the entry — not found at the agent's first turn as a CLI
- * that "is not installed". An id a tried built-in row has is refused: the built-in one was tried, and a row of the same
- * name that is not would read as if it were. An id of a built-in row still marked experimental is the person's: theirs
- * may well be older than the built-in one, and a daemon that stopped at the upgrade over it would break what worked, so
- * theirs is kept in its place, said at load (and so by `config check`). No `env`: a secret the CLI needs is bound to its command in
+ * that "is not installed". An id a built-in row has is refused: the built-in one was tried, and a row of the same name
+ * that is not would read as if it were. Not one built in after its id was free (`ownKept`): the person's may well be
+ * older than the built-in one, and a daemon that stopped at the upgrade over it would break what worked, so theirs is
+ * kept in its place, said at load (and so by `config check`). No `env`: a secret the CLI needs is bound to its command in
  * `[security.exec_secrets]`, which never puts a value in this file.
  */
 
@@ -45,8 +45,8 @@ function parseRow(entry: unknown, at: string): ExternalCliConfig {
   if (!id || !ID.test(id)) throw new ConfigError(`${at} id must be lowercase letters, digits and "-", up to 32: it is what a pack's [external] cli names`);
   const where = `[[external_clis]] "${id}"`;
   const builtIn = BUILT_IN_CLIS.find((row) => row.id === id);
-  if (builtIn && !builtIn.experimental) throw new ConfigError(`${where} is a built-in CLI's id: remove the entry, or give yours another id`);
-  if (builtIn) log.warn("a coding CLI of yours has the id of one built in, marked Experimental: yours is kept in its place", { cli: id, built_in: builtIn.name });
+  if (builtIn && !builtIn.ownKept) throw new ConfigError(`${where} is a built-in CLI's id: remove the entry, or give yours another id`);
+  if (builtIn) log.warn("a coding CLI of yours has the id of one built in after it: yours is kept in its place", { cli: id, built_in: builtIn.name });
   for (const key of Object.keys(entry)) if (!KEYS.has(key)) log.warn("unknown config key ignored", { key: `${where} ${key}` });
 
   const command = requireString(entry.command, `${where} command`)?.trim();

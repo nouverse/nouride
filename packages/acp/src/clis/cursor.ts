@@ -29,6 +29,7 @@ export const cursor: CliRow = {
   name: "Cursor CLI",
   maker: "Cursor",
   experimental: true,
+  ownKept: true,
   command: "cursor-agent",
   // Its own updater off, by its switch for it (read in its code; it takes it before any command): it is updated the way
   // it was installed. Seen accepted on `acp`, `login` and `--version` in a Linux container; not yet seen at an update.

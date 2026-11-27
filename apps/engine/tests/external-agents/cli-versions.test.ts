@@ -106,8 +106,8 @@ describe("where a CLI's version stands", () => {
   });
 
   test("the built-in rows that were tried name their package and a tested range, lowest at or below highest", () => {
-    // An experimental one names no tested range (`packages/acp/tests/clis.test.ts`).
-    for (const row of BUILT_IN_CLIS.filter((one) => !one.experimental)) {
+    // An experimental one names no tested range, nor one its maker's script installs (`packages/acp/tests/clis.test.ts`).
+    for (const row of BUILT_IN_CLIS.filter((one) => !one.experimental && !one.script)) {
       expect(row.package).toStartWith("@agentclientprotocol/");
       expect(row.install).toContain(row.package!);
       expect(["update", "current"]).toContain(cliStanding(row.tested!.lowest, row.tested!)!.standing);

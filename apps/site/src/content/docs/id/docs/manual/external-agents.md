@@ -23,10 +23,11 @@ pemakaian akunnya, pertanyaan yang sama yang ditanyakan halaman pemakaian CLI it
 dilakukan sebuah langganan tetap ditentukan oleh ketentuan pembuatnya.
 
 Tiga lagi sudah bawaan, masing-masing bicara ACP sendiri, tanpa adapter: **Antigravity** dari Google (`agy`),
-**Cursor CLI**, dan **Grok Build** dari xAI (`grok`). Ketiganya ditandai **Experimental**: masing-masing sudah di-install,
-dijalankan, dan dimintai sesi di box Linux tanpa akun, tapi belum ada yang menjawab satu giliran pun di akun sungguhan.
-Dashboard menyebutnya di samping nama mereka, di daftar CLI dan di tempat CLI sebuah agent dipilih. Mereka bisa saja
-gak menjawab, atau menjawab sebagian; laporkan lewat issue kalau ada yang gak jalan.
+**Cursor CLI**, dan **Grok Build** dari xAI (`grok`). Antigravity sudah dicoba di akun sungguhan. Cursor CLI dan Grok
+Build ditandai **Experimental**: masing-masing sudah di-install, dijalankan, dan dimintai sesi di box Linux tanpa akun,
+tapi belum ada yang menjawab satu giliran pun di akun sungguhan. Dashboard menyebutnya di samping nama mereka, di daftar
+CLI dan di tempat CLI sebuah agent dipilih. Mereka bisa saja gak menjawab, atau menjawab sebagian; laporkan lewat issue
+kalau ada yang gak jalan.
 
 ## Meng-install CLI
 
@@ -38,7 +39,7 @@ itu sendiri:
 | Claude Code | `@agentclientprotocol/claude-agent-acp` | `claude-agent-acp` | Node 22 ke atas |
 | Codex | `@agentclientprotocol/codex-acp` | `codex-acp` | npm |
 
-Tiga yang ditandai Experimental di-install dengan skrip pembuatnya sendiri. **Set it up** di kartunya meminta
+Antigravity, Cursor CLI, dan Grok Build di-install dengan skrip pembuatnya sendiri. **Set it up** di kartunya meminta
 orkestrator, sama seperti dua di atas; kalau manual cukup satu perintah, dijalankan root seperti `nouride tools run`:
 
 | CLI | Install | Perintah yang dijalankan Nouride |
@@ -131,7 +132,7 @@ urusan admin.
   store, gak pernah di halaman, dan memberikannya ke Claude Code tiap agent di akun itu waktu dinyalakan.
 - **Codex** mencetak link dan kode sekali pakai: buka link-nya, login ke ChatGPT, ketik kodenya di halaman OpenAI, dan
   login-nya selesai sendiri. Login device-code harus dinyalakan dulu, di pengaturan keamanan akun ChatGPT kamu.
-- **Antigravity** (Experimental) login dengan akun Google yang berlangganan Google AI Pro atau Ultra: dia mencetak link,
+- **Antigravity** login dengan akun Google yang berlangganan Google AI Pro atau Ultra: dia mencetak link,
   dan kamu tempel balik kode yang ditampilkan halaman Google.
 - **Cursor CLI** (Experimental) login dengan akun Cursor: dia mencetak link untuk dibuka; login-nya selesai sendiri.
 - **Grok Build** (Experimental) login dengan akun Grok yang berlangganan SuperGrok atau X Premium+: dia mencetak link dan
@@ -430,7 +431,7 @@ modes = { folder = "build", all = "plan" }
 ```
 
 Secret yang dia butuhkan diikat ke perintahnya di `[security.exec_secrets]`; baris ini gak punya `env`. `id` yang sama
-dengan CLI bawaan (`claude-code`, `codex`) ditolak saat dimuat. `id` milik CLI bawaan yang ditandai Experimental
+dengan CLI bawaan (`claude-code`, `codex`) ditolak saat dimuat. `id` milik tiga CLI yang baru dibawakan belakangan
 (`antigravity`, `cursor`, `grok`) jadi milikmu: baris kamu dipakai menggantikannya, dan start menyebutnya sekali, sama
 seperti `nouride config check`. CLI tambahan jalan sebagai user agent itu sendiri hanya
 kalau tiap agent punya user sendiri, gak dapat skill, dan, kalau punya `login`, di-login-kan di akun seperti yang lain.

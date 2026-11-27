@@ -477,7 +477,7 @@ dashboard juga. [Misi →](/id/docs/manual/missions/)
 ## `[[external_clis]]`
 
 CLI coding yang kamu tambahkan untuk [agent eksternal](/id/docs/manual/external-agents/), di samping lima yang bawaan:
-`claude-code`, `codex`, dan tiga yang ditandai Experimental, `antigravity`, `cursor`, dan `grok`. Milikmu gak boleh memakai
+`claude-code`, `codex`, dan tiga yang dibawakan belakangan, `antigravity`, `cursor`, dan `grok`. Milikmu gak boleh memakai
 id dua yang pertama; id salah satu dari tiga itu boleh, dan barismu dipakai menggantikannya, disebut sekali saat start.
 Satu tabel per CLI:
 
