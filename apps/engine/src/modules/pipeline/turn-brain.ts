@@ -44,7 +44,7 @@ export function turnBrain(
     ...(record ? { turnId: record.id } : {}),
   });
   // Who writes a compaction summary, before the answer and after it alike — `[memory]`'s pass model when set.
-  const summarize = summarizerFor(ctx.deps, { agentId: agent.config.id, profile: agent.config.llm.provider, sessionId: session.id, tiers: agent.config.llm, ...(record ? { turnId: record.id } : {}) });
+  const summarize = summarizerFor(ctx.deps, { agentId: agent.config.id, profile: agent.config.llm.provider, sessionId: session.id, tiers: agent.config.llm, held: (pair) => ctx.fallbackHolds.heldFor(agent.config.id, pair), ...(record ? { turnId: record.id } : {}) });
   // Three layers, resolved fresh per call: the agent's own posture, then this person's — keyed by the person and not
   // the conversation, because pairing establishes that *they* are trusted and scoping it to a chat meant re-saying it
   // after every `/new` — then the daemon default. A scheduled job's turn here is never `trusted` (`chatTurnLevel`).
@@ -57,6 +57,7 @@ export function turnBrain(
     // switched mid-conversation is the one recorded.
     onAudioRefused: () => with_.hearing.recordRejection(agent.config.llm.provider, with_.modelOverrides.get(session.id) ?? agent.config.llm.model),
     onFallback: alertOnFallback(ctx.outages, ctx.deps.notifier, agent),
+    fallbackHolds: ctx.fallbackHolds,
     windowOf: (model) => ctx.deps.providers?.catalog?.windowNow(agent.config.llm.provider, model) ?? null,
     ...(ctx.deps.spill ? { spill: ctx.deps.spill } : {}),
     tokenScales: ctx.tokenScales,

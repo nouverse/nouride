@@ -219,6 +219,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     ...(ctx.deps.spill ? { spill: ctx.deps.spill } : {}),
     fitImages: ctx.fitImages,
     onFallback: alertOnFallback(ctx.outages, ctx.deps.notifier, peer),
+    fallbackHolds: ctx.fallbackHolds,
     windowOf: (model) => ctx.deps.providers?.catalog?.windowNow(peer.config.llm.provider, model) ?? null,
     llm: ctx.deps.config.llm,
     // In the background it says whose work a question is for: the asking turn is over, and a question from an agent

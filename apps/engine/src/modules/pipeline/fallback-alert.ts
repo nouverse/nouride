@@ -7,7 +7,8 @@
  * not served, a key refused, a balance spent — carries the classifier's hint.
  */
 
-import type { LLMFailure, LoadedAgent } from "@nouride/shared";
+import type { LLMError, LLMFailure, LoadedAgent } from "@nouride/shared";
+import { HOLD_MS } from "@/modules/llm/executor/fallback-holds.ts";
 import type { Notifier } from "@/commons/notify.ts";
 
 /** How long a model that fell back counts as still down: an hour without falling back from it ends its outage. */
@@ -40,13 +41,22 @@ export function alertOnFallback(
   outages: FallbackOutages,
   notifier: Pick<Notifier, "alert"> | undefined,
   agent: LoadedAgent,
-): (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure }) => void {
-  return ({ from, fromProfile, to, toProfile, failure }) => {
+): (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure; upstream?: LLMError["upstream"] }) => void {
+  return ({ from, fromProfile, to, toProfile, failure, upstream }) => {
     if (!outages.starts(fromProfile, from)) return;
+    /**
+     * A key refused by the accounts a gateway tried behind it, not by the gateway: this install's key to it is fine, and
+     * the hint to check it sent the operator after the wrong thing (seen live: Google refused the gateway's
+     * Antigravity accounts, 403, and the alert said to check the secret in `[providers.*] api_key`).
+     */
+    const behind = failure.class === "auth" && upstream?.tried?.length ? upstream.tried : null;
+    const what = behind
+      ? `failed: the accounts ${fromProfile} tried for it (${behind.join(", ")}) were refused there, not this install's key to ${fromProfile}`
+      : `failed (${failure.class})`;
     void notifier?.alert(
       `fallback:${fromProfile}:${from}`,
-      `${agent.config.id}: ${from} on ${fromProfile} failed (${failure.class}), so ${to} on ${toProfile} is answering until it is back.` +
-        (failure.alertOperator ? ` ${forOperator(failure)}` : ""),
+      `${agent.config.id}: ${from} on ${fromProfile} ${what}, so ${to} on ${toProfile} is answering until it is back, and ${from} is asked again in ${HOLD_MS / 60_000} minutes.` +
+        (failure.alertOperator && !behind ? ` ${forOperator(failure)}` : behind && failure.said ? ` ${fromProfile} said: "${failure.said}"` : ""),
     );
   };
 }

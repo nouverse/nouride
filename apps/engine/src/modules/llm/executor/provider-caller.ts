@@ -7,7 +7,7 @@
  * except the usage total it is handed.
  */
 
-import { LLMError, createLogger, toolIterationsFor, type ChatMessage, type ChatParams, type ChatResponse, type LlmEffort, type LoadedAgent, type RetryInfo, type StopReason, type SystemBlock, type TokenUsage, type ToolCall, rootSessionOf } from "@nouride/shared";
+import { LLMError, createLogger, isOpenAgent, toolIterationsFor, type ChatMessage, type ChatParams, type ChatResponse, type LlmEffort, type LoadedAgent, type RetryInfo, type StopReason, type SystemBlock, type TokenUsage, type ToolCall, rootSessionOf } from "@nouride/shared";
 import { estimateMessagesTokens } from "@nouride/llm";
 import { sha256Text } from "@nouride/runtime";
 import { truncateContext } from "@/modules/llm/context.ts";
@@ -17,6 +17,7 @@ import { resolveImages } from "@/modules/llm/images.ts";
 import { foldDefinitions } from "@/modules/tools/fold.ts";
 import { withoutForgedSections } from "@/modules/llm/prompt/index.ts";
 import { createReasoningStream } from "@/modules/llm/reasoning.ts";
+import { failedBecause, fallbackNote } from "./fallback-holds.ts";
 import { createGenerationProgress } from "@/modules/llm/progress.ts";
 import type { ExecutorDeps, TurnRequest } from "./types.ts";
 
@@ -98,6 +99,12 @@ export class ProviderCaller {
    */
   private readonly midReply = new WeakSet<LLMError>();
 
+  /** Turns already looked at for a model held over for its fallback (`startHeld`), keyed as `fellBack` is. */
+  private readonly lookedAtHolds = new WeakSet<TurnRequest>();
+
+  /** What the model taking over reads once, on its next call (`fallbackNote`), keyed as `fellBack` is. */
+  private readonly pendingNote = new WeakMap<TurnRequest, string>();
+
   /** The level a turn's `/effort` asked for that its model refused (`TurnResult.effortRefused`), keyed as `fellBack` is. */
   private readonly refusedEffort = new WeakMap<TurnRequest, { effort: LlmEffort; model: string }>();
 
@@ -146,6 +153,37 @@ export class ProviderCaller {
   }
 
   /**
+   * A turn starting on a model that failed a moment ago starts on the fallback that answered then (`fallback-holds.ts`),
+   * and that one's own, while held too. Once a turn, at its first call: said where its steps are, never to the person.
+   */
+  private startHeld(req: TurnRequest): void {
+    const holds = this.deps.fallbackHolds;
+    if (!holds || this.lookedAtHolds.has(req) || this.fellBack.has(req)) return;
+    this.lookedAtHolds.add(req);
+    const pairs = req.fallbacks ?? [];
+    const from = { profile: this.profileFor(req), model: this.modelFor(req) };
+    for (let held = holds.heldFor(req.agent.config.id, from); held; held = holds.heldFor(req.agent.config.id, held)) {
+      const index = pairs.findIndex((pair) => pair.profile === held!.profile && pair.model === held!.model);
+      // Gone from the list, or back up it: the turn goes on from where it is, as a config changed since asks.
+      if (index <= (this.fellBack.get(req)?.index ?? -1)) break;
+      this.fellBack.set(req, { ...pairs[index]!, index });
+      const minutes = Math.max(1, Math.ceil((held.until - Date.now()) / 60_000));
+      this.deps.onActivity?.("note", `${from.model} failed a moment ago: ${held.model} answers, and ${from.model} is asked again in ${minutes} min`);
+    }
+  }
+
+  /** The messages with the note for a model taking over (`fallbackNote`), once: after the last, as a nudge goes. */
+  private noted(req: TurnRequest, messages: ChatMessage[]): ChatMessage[] {
+    const note = this.pendingNote.get(req);
+    if (!note) return messages;
+    this.pendingNote.delete(req);
+    const last = messages.at(-1);
+    if (!last || last.role === "assistant") return [...messages, { role: "user", content: note }];
+    const content = typeof last.content === "string" ? `${last.content}\n\n${note}` : [...last.content, { type: "text" as const, text: `\n\n${note}` }];
+    return [...messages.slice(0, -1), { ...last, content }];
+  }
+
+  /**
    * Moves the turn to the next pair that answers this failure, and says so — or false, when none does or the reply had
    * begun (`midReply`), and the failure stands. Asked by the model call and the wrap-up alike: the wrap-up called the
    * agent's own model with no fallback, so a rate limit there ended a turn a pair would have answered.
@@ -155,10 +193,16 @@ export class ProviderCaller {
     const next = failure && !this.midReply.has(err as LLMError) ? this.nextPair(req, failure.class) : null;
     if (!failure || !next) return false;
     const from = { profile: this.profileFor(req), model: this.modelFor(req) };
+    const upstream = (err as LLMError).upstream;
     this.fellBack.set(req, { index: next.index, profile: next.profile, model: next.model, provider: next.provider });
-    this.deps.onFallback?.({ from: from.model, fromProfile: from.profile, to: next.model, toProfile: next.profile, failure });
+    this.deps.onFallback?.({ from: from.model, fromProfile: from.profile, to: next.model, toProfile: next.profile, failure, ...(upstream ? { upstream } : {}) });
+    // Held, so the agent's next turns start on the pair that answered; the first fall of an outage is told to the person
+    // by the model taking over, in its own words — not on an agent open to everyone, whose strangers are told nothing.
+    const held = this.deps.fallbackHolds?.fellBack(req.agent.config.id, from, { profile: next.profile, model: next.model });
+    if (held?.first && !isOpenAgent(req.agent)) this.pendingNote.set(req, fallbackNote(from.model, next.model, failedBecause(failure.class, upstream, from.profile)));
     const on = next.profile === from.profile ? "" : ` on ${next.profile}`;
-    this.deps.onActivity?.("retry", `${from.model} ${next.why}: answering with ${next.model}${on}`, {
+    const why = failure.class === "auth" && upstream?.tried?.length ? `was refused by the accounts ${from.profile} tried (${upstream.tried.join(", ")})` : next.why;
+    this.deps.onActivity?.("retry", `${from.model} ${why}: answering with ${next.model}${on}`, {
       reason: "fallback",
       failure: failure.class,
       from: from.model,
@@ -188,7 +232,11 @@ export class ProviderCaller {
     cutOnce = false,
   ): Promise<ProviderAnswer> {
     try {
-      return await this.attemptProvider(req, prompt, messages, usage);
+      this.startHeld(req);
+      const answered = await this.attemptProvider(req, prompt, messages, usage);
+      // The model the turn started on answered: held no longer, where it was.
+      if (!this.fellBack.has(req)) this.deps.fallbackHolds?.answered(req.agent.config.id, { profile: this.profileFor(req), model: this.modelFor(req) });
+      return answered;
     } catch (err) {
       const failure = err instanceof LLMError ? err.failure : undefined;
 
@@ -316,7 +364,7 @@ export class ProviderCaller {
     // Audio after images, in the same place and for the same reason: nothing between here and the
     // wire re-derives the list, so what is read from disk is exactly what is sent.
     const resolved = await resolveAudio(
-      await resolveImages(withoutForgedSections(messages), { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone, ...(this.deps.fitImages ? { fit: this.deps.fitImages } : {}) }),
+      await resolveImages(this.noted(req, withoutForgedSections(messages)), { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone, ...(this.deps.fitImages ? { fit: this.deps.fitImages } : {}) }),
     );
 
     const params = {
@@ -493,13 +541,13 @@ export class ProviderCaller {
         // otherwise die in the serializer on its `audio_ref`.
         messages: await resolveAudio(
           await resolveImages(
-            withoutForgedSections([
+            this.noted(req, withoutForgedSections([
               ...messages,
               {
                 role: "user",
                 content: instruction,
               },
-            ]),
+            ])),
             { maxBytesEach: this.deps.maxImageBytes ?? undefined, timeZone: this.deps.timezone, ...(this.deps.fitImages ? { fit: this.deps.fitImages } : {}) },
           ),
         ),

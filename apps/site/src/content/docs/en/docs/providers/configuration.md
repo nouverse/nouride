@@ -199,7 +199,16 @@ answer has already been written. The call that closes a turn, the reply written 
 has to stop calling tools, falls back like the others. A refused request is never retried on a
 fallback: any model would get the same answer. `[llm.defaults] fallbacks` is the list for every agent
 that names none, and the agent's **Model** tab in the dashboard edits its own. The operator hears of an
-outage once, not once a turn. 0.8.0 rewrote a pack's 0.7 `fallback_model` at its first boot into one
+outage once, not once a turn, and where a gateway such as Nougate says the accounts behind it were refused,
+the alert says that rather than asking you to check this install's key.
+
+**A fallback holds for ten minutes.** Once a model has fallen back, the agent's next turns start on the
+pair that answered, rather than waiting on the model that failed each time; after ten minutes the model is
+asked again at the next turn, and stays the agent's own once it answers. The first time an outage moves a
+conversation, the model taking over says so in one sentence of its own, in the person's language ("Gemini
+ran into a problem, carrying on with Sonnet"), and goes on with the work; not again while the outage lasts.
+An agent open to everyone falls back the same way and says nothing of it: its strangers are not told which
+models are behind it. A restart asks the agent's own model first. 0.8.0 rewrote a pack's 0.7 `fallback_model` at its first boot into one
 pair on its own provider; a pack that says `fallback_model` again is refused for that agent, naming the
 `fallbacks` line to write.
 

@@ -50,6 +50,7 @@ import { ActiveTurns } from "./active-turns.ts";
 import { Asleep } from "./asleep.ts";
 import { WaysOn } from "./way-on.ts";
 import { FallbackOutages } from "./fallback-alert.ts";
+import { FallbackHolds } from "@/modules/llm/executor/fallback-holds.ts";
 
 export { RESTARTING, STOPPED_BY_PERSON, type ActiveTurn } from "./active-turns.ts";
 
@@ -104,6 +105,8 @@ export class TurnContext extends ActiveTurns {
   readonly waysOn = new WaysOn();
   /** Which models are falling back now, so the operator hears of each outage once (`fallback-alert.ts`). */
   readonly outages = new FallbackOutages();
+  /** Which agents' models are passed over for their fallback a while, so the next turns start there (`fallback-holds.ts`). */
+  readonly fallbackHolds = new FallbackHolds();
   /** The smaller copies of pictures too large on a side, made once and kept for the requests after (`shrink-image.ts`). */
   private readonly shrinker = new ImageShrinker();
   /** The daemon's hint under `careful`, counted per person per day — `tools/careful-hint.ts`. */

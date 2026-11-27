@@ -201,7 +201,17 @@ yang menutup sebuah turn, balasan yang ditulis saat turn harus berhenti memanggi
 fallback seperti panggilan lain. Request yang ditolak tidak pernah dicoba ulang ke fallback: model mana
 pun akan mendapat jawaban yang sama. `[llm.defaults] fallbacks` adalah daftar untuk semua agent yang
 tidak menyebut miliknya sendiri, dan tab **Model** agent di dashboard mengubah daftarnya sendiri.
-Operator diberi tahu sekali per gangguan, bukan sekali per turn. 0.8.0 menulis ulang `fallback_model` dari 0.7 di setiap pack saat boot
+Operator diberi tahu sekali per gangguan, bukan sekali per turn, dan kalau gateway seperti Nougate bilang
+akun di belakangnya yang ditolak, alert-nya menyebut itu, bukan menyuruhmu mengecek key instalasi ini.
+
+**Fallback bertahan sepuluh menit.** Setelah sebuah model pindah ke fallback, turn agent berikutnya langsung
+mulai di pasangan yang menjawab, tidak lagi menunggu model yang gagal setiap kali; setelah sepuluh menit model
+itu dicoba lagi di turn berikutnya, dan kembali jadi model agent begitu ia menjawab. Pertama kali sebuah
+gangguan memindahkan percakapan, model yang mengambil alih mengatakannya dalam satu kalimatnya sendiri, dalam
+bahasa orang itu ("Gemini lagi bermasalah, gw lanjut pakai Sonnet"), lalu melanjutkan kerjaannya; tidak
+diulang selama gangguan itu masih berlangsung. Agent yang terbuka untuk semua orang pindah dengan cara yang
+sama tapi diam saja: orang asing tidak diberi tahu model apa di belakangnya. Restart mencoba model agent
+sendiri lebih dulu. 0.8.0 menulis ulang `fallback_model` dari 0.7 di setiap pack saat boot
 pertamanya menjadi satu pasangan di provider-nya sendiri; pack yang menyebut `fallback_model` lagi ditolak
 untuk agent itu, sambil menyebut baris `fallbacks` yang harus ditulis.
 
