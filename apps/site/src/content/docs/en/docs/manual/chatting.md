@@ -170,6 +170,9 @@ approval's own message). A "yes" typed as a message does not answer it.
   free, your next message is a turn of its own, and the agent says what came of the helpers when they end. A
   CLI that cannot take a message mid-prompt reads it once its prompt ends, and "Got it" says so: "I'll read
   that once what I'm running now ends."
+- **An agent answered by Antigravity** (from 0.8.49) is handed your message the same way, after the same wait
+  for a command of its: as a second message into the work it is doing, which it reads and goes on with. While it
+  waits for your approval it takes none, so your message is read once its prompt ends.
 
 What the turn read stays in the conversation. On the dashboard your message appears at once, under
 the agent's steps, with "Got it" and the agent's line under it, and the steps mark where the turn

@@ -9,7 +9,7 @@
  * a model. `/stop` and a shutdown are a `session/cancel`.
  */
 
-import { steeringOffered, type CliRow, type McpServer, type PlanEntry, type PromptAnswer, type RequestPermissionParams, type StopReason as AcpStopReason } from "@nouride/acp";
+import { type CliRow, type McpServer, type PlanEntry, type PromptAnswer, type RequestPermissionParams, type StopReason as AcpStopReason } from "@nouride/acp";
 import { contained, createLogger, NourideError, type ChatMessage, type ExternalPermissions, type LoadedAgent, type StopReason } from "@nouride/shared";
 import type { ExecutorDeps, TurnRequest, TurnResult } from "@/modules/llm/executor/types.ts";
 import { clockNote, withReminders } from "@/modules/llm/executor/reminders.ts";
@@ -388,7 +388,7 @@ export class ExternalTurnRunner {
           // A message for the turn while the prompt runs goes into it (0.8.10, `steering.ts`) — where the CLI takes one.
           const open = sessionId;
           const mid =
-            req.steer && req.steerListen && steeringOffered(cli.info)
+            req.steer && req.steerListen && cli.steers
               ? new MidPrompt({
                   take: () => req.steer?.() ?? null,
                   send: async (said) => await cli.steer(open, await promptOf(said, undefined, "", promptTakes(cli.info), this.deps.maxImageBytes)),

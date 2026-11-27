@@ -26,6 +26,7 @@ import {
   type SessionUpdate,
   type StopReason,
   type PromptAnswer,
+  type PromptUsage,
   type SteerOutcome,
   promptUsageOf,
   steerOutcomeOf,
@@ -50,6 +51,8 @@ const OPEN_TIMEOUT_MS = 90_000;
 export class AcpClient {
   private readonly peer: AcpPeer;
   private readonly listeners = new Map<string, (update: SessionUpdate) => void>();
+  /** Each session's running prompt, what a prompt sent into it (`steerByPrompt`) goes on from. */
+  private readonly runs = new Map<string, PromptRun>();
   private agent: InitializeResult | null = null;
 
   constructor(private readonly options: AcpClientOptions) {
@@ -148,17 +151,65 @@ export class AcpClient {
     return (await this.promptAnswer(sessionId, prompt, onUpdate)).stopReason;
   }
 
-  /** `prompt`, with the tokens the agent says the turn spent — null where it says none (0.8.7). */
+  /**
+   * `prompt`, with the tokens the agent says the turn spent — null where it says none (0.8.7). A prompt sent into it
+   * (`steerByPrompt`) ended it and goes on with its work: the answer is then the last one's, with what each spent.
+   */
   async promptAnswer(sessionId: string, prompt: ContentBlock[], onUpdate: (update: SessionUpdate) => void): Promise<PromptAnswer> {
     if (this.listeners.has(sessionId)) throw new AcpError(METHOD_NOT_FOUND, `session/prompt: session ${sessionId} is already answering a prompt`);
     this.listeners.set(sessionId, onUpdate);
+    const run = new PromptRun(this.peer.call<PromptResult>("session/prompt", { sessionId, prompt }));
+    this.runs.set(sessionId, run);
     try {
-      const result = await this.peer.call<{ stopReason: StopReason; usage?: unknown }>("session/prompt", { sessionId, prompt });
-      return { stopReason: result?.stopReason ?? "end_turn", usage: promptUsageOf(result?.usage) };
+      let result = await run.first;
+      let usage = promptUsageOf(result?.usage);
+      for (let next = run.more.shift(); next; next = run.more.shift()) {
+        const answered = await next;
+        // Refused while the one before it ran: nothing of it ran.
+        if (answered === null) continue;
+        result = answered;
+        usage = summed(usage, promptUsageOf(answered?.usage));
+      }
+      return { stopReason: result?.stopReason ?? "end_turn", usage };
     } finally {
+      if (this.runs.get(sessionId) === run) this.runs.delete(sessionId);
       // Its own alone: a prompt let go of (`letGo`) answers after the session's next one has begun.
       if (this.listeners.get(sessionId) === onUpdate) this.listeners.delete(sessionId);
     }
+  }
+
+  /**
+   * Words for the prompt running in a session, sent as a second prompt into it, for an agent that takes one so
+   * (`CliRow.steerByPrompt`): it answers the running prompt at once and goes on in the new one, which `promptAnswer`
+   * waits for. `failed`: refused before that (a question it waits on), the words not taken; `promptRequired`: no prompt
+   * runs. One sent once the prompt before it had answered is a prompt of its own, and its failure the turn's.
+   */
+  async steerByPrompt(sessionId: string, prompt: ContentBlock[]): Promise<SteerOutcome> {
+    const run = this.runs.get(sessionId);
+    if (!run) return "promptRequired";
+    const before = run.current;
+    let outcome: SteerOutcome | null = run.answered ? "injected" : null;
+    const answer = this.peer.call<PromptResult>("session/prompt", { sessionId, prompt }).then(
+      (result) => result,
+      (err: unknown) => {
+        if (outcome === "injected") throw err;
+        return null;
+      },
+    );
+    run.more.push(answer);
+    if (outcome) run.at(answer);
+    // Taken once the prompt before it answers, as the agent answers it for the new one; refused if it fails first.
+    const decide = (said: SteerOutcome): SteerOutcome => {
+      if (outcome === null) {
+        outcome = said;
+        if (said === "injected") run.at(answer);
+      }
+      return outcome;
+    };
+    return await Promise.race([
+      answer.then((result) => decide(result === null ? "failed" : "injected"), () => decide("injected")),
+      before.then(() => decide("injected"), () => decide("injected")),
+    ]);
   }
 
   /**
@@ -208,4 +259,42 @@ export class AcpClient {
     }
     throw new AcpError(METHOD_NOT_FOUND, `${method}: Nouride lends the agent neither its files nor a terminal, so work in the session's folder`);
   }
+}
+
+type PromptResult = { stopReason: StopReason; usage?: unknown } | null;
+
+/** A session's running prompt and the prompts sent into it (`steerByPrompt`), in order. */
+class PromptRun {
+  /** Each prompt sent into it, its answer or null where it was refused: `promptAnswer` reads them in order. */
+  readonly more: Promise<PromptResult>[] = [];
+  /** The prompt the agent works in now, and whether it has answered. */
+  current: Promise<unknown>;
+  answered = false;
+
+  constructor(readonly first: Promise<PromptResult>) {
+    this.current = first;
+    this.at(first);
+  }
+
+  at(prompt: Promise<unknown>): void {
+    this.current = prompt;
+    this.answered = false;
+    const settled = () => {
+      if (this.current === prompt) this.answered = true;
+    };
+    prompt.then(settled, settled);
+  }
+}
+
+/** What two prompts of one run spent: the sum of each kind, unknown only where neither said. */
+function summed(a: PromptUsage | null, b: PromptUsage | null): PromptUsage | null {
+  if (!a || !b) return a ?? b;
+  const both = (x: number | null, y: number | null) => (x === null && y === null ? null : (x ?? 0) + (y ?? 0));
+  return {
+    totalTokens: a.totalTokens + b.totalTokens,
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cachedReadTokens: both(a.cachedReadTokens, b.cachedReadTokens),
+    cachedWriteTokens: both(a.cachedWriteTokens, b.cachedWriteTokens),
+  };
 }

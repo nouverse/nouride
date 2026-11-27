@@ -8,13 +8,15 @@
  */
 
 import { VERSION } from "@/commons/version.ts";
-import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliPart, type CliRow, type CliUse, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
+import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, steeringOffered, steersByPrompt, type CliPart, type CliRow, type CliUse, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
 import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
 import { thoughtLevel } from "./models.ts";
 
 const log = createLogger("external-agents");
+/** How long a message sent as a second prompt waits for the running prompt's first update. */
+const FIRST_UPDATE_MS = 10_000;
 
 export type Spawn = (cmd: string[], opts: { agent: string; cwd: string; env: Record<string, string> }) => LongLivedProcess;
 
@@ -87,6 +89,8 @@ export class CliConnection {
   /** Each session's options as the CLI last said them — opened, reopened, or after one was set. */
   private readonly options = new Map<string, SessionConfigOption[]>();
   private readonly permissions = new Map<string, PermissionHandler>();
+  /** Each running prompt's first update, by session: a message sent into it as a second prompt waits for that. */
+  private readonly begun = new Map<string, Promise<void>>();
   /** The sessions turns are working in, with how many; and those let go under one, closed once it is done (0.8.8). */
   private readonly inUse = new Map<string, number>();
   private readonly closeWhenDone = new Set<string>();
@@ -118,6 +122,15 @@ export class CliConnection {
 
   get info(): InitializeResult | null {
     return this.handshake;
+  }
+
+  /** Whether it takes a message into a running prompt: by `_session/steering`, or as a second prompt (`steerByPrompt`). */
+  get steers(): boolean {
+    return steeringOffered(this.handshake) || this.byPrompt;
+  }
+
+  private get byPrompt(): boolean {
+    return steersByPrompt(this.row, this.handshake?.agentInfo?.version);
   }
 
   get closed(): string | null {
@@ -454,8 +467,12 @@ export class CliConnection {
     this.running += 1;
     this.permissions.set(sessionId, onPermission);
     let letGo = false;
+    let begin = () => {};
+    const begun = new Promise<void>((resolve) => (begin = resolve));
+    this.begun.set(sessionId, begun);
     try {
       const answering = client.promptAnswer(sessionId, blocks, (update) => {
+        begin();
         const said = this.row.use?.(update, this.now());
         if (said) this.accountUse = { use: said, at: this.now() };
         onUpdate(update);
@@ -475,15 +492,30 @@ export class CliConnection {
       if (typeof err === "object" && err !== null) inPrompt.add(err);
       throw err;
     } finally {
+      // A message waiting for its first update goes on now, and finds no prompt to go into.
+      begin();
+      if (this.begun.get(sessionId) === begun) this.begun.delete(sessionId);
       if (!letGo && this.permissions.get(sessionId) === onPermission) this.permissions.delete(sessionId);
       this.running -= 1;
       this.lastUsed = this.now();
     }
   }
 
-  /** Words for the prompt running in a session (`AcpClient.steer`); `failed` where the CLI is gone. */
+  /**
+   * Words for the prompt running in a session (`AcpClient.steer`); `failed` where the CLI is gone. As a second prompt
+   * only once the running one has said something: sent before that, it races the CLI's taking up of its own prompt, so
+   * it waits for its first update (or its end), `FIRST_UPDATE_MS` at most, then is the turn's next prompt.
+   */
   async steer(sessionId: string, blocks: ContentBlock[]): Promise<SteerOutcome> {
-    return this.client && !this.gone ? await this.client.steer(sessionId, blocks) : "failed";
+    if (!this.client || this.gone) return "failed";
+    if (!this.byPrompt) return await this.client.steer(sessionId, blocks);
+    const begun = this.begun.get(sessionId);
+    if (!begun) return "promptRequired";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ready = await Promise.race([begun.then(() => true), new Promise<boolean>((resolve) => (timer = setTimeout(() => resolve(false), FIRST_UPDATE_MS)))]);
+    clearTimeout(timer);
+    if (!ready || !this.client || this.gone) return "failed";
+    return await this.client.steerByPrompt(sessionId, blocks);
   }
 
   cancel(sessionId: string): void {

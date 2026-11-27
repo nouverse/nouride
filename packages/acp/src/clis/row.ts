@@ -61,6 +61,12 @@ export interface CliRow {
    * an update runs (`handshake.ts`). Absent: a CLI that never offered it is driven without it.
    */
   steering?: boolean;
+  /**
+   * Takes a message mid-prompt as a second `session/prompt` into the session, from this version on: the running prompt
+   * answers at once and the new one goes on with the work, its answer the turn's (Antigravity's, seen on the live box).
+   * Not while it waits on a permission: it refuses the prompt then, and the message is the turn's next prompt.
+   */
+  steerByPrompt?: { since: string };
   /** Its instruction file, in the folder it works in. */
   instructionFile: string;
   /**

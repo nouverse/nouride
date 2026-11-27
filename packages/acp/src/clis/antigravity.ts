@@ -25,6 +25,9 @@ export const antigravity: CliRow = {
   // makes edits in the workspace unasked, `auto` makes edits and safe commands unasked and asks before what it cannot
   // undo, which Free in its folder answers itself. Its unasked-for-everything is a start flag, not a mode.
   modes: { folder: "auto", risky: "accept-edits", all: "default" },
+  // A message sent while it works goes in as a second prompt (seen on the live box, 1.5.18): it answers the running
+  // prompt and goes on in the new one; refused while it waits on a permission. It offers no `_session/steering`.
+  steerByPrompt: { since: "1.5.0" },
   instructionFile: "AGENTS.md",
   // A Google link, then the code from the page it lands on, pasted back.
   login: ["acp", "--login"],

@@ -22,6 +22,8 @@ through Nouride's own gate. Nothing that drives a CLI names one. Everything a CL
      files a new profile starts with, such as the setting that keeps it from updating itself. Absent: its `HOME`.
    - `modes`: Nouride's three presets as the session modes the CLI offers. On *Free in its folder* Nouride allows
      whatever the CLI still asks, so a CLI with no mode that asks nothing takes its least asking one there.
+   - `steering` or `steerByPrompt`: how it takes a message mid-prompt, by `_session/steering` (its handshake says so)
+     or as a second prompt into the running one, from a version on. Neither: the message is its next prompt.
    - `instructionFile` and `skillsDir`: where Nouride writes the agent's instructions and copies its skills.
    - `login`, `status`, `signedOut`: how a person signs it in from the dashboard's terminal, and how Nouride tells it is
      signed in. A `status` command that exits 0 whether or not it is signed in is no status: leave it out.

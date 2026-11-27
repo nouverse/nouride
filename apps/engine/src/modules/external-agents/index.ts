@@ -28,7 +28,7 @@
  * - `usage.ts` — what it says it spent, and of its context, as Nouride records and shows them.
  */
 
-import { BUILT_IN_CLIS, helpersUpdate, steeringOffered, type CliRow, type McpServer } from "@nouride/acp";
+import { BUILT_IN_CLIS, helpersUpdate, type CliRow, type McpServer } from "@nouride/acp";
 import { contained, createLogger, NourideError, type ExternalPermissions, type LoadedAgent, type Skill } from "@nouride/shared";
 import { agentCommandsHaveOwnUsers, commandsRunningUnder, join, removePath, renamePath, runCommand, sha256Text, spawnInteractive, spawnLongLived, statFile } from "@nouride/runtime";
 import { privateWorkspace } from "@nouride/persona";
@@ -326,10 +326,10 @@ export class ExternalAgents implements RunnerHost {
     return this.efforts.of(agentId).map((effort) => effort.value);
   }
 
-  /** Whether the agent's CLI takes a message mid-prompt, as its handshake said (`ExternalBrains.steersMidPrompt`). */
+  /** Whether the agent's CLI takes a message mid-prompt, as its handshake or its row says (`ExternalBrains.steersMidPrompt`). */
   steersMidPrompt(agentId: string): boolean {
     const open = this.running.get(agentId);
-    return open !== undefined && !open.closed && steeringOffered(open.info);
+    return open !== undefined && !open.closed && open.steers;
   }
 
   /** What answers the agent in a conversation, for `/status` (0.8.8) — never the pack's `[llm]`; null for an agent no CLI answers. */

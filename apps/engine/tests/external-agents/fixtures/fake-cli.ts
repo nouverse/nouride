@@ -24,6 +24,11 @@
  *   `FAKE_STEER_WAIT_MS` (3 s), then answers "Done: <prompt>". Each steer goes to stderr as `steer:<words>`.
  *   `FAKE_STEER_OFFER=no`: the same CLI, not offering the extension. `FAKE_TOOL_HELPER=1`: the tool call is a
  *   helper's the CLI started itself, marked in its `_meta` as `{ fake: { startedBy: "agent-1" } }`.
+ * - `byprompt` — takes a message mid-prompt as a second `session/prompt`, as Antigravity does (seen on the live box):
+ *   a prompt says "Working." 50 ms on, and only then is running; a prompt that comes into a running one answers that
+ *   one at once, with no usage, and goes on: "Steered: <words>", its usage 20 (`byprompt:<words>` on stderr). With none,
+ *   "Done: <prompt>" after `FAKE_STEER_WAIT_MS`, usage 10. `FAKE_ASK=1`: the prompt first asks permission for a
+ *   command, and a prompt that comes while it waits is refused as Antigravity refuses it (`refused:<words>`).
  * - `held` — a CLI that starts a helper of its own in the background and keeps the prompt open for it, as Claude
  *   Code's connector does: the first prompt of a session says "Started.", opens the helper's call (marked in its
  *   `_meta` as `{ fake: { startedBy: "agent-1" } }`), says its own turn ended with a usage update that carries `cost`,
@@ -68,7 +73,7 @@
 
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
-import { AcpError, AcpServer, authRequired, type ContentBlock, type McpServer, type SessionConfigOption } from "@nouride/acp";
+import { AcpError, AcpServer, authRequired, type ContentBlock, type McpServer, type PromptUsage, type SessionChannel, type SessionConfigOption, type StopReason } from "@nouride/acp";
 import { sleep } from "../../wait.ts";
 
 const mode = process.env.FAKE_MODE ?? "";
@@ -82,6 +87,9 @@ const closed = new Set<string>();
 const heldSessions = new Map<string, () => void>();
 /** `steer` mode: each running prompt's ear for the words a steer brings. */
 const steered = new Map<string, (words: string) => void>();
+/** `byprompt` mode: each running prompt's end, by session, and the sessions waiting on a permission. */
+const byPrompt = new Map<string, () => void>();
+const asking = new Set<string>();
 /** The handshake's request ids — answered with the steering extension in `steer` mode. */
 const handshakes = new Set<unknown>();
 const text = (blocks: ContentBlock[]) => blocks.map((block) => (block.type === "text" ? block.text : "")).join("");
@@ -175,6 +183,7 @@ const server = new AcpServer({
         channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words ? `Steered: ${words}` : `Done: ${text(prompt)}` } });
         return "end_turn";
       }
+      if (mode === "byprompt") return await byPromptAnswer(sessionId, prompt, channel);
       if (mode === "held" || mode === "held-working") {
         const said = (words: string) => channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } });
         if (heldSessions.has(sessionId)) {
@@ -361,3 +370,41 @@ process.stdin.on("data", (chunk) => {
   }
 });
 process.stdin.on("end", () => process.exit(0));
+
+/** `byprompt` mode's prompt: one into a running prompt ends that one and goes on, refused while it waits on a permission. */
+async function byPromptAnswer(sessionId: string, prompt: ContentBlock[], channel: SessionChannel): Promise<StopReason | { stopReason: StopReason; usage: PromptUsage }> {
+  const said = (words: string) => channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } });
+  const running = byPrompt.get(sessionId);
+  if (running && asking.has(sessionId)) {
+    process.stderr.write(`refused:${text(prompt)}\n`);
+    throw new Error(`Can't add this prompt to session ${sessionId}: the running prompt is waiting for a permission or question answer; answer it or send session/cancel, then send this prompt again`);
+  }
+  if (running) {
+    byPrompt.delete(sessionId);
+    running();
+    process.stderr.write(`byprompt:${text(prompt)}\n`);
+    said(`Steered: ${text(prompt)}`);
+    return { stopReason: "end_turn", usage: { totalTokens: 20, inputTokens: 15, outputTokens: 5, cachedReadTokens: null, cachedWriteTokens: null } };
+  }
+  await sleep(50);
+  said("Working.");
+  const ended = new Promise<"steered" | "done">((resolve) => {
+    byPrompt.set(sessionId, () => resolve("steered"));
+    setTimeout(() => resolve("done"), Number(process.env.FAKE_STEER_WAIT_MS ?? 3_000));
+  });
+  if (process.env.FAKE_ASK === "1") {
+    asking.add(sessionId);
+    const toolCall = { toolCallId: `a${sessions}`, title: "touch b.txt", kind: "execute" as const, name: "Bash", status: "pending" as const, rawInput: { command: "touch b.txt" } };
+    channel.update({ sessionUpdate: "tool_call", ...toolCall });
+    await channel.requestPermission(toolCall, [
+      { optionId: "allow", name: "Allow", kind: "allow_once" },
+      { optionId: "reject", name: "Reject", kind: "reject_once" },
+    ]);
+    asking.delete(sessionId);
+    channel.update({ sessionUpdate: "tool_call_update", toolCallId: toolCall.toolCallId, status: "completed" });
+  }
+  if ((await ended) === "steered") return "end_turn";
+  byPrompt.delete(sessionId);
+  said(`Done: ${text(prompt)}`);
+  return { stopReason: "end_turn", usage: { totalTokens: 10, inputTokens: 8, outputTokens: 2, cachedReadTokens: null, cachedWriteTokens: null } };
+}

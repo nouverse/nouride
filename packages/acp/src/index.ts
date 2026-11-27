@@ -27,7 +27,7 @@ export {
   type UseToken,
   type UseWindow,
 } from "./clis/index.ts";
-export { cliStanding, type CliOut, type CliStanding, type CliVersionView } from "./versions.ts";
+export { cliStanding, steersByPrompt, type CliOut, type CliStanding, type CliVersionView } from "./versions.ts";
 export { cliPart, partsNamed, underMinimum, type CliPart, type CliPartKind } from "./parts.ts";
 export { handshakeProblem } from "./handshake.ts";
 export { AcpClient, type AcpClientOptions } from "./client.ts";
