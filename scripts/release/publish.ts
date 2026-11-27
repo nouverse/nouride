@@ -314,12 +314,7 @@ function gather(tag: string, mode: Mode): PublishFacts {
   // On `main` only a run that was asked for counts: a push there runs the lint and the contract tests, not the suite.
   const onMain = mode !== "lts" && branch === "main";
   const ciRuns = () => run("gh", ["api", ciRunsOf(head, onMain), "--jq", '[.workflow_runs[] | (.status + ":" + (.conclusion // ""))] | join(" ")']);
-  let runs = ciRuns();
-  for (let waited = 0; ciOnHead(runs.ok ? runs.out : "") === "running" && waited < CI_WAIT_MS; waited += CI_LOOK_MS) {
-    if (waited === 0) console.log(`ci.yml is still running on ${head.slice(0, 8)}: waiting for it`);
-    MACHINE.sleep(CI_LOOK_MS);
-    runs = ciRuns();
-  }
+  const runs = suiteRuns(ciRuns, MACHINE, head);
   const listed = run("curl", ["-fsS", "-H", "accept: application/vnd.github+json", "https://api.github.com/repos/nouverse/nouride/releases?per_page=30"]);
   const page: MirrorEntry[] = listed.ok
     ? (JSON.parse(listed.out) as { tag_name: string; draft?: boolean; prerelease?: boolean }[])
@@ -381,6 +376,21 @@ export function ciRunsOf(head: string, askedOnly: boolean): string {
 /** How long a run of `ci.yml` still going on the release's commit is waited for, and how often it is asked. */
 const CI_WAIT_MS = 40 * 60_000;
 const CI_LOOK_MS = 30_000;
+
+/**
+ * `ci.yml`'s runs on the commit, read again while one runs — and while a read fails, as `waitFor` reads a run. Taken as
+ * no run, a read that failed had the release ask for the suite again; a newer run on the branch cancels the older
+ * (`ci.yml`'s concurrency), so `main` showed a cancelled run and the release waited twenty minutes more (0.8.46).
+ */
+export function suiteRuns(read: () => { ok: boolean; out: string }, io: Pick<PublishIo, "sleep" | "say">, head: string, limitMs = CI_WAIT_MS, lookMs = CI_LOOK_MS): { ok: boolean; out: string } {
+  let runs = read();
+  for (let waited = 0; (!runs.ok || ciOnHead(runs.out) === "running") && waited < limitMs; waited += lookMs) {
+    if (waited === 0) io.say(runs.ok ? `ci.yml is still running on ${head.slice(0, 8)}: waiting for it` : `ci.yml's runs on ${head.slice(0, 8)} could not be read: reading them again`);
+    io.sleep(lookMs);
+    runs = read();
+  }
+  return runs;
+}
 
 /**
  * `ci.yml` on a commit, from its runs as `status:conclusion` words (`completed:success in_progress:`): green once one
