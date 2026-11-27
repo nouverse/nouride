@@ -1033,8 +1033,12 @@ above leaves open:
   "needs login", tells the operator once through `[alerts]`, and an agent's call to its tools fails saying a person must
   log in again, and where. No route answers with a token, a code or a verifier.
 - **Credentials stay out of the file.** `headers` refuses a value that looks like a token; an HTTP
-  server's token is a secret named by `auth_secret` (`auth_header` when it is not `Authorization`), and a stdio
-  server's is a variable named in `env_secrets` (0.7.19), resolved when the server starts.
+  server's token is a secret named by `auth_secret` (`auth_header` when it is not `Authorization`), any other header
+  that holds a credential a secret named in `header_secrets` (0.8.49), and a stdio server's is a variable named in
+  `env_secrets` (0.7.19), resolved when the server starts. One header set two ways is refused at load.
+- **Who a call is made for is the daemon's to say.** `[identity]` (0.8.49, off unless written) puts the turn's resolved
+  sender in one header of each call (`{account}`, `{accounts}`, `{person_key}`), never anything the model wrote; a turn
+  with no sender sends none (`omit`) or is refused the call (`fail`) — never an empty header, never the agent's id.
 - **Declaring a server is the opt-in.** MCP tools are merged into the toolset without appearing in
   `[tools] enabled`, because their names come from the server and are not knowable when the pack is
   written.

@@ -23,6 +23,10 @@ export interface McpServer {
   hasCredential: boolean;
   /** A stdio server's credential variables, each with whether its secret is set — never the secret. Absent before 0.7.19. */
   envSecrets?: { name: string; set: boolean }[];
+  /** An http server's headers that hold a secret, each with whether it is set — never the secret's name. */
+  headerSecrets?: { name: string; set: boolean }[];
+  /** Who each call is made for, in a header the daemon fills (`[identity]`): its header, format and what an unknown sender gets. */
+  identity?: { header: string; format: string; onUnknown: "omit" | "fail" };
   /** Live state. `running` false means configured but the daemon has not started it yet. */
   connected: boolean;
   running: boolean;
@@ -64,6 +68,8 @@ export interface McpLibraryServer {
   /** The library's own credential is stored — never the secret. */
   hasCredential: boolean;
   envSecrets: { name: string; set: boolean }[];
+  headerSecrets?: { name: string; set: boolean }[];
+  identity?: { header: string; format: string; onUnknown: "omit" | "fail" };
   /** The library's login, when it has one. */
   login?: McpLoginView;
   needsLogin: boolean;

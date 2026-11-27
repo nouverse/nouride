@@ -282,6 +282,7 @@ const ELSEWHERE: Partial<Record<keyof SettingsService, string>> = {
   setAgentEnabled: "an agent's pack",
   saveAgentSkills: "an agent's pack",
   saveLibraryServer: "the MCP library (agents/mcp.toml), and the packs it is switched on in",
+  changeServerHeader: "one header of a server in the MCP library (agents/mcp.toml), or of one agent's switch on it",
   removeLibraryServer: "the MCP library, and every pack that named it",
   setAgentMcp: "an agent's mcp.toml",
 };

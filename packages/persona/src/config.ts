@@ -7,8 +7,9 @@
  * naming the file, the field and the accepted values — not a silently ignored key.
  */
 
-import { assertSecretName, looksLikeCredential } from "@nouride/secrets";
+import { assertSecretName } from "@nouride/secrets";
 import { accessOf } from "./access.ts";
+import { headerSecretTable, headerTable, identityHeader, oneHeaderEach } from "./mcp-headers.ts";
 import { externalOf } from "./external.ts";
 import { lookOf } from "./look.ts";
 import { fallbacksOf } from "./fallbacks.ts";
@@ -618,7 +619,7 @@ export function parseMcpServers(value: unknown, where: string, block = "[[server
       throw new ConfigError(`${at} transport "${transport}" needs a url`);
     }
 
-    return {
+    const parsed: McpServerConfig = {
       name,
       transport,
       ...(server.command ? { command: str(server.command, `${at} command`)! } : {}),
@@ -633,11 +634,15 @@ export function parseMcpServers(value: unknown, where: string, block = "[[server
       // A name, refused here when it is a value — as `config.toml`'s are (invariant 3).
       ...(server.auth_secret ? { authSecret: secretName(str(server.auth_secret, `${at} auth_secret`)!, `${at} auth_secret`) } : {}),
       ...(server.auth_header ? { authHeader: str(server.auth_header, `${at} auth_header`)! } : {}),
+      ...(server.header_secrets === undefined ? {} : { headerSecrets: headerSecretTable(server.header_secrets, transport, at) }),
+      ...(server.identity === undefined ? {} : { identity: identityHeader(server.identity, transport, at) }),
       ...(server.auth === undefined ? {} : { auth: oauthLogin(server, transport, at) }),
       ...(server.parallel_safe === undefined ? {} : { parallelSafe: parallelSafe(server.parallel_safe, at) }),
       ...(server.per_agent === undefined ? {} : { perAgent: perAgent(server.per_agent, at) }),
       ...(server.tools === undefined ? {} : { tools: mcpToolList(server.tools, `${at} tools`) }),
     };
+    oneHeaderEach(parsed, at);
+    return parsed;
   });
 }
 
@@ -711,35 +716,6 @@ function parallelSafe(value: unknown, at: string): boolean | string[] {
   );
 }
 
-/**
- * `headers = { "X-Client" = "nouride" }` — a flat table of strings, and nothing that looks like a
- * credential.
- *
- * The refusal is the point. `headers` is the obvious place to paste a bearer token, and doing so
- * produces a daemon that works — while the token sits in a `config.toml` that gets committed,
- * copied into a backup, and pasted into an issue. `auth_secret` exists so there is somewhere right
- * to put it, so this says that rather than just saying no.
- */
-function headerTable(value: unknown, at: string): Record<string, string> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new ConfigError(`${at} headers must be a table of header name → string`);
-  }
-
-  const headers: Record<string, string> = {};
-  for (const [name, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof raw !== "string") {
-      throw new ConfigError(`${at} headers "${name}" must be a string`);
-    }
-    if (looksLikeCredential(raw)) {
-      throw new ConfigError(
-        `${at} headers "${name}" looks like a credential: put it in the secret store and name it ` +
-          `with auth_secret instead, so it is not sitting in a file that gets committed`,
-      );
-    }
-    headers[name] = raw;
-  }
-  return headers;
-}
 
 /**
  * A secret's name, refused when it is a value — as every name in `config.toml` is (invariant 3).

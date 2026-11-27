@@ -347,6 +347,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         // The asking turn's: the peer's calls are audited under it, and their ids drawn from its own (`stepsInto`).
         ...(request.ctx.turnId ? { turnId: request.ctx.turnId, callIds: ctx.callIdsOf(request.ctx.turnId) } : {}),
         senderId: request.ctx.senderId,
+        // The person the asking turn is for: an MCP call the peer makes says it is made for them (`mcp-identity.ts`).
+        ...(request.ctx.senderAlso?.length ? { senderAlso: request.ctx.senderAlso } : {}),
         // A shutdown stops it at a step, as it stops any turn: one in the background is then reported by the next boot.
         ...(options.detachable ? { pause: () => ctx.paused } : {}),
         ...(nudges ? { harnessNote: nudges.take } : {}),

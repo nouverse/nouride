@@ -217,3 +217,56 @@ describe("taking a server out of the library", () => {
     expect(await settings.removeLibraryServer({ packs, actor: "test", name: "gh" })).toMatchObject({ ok: false });
   });
 });
+
+describe("one header of a server (issue #43)", () => {
+  const crm = { name: "crm", transport: "streamable-http" as const, url: "https://crm.example/mcp" };
+  const header = (change: { header: string; value?: string; secret?: string; agentId?: string }) => settings.changeServerHeader({ packs, actor: "test", server: "crm", ...change });
+
+  test("added and taken off one at a time, the server's other keys and every agent's switch as they were", async () => {
+    await secrets.set("crm_token", "the-token");
+    await secrets.set("crm_key", "the-key");
+    // Its bearer token, its tools run in parallel, on for nox: what `rm` then `add` lost.
+    expect((await settings.saveLibraryServer({ packs, actor: "test", server: { ...crm, parallelSafe: true }, token: "the-token", enable: ["nox"] })).ok).toBe(true);
+    const before = choicesOf("nox");
+    expect(await header({ header: "x-app-tenant", value: "acme" })).toEqual({ ok: true, restartRequired: false });
+    expect(await header({ header: "x-app-key", secret: "crm_key" })).toEqual({ ok: true, restartRequired: false });
+    expect(library()).toContain('headers = { x-app-tenant = "acme" }');
+    expect(library()).toContain('header_secrets = { x-app-key = "crm_key" }');
+    expect(library()).toContain("parallel_safe = true");
+    expect(library()).toContain('auth_secret = "mcp-lib-crm"');
+    expect(library()).not.toContain("the-key");
+    expect(choicesOf("nox")).toBe(before);
+    expect(reloaded).toContain("nox");
+
+    // The same header set the other way is replaced, not set twice; taken off, its table goes with the last one.
+    expect(await header({ header: "X-App-Tenant", secret: "crm_key" })).toEqual({ ok: true, restartRequired: false });
+    expect(library()).not.toContain("headers = ");
+    expect(library()).toContain('header_secrets = { x-app-key = "crm_key", X-App-Tenant = "crm_key" }');
+    expect(await header({ header: "x-app-key" })).toEqual({ ok: true, restartRequired: false });
+    expect(await header({ header: "x-app-tenant" })).toEqual({ ok: true, restartRequired: false });
+    expect(library()).not.toContain("header_secrets");
+    expect(library()).toContain('url = "https://crm.example/mcp"');
+  });
+
+  test("refused: a secret the store does not hold, a literal that is a key, a header the token holds, a stdio server", async () => {
+    await settings.saveLibraryServer({ packs, actor: "test", server: crm, token: "the-token" });
+    expect(await header({ header: "x-app-key", secret: "nothing_stored" })).toMatchObject({ ok: false, field: "token" });
+    expect(await header({ header: "x-app-key", value: "sk-live-0123456789abcdefghijABCDEFGHIJ0123" })).toMatchObject({ ok: false });
+    expect(await header({ header: "authorization", value: "x" })).toMatchObject({ ok: false });
+    expect(await header({ header: "x app", value: "x" })).toMatchObject({ ok: false, field: "name" });
+    await save();
+    expect(await settings.changeServerHeader({ packs, actor: "test", server: "gh", header: "x-a", value: "1" })).toMatchObject({ ok: false, field: "name" });
+  });
+
+  test("one agent's own secret header, over the library's; a literal is the server's, not one agent's", async () => {
+    await secrets.set("nox_crm_key", "nox's key");
+    await settings.saveLibraryServer({ packs, actor: "test", server: crm, enable: ["nox"] });
+    expect(await header({ header: "x-app-key", secret: "nox_crm_key", agentId: "nox" })).toEqual({ ok: true, restartRequired: false });
+    expect(choicesOf("nox")).toContain('header_secrets = { "x-app-key" = "nox_crm_key" }');
+    expect(choicesOf("nox")).toContain("on = true");
+    expect(await header({ header: "x-app-tenant", value: "acme", agentId: "nox" })).toMatchObject({ ok: false, field: "token" });
+    expect(await header({ header: "x-app-key", agentId: "nox" })).toEqual({ ok: true, restartRequired: false });
+    expect(choicesOf("nox")).not.toContain("header_secrets =");
+  });
+});
+

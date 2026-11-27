@@ -102,6 +102,14 @@ export function parseAgentMcp(raw: Raw | null, where: string): Record<string, Ag
       }
     }
     if (value.auth_secret !== undefined) choice.authSecret = mcpSecretName(value.auth_secret, `${at} auth_secret`);
+    if (value.header_secrets !== undefined) {
+      if (!isTable(value.header_secrets)) throw new ConfigError(`${at} header_secrets must be a table of "header-name" = "secret_name"`);
+      choice.headerSecrets = {};
+      for (const [header, secret] of Object.entries(value.header_secrets)) {
+        if (!/^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(header)) throw new ConfigError(`${at} header_secrets: "${header}" is not a header's name`);
+        choice.headerSecrets[header] = mcpSecretName(secret, `${at} header_secrets.${header}`);
+      }
+    }
     if (value.login !== undefined) {
       if (value.login !== "own") throw new ConfigError(`${at} login must be "own" (absent, the library's login is used)`);
       choice.login = "own";
@@ -122,7 +130,7 @@ const key = (name: string) => (/^[A-Za-z0-9_-]+$/.test(name) ? name : JSON.strin
 export function renderAgentMcp(choices: Record<string, AgentMcpChoice>): string {
   const lines = [
     "# The install's MCP servers (agents/mcp.toml) this agent uses. A server not listed here, or listed with",
-    "# on = false, is off. Its credential is the library's unless set here: env_secrets / auth_secret name",
+    "# on = false, is off. Its credential is the library's unless set here: env_secrets / auth_secret / header_secrets name",
     "# secrets, and login = \"own\" logs it in for this agent alone. tools = [\"…\"] gives it only those of the",
     "# server's tools; left out, it has all of them.",
     "#",
@@ -134,6 +142,9 @@ export function renderAgentMcp(choices: Record<string, AgentMcpChoice>): string 
       lines.push(`env_secrets = { ${Object.entries(choice.envSecrets).map(([variable, secret]) => `${key(variable)} = ${JSON.stringify(secret)}`).join(", ")} }`);
     }
     if (choice.authSecret) lines.push(`auth_secret = ${JSON.stringify(choice.authSecret)}`);
+    if (choice.headerSecrets && Object.keys(choice.headerSecrets).length > 0) {
+      lines.push(`header_secrets = { ${Object.entries(choice.headerSecrets).map(([header, secret]) => `${JSON.stringify(header)} = ${JSON.stringify(secret)}`).join(", ")} }`);
+    }
     if (choice.login) lines.push(`login = "${choice.login}"`);
     if (choice.tools) lines.push(`tools = [${choice.tools.map((tool) => JSON.stringify(tool)).join(", ")}]`);
   }
@@ -156,15 +167,19 @@ export function effectiveMcpServers(
   for (const server of library) {
     const choice = choices[server.name];
     if (!choice?.on) continue;
-    const { envSecrets, authSecret, perAgent, ...rest } = server;
+    const { envSecrets, authSecret, headerSecrets, perAgent, ...rest } = server;
     const shared = perAgent !== true;
     const variables = { ...(shared ? envSecrets : {}), ...choice.envSecrets };
     const credential = choice.authSecret ?? (shared ? authSecret : undefined);
+    // Header by header, as the variables are: what the agent names over the library's, and none of the library's for
+    // a `per_agent` server, whose credential is each agent's own.
+    const headers = { ...(shared ? headerSecrets : {}), ...choice.headerSecrets };
     chosen.push({
       ...rest,
       ...(perAgent ? { perAgent } : {}),
       ...(Object.keys(variables).length > 0 ? { envSecrets: variables } : {}),
       ...(credential ? { authSecret: credential } : {}),
+      ...(Object.keys(headers).length > 0 ? { headerSecrets: headers } : {}),
       loginAs: choice.login === "own" || !shared ? agentId : SHARED_LOGIN,
       ...(choice.tools ? { tools: choice.tools } : {}),
     });

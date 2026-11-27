@@ -81,6 +81,11 @@ function secretEnv(config: McpServerConfig, reach: Reach): Record<string, string
  */
 function httpHeaders(config: McpServerConfig, reach: Reach): Record<string, string> {
   const headers: Record<string, string> = { ...config.headers };
+  // Each header that holds a credential, from the store by its name (`header_secrets`), as `auth_secret` is below.
+  for (const [header, name] of Object.entries(config.headerSecrets ?? {})) {
+    if (!reach.secrets) throw new Error(`header_secrets "${name}" needs a secret store`);
+    headers[header] = reach.secrets.require(name, `MCP server "${config.name}" header ${header}`);
+  }
   if (!config.authSecret) return headers;
 
   const secrets = reach.secrets;

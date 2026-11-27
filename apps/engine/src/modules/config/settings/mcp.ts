@@ -44,9 +44,9 @@ const librarySecret = (server: string) => `mcp-lib-${server}`;
 /** An agent's own credential for a library server. */
 const agentSecret = (agentId: string, server: string) => `mcp-${agentId}-${server}`;
 
-const users = (packs: McpPacks, server: string) => packs.agents().filter((agent) => agent.mcp[server]?.on);
+export const users = (packs: McpPacks, server: string) => packs.agents().filter((agent) => agent.mcp[server]?.on);
 
-async function reloadAll(packs: McpPacks, ids: readonly string[]): Promise<void> {
+export async function reloadAll(packs: McpPacks, ids: readonly string[]): Promise<void> {
   for (const id of ids) await packs.reload(id);
 }
 
@@ -85,6 +85,9 @@ export async function saveLibraryServer(deps: SettingsDeps, input: {
   const server = { ...input.server, name: input.server.name.trim() };
   const problem = shapeProblem(server);
   if (problem) return { ok: false, ...problem };
+  // A header's secret is named, never sent: one the store does not hold would stop every connect with its name.
+  const missing = Object.values(server.headerSecrets ?? {}).filter((name) => !deps.secrets.inventory().some((entry) => entry.name === name));
+  if (missing.length > 0) return { ok: false, field: "token", error: `no secret ${missing.map((name) => `"${name}"`).join(", ")}: store it first (nouride secrets set <name>)` };
   const unknown = (input.enable ?? []).filter((id) => !input.packs.agents().some((agent) => agent.id === id));
   if (unknown.length > 0) return { ok: false, field: "agents", error: `no agent ${unknown.map((id) => `"${id}"`).join(", ")}` };
 
@@ -236,7 +239,7 @@ function ownCredential(choice: AgentMcpChoice | undefined): Omit<AgentMcpChoice,
  * An agent's `mcp.toml`, rewritten whole, the agent reloaded — put back when it no longer loads. The change is applied
  * to what the file holds when the write lands, so two tabs switching two servers keep both.
  */
-async function writeChoices(
+export async function writeChoices(
   packDir: string,
   reload: () => Promise<unknown>,
   change: (there: Record<string, AgentMcpChoice>) => Record<string, AgentMcpChoice>,

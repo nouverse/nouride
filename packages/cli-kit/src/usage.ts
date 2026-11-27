@@ -290,7 +290,8 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride mcp add --name <name> (--command <exe> | --url <url>) [--agent <id> …] [--stdin]
                                    Into the library (agents/mcp.toml); --agent switches it on for that agent.
                                    --arg <value> per argument and --cwd <dir> for a command; --sse for
-                                   the legacy transport; --header <name> to send the token under;
+                                   the legacy transport; --header <name>=<value> per header of an http server
+                                   (=secret:<secret> for one the store holds), --header <name> to send the token under;
                                    --token <value> inline, kept forever in the grant and the audit log;
                                    --env-secret VAR=<secret> per credential variable of a command, --env VAR=<value>
                                    for a plain one; --per-agent when each agent brings its own credential;
@@ -302,6 +303,10 @@ ${BOLD}Talking to a running daemon${RESET}
                                    The server's tools for one agent, each with what it adds to every request;
                                    --only gives the agent just those (the rest are not sent, nor callable),
                                    --all gives it every one again
+  nouride mcp header add <server> <name>=<value|secret:<secret>> [--agent <id>]
+  nouride mcp header rm <server> <name> [--agent <id>]
+                                   One header of a server set or taken off; its other keys and every agent's switch
+                                   stay. With --agent, that agent's own secret header over the library's
   nouride mcp rm <name> [--agent <id>]
                                    Take it out of the library and every agent or, with --agent, off for that one
   nouride mcp login --server <name> [--agent <id>] [--client-id <id>]

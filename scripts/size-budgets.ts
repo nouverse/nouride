@@ -51,7 +51,7 @@ export const BUDGET: Record<string, Budget> = {
     why: "the ticker: claim, catch up, run now, each kind's dispatch (+4: a mission drafted, its notice waited for), a step run's hands. Step runs are `step-runs.ts`, a job's end `ending.ts`, quiet `quiet.ts`",
   },
   "packages/persona/src/config.ts": {
-    lines: 492,
+    lines: 469,
     why: "a pack's `config.toml` mapped field by field, so each refusal names its file and field: one list, the pack's schema. Its MCP server readers are the seam if it grows by more than a field",
   },
   "apps/engine/src/modules/jobs/jobs.store.ts": {

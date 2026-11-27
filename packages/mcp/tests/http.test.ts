@@ -159,6 +159,21 @@ describe("streamable-http", () => {
     await transport.close();
   });
 
+  test("a message's own headers go on its request alone, beside the configured ones", async () => {
+    // Who a tool call is made for (`McpClient.callTool`'s `headers`): one call's, never the next one's.
+    const calls = stubFetch((call) => json({ jsonrpc: "2.0", id: JSON.parse(call.body ?? "{}").id, result: {} }));
+    const sink = collector();
+    const transport = streamableHttpTransport({ url: "https://mcp.test/mcp", headers: { "x-app-tenant": "acme" } })(sink.handlers);
+
+    transport.send(REQUEST, { "x-app-sender": "telegram:555" });
+    await sink.settled();
+    transport.send(JSON.stringify({ jsonrpc: "2.0", id: 8, method: "tools/list", params: {} }));
+    await sink.settled(2);
+
+    expect(calls.map((call) => [call.headers["x-app-tenant"], call.headers["x-app-sender"]])).toEqual([["acme", "telegram:555"], ["acme", undefined]]);
+    await transport.close();
+  });
+
   test("an HTTP error fails the waiting call instead of leaving it to time out", async () => {
     // The whole reason this transport parses what it sends. `send` returns void, so without this the
     // caller waits the full request timeout for a server that already said no.
@@ -272,6 +287,21 @@ describe("sse", () => {
     const posted = calls.find((c) => c.method === "POST")!;
     expect(posted.url).toBe("https://mcp.test/messages?sessionId=xyz");
     expect(posted.body).toBe(REQUEST);
+
+    stream.end();
+    await transport.close();
+  });
+
+  test("a held message keeps its own headers when it is delivered", async () => {
+    const stream = openStream();
+    const calls = stubFetch((call) => (call.method === "POST" ? new Response("", { status: 202 }) : stream.response));
+    const sink = collector();
+    const transport = sseTransport({ url: "https://mcp.test/sse" })(sink.handlers);
+
+    transport.send(REQUEST, { "x-app-sender": "telegram:555" });
+    stream.push("event: endpoint\ndata: /messages?sessionId=xyz\n\n");
+    await eventually(() => calls.some((c) => c.method === "POST"));
+    expect(calls.find((c) => c.method === "POST")!.headers["x-app-sender"]).toBe("telegram:555");
 
     stream.end();
     await transport.close();

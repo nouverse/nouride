@@ -171,3 +171,29 @@ describe("nouride mcp (the listing)", () => {
     expect(agents[1]).toContain("alpha");
   });
 });
+
+describe("an http server's headers (issue #43)", () => {
+  test("`--header name=value` repeats, `=secret:<name>` names a stored secret, and a bare name is still where the token goes", async () => {
+    const { client, sent } = recording();
+    await mcp(client, ["add", "--name", "crm", "--url", "https://crm.example/mcp", "--header", "authorization=secret:crm_token", "--header", "x-client-version=2", "--header", "x-app-tenant=acme"]);
+    expect(sent[0]!.body).toMatchObject({ headers: { "x-client-version": "2", "x-app-tenant": "acme" }, headerSecrets: { authorization: "crm_token" } });
+    expect(sent[0]!.body).not.toHaveProperty("authHeader");
+    const legacy = recording();
+    await mcp(legacy.client, ["add", "--name", "crm", "--url", "https://crm.example/mcp", "--header", "X-Api-Key", "--token", "t"]);
+    expect(legacy.sent[0]!.body).toMatchObject({ authHeader: "X-Api-Key", token: "t" });
+    expect(legacy.sent[0]!.body).not.toHaveProperty("headers");
+  });
+
+  test("`mcp header add|rm` changes one header, of the library's server or, with --agent, of one agent's switch", async () => {
+    const { client, sent } = recording();
+    await mcp(client, ["header", "add", "crm", "x-app-tenant=acme"]);
+    await mcp(client, ["header", "add", "crm", "x-app-key=secret:nox_key", "--agent", "nox"]);
+    await mcp(client, ["header", "rm", "crm", "x-app-tenant"]);
+    expect(sent).toEqual([
+      { method: "PUT", path: "/mcp/library/crm/headers/x-app-tenant", body: { value: "acme" } },
+      { method: "PUT", path: "/mcp/library/crm/headers/x-app-key?agent=nox", body: { secret: "nox_key" } },
+      { method: "DELETE", path: "/mcp/library/crm/headers/x-app-tenant" },
+    ]);
+  });
+});
+

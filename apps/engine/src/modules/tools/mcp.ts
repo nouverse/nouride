@@ -31,7 +31,7 @@
  * has nothing to do with another's.
  */
 
-import { contained, createLogger, MCP_SCHEMA_WARN_BYTES, type LoadedAgent, type McpServerConfig, type Tool } from "@nouride/shared";
+import { contained, createLogger, MCP_SCHEMA_WARN_BYTES, type LoadedAgent, type McpServerConfig, type Person, type Tool } from "@nouride/shared";
 import { McpAuthRequiredError, McpClient, McpError, type McpAuth, type McpTool, type McpTransportFactory } from "@nouride/mcp";
 import type { ReadImages } from "./builtins/read-image.ts";
 import { audited } from "./audited.ts";
@@ -94,6 +94,8 @@ export interface McpManagerOptions {
   logins?: McpLoginPort;
   /** An agent's own folder: its stdio servers' HOME and working folder where each agent is its own user. */
   privateDir?: (agentId: string) => string;
+  /** The install's People, read at each call: who a server's `identity` header names (`mcp-identity.ts`). */
+  people?: () => readonly Person[];
 }
 
 /** One server, as `status()` reports it. */
@@ -569,6 +571,8 @@ export class McpManager {
       onSkipped: (tool, why) =>
         log.warn("mcp tool skipped", { agent_id: agentId, server: config.name, tool, hint: why }),
       ...(config.tools ? { only: { tools: config.tools, where: `agents/${agentId}/mcp.toml` } } : {}),
+      ...(config.identity ? { identity: config.identity } : {}),
+      ...(this.options.people ? { people: this.options.people } : {}),
     });
     const unknown = unknownChosenTools(config.tools, discovered);
     if (unknown.length > 0) {

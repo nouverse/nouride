@@ -159,6 +159,8 @@ export interface TurnRequest {
    */
   callIds?: Set<string>;
   senderId: string;
+  /** Other ids the platform knows the sender by (`ToolContext.senderAlso`). */
+  senderAlso?: readonly string[];
   /** A `delegate` helper's turn — see `HarnessFacts.helper`. */
   helper?: boolean;
   /** The daemon started this turn, not a person — see `PromptContext.systemEvent`. */

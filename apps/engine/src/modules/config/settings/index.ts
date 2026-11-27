@@ -24,6 +24,7 @@ import * as gateways from "./gateways.ts";
 import * as providers from "./providers.ts";
 import * as agents from "./agents.ts";
 import * as mcp from "./mcp.ts";
+import * as mcpHeaders from "./mcp-headers.ts";
 import * as policy from "./policy.ts";
 import * as jobs from "./jobs.ts";
 import * as people from "./people.ts";
@@ -235,6 +236,10 @@ export class SettingsService {
 
   async setAgentMcp(...args: Rest<typeof mcp.setAgentMcp>): ReturnType<typeof mcp.setAgentMcp> {
     return await mcp.setAgentMcp(this.deps, ...args);
+  }
+
+  async changeServerHeader(...args: Rest<typeof mcpHeaders.changeServerHeader>): ReturnType<typeof mcpHeaders.changeServerHeader> {
+    return await mcpHeaders.changeServerHeader(this.deps, ...args);
   }
 
   async setAccessMode(...args: Rest<typeof policy.setAccessMode>): Promise<SaveResult> {
