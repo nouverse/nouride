@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { HeadlineField } from "@/commons/components/ui/HeadlineField";
 import { useEffect, useRef, useState } from "react";
+import { offeredProfiles } from "@/commons/lib/bundled-gateway";
 import { api } from "@/commons/lib/api";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
@@ -78,7 +79,7 @@ export function NewAgentForm({
   }, [presets.data, preset]);
 
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, retry: false });
-  const profiles = providers.data?.providers ?? [];
+  const profiles = offeredProfiles(providers.data?.providers ?? []);
   const profile = profiles.find((entry) => entry.name === provider);
 
   /**
@@ -162,7 +163,7 @@ export function NewAgentForm({
           <>
           <AccountPicker cli={cli} value={account} onChange={setAccount} />
           <p className="text-base-content/70 rounded-xl border border-base-content/10 p-3 text-xs">
-            It answers with the coding CLI's own model, chosen on its Brain tab once it is made, where it signs in too.
+            It answers with the coding CLI's own model, chosen on its Brain tab once it is made, with the account above.
             Nouride's own work around it (a mission's review, the memory pass) runs on the default model.
           </p>
           </>

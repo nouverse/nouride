@@ -13,6 +13,7 @@ import { eventProblems, LLMError, type ChatParams, type LLMFailure, type LLMProv
 import { TurnExecutor } from "@/modules/llm/executor/index.ts";
 import type { AgentToolset } from "@/modules/tools/registry.ts";
 import { alertOnFallback, FallbackOutages } from "@/modules/pipeline/fallback-alert.ts";
+import { FallbackHolds, HOLD_MS } from "@/modules/llm/executor/fallback-holds.ts";
 import { AutoApprovalGate, fakeAgent } from "../helpers.ts";
 
 const FAILURES: Record<string, LLMFailure> = {
@@ -32,14 +33,15 @@ type Asked = string[];
  * An endpoint where the models in `failing` cannot answer with `failure`, and every other model answers — a tool call
  * first when `toolFirst`, so the turn takes a second round, then text.
  */
-function endpoint(profile: string, asked: Asked, input: { failing?: string[]; failure?: LLMFailure; toolFirst?: boolean } = {}) {
+function endpoint(profile: string, asked: Asked, input: { failing?: string[]; failure?: LLMFailure; toolFirst?: boolean; sent?: ChatParams[]; upstream?: LLMError["upstream"] } = {}) {
   let rounds = 0;
   return {
     async chat(params: ChatParams) {
       asked.push(`${profile}/${params.model}`);
+      input.sent?.push(params);
       // A turn that falls back for ever never yields to a timer, so it would hang the file rather than fail it.
       if (asked.length > 20) throw new Error(`asked ${asked.length} times — falling back in a loop`);
-      if (input.failing?.includes(params.model)) throw new LLMError(`${profile}/${params.model}: ${input.failure!.class}`, 429, { failure: input.failure! });
+      if (input.failing?.includes(params.model)) throw new LLMError(`${profile}/${params.model}: ${input.failure!.class}`, 429, { failure: input.failure!, ...(input.upstream ? { upstream: input.upstream } : {}) });
       rounds += 1;
       if (input.toolFirst && rounds === 1) {
         return { text: "", toolCalls: [{ id: "c1", name: "clock", arguments: {} }], stopReason: "tool_use", usage: { inputTokens: 1, outputTokens: 1 }, model: params.model };
@@ -52,7 +54,7 @@ function endpoint(profile: string, asked: Asked, input: { failing?: string[]; fa
 function run(
   own: LLMProvider,
   fallbacks: { profile: string; model: string; provider: LLMProvider }[],
-  options: { model?: string; streaming?: boolean; onFallback?: (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure }) => void } = {},
+  options: { model?: string; streaming?: boolean; onFallback?: (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure }) => void; holds?: FallbackHolds; open?: boolean } = {},
 ) {
   const activity: string[] = [];
   const rows: { kind: string; data: Record<string, unknown> }[] = [];
@@ -67,7 +69,7 @@ function run(
     gate: () => ({ action: "run", via: "allowlist" }),
     blockedPatterns: [],
   } as AgentToolset;
-  const agent = fakeAgent({ config: { ...fakeAgent().config, llm: { provider: "nougate", model: options.model ?? "primary", maxTokens: 1024, temperature: 0 } } });
+  const agent = fakeAgent({ config: { ...fakeAgent().config, ...(options.open ? { access: "open" as const } : {}), llm: { provider: "nougate", model: options.model ?? "primary", maxTokens: 1024, temperature: 0 } } });
   const result = new TurnExecutor({
     llm: {
       streaming: { enabled: options.streaming === true, typingIndicator: false, progressInChat: false },
@@ -84,6 +86,7 @@ function run(
     onUsage: (usage) => void charged.push(`${usage.provider}/${usage.model}`),
     onText: (delta) => void written.push(delta),
     ...(options.onFallback ? { onFallback: options.onFallback } : {}),
+    ...(options.holds ? { fallbackHolds: options.holds } : {}),
   }).run({
     agent,
     provider: own,
@@ -330,7 +333,7 @@ describe("what the operator is told", () => {
     now += 50 * 60_000;
     notify(fell(FAILURES.transient!));
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]!.text).toBe("nouva: primary on nougate failed (transient), so claude on openrouter is answering until it is back.");
+    expect(alerts[0]!.text).toBe("nouva: primary on nougate failed (transient), so claude on openrouter is answering until it is back, and primary is asked again in 10 minutes.");
     now += 61 * 60_000;
     notify(fell(FAILURES.transient!));
     expect(alerts).toHaveLength(2);
@@ -339,20 +342,102 @@ describe("what the operator is told", () => {
   test("with the fix, when it is theirs to make — a model not served, a key refused", () => {
     const alerts: string[] = [];
     alertOnFallback(new FallbackOutages(), { alert: async (_key, text) => (alerts.push(text), true) }, agent)(fell(FAILURES.model_not_found!));
-    expect(alerts[0]).toEndWith("until it is back. the model id is wrong.");
+    expect(alerts[0]).toEndWith("until it is back, and primary is asked again in 10 minutes. the model id is wrong.");
   });
 
   test("with the provider's own sentence after the fix, where it wrote one", () => {
     const alerts: string[] = [];
     const notify = alertOnFallback(new FallbackOutages(), { alert: async (_key, text) => (alerts.push(text), true) }, agent);
     notify(fell({ ...FAILURES.auth!, said: "no account is configured for kiro on this gateway" }));
-    expect(alerts[0]).toEndWith('until it is back. the provider rejected the credential. The provider said: "no account is configured for kiro on this gateway"');
+    expect(alerts[0]).toEndWith('until it is back, and primary is asked again in 10 minutes. the provider rejected the credential. The provider said: "no account is configured for kiro on this gateway"');
   });
 
   test("and not for a failure that is not theirs to fix", () => {
     const alerts: string[] = [];
     const notify = alertOnFallback(new FallbackOutages(), { alert: async (_key, text) => (alerts.push(text), true) }, agent);
     notify(fell({ ...FAILURES.transient!, said: "upstream connect error" }));
-    expect(alerts[0]).toEndWith("is answering until it is back.");
+    expect(alerts[0]).toEndWith("is answering until it is back, and primary is asked again in 10 minutes.");
   });
 });
+
+describe("a fallback held across turns (owner, 2026-11-27: \"gw udh set ke sonnet, harusnya tetap balas pake sonnet\")", () => {
+  const lastText = (params: ChatParams) => JSON.stringify(params.messages.at(-1)?.content ?? "");
+
+  test("the agent's next turns start on the fallback that answered; the model is asked again once the hold is over", async () => {
+    let now = 1_000;
+    const holds = new FallbackHolds(() => now);
+    const asked: Asked = [];
+    const failing = ["primary"];
+    const nougate = endpoint("nougate", asked, { failing, failure: FAILURES.auth! });
+    const anthropic = endpoint("anthropic", asked);
+    const pairs = [{ profile: "anthropic", model: "sonnet", provider: anthropic }];
+    const turn = async () => {
+      asked.splice(0);
+      const t = run(nougate, pairs, { holds });
+      await t.result;
+      return { asked: [...asked], activity: t.activity };
+    };
+
+    expect((await turn()).asked).toEqual(["nougate/primary", "anthropic/sonnet"]);
+    // Held: the next turn does not wait on the model that failed.
+    const held = await turn();
+    expect(held.asked).toEqual(["anthropic/sonnet"]);
+    expect(held.activity.some((line) => line.startsWith("note: primary failed a moment ago: sonnet answers"))).toBe(true);
+    // Over: asked again; failing still, held again.
+    now += HOLD_MS + 1;
+    expect((await turn()).asked).toEqual(["nougate/primary", "anthropic/sonnet"]);
+    expect((await turn()).asked).toEqual(["anthropic/sonnet"]);
+    // Over, and answering: held no longer, so the turn after it is the model's own too.
+    now += HOLD_MS + 1;
+    failing.splice(0);
+    expect((await turn()).asked).toEqual(["nougate/primary"]);
+    expect((await turn()).asked).toEqual(["nougate/primary"]);
+  });
+
+  test("the model taking over is told once to say so, in the person's language; not when the hold is renewed, nor on an open agent", async () => {
+    let now = 1_000;
+    const holds = new FallbackHolds(() => now);
+    const sent: ChatParams[] = [];
+    const failing = ["primary"];
+    const nougate = endpoint("nougate", [], { failing, failure: FAILURES.auth!, upstream: { tried: ["antigravity"] } });
+    const anthropic = endpoint("anthropic", [], { sent });
+    const pairs = [{ profile: "anthropic", model: "sonnet", provider: anthropic }];
+
+    await run(nougate, pairs, { holds }).result;
+    const told = lastText(sent[0]!);
+    expect(told).toContain("[harness] primary could not answer just now (the accounts nougate tried for it (antigravity) were refused), so you, sonnet, are carrying on");
+    expect(told).toContain("Begin the next thing you say to the person with one short sentence, in their language and your own voice");
+    // Once: the same outage, asked again after the hold and failing, is not told again.
+    sent.splice(0);
+    now += HOLD_MS + 1;
+    await run(nougate, pairs, { holds }).result;
+    expect(sent.some((params) => lastText(params).includes("could not answer just now"))).toBe(false);
+    // Back, and answering: the next outage is a new one, told again.
+    now += HOLD_MS + 1;
+    failing.splice(0);
+    await run(nougate, pairs, { holds }).result;
+    failing.push("primary");
+    sent.splice(0);
+    await run(nougate, pairs, { holds }).result;
+    expect(sent.some((params) => lastText(params).includes("could not answer just now"))).toBe(true);
+    // An agent open to everyone falls back and is held all the same, and its strangers are told nothing of it.
+    sent.splice(0);
+    await run(nougate, pairs, { holds: new FallbackHolds(() => now), open: true }).result;
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.some((params) => lastText(params).includes("[harness]"))).toBe(false);
+  });
+
+  test("the operator is told a gateway's accounts were refused, not to check this install's key, and when it is asked again", () => {
+    const said: string[] = [];
+    const alert = alertOnFallback(new FallbackOutages(), { alert: async (_key: string, text: string) => void said.push(text) } as never, fakeAgent());
+    alert({ from: "gemini", fromProfile: "nougate", to: "sonnet", toProfile: "nougate-anthropic", failure: FAILURES.auth!, upstream: { tried: ["antigravity"] } });
+    expect(said[0]).toContain("gemini on nougate failed: the accounts nougate tried for it (antigravity) were refused there, not this install's key to nougate");
+    expect(said[0]).toContain("is asked again in 10 minutes");
+    expect(said[0]).not.toContain("rejected the credential");
+    // Refused by the endpoint itself: its key is the operator's to check, as before.
+    const own: string[] = [];
+    alertOnFallback(new FallbackOutages(), { alert: async (_key: string, text: string) => void own.push(text) } as never, fakeAgent())({ from: "gemini", fromProfile: "nougate", to: "sonnet", toProfile: "nougate-anthropic", failure: FAILURES.auth! });
+    expect(own[0]).toContain("rejected the credential");
+  });
+});
+

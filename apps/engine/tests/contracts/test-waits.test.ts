@@ -48,7 +48,10 @@ const FIXED_SLEEPS: Record<string, number> = {
   // 217 → 219 for a run that waits for a draft's notice before it goes on (`cron-step-waits.test.ts`): two show the
   // run said nothing more, and did not end, while the notice was still on its way. 219 → 220 for a weighed file's time
   // to arrive (`attachment-store.test.ts`): one paces a stand-in download past the deadline a file of no weight is given.
-  "apps/engine": 220,
+  // 220 → 222 for a message taken as a second prompt (`mid-prompt.test.ts`, the fake CLI's `byprompt` mode): one paces
+  // the fake's first word, which a message sent before it must wait for, and one holds a person's approval open while
+  // a message comes, the refusal under test.
+  "apps/engine": 222,
   "apps/dashboard": 37,
   // 11 → 12 for a connection that goes on trying slowly once its tries run out (`resilience.test.ts`): one shows a drop
   // its fast tries mend is said to nobody, which no condition can show. The test that lost its end in `dead` gave one up.

@@ -8,7 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ciRunsOf, dirtyPaths, notices, plan, publish, PR_WORKFLOWS, readMerged, refusals, run, settledChecks, settledRun, unlistedChecks, type PublishFacts, type PublishIo, ciOnHead } from "../../../../scripts/release/publish.ts";
+import { ciRunsOf, dirtyPaths, notices, plan, publish, PR_WORKFLOWS, readMerged, refusals, run, settledChecks, settledRun, unlistedChecks, type PublishFacts, type PublishIo, ciOnHead, suiteRuns } from "../../../../scripts/release/publish.ts";
 
 const PIN = (path: string, pin: string) => ({ path, pin, onRemote: true, mainFastForwards: true });
 const READY: PublishFacts = {
@@ -368,3 +368,28 @@ describe("a release whose pull request is merged already, published from main", 
     expect(asked).not.toContain("--jq");
   });
 });
+
+describe("the suite's runs on the commit, read before the release", () => {
+  test("a read that fails is read again, not taken for no run: the release asked for another, which cancelled the one running", () => {
+    const answers = [{ ok: false, out: "" }, { ok: true, out: "in_progress:" }, { ok: true, out: "completed:success" }];
+    const said: string[] = [];
+    const slept: number[] = [];
+    const runs = suiteRuns(() => answers.shift()!, { sleep: (ms) => void slept.push(ms), say: (line) => void said.push(line) }, "abcdef1234", 120_000, 30_000);
+    expect(runs).toEqual({ ok: true, out: "completed:success" });
+    expect(slept).toEqual([30_000, 30_000]);
+    expect(said).toEqual(["ci.yml's runs on abcdef12 could not be read: reading them again"]);
+  });
+
+  test("none there, read once: nothing to wait for", () => {
+    let reads = 0;
+    expect(suiteRuns(() => (reads++, { ok: true, out: "" }), { sleep: () => {}, say: () => {} }, "abcdef1234")).toEqual({ ok: true, out: "" });
+    expect(reads).toBe(1);
+  });
+
+  test("a read that keeps failing is given up at the limit, and is no run then", () => {
+    let reads = 0;
+    expect(suiteRuns(() => (reads++, { ok: false, out: "" }), { sleep: () => {}, say: () => {} }, "abcdef1234", 90_000, 30_000).ok).toBe(false);
+    expect(reads).toBe(4);
+  });
+});
+

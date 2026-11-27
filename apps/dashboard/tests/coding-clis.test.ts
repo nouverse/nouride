@@ -29,12 +29,28 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 const CLIS: CliAccountsView[] = [
   { id: "claude-code", name: "Claude Code", maker: "Anthropic", installed: true, version: "0.95.0", install: "npm i -g", shared: true, canLogin: true, accounts: [{ name: "team", signedIn: false, agents: [{ id: "nix", name: "Nix", signedIn: false }, { id: "nox", name: "Nox", signedIn: false }] }] },
-  { id: "codex", name: "Codex", installed: true, version: "0.9.1", install: "npm i -g codex-acp", shared: false, canLogin: true, accounts: [{ name: "work", signedIn: null, agents: [{ id: "coder", name: "Coder", signedIn: false }] }] },
+  { id: "codex", name: "Codex", installed: true, version: "0.9.1", install: "npm i -g codex-acp", shared: false, canLogin: true, accounts: [{ name: "work", signedIn: false, agents: [{ id: "coder", name: "Coder", signedIn: false }] }] },
   { id: "gemini", name: "Gemini CLI", installed: false, install: "npm i -g gemini-acp", shared: false, canLogin: true, accounts: [] },
   { id: "mine", name: "Mine", installed: false, install: "download mine-acp from mine.example.test onto the PATH", shared: false, canLogin: false, accounts: [] },
 ];
 
-function serve(): { posted: string[] } {
+const NOW = Date.now();
+/** The team account's use: its 5-hour window, and Codex-like a limit with two windows. */
+const TEAM_USE = {
+  use: {
+    limits: [
+      { id: "five_hour", label: "5-hour", windows: [{ usedPercent: 44.4, minutes: 300, resetsAt: NOW + 2 * 3_600_000 + 60_000 }] },
+      { id: "plan", label: "Plan", windows: [{ usedPercent: 95, minutes: 300, resetsAt: null }, { usedPercent: 12, minutes: 10_080, resetsAt: null }] },
+    ],
+    creditsLeft: false,
+  },
+  at: NOW - 3 * 60_000,
+};
+
+/** Coder's own sign-in on Codex: its CLI said it while it worked. */
+const CODER_USE = { limits: [{ id: "codex", label: "Codex", windows: [{ usedPercent: 10, minutes: 300, resetsAt: null }] }] };
+
+function serve(clis: CliAccountsView[] = CLIS): { posted: string[] } {
   const posted: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname;
@@ -43,7 +59,10 @@ function serve(): { posted: string[] } {
       return json({ ok: true, login: { running: true, output: "Open https://claude.example.test/x\n", links: ["https://claude.example.test/x"], exitCode: null, signedIn: false } });
     }
     if (path === "/api/control/auth/me") return json({ id: "u1", username: "mira", role: "admin" });
-    if (path === "/api/control/cli-accounts") return json({ clis: CLIS });
+    if (path === "/api/control/cli-accounts") return json({ clis });
+    if (path === "/api/control/cli-accounts/claude-code/team/use") return json(TEAM_USE);
+    if (path === "/api/control/cli-accounts/codex/work/use") return json({ use: null, at: null, agents: [{ id: "coder", use: CODER_USE, at: NOW - 60_000, said: true }, { id: "ghost", use: null, at: null }] });
+    if (path.endsWith("/use")) return json({ use: null, at: null });
     if (path === "/api/control/status") return json({ orchestrator: "nouva", agents: [{ id: "nouva", displayName: "Nouva" }], gateways: [] });
     if (path.endsWith("/login")) return json({ login: { running: true, output: "Open https://claude.example.test/x\n", links: ["https://claude.example.test/x"], exitCode: null, signedIn: false } });
     return json({ error: "not found" }, 404);
@@ -81,6 +100,44 @@ const plainText = (host: HTMLElement) => {
 };
 
 describe("Coding CLIs on the Models page", () => {
+  test("each account says how much of its plan is used, as its maker last said, or that it is not known", async () => {
+    serve();
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => host.querySelectorAll("[data-account-use]").length === 3, 2_000, "each account's use");
+      const [team, coder, ghost] = [...host.querySelectorAll("[data-account-use]")];
+      const lines = [...team!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim());
+      expect(lines).toEqual(["5-hour44% used, starts again in 2 h", "Plan, 5 hours95% used", "Plan, weekly12% used", "No credits left beyond these limits.", "Read 3 min ago."]);
+      expect([...team!.querySelectorAll("progress")].map((bar) => [bar.getAttribute("value"), bar.className.includes("progress-warning")])).toEqual([
+        ["44.4", false],
+        ["95", true],
+        ["12", false],
+      ]);
+      // Codex signs in once per agent: each agent's own sign-in, under its name, said as its CLI's word where it was.
+      const each = host.querySelector("[data-account-use-each]")!;
+      expect([...each.querySelectorAll(":scope > div > p:first-child")].map((name) => name.textContent)).toEqual(["Coder's own sign-in", "ghost's own sign-in"]);
+      expect(ghost!.textContent).toBe("How much of its plan is used is not known.");
+      expect([...coder!.querySelectorAll("li")].map((line) => line.textContent?.replace(/\s+/g, " ").trim())).toEqual(["Codex10% used", "Said while an agent worked on it, 1 min ago."]);
+    } finally {
+      unmount();
+    }
+  });
+
+  test("a CLI not yet tried on a real account says so on its card, and only on its card", async () => {
+    serve([...CLIS, { id: "grok", name: "Grok Build", maker: "xAI", experimental: true, installed: true, install: "curl x.example.test | bash", shared: false, canLogin: true, accounts: [] }]);
+    const { host, unmount } = await mount();
+    try {
+      await eventually(() => (host.textContent ?? "").includes("Grok Build"), 2_000, "the experimental CLI");
+      const notes = [...host.querySelectorAll("[data-cli-experimental-note]")];
+      expect(notes.map((note) => note.textContent?.replace(/\s+/g, " ").trim())).toEqual([
+        "Experimental Grok Build has not yet been tried on a real account here. It may not answer, or answer only in part.",
+      ]);
+      expect(host.querySelectorAll("[data-cli-experimental]")).toHaveLength(1);
+    } finally {
+      unmount();
+    }
+  });
+
   test("says the agent runs inside the CLI itself, signed in with its own sign-in — no token swap", async () => {
     serve();
     const { host, unmount } = await mount();
@@ -111,15 +168,17 @@ describe("Coding CLIs on the Models page", () => {
     }
   });
 
-  test("a shared account is signed in on its row, for all its agents; a per-agent CLI sends each agent to its Brain tab", async () => {
+  test("every account is signed in on its row, for all its agents, whatever its CLI keeps its sign-in in", async () => {
     const { posted } = serve();
     const { host, unmount } = await mount();
     try {
       expect(host.textContent).toContain("Each account is signed in once, here, and every agent on it answers with it.");
       expect(host.textContent).toContain("its agents share its limits");
-      expect(host.textContent).toContain("Each agent on an account signs in once, on its own Brain tab");
-      expect(host.textContent).toContain("One sign-in per agent");
-      expect(host.querySelector('a[href$="/agents/coder/cli"]')?.textContent).toBe("Sign in");
+      // Codex's account too, which named a sign-in nowhere and sent each agent to its own Brain tab.
+      expect(host.textContent).not.toContain("on its own Brain tab");
+      expect(host.textContent).not.toContain("One sign-in per agent");
+      expect(host.querySelector('a[href$="/agents/coder/cli"]')).toBeNull();
+      await eventually(() => [...host.querySelectorAll("button")].filter((one) => one.textContent?.trim() === "Sign in").length === 2, 2_000, "a Sign in on each account");
       // A missing CLI a package manager installs: one plain line, and the orchestrator asked to set it up in a message
       // the person sends; the command under Details, for whoever runs the server (0.8.19).
       expect(plainText(host)).toContain("Gemini CLI is not set up on this server yet.");
@@ -150,9 +209,11 @@ describe("Coding CLIs on the Models page", () => {
     }
   });
 
-  test("a shared account whose agents signed in on their own says so, not that it is signed out", async () => {
+  test("an account whose agents signed in on their own says so, not that it is signed out", async () => {
     const answering = structuredClone(CLIS);
     answering[0]!.accounts[0]!.agents = answering[0]!.accounts[0]!.agents.map((agent) => ({ ...agent, signedIn: true }));
+    // Codex's too: its agent signed in on its Brain tab, as every Codex agent had to before its account could be.
+    answering[1]!.accounts[0]!.agents = answering[1]!.accounts[0]!.agents.map((agent) => ({ ...agent, signedIn: true }));
     serve();
     const fetchWith = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => (new URL(String(input), "http://localhost").pathname === "/api/control/cli-accounts" ? json({ clis: answering }) : fetchWith(input, init))) as typeof fetch;

@@ -131,6 +131,8 @@ export interface TurnRecord {
   attachments?: TurnAttachment[];
   /** Set on a turn the daemon started — see `TurnCause`. */
   cause?: TurnCause;
+  /** A turn held for a limit's end: when it is taken up again (`pipeline/provider-resume.ts`). */
+  retryAt?: number;
 }
 
 /** A record with its steps. What a transcript is made of. */
@@ -166,6 +168,8 @@ export interface FinishTurn {
    * boot after a restart finds the promise whatever words it was made in.
    */
   retryPromised?: true;
+  /** And when, where it is held for a limit that said its end rather than tried a few minutes on. */
+  retryAt?: number;
 }
 
 export abstract class TurnStore {
@@ -345,7 +349,8 @@ export abstract class TurnStore {
            iterations = COALESCE(?, iterations),
            input_tokens = COALESCE(?, input_tokens),
            output_tokens = COALESCE(?, output_tokens),
-           retry_promised = COALESCE(?, retry_promised)
+           retry_promised = COALESCE(?, retry_promised),
+           retry_at = COALESCE(?, retry_at)
          WHERE id = ?`,
       )
       .run(
@@ -359,6 +364,7 @@ export abstract class TurnStore {
         patch.inputTokens ?? null,
         patch.outputTokens ?? null,
         patch.retryPromised ? 1 : null,
+        patch.retryAt ?? null,
         turnId,
       );
   }
@@ -391,6 +397,14 @@ export abstract class TurnStore {
   /** Its person was asked whether to carry on, at `at`: never asked again, and never taken up without their word. */
   markResumeAsked(turnId: string, at: number): void {
     this.db.prepare("UPDATE turn_records SET resume_asked_at = ? WHERE id = ? AND resume_asked_at IS NULL").run(at, turnId);
+  }
+
+  /** The failed turns held for a limit's end since `since`, with when each is taken up (`provider-resume.ts`). */
+  heldSince(since: number): TurnRecord[] {
+    return this.db
+      .prepare<TurnRow>(`SELECT * FROM turn_records WHERE started_at >= ? AND status = 'failed' AND ended_at >= ? AND retry_at IS NOT NULL AND ${OWN} ORDER BY started_at`)
+      .all(since - TURN_SECONDS_MAX * 1000, since)
+      .map(toRecord);
   }
 
   /**
@@ -428,6 +442,16 @@ export abstract class TurnStore {
       )
       .get(gatewayId, chatId, senderId);
     return row?.prompt.trim() || null;
+  }
+
+  /**
+   * Whether this person said anything in this chat after `since`: a turn of theirs, not one the daemon started or
+   * another's. What a turn held for hours waits on (`provider-resume.ts`): in a room, others go on talking meanwhile.
+   */
+  spokeInChatSince(gatewayId: string, chatId: string, senderId: string, since: number): boolean {
+    return Boolean(
+      this.db.prepare<{ n: number }>(`SELECT 1 AS n FROM turn_records WHERE gateway_id = ? AND chat_id = ? AND sender_id = ? AND cause IS NULL AND started_at > ? LIMIT 1`).get(gatewayId, chatId, senderId, since),
+    );
   }
 
   /** Whether anything started in this chat after `since` — a person who has moved on since a turn failed. */
@@ -788,6 +812,7 @@ export interface TurnRow {
   ended_at: number | null;
   attachments: string | null;
   cause?: string | null;
+  retry_at?: number | null;
 }
 
 export function toRecord(row: TurnRow): TurnRecord {
@@ -812,6 +837,7 @@ export function toRecord(row: TurnRow): TurnRecord {
     ...(row.ended_at === null ? {} : { endedAt: row.ended_at }),
     ...(parseAttachments(row.attachments) ?? {}),
     ...(parseCause(row.cause ?? null) ?? {}),
+    ...(row.retry_at ? { retryAt: row.retry_at } : {}),
   };
 }
 

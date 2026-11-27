@@ -85,6 +85,21 @@ describe("the answer, as the option the CLI offered", () => {
   });
 });
 
+describe("an agent on Free in its folder", () => {
+  test("is allowed once, without the gate: a CLI with no mode that asks nothing asked the person for each file it wrote", async () => {
+    // Antigravity's least asking mode still asks; on the live box it asked to write a file in its own folder.
+    const { approvals, asks } = gate({ status: "denied", by: "555" });
+    const write: RequestPermissionParams = { sessionId: "s1", toolCall: { toolCallId: "t3", name: "write_file", kind: "edit", title: "File halo.txt", rawInput: { Path: "/srv/agent/halo.txt", Content: "halo" } }, options: OPTIONS };
+    expect(await askPermission({ cli: "antigravity", cliName: "Antigravity", request: write, asked: ASKED, approvals, waiting: () => {}, free: true })).toEqual({ outcome: "selected", optionId: "a1" });
+    // Only always offered: that, as the person's yes would be.
+    expect(await askPermission({ cli: "antigravity", cliName: "Antigravity", request: request(OPTIONS.slice(1)), asked: ASKED, approvals, waiting: () => {}, free: true })).toEqual({ outcome: "selected", optionId: "a2" });
+    expect(asks).toEqual([]);
+    // No yes offered at all: the person, as before.
+    await askPermission({ cli: "antigravity", cliName: "Antigravity", request: request(OPTIONS.slice(2)), asked: ASKED, approvals, waiting: () => {}, free: true });
+    expect(asks).toHaveLength(1);
+  });
+});
+
 describe("a delete inside the mission's folder (0.8.7)", () => {
   const own = "/";
   const deleting = (command: string): RequestPermissionParams => ({

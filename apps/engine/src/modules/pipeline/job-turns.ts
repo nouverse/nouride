@@ -228,6 +228,7 @@ export class JobTurns {
       maxImageBytes: this.ctx.deps.config.media.maxImageBytes,
       fitImages: this.ctx.fitImages,
       onFallback: alertOnFallback(this.ctx.outages, this.ctx.deps.notifier, agent),
+      fallbackHolds: this.ctx.fallbackHolds,
       windowOf: (model) => this.ctx.deps.providers?.catalog?.windowNow(agent.config.llm.provider, model) ?? null,
       ...(this.ctx.deps.spill ? { spill: this.ctx.deps.spill } : {}),
       // The conversation's scale: a job kept in a chat's history runs on that history.
@@ -289,7 +290,7 @@ export class JobTurns {
       onUsage: (usage) =>
         meter(this.ctx.deps.usage, { agentId: usage.agentId, provider: agent.config.llm.provider, purpose: "turn", sessionId: session.id, ...(record ? { turnId: record.id } : {}) })(usage, usage.model, usage.purpose, usage.provider),
       // A job kept in a chat's history compacts it like a turn there: with `[memory]`'s pass model when set.
-      summarizer: summarizerFor(this.ctx.deps, { agentId: agent.config.id, profile: agent.config.llm.provider, sessionId: session.id, tiers: agent.config.llm, ...(record ? { turnId: record.id } : {}) }),
+      summarizer: summarizerFor(this.ctx.deps, { agentId: agent.config.id, profile: agent.config.llm.provider, sessionId: session.id, tiers: agent.config.llm, held: (pair) => this.ctx.fallbackHolds.heldFor(agent.config.id, pair), ...(record ? { turnId: record.id } : {}) }),
     });
 
     const asked: ChatMessage = { role: "user", content: unattendedPreamble(request.job, request.message), timestamp: Date.now() };

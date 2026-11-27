@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { gatewayDashboard, gatewayMount, gatewayOffer, gatewayPage, gatewaySwitch, isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gateway";
+import { gatewayDashboard, gatewayMount, gatewayOffer, gatewayPage, gatewaySwitch, nougateConsoleUrl, offeredProfiles } from "@/commons/lib/bundled-gateway";
 
 describe("gatewayMount", () => {
   test("a running, mounted gateway answers its mount", () => {
@@ -85,28 +85,6 @@ describe("the switch, and what is offered by it", () => {
   });
 });
 
-describe("isBundledEndpoint", () => {
-  const state = {
-    hasUser: true, hasProvider: true, hasAgent: true, complete: true,
-    bundledGateway: { available: true, baseUrl: "http://127.0.0.1:18256", mount: "/llm-gateway", dashboard: true },
-  };
-
-  test("the hosted gateway's endpoints are recognised, on either wire format", () => {
-    expect(isBundledEndpoint("http://127.0.0.1:18256/openai/v1", state)).toBe(true);
-    expect(isBundledEndpoint("http://127.0.0.1:18256/anthropic/v1", state)).toBe(true);
-  });
-
-  test("another nougate, or another port, is not this one", () => {
-    expect(isBundledEndpoint("http://192.168.0.10:3000/openai/v1", state)).toBe(false);
-    expect(isBundledEndpoint("http://127.0.0.1:18257/openai/v1", state)).toBe(false);
-  });
-
-  test("no link to a page that cannot show it", () => {
-    expect(isBundledEndpoint("http://127.0.0.1:18256/openai/v1", { ...state, bundledGateway: { available: true, baseUrl: "http://127.0.0.1:18256" } })).toBe(false);
-    expect(isBundledEndpoint("http://127.0.0.1:18256/openai/v1", { ...state, bundledGateway: { ...state.bundledGateway, dashboard: false } })).toBe(false);
-  });
-});
-
 describe("nougateConsoleUrl", () => {
   test("a nougate endpoint yields its console", () => {
     expect(nougateConsoleUrl("http://192.168.0.10:3000/openai/v1")).toBe("http://192.168.0.10:3000");
@@ -156,5 +134,19 @@ describe("the gateway is offered by what runs, never by the edition", () => {
       .filter((path) => readFileSync(path, "utf8").includes("pro-router"))
       .map((path) => path.slice(src.length + 1));
     expect(naming).toEqual([]);
+  });
+});
+
+describe("offeredProfiles", () => {
+  const profile = (name: string, bundled?: "off" | "no-account" | "ready") => ({ name, ...(bundled ? { bundled } : {}) });
+
+  test("a Nougate profile only once it can answer: off or with no account it would be picked first and answer nothing", () => {
+    const list = [profile("nougate-openai", "off"), profile("nougate-anthropic", "no-account"), profile("openai")];
+    expect(offeredProfiles(list).map((one) => one.name)).toEqual(["openai"]);
+    expect(offeredProfiles([profile("nougate-openai", "ready"), profile("openai")]).map((one) => one.name)).toEqual(["nougate-openai", "openai"]);
+  });
+
+  test("the one an agent is on stays, so its page shows what it uses", () => {
+    expect(offeredProfiles([profile("nougate-openai", "off"), profile("openai")], "nougate-openai").map((one) => one.name)).toEqual(["nougate-openai", "openai"]);
   });
 });

@@ -155,6 +155,7 @@ nouride chat [agent]              # chat interaktif, tanpa bot token
 nouride agents                    # daftar: waiting for you, working, asleep, atau idle
 nouride agents scan               # CLI coding untuk agent eksternal di box ini, dan apa saja yang dipakainya
 nouride agents login <id>         # login CLI agent eksternal: jalan di box, dijawab dari sini
+nouride agents install <cli>      # Antigravity, Cursor atau Grok Build, lewat installer pembuatnya, untuk semua agent
 nouride agents update <cli> [<versi>]   # ke versi terbaru yang sudah rilis, atau ke <versi>
 nouride agent sleep <id>          # gak menerima kerjaan sampai wake, restart pun gak membangunkannya (pause juga bisa)
 nouride agent wake  <id>          # (resume juga bisa)
@@ -456,13 +457,16 @@ nouride mcp                                    # library, agent tempat tiap serv
 nouride mcp add --name <nama> (--command <exe> | --url <url>) [--stdin] [--agent <id> …]
 nouride mcp enable|disable <nama> --agent <id> # saklar satu agent; --env-secret, --stdin atau --own-login memberinya kredensial sendiri
 nouride mcp tools <nama> --agent <id> [--only <tool,…> | --all]   # tool mana dari server itu yang dipunya agent
+nouride mcp header add <server> <nama>=<nilai|secret:<nama>> [--agent <id>]   # satu header diatur, yang lain tetap
+nouride mcp header rm <server> <nama> [--agent <id>]
 nouride mcp rm <nama> [--agent <id>]           # keluarkan dari library, atau dengan --agent cuma matikan untuk agent itu
 nouride mcp login|logout --server <nama> [--agent <id>]
 ```
 
 Server ditambahkan sekali, ke library instalasi, lalu dinyalakan per agent (sejak 0.7.19); tiap perubahan memuat ulang
 agent yang terkena, jadi tidak ada yang restart. `mcp add` tanpa flag mencetak sisanya: `--arg` (sekali per argumen),
-`--cwd`, `--sse`, `--header`, `--env-secret`, `--per-agent` dan `--from`.
+`--cwd`, `--sse`, `--header` (`nama=nilai` sekali per header server http, `nama=secret:<secret>` untuk yang disimpan
+di store; nama saja adalah tempat `--token` dikirim), `--env-secret`, `--per-agent` dan `--from`.
 
 Nouride juga bisa menjadi server MCP untuk tool lain (Claude Code, Cursor), menyajikan memori sebagai
 seseorang:

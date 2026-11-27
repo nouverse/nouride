@@ -28,9 +28,9 @@
  * - `usage.ts` — what it says it spent, and of its context, as Nouride records and shows them.
  */
 
-import { BUILT_IN_CLIS, helpersUpdate, steeringOffered, type CliRow, type McpServer } from "@nouride/acp";
+import { BUILT_IN_CLIS, helpersUpdate, type CliRow, type McpServer } from "@nouride/acp";
 import { contained, createLogger, NourideError, type ExternalPermissions, type LoadedAgent, type Skill } from "@nouride/shared";
-import { agentCommandsHaveOwnUsers, commandsRunningUnder, join, removePath, runCommand, sha256Text, spawnInteractive, spawnLongLived, statFile } from "@nouride/runtime";
+import { agentCommandsHaveOwnUsers, commandsRunningUnder, join, removePath, renamePath, runCommand, sha256Text, spawnInteractive, spawnLongLived, statFile } from "@nouride/runtime";
 import { privateWorkspace } from "@nouride/persona";
 import type { ExecutorDeps, TurnBrain, TurnRequest } from "@/modules/llm/executor/types.ts";
 import type { PlanStep } from "@/modules/notes/store.ts";
@@ -39,14 +39,16 @@ import type { AuditPort } from "@/commons/audit.store.ts";
 import { CliConnection, signedOut, unavailableReason, type ChildrenOf, type Spawn } from "./connection.ts";
 import { OfferedModels, offeredModels, renewLists } from "./models.ts";
 import { accountLaunch, launchFor, ownFolder, profileDirOf } from "./launch.ts";
+import { AccountSignIns, signInFiles, signInRoot } from "./account-sign-in.ts";
 import { FRESH_POLL_MS, FRESH_WAIT_MS, hashedEach, notStartedWith, pause } from "./fresh-secrets.ts";
 import { CliAccounts, type AccountsDeps, type CliAccountsView } from "./accounts.ts";
 import { LentTools } from "./lent-tools.ts";
 import { CliLogin, type LoginView, type SignIn } from "./login.ts";
 import { openOnBox, returnAddress } from "./callback.ts";
 import { KeptParts } from "./parts.ts";
-import { AccountRotation, type LimitsFile } from "./rotation.ts";
-import type { AccountUse } from "./use.ts";
+import { AccountRotation, accountsOf, type LimitsFile } from "./rotation.ts";
+import { AccountUses, type UseSeen } from "./account-use.ts";
+import { fullest, type AccountUse } from "./use.ts";
 import { profileNames, type CliProfile } from "./profiles.ts";
 import { cliSessionKey, ExternalTurnRunner, type RunnerHost } from "./runner.ts";
 import { Instructed, type InstructedFile } from "./instructed.ts";
@@ -101,6 +103,11 @@ export interface ExternalAgentsDeps {
   /** The accounts at a limit, kept across a restart (`rotation.ts`). Absent: in this process alone. */
   limits?: LimitsFile;
   workspaceDir: () => string;
+  /**
+   * Where an account of a CLI that has no token to share keeps its sign-in, signed in on the Models page
+   * (`account-sign-in.ts`): a folder no agent reads. Absent: beside the agents' folders (a test's service).
+   */
+  signInsDir?: () => string;
   /** The secrets bound to a command of the agent's (`[security.exec_secrets]`), as variables. */
   secretsFor: (agentId: string, argv: readonly string[]) => Record<string, string>;
   /** How long a turn waits for a busy CLI to start again with changed secrets (`forTurn`). Absent: two minutes. */
@@ -131,6 +138,10 @@ export interface ExternalAgentsDeps {
   openOnBox?: (url: URL) => Promise<string>;
   /** Runs a CLI's status words as the agent. */
   run?: typeof runCommand;
+  /** How an account's use is asked of its maker (`account-use.ts`). Absent: the runtime's. */
+  fetch?: typeof fetch;
+  /** How long a CLI is given to take the sign-in method it is told (`connection.ts`). Absent: fifteen seconds. */
+  authenticateMs?: number;
   scan?: (row: CliRow) => Promise<ScannedCli>;
   /** The newest version of each CLI's package, as the npm registry says (0.8.24). Absent: nothing is said of it. */
   newest?: Pick<NewestVersions, "of">;
@@ -187,6 +198,8 @@ export class ExternalAgents implements RunnerHost {
   private readonly parts = new KeptParts();
   /** Which account each agent is on, and the accounts at a limit: an agent moved to its next (`rotation.ts`). */
   readonly rotation: AccountRotation;
+  /** Each account's use, asked of its maker or said by its CLI (`account-use.ts`). */
+  private readonly uses: AccountUses;
   /** What the CLIs leave running in the background, and the chats owed what came of it. */
   private readonly left: LeftRunning;
   /** What a followed session's commands started, kept together to be sorted at its work's end. */
@@ -203,6 +216,10 @@ export class ExternalAgents implements RunnerHost {
   private readonly instructed: Instructed;
 
   readonly accounts: CliAccounts;
+  /** The accounts signed in on the Models page whose sign-in is files: copied into each agent's folder on them. */
+  private readonly signIns: AccountSignIns;
+  /** What an agent's running CLI was given of its account's sign-in, to copy back what it changed after each turn. */
+  private readonly given = new Map<string, { row: CliRow; account: string; target: string; paths: string[] }>();
 
   get steerHoldMs(): number | undefined {
     return this.deps.steerHoldMs;
@@ -221,8 +238,21 @@ export class ExternalAgents implements RunnerHost {
     this.instructed = new Instructed(deps.instructions);
     this.models = new OfferedModels(deps.models);
     this.efforts = new OfferedModels(deps.efforts);
-    this.accounts = new CliAccounts(deps.accounts ?? {});
-    this.rotation = new AccountRotation({ usable: (row, account) => this.accounts.token(row, account) !== undefined, record: (action, details) => deps.audit?.record({ action, actor: "nouride:system", details }), ...(deps.limits ? { file: deps.limits } : {}), ...(deps.now ? { now: deps.now } : {}) });
+    this.signIns = new AccountSignIns({ dir: deps.signInsDir ?? (() => join(deps.workspaceDir(), ".cli-accounts")), ...(deps.run ? { run: deps.run } : {}) });
+    this.accounts = new CliAccounts({ ...(deps.accounts ?? {}), signedIn: (row, account) => this.signIns.signedIn(row, account), forget: (cli, account) => this.signIns.forget(cli, account) });
+    this.rotation = new AccountRotation({ usable: (row, account) => this.accounts.token(row, account) !== undefined || (!row.sharedLogin && this.signIns.signedIn(row, account)), record: (action, details) => deps.audit?.record({ action, actor: "nouride:system", details }), ...(deps.limits ? { file: deps.limits } : {}), ...(deps.now ? { now: deps.now } : {}) });
+    this.uses = new AccountUses({
+      sharedToken: (row, account) => this.accounts.token(row, account),
+      folderOf: (row, agentId, account) => (row.profileEnv ? profileDirOf(this.privateDir(agentId), row.id, account) : this.privateDir(agentId)),
+      readAs: async (agentId, path) => {
+        const out = await (deps.run ?? runCommand)(["cat", "--", path], { cwd: "/", env: { PATH: "/usr/bin:/bin" }, timeoutMs: 10_000, maxOutputBytes: 256 * 1024, agent: agentId });
+        return out.exitCode === 0 ? out.stdout : undefined;
+      },
+      running: (cli, account, agent) =>
+        [...this.running].filter(([agentId, connection]) => !connection.closed && connection.row.id === cli && this.rotation.accountOf(agentId) === account && (agent === undefined || agentId === agent)).map(([, connection]) => connection),
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
+    });
     this.ownWords = new OwnWords((chat) => this.onOwnWords?.(chat), deps.quietMs);
     this.left = new LeftRunning(deps.leftRunning, deps.commandsUnder ?? commandsRunningUnder);
     this.groups = new SessionGroups(deps.groupOs ?? MACHINE_GROUPS);
@@ -247,13 +277,43 @@ export class ExternalAgents implements RunnerHost {
     return this.deps.rows?.() ?? BUILT_IN_CLIS;
   }
 
-  /** The account's use as the agent's running CLI last said it (`use.ts`): what a turn's end reads to move on early. */
+  /** The account's fullest limit as the agent's running CLI last said it (`use.ts`): what a turn's end reads to move on early. */
   accountUse(agentId: string): AccountUse | null {
-    return this.running.get(agentId)?.accountUse ?? null;
+    return fullest(this.running.get(agentId)?.accountUse?.use ?? null, (this.deps.now ?? Date.now)());
   }
 
   row(id: string): CliRow | undefined {
     return this.rows().find((row) => row.id === id);
+  }
+
+  /**
+   * An account's use as last read or said (`account-use.ts`), as it is signed in. Signed in once for all its agents:
+   * read with that sign-in, and a window of it used up is marked, so no agent sends a message there to be refused
+   * until it starts again (`rotation.ts`). Where each agent signs in by itself: each agent's own, marking nothing, as
+   * an agent on its own sign-in has no other account to move to.
+   */
+  async useOf(row: CliRow, account: string, agents: readonly LoadedAgent[]): Promise<{ seen: UseSeen | null; agents?: { id: string; seen: UseSeen | null }[] }> {
+    if (this.sharedSignIn(row, account)) {
+      const seen = await this.uses.of(row, account);
+      this.rotation.seen(row, account, seen?.use ?? null);
+      return { seen };
+    }
+    const own = agents.filter((agent) => agent.config.external?.cli === row.id && (agent.config.external.profile ?? "default") === account);
+    return { seen: null, agents: await Promise.all(own.map(async (agent) => ({ id: agent.config.id, seen: await this.uses.of(row, account, agent.config.id) }))) };
+  }
+
+  private sharedSignIn(row: CliRow, account: string): boolean {
+    return Boolean(row.sharedLogin) && this.accounts.token(row, account) !== undefined;
+  }
+
+  /**
+   * What is known of a shared account's use, marked at once; a read that is due runs beside the turn, never before it,
+   * and is marked when it lands.
+   */
+  private useKnown(row: CliRow, account: string): void {
+    if (!row.readUse || !this.sharedSignIn(row, account)) return;
+    this.rotation.seen(row, account, this.uses.known(row, account)?.use ?? null);
+    void this.uses.of(row, account).then((seen) => this.rotation.seen(row, account, seen?.use ?? null), () => undefined);
   }
 
   /** The turn's brain for an external agent; null for any other, which the executor answers. */
@@ -266,10 +326,10 @@ export class ExternalAgents implements RunnerHost {
     return this.efforts.of(agentId).map((effort) => effort.value);
   }
 
-  /** Whether the agent's CLI takes a message mid-prompt, as its handshake said (`ExternalBrains.steersMidPrompt`). */
+  /** Whether the agent's CLI takes a message mid-prompt, as its handshake or its row says (`ExternalBrains.steersMidPrompt`). */
   steersMidPrompt(agentId: string): boolean {
     const open = this.running.get(agentId);
-    return open !== undefined && !open.closed && steeringOffered(open.info);
+    return open !== undefined && !open.closed && open.steers;
   }
 
   /** What answers the agent in a conversation, for `/status` (0.8.8) — never the pack's `[llm]`; null for an agent no CLI answers. */
@@ -318,11 +378,13 @@ export class ExternalAgents implements RunnerHost {
     return chosen ?? "folder";
   }
 
-  /** Whether nothing asks before the agent deletes (0.8.8): its CLI in `folder`, where its user's rights are the limit. */
+  /**
+   * Whether nothing asks before the agent deletes (0.8.8): its CLI in `folder`, where its user's rights are the limit,
+   * and what the CLI still asks there the preset answers (`permission.ts`), a CLI with no mode for it too.
+   */
   freeToDelete(agent: LoadedAgent | undefined): boolean {
     const external = agent?.config.external;
-    // A CLI of the person's own with no `folder` mode keeps its default there, which may ask.
-    return external !== undefined && this.preset(external.permissions) === "folder" && this.row(external.cli)?.modes?.folder !== undefined;
+    return external !== undefined && this.preset(external.permissions) === "folder";
   }
 
   keptSession(agentId: string, key: string): string | undefined {
@@ -457,8 +519,12 @@ export class ExternalAgents implements RunnerHost {
     const secrets = this.deps.secretsFor(agentId, [row.command, ...row.args]);
     // The account this turn runs on: the one it is on, or its next where that is at a limit for the turn's model. The
     // folder stays `profile`, the first; a CLI on another account is started again as one whose secrets changed is.
+    // An agent with accounts to move between acts on what is known of the one it is on, and has it read again beside
+    // the turn: a window used up since, elsewhere too, moves it before a message is refused there.
+    if (model !== undefined && accountsOf(external).length > 1) this.useKnown(row, this.rotation.accountOf(agentId) ?? accountsOf(external)[0]!);
     const account = this.rotation.accountFor(row, { id: agentId, name: agent.config.displayName, external }, model);
-    const stamp = `${secretsStamp(secrets)}|${account}`;
+    // Its account's sign-in where it was signed in on the Models page: a newer one there starts its CLI again with it.
+    const stamp = `${secretsStamp(secrets)}|${account}|${row.sharedLogin ? "" : this.signIns.stamp(row, account)}`;
     const current = this.running.get(agentId);
     if (current && !current.closed && current.row.id === row.id && current.launch.profileDir === launchFor({ row, profile, privateDir: this.privateDir(agentId), secrets: {} }).profileDir) {
       if (this.startedWith.get(agentId) === stamp || current.busy || current.held || this.left.commandsOf(current) > 0) return current;
@@ -471,9 +537,14 @@ export class ExternalAgents implements RunnerHost {
     const pending = this.starting.get(agentId);
     if (pending) return pending;
     const start = (async () => {
+      // An account signed in on the Models page gives the agent its sign-in, written into its folder before the CLI
+      // starts; one that was not leaves the agent's own, from its Brain tab (`account-sign-in.ts`).
+      const target = row.profileEnv ? profileDirOf(ownFolder(this.privateDir(agentId)), row.id, profile) : ownFolder(this.privateDir(agentId));
+      const given = row.sharedLogin ? [] : await this.signIns.copyIn(row, account, agentId, target);
       const lent = row.mcpEnvHeaders && this.deps.mcpUrl?.() ? this.lent.env(agentId) : {};
       const launch = launchFor({ row, profile, privateDir: ownFolder(this.privateDir(agentId)), secrets: { ...secrets, ...this.tokenEnv(row, account), ...lent } });
       const connection = new CliConnection(row, launch, agentId, this.deps.spawn ?? spawnLongLived, this.deps.now, this.deps.childrenOf ?? ownChildren);
+      if (this.deps.authenticateMs !== undefined) connection.authenticateMs = this.deps.authenticateMs;
       connection.onOwnWords = (sessionId, update) => {
         // What a helper the CLI started does behind a turn is not the agent's word: it wakes no chat and is in no
         // turn. The agent's own, once the helper has ended, is.
@@ -501,6 +572,8 @@ export class ExternalAgents implements RunnerHost {
       this.rotation.started(agentId, account);
       this.running.set(agentId, connection);
       this.startedWith.set(agentId, stamp);
+      if (given.length > 0) this.given.set(agentId, { row, account, target, paths: given });
+      else this.given.delete(agentId);
       this.startedWithEach.set(agentId, hashedEach(secrets));
       return connection;
     })();
@@ -621,6 +694,21 @@ export class ExternalAgents implements RunnerHost {
     this.logins.get(agentId)?.login.stop();
   }
 
+  /**
+   * After a turn: what the agent's CLI changed of its account's sign-in in its folder (a token it refreshed), kept as the
+   * account's, so the next CLI to start on it takes the newest. This CLI's own start moves with it: it is not started
+   * again for a refresh of its own.
+   */
+  async keepSignIn(agentId: string): Promise<void> {
+    const given = this.given.get(agentId);
+    if (!given) return;
+    const changed = await this.signIns.copyBack(given.row, given.account, agentId, given.target, given.paths);
+    if (changed.length === 0) return;
+    log.info("an account's sign-in, changed by an agent's CLI, kept as the account's", { agent_id: agentId, cli: given.row.id, account: given.account, files: changed.length });
+    const was = this.startedWith.get(agentId);
+    if (was !== undefined) this.startedWith.set(agentId, `${was.slice(0, was.lastIndexOf("|"))}|${this.signIns.stamp(given.row, given.account)}`);
+  }
+
   /** A shared account's token, as the variable its CLI reads — for an agent on that account; none for any other. */
   private tokenEnv(row: CliRow, account: string): Record<string, string> {
     const token = this.accounts.token(row, account);
@@ -643,7 +731,11 @@ export class ExternalAgents implements RunnerHost {
     const running = this.logins.get(key);
     if (running?.login.running) return { ...running.login.view(), profile: account };
     const row = this.row(cli);
-    if (!row?.sharedLogin) throw new NourideError("external_agent", `${row?.name ?? cli} signs in once per agent, on the agent's Brain tab`, `${row?.name ?? cli} signs in once per agent, on the agent's Brain tab.`);
+    if (!row?.sharedLogin && !row?.login?.length) {
+      const why = `${row?.name ?? cli} has no sign-in Nouride can run${row?.loginNote ? `. ${row.loginNote}` : ""}`;
+      throw new NourideError("external_agent", why, why);
+    }
+    if (!row.sharedLogin) return this.startFilesLogin(row, account, actor);
     const home = join(this.deps.workspaceDir(), ".cli-sign-in", `${cli}-${account}`);
     const launch = accountLaunch(row, home);
     const login = new CliLogin((this.deps.interactive ?? spawnInteractive)(launch.cmd, { cwd: launch.cwd, env: launch.env }), row.sharedLogin.tokenPrefix);
@@ -666,6 +758,38 @@ export class ExternalAgents implements RunnerHost {
         }
       })
       .catch((err: unknown) => log.warn("could not keep an account's sign-in", { cli, account, error: String(err) }));
+    return { ...login.view(), profile: account };
+  }
+
+  /**
+   * An account of a CLI whose sign-in is files, signed in here (`account-sign-in.ts`): its `login` words as the daemon's
+   * user, in a HOME made for this sign-in. Once it ends signed in, with something written there, that HOME is the
+   * account's, over the one before, and the agents on it take it at their CLI's next start. One that does not leaves the
+   * account as it was.
+   */
+  private startFilesLogin(row: CliRow, account: string, actor: string): ProfileLogin {
+    const key = `@${row.id}/${account}`;
+    const home = this.signIns.home(row.id, account);
+    const signing = `${home}.signing`;
+    removePath(signing);
+    const launch = accountLaunch(row, signing, row.login ?? []);
+    const login = new CliLogin((this.deps.interactive ?? spawnInteractive)(launch.cmd, { cwd: launch.cwd, env: launch.env }));
+    this.logins.set(key, { login, profile: account });
+    log.info("a coding-CLI account's sign-in started", { cli: row.id, account });
+    const giveUp = setTimeout(contained(log, "could not stop a sign-in nobody finished", () => login.stop()), LOGIN_MS);
+    void login.exited
+      .then(async (code) => {
+        clearTimeout(giveUp);
+        const signedIn = login.signedIn && signInFiles(row, signInRoot(row, signing)).length > 0;
+        log.info("a coding-CLI account's sign-in ended", { cli: row.id, account, code, signed_in: signedIn });
+        if (!signedIn) return removePath(signing);
+        removePath(home);
+        renamePath(signing, home);
+        this.accounts.add(row.id, account);
+        this.deps.audit?.record({ action: "cli_account_signed_in", actor, details: { cli: row.id, account } });
+        for (const checked of this.checks.keys()) if (checked.endsWith(`|${account}`)) this.checks.delete(checked);
+      })
+      .catch((err: unknown) => log.warn("could not keep an account's sign-in", { cli: row.id, account, error: String(err) }));
     return { ...login.view(), profile: account };
   }
 

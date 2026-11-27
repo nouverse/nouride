@@ -463,8 +463,9 @@ agents' commands may use, whichever is lower, at least 1 and at most 4), and it 
 
 ## `[[external_clis]]`
 
-A coding CLI you add for [external agents](/en/docs/manual/external-agents/), beside the two built in, `claude-code`
-and `codex`. One table per CLI:
+A coding CLI you add for [external agents](/en/docs/manual/external-agents/), beside the five built in: `claude-code`,
+`codex`, and the three built in since, `antigravity`, `cursor` and `grok`. Yours may not take the id of the first
+two; it may take one of the three, and is then kept in its place, said once at the start. One table per CLI:
 
 ```toml
 [[external_clis]]
@@ -485,13 +486,14 @@ modes = { folder = "build", all = "plan" }   # each preset as the CLI's own mode
 
 An id a built-in CLI has is refused at load, and so is an id written twice; a key it does not read is warned about.
 There is no `env`: a secret the CLI needs is bound to its command in the agent's `[security.exec_secrets]`. A CLI you add
-runs as the agent's own user only where each agent has one, gets no skills, and signs in once per agent.
+runs as the agent's own user only where each agent has one, gets no skills, and, with a `login`, is signed in on the
+account like the others.
 
 Per agent, in its pack's `config.toml`:
 
 ```toml
 [external]
-cli = "claude-code"                 # required: claude-code, codex or an [[external_clis]] id
+cli = "claude-code"                 # required: a built-in CLI's id or an [[external_clis]] id
 profile = "default"                 # the account: lowercase, digits and "-", up to 24 (the default); or a list,
                                     # ["work", "second"]: it goes on with the next when one reaches its limit
 move_at = 90                        # with several accounts: move on once this percent of a limit is used (1 to 99);
@@ -529,11 +531,11 @@ setting.
 ## `[nougate]`
 
 ```toml
-in_process = false                  # the dashboard's LLM Gateway page switches it
+in_process = false                  # Nougate's page in the dashboard switches it
 ```
 
-Every official build carries the gateway, off by default. Choosing **Use Nougate** in setup or **Turn on Nougate** on the
-LLM Gateway page writes `true` and starts it without a restart; **Turn off** writes `false` and restarts Nouride.
+Every official build carries the gateway, off by default. Choosing **Use Nougate** in setup or **Turn on Nougate** on
+its page (**Open Nougate** on **Models**) writes `true` and starts it without a restart; **Turn off** writes `false` and restarts Nouride.
 A Router install's first start on Community writes `true` when the file has no `in_process` and the gateway has
 data, so it stays on. On a build without the gateway (compiled from the public source alone), turning it on stops
 the daemon from starting, with a message saying the build does not carry the gateway. `$NOUGATE_IN_PROCESS`

@@ -77,6 +77,7 @@ import factDirectOnly from "./migrations/094_fact_direct_only.sql" with { type: 
 import openDoor from "./migrations/095_open_door.sql" with { type: "text" };
 import turnPublic from "./migrations/096_turn_public.sql" with { type: "text" };
 import openDoorPerson from "./migrations/097_open_door_person.sql" with { type: "text" };
+import retryAt from "./migrations/098_retry_at.sql" with { type: "text" };
 
 export interface Migration {
   /** Parsed from the filename prefix, and what `user_version` is set to once applied. */
@@ -126,6 +127,7 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 95, name: "095_open_door.sql", sql: openDoor },
   { version: 96, name: "096_turn_public.sql", sql: turnPublic },
   { version: 97, name: "097_open_door_person.sql", sql: openDoorPerson },
+  { version: 98, name: "098_retry_at.sql", sql: retryAt },
 ];
 
 /**

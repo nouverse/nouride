@@ -476,8 +476,10 @@ dashboard juga. [Misi →](/id/docs/manual/missions/)
 
 ## `[[external_clis]]`
 
-CLI coding yang kamu tambahkan untuk [agent eksternal](/id/docs/manual/external-agents/), di samping dua yang bawaan,
-`claude-code` dan `codex`. Satu tabel per CLI:
+CLI coding yang kamu tambahkan untuk [agent eksternal](/id/docs/manual/external-agents/), di samping lima yang bawaan:
+`claude-code`, `codex`, dan tiga yang dibawakan belakangan, `antigravity`, `cursor`, dan `grok`. Milikmu gak boleh memakai
+id dua yang pertama; id salah satu dari tiga itu boleh, dan barismu dipakai menggantikannya, disebut sekali saat start.
+Satu tabel per CLI:
 
 ```toml
 [[external_clis]]
@@ -498,14 +500,14 @@ modes = { folder = "build", all = "plan" }   # tiap preset sebagai id mode CLI i
 
 Id yang sama dengan CLI bawaan ditolak saat dimuat, begitu juga id yang ditulis dua kali; key yang gak dibaca
 diperingatkan. Gak ada `env`: secret yang dibutuhkan CLI diikat ke perintahnya di `[security.exec_secrets]` milik agent.
-CLI tambahan jalan sebagai user milik agent hanya kalau tiap agent punya user sendiri, gak dapat skill, dan login sekali
-per agent.
+CLI tambahan jalan sebagai user milik agent hanya kalau tiap agent punya user sendiri, gak dapat skill, dan, kalau punya
+`login`, di-login-kan di akun seperti yang lain.
 
 Per agent, di `config.toml` pack-nya:
 
 ```toml
 [external]
-cli = "claude-code"                 # wajib: claude-code, codex, atau id [[external_clis]]
+cli = "claude-code"                 # wajib: id CLI bawaan atau id [[external_clis]]
 profile = "default"                 # akunnya: huruf kecil, angka, dan "-", maks 24 (default); atau daftar,
                                     # ["work", "second"]: lanjut ke akun berikutnya begitu satu kena limit
 move_at = 90                        # dengan beberapa akun: pindah begitu sekian persen limit terpakai (1 sampai 99);
@@ -544,11 +546,11 @@ pengaturan.
 ## `[nougate]`
 
 ```toml
-in_process = false                  # diatur dari halaman LLM Gateway di dashboard
+in_process = false                  # diatur dari halaman Nougate di dashboard
 ```
 
 Setiap build resmi membawa gateway ini, mati secara bawaan. Memilih **Use Nougate** di setup atau **Turn on Nougate** di
-halaman LLM Gateway menulis `true` dan menyalakannya tanpa restart; **Turn off** menulis `false` lalu me-restart
+halamannya (**Open Nougate** di **Models**) menulis `true` dan menyalakannya tanpa restart; **Turn off** menulis `false` lalu me-restart
 Nouride. Start pertama instalasi Router di Community menulis `true` kalau file-nya belum punya `in_process` dan
 gateway-nya punya data, jadi ia tetap menyala. Di build tanpa gateway (dikompilasi dari source publik saja),
 menyalakannya membuat daemon gak mau start, dengan pesan bahwa build itu gak membawa gateway-nya.

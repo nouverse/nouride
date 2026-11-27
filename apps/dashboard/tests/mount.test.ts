@@ -540,7 +540,7 @@ describe("transcripts kept forever", () => {
  * which is exactly where a person lands after creating their first one.
  */
 describe("the setup wizard", () => {
-  test("ends on memory, in plain words: remember, learn about you, shared knowledge, a time, and a way to skip", async () => {
+  test("ends on memory, in plain words: remember, learn about you, shared knowledge, a time, and one way on", async () => {
     const html = await renderPage("/setup");
     expect(errors.filter((line) => /Error|error boundary|Cannot read/.test(line))).toEqual([]);
     expect(html).toContain("Let your agent get to know you");
@@ -548,7 +548,8 @@ describe("the setup wizard", () => {
     expect(html).toContain('type="time"');
     expect(html).toContain("Dashboard → Memory");
     expect(html).toContain("Finish setup");
-    expect(html).toContain("Skip for now");
+    // One call to action: what is not wanted is switched off here, and Finish saves it.
+    expect(html).not.toContain("Skip for now");
     // Plain words: none of the engine's own.
     for (const word of ["Semantic search", "nightly pass", "Proposals", "facts"]) expect(html).not.toContain(word);
   });

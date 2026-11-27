@@ -237,6 +237,7 @@ export class ToolCaller {
       gateway: req.gateway,
       gatewayId: req.gatewayId,
       senderId: req.senderId,
+      ...(req.senderAlso?.length ? { senderAlso: req.senderAlso } : {}),
       ...(req.senderName ? { senderName: req.senderName } : {}),
       ...(req.liveEdit ? { liveEdit: req.liveEdit } : {}),
       chatType: req.chatType,

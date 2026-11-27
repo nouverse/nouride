@@ -39,7 +39,7 @@ export function Sidebar({
   onFold,
 }: {
   pathname: string;
-  where: { admin: boolean; onBox: boolean; hostsGateway: boolean };
+  where: { admin: boolean; onBox: boolean };
   principal: Principal | null | undefined;
   theme: Theme;
   toggleTheme: () => void;

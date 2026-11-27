@@ -295,6 +295,8 @@ export async function buildTurnMachine(
     audit,
     logins: mcpLogins,
     privateDir: (agentId) => privateWorkspace(config.daemon.workspaceDir, agentId),
+    // Read at each call, as the dashboard edits them in place.
+    people: () => config.people,
   });
   input.progress.phase = "connecting MCP servers";
   await mcp.connectAll(registry.all());

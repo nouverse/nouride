@@ -8,14 +8,15 @@
  */
 
 import { VERSION } from "@/commons/version.ts";
-import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, type CliPart, type CliRow, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
+import { AcpClient, AcpError, AUTH_REQUIRED, INTERNAL_ERROR, steeringOffered, steersByPrompt, type CliPart, type CliRow, type CliUse, type ContentBlock, type InitializeResult, type McpServer, type NewSessionResult, type PermissionOutcome, type RequestPermissionParams, type SessionConfigOption, type SessionUpdate, type PromptAnswer, type SteerOutcome } from "@nouride/acp";
 import { createLogger } from "@nouride/shared";
 import type { LongLivedProcess } from "@nouride/runtime";
 import type { Launch } from "./launch.ts";
 import { thoughtLevel } from "./models.ts";
-import { useOf, type AccountUse } from "./use.ts";
 
 const log = createLogger("external-agents");
+/** How long a message sent as a second prompt waits for the running prompt's first update. */
+const FIRST_UPDATE_MS = 10_000;
 
 export type Spawn = (cmd: string[], opts: { agent: string; cwd: string; env: Record<string, string> }) => LongLivedProcess;
 
@@ -24,6 +25,11 @@ export type ChildrenOf = (pid: number) => number[];
 
 /** How many of the CLI's last stderr lines are kept. */
 const STDERR_KEPT = 30;
+/**
+ * How long a CLI is given to take the sign-in method it is told: one with a sign-in kept answers at once. A choice of
+ * this code, not something a CLI said.
+ */
+const AUTHENTICATE_MS = 15_000;
 
 /**
  * Why an agent's CLI cannot answer, in words for wherever its status is shown: not installed, not signed in, or what
@@ -72,6 +78,10 @@ export class CliConnection {
   private child: LongLivedProcess | null = null;
   private client: AcpClient | null = null;
   private handshake: InitializeResult | null = null;
+  /** The sign-in method this process was told (`CliRow.authenticate`), once: a CLI keeps it for its later sessions. */
+  private told: string | null = null;
+  /** How long a CLI told its sign-in method is given to take it (`signedIn`). */
+  authenticateMs = AUTHENTICATE_MS;
   private readonly stderr: string[] = [];
   private readonly sessions = new Map<string, string>();
   /** What Nouride last set each session to, by session id: a change on the Brain tab is set again where it differs. */
@@ -79,6 +89,8 @@ export class CliConnection {
   /** Each session's options as the CLI last said them — opened, reopened, or after one was set. */
   private readonly options = new Map<string, SessionConfigOption[]>();
   private readonly permissions = new Map<string, PermissionHandler>();
+  /** Each running prompt's first update, by session: a message sent into it as a second prompt waits for that. */
+  private readonly begun = new Map<string, Promise<void>>();
   /** The sessions turns are working in, with how many; and those let go under one, closed once it is done (0.8.8). */
   private readonly inUse = new Map<string, number>();
   private readonly closeWhenDone = new Set<string>();
@@ -94,8 +106,8 @@ export class CliConnection {
   onOwnWords?: (sessionId: string, update: SessionUpdate) => void;
   /** What this CLI runs on, read from the files installed as it started (`parts.ts`); none until then, or for a row that names no package. */
   parts: Promise<CliPart[]> = Promise.resolve([]);
-  /** The account's use as this CLI last said it in a prompt (`use.ts`); null before it said any. */
-  accountUse: AccountUse | null = null;
+  /** The account's use as this CLI last said it in a prompt (`CliRow.use`), and when; null before it said any. */
+  accountUse: { use: CliUse; at: number } | null = null;
 
   constructor(
     readonly row: CliRow,
@@ -110,6 +122,15 @@ export class CliConnection {
 
   get info(): InitializeResult | null {
     return this.handshake;
+  }
+
+  /** Whether it takes a message into a running prompt: by `_session/steering`, or as a second prompt (`steerByPrompt`). */
+  get steers(): boolean {
+    return steeringOffered(this.handshake) || this.byPrompt;
+  }
+
+  private get byPrompt(): boolean {
+    return steersByPrompt(this.row, this.handshake?.agentInfo?.version);
   }
 
   get closed(): string | null {
@@ -228,12 +249,41 @@ export class CliConnection {
         log.info("an external agent's kept session could not be reopened; starting a new one", { agent_id: this.agentId, error: String(err) });
       }
     }
-    const { value: opened, born: started } = await this.bornWhile(() => client.newSession(cwd, mcpServers), born !== undefined);
+    const { value: opened, born: started } = await this.bornWhile(() => this.signedIn(() => client.newSession(cwd, mcpServers)), born !== undefined);
     born?.(started);
     this.sessions.set(key, opened.sessionId);
     this.offers(opened.sessionId, opened.configOptions);
     await setUp(opened.sessionId, opened);
     return opened.sessionId;
+  }
+
+  /**
+   * A session asked for, and where the CLI refuses it as signed out, told the sign-in method its row names that its
+   * handshake offers (`CliRow.authenticate`) and asked once more. Cursor's and Grok Build's CLIs open no session until
+   * told how their kept sign-in is to be read, signed in or not: refused, a CLI that has a sign-in kept answered as one
+   * that had none. Told once a process; a refusal after it is the CLI's answer, said as signed out.
+   *
+   * Told with a short wait: signed out, Grok Build's CLI never answered `cached_token` (40 seconds and more, in a
+   * container with no account), and Antigravity's and Cursor's answered with an error. Either way the CLI is not signed
+   * in, and the turn is told so at once, to sign it in on its card, not after the protocol's minute and a half.
+   */
+  private async signedIn<T>(open: () => Promise<T>): Promise<T> {
+    try {
+      return await open();
+    } catch (err) {
+      const offered = new Set((this.handshake?.authMethods ?? []).map((method) => method.id));
+      const method = this.told === null && err instanceof AcpError && err.code === AUTH_REQUIRED ? this.row.authenticate?.find((id) => offered.has(id)) : undefined;
+      if (!method) throw err;
+      this.told = method;
+      try {
+        await this.need().authenticate(method, this.authenticateMs);
+      } catch (refused) {
+        log.info("an external agent's CLI did not take its sign-in method: it is signed out", { agent_id: this.agentId, cli: this.row.id, method, code: refused instanceof AcpError ? refused.code : null });
+        throw err;
+      }
+      log.info("an external agent's CLI was told its sign-in method", { agent_id: this.agentId, cli: this.row.id, method });
+      return await open();
+    }
   }
 
   /** A session's options as the CLI last said them; empty before it said any. */
@@ -297,11 +347,17 @@ export class CliConnection {
    */
   async probe(cwd: string): Promise<NewSessionResult> {
     // Counted as an open: what it starts is not a session's that opens beside it.
-    const { value: opened } = await this.bornWhile(() => this.need().newSession(cwd));
+    const { value: opened } = await this.bornWhile(() => this.signedIn(() => this.need().newSession(cwd)));
     this.lastUsed = this.now();
     // Let go at once: each check left a session open in the agent's live CLI, and a session holds memory there.
     this.letGo(opened.sessionId);
     return opened;
+  }
+
+  /** A method of the CLI's own, asked on this connection: how its row reads its account's use (`readUse`). */
+  ask(method: string, timeoutMs: number): Promise<unknown> {
+    // Not a use of the CLI: a page that asks keeps no idle CLI running.
+    return this.need().extension(method, {}, timeoutMs);
   }
 
   /**
@@ -411,9 +467,14 @@ export class CliConnection {
     this.running += 1;
     this.permissions.set(sessionId, onPermission);
     let letGo = false;
+    let begin = () => {};
+    const begun = new Promise<void>((resolve) => (begin = resolve));
+    this.begun.set(sessionId, begun);
     try {
       const answering = client.promptAnswer(sessionId, blocks, (update) => {
-        this.accountUse = useOf(this.row, update, this.now()) ?? this.accountUse;
+        begin();
+        const said = this.row.use?.(update, this.now());
+        if (said) this.accountUse = { use: said, at: this.now() };
         onUpdate(update);
       });
       if (!held) return await answering;
@@ -431,15 +492,30 @@ export class CliConnection {
       if (typeof err === "object" && err !== null) inPrompt.add(err);
       throw err;
     } finally {
+      // A message waiting for its first update goes on now, and finds no prompt to go into.
+      begin();
+      if (this.begun.get(sessionId) === begun) this.begun.delete(sessionId);
       if (!letGo && this.permissions.get(sessionId) === onPermission) this.permissions.delete(sessionId);
       this.running -= 1;
       this.lastUsed = this.now();
     }
   }
 
-  /** Words for the prompt running in a session (`AcpClient.steer`); `failed` where the CLI is gone. */
+  /**
+   * Words for the prompt running in a session (`AcpClient.steer`); `failed` where the CLI is gone. As a second prompt
+   * only once the running one has said something: sent before that, it races the CLI's taking up of its own prompt, so
+   * it waits for its first update (or its end), `FIRST_UPDATE_MS` at most, then is the turn's next prompt.
+   */
   async steer(sessionId: string, blocks: ContentBlock[]): Promise<SteerOutcome> {
-    return this.client && !this.gone ? await this.client.steer(sessionId, blocks) : "failed";
+    if (!this.client || this.gone) return "failed";
+    if (!this.byPrompt) return await this.client.steer(sessionId, blocks);
+    const begun = this.begun.get(sessionId);
+    if (!begun) return "promptRequired";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ready = await Promise.race([begun.then(() => true), new Promise<boolean>((resolve) => (timer = setTimeout(() => resolve(false), FIRST_UPDATE_MS)))]);
+    clearTimeout(timer);
+    if (!ready || !this.client || this.gone) return "failed";
+    return await this.client.steerByPrompt(sessionId, blocks);
   }
 
   cancel(sessionId: string): void {

@@ -13,6 +13,8 @@ import { readParts } from "./parts.ts";
 export interface ScannedCli {
   id: string;
   name: string;
+  /** Not yet run on a real account: offered with an Experimental label. */
+  experimental?: true;
   /** Who makes it: "Anthropic". */
   maker?: string;
   command: string;
@@ -62,6 +64,7 @@ export async function scanCli(row: CliRow, run: typeof runCommand = runCommand, 
   const base = {
     id: row.id,
     name: row.name,
+    ...(row.experimental ? { experimental: true as const } : {}),
     ...(row.maker ? { maker: row.maker } : {}),
     command: row.command,
     install: row.install,

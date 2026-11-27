@@ -16,7 +16,6 @@ import { bundleVersion, staleBundle } from "@/commons/lib/bundle";
 import { isAdmin, MCP_LOGIN_CALLBACK, offersSignOut, useGate } from "@/commons/lib/session";
 import { useTheme } from "@/commons/lib/theme";
 import { useSignOut } from "@/commons/components/layout/sign-out";
-import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { isPairedBox } from "@/commons/lib/api.appliance";
 import { HELD_BOTTOM, PAGE_BOTTOM } from "@/commons/components/ui/ScrollCard";
 import { Sheet } from "@/commons/components/ui/Sheet";
@@ -184,7 +183,7 @@ export function RootLayout() {
     );
   }
 
-  const where = { admin: isAdmin(gate.principal), onBox, hostsGateway: gatewayPage(gate.setup) };
+  const where = { admin: isAdmin(gate.principal), onBox };
   // On Chats the menu folds to its icons from a laptop up, unless it was expanded there; on a phone a conversation is
   // the whole screen (`chat-place.ts`).
   const chats = onChats(pathname);

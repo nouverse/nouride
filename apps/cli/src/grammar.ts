@@ -57,7 +57,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
   tools: { forms: { "": NONE, run: NONE } },
   chat: { forms: { "": NONE, "*": NONE } },
   status: { forms: { "": NONE } },
-  agents: { forms: { "": NONE, scan: NONE, login: NONE, update: NONE } },
+  agents: { forms: { "": NONE, scan: NONE, login: NONE, install: NONE, update: NONE } },
   acp: { forms: { "": ["--agent <id>"] } },
   // `pause` and `resume`, what asleep was called before 0.8.0: kept, untaught.
   agent: {
@@ -218,7 +218,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
       "": NONE,
       ls: NONE,
       list: NONE,
-      add: ["--agent <id>", "--name <name>", "--command <exe>", "--url <url>", "--arg <value>", "--cwd <dir>", "--sse", "--stdin", "--token <value>", "--header <name>", "--env-secret <VAR=secret>", "--env <VAR=value>", "--per-agent", "--from <registry-name>"],
+      add: ["--agent <id>", "--name <name>", "--command <exe>", "--url <url>", "--arg <value>", "--cwd <dir>", "--sse", "--stdin", "--token <value>", "--header <name=value>", "--env-secret <VAR=secret>", "--env <VAR=value>", "--per-agent", "--from <registry-name>"],
       enable: ["--agent <id>", "--name <name>", "--own-login", "--env-secret <VAR=secret>", "--stdin", "--token <value>", "--library-credential"],
       disable: ["--agent <id>", "--name <name>"],
       search: NONE,
@@ -227,6 +227,7 @@ export const GRAMMAR: Readonly<Record<string, CommandGrammar>> = {
       login: ["--agent <id>", "--server <name>", "--client-id <id>"],
       logout: ["--agent <id>", "--server <name>"],
       tools: ["--agent <id>", "--name <name>", "--only <tools>", "--all"],
+      header: ["--agent <id>"],
     },
     untaught: ["ls", "list", "remove"],
   },

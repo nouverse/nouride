@@ -7,6 +7,8 @@
  * version of any other shape is no verdict, and nothing is said of it.
  */
 
+import type { CliRow } from "./clis/row.ts";
+
 /** Older than this Nouride supports; a newer version is out; up to date; newer than it was tested with. */
 export type CliStanding = "older" | "update" | "current" | "newer";
 
@@ -36,6 +38,13 @@ export interface CliOut {
 function parse(raw: string): { numbers: [number, number, number]; pre: string } | null {
   const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(raw.trim());
   return match ? { numbers: [Number(match[1]), Number(match[2]), Number(match[3])], pre: match[4] ?? "" } : null;
+}
+
+/** Whether the CLI its handshake names takes a message mid-prompt as a second prompt (`CliRow.steerByPrompt`). */
+export function steersByPrompt(row: Pick<CliRow, "steerByPrompt">, version: string | undefined): boolean {
+  if (!row.steerByPrompt || !version) return false;
+  const against = compareCliVersions(version, row.steerByPrompt.since);
+  return against !== null && against >= 0;
 }
 
 /** -1, 0 or 1 as `a` is older, the same or newer than `b`; null where either is not a version. */

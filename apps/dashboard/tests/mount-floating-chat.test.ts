@@ -489,10 +489,11 @@ describe("the conversation in it", () => {
   test("a page with no title of its own is named by where the menu puts it: its section's tab, else its menu item", () => {
     // One mission's page is in Missions and one agent's pages are in Agents: the nearest tab at or over the address.
     expect(["/missions/msn_1", "/missions/msn_1/", "/agents/nix/model"].map(sectionTitle)).toEqual([tabLabel("/missions"), tabLabel("/missions"), tabLabel("/agents")]);
-    // A page of no section is its menu item; Settings is its own; an address the menu does not know is nothing.
-    expect(["/", "/llm-gateway/keys", "/settings", "/nowhere"].map(sectionTitle)).toEqual([itemLabel("/"), itemLabel("/llm-gateway"), "Settings", ""]);
+    // A page of no section is its menu item, or the one that holds it (Nougate's, in Models); Settings is its own; an
+    // address the menu does not know is nothing.
+    expect(["/", "/llm-gateway/keys", "/settings", "/nowhere"].map(sectionTitle)).toEqual([itemLabel("/"), itemLabel("/models"), "Settings", ""]);
     // And the menu says something for each: the names above are not all empty.
-    expect([tabLabel("/missions"), tabLabel("/agents"), itemLabel("/"), itemLabel("/llm-gateway")].every((label) => label.length > 0)).toBe(true);
+    expect([tabLabel("/missions"), tabLabel("/agents"), itemLabel("/"), itemLabel("/models")].every((label) => label.length > 0)).toBe(true);
   });
 });
 

@@ -3,7 +3,7 @@
  * sign-in, and the accounts each CLI is signed in on.
  */
 
-import type { CliPart, CliStanding, CliVersionView } from "@nouride/acp";
+import type { CliPart, CliStanding, CliUse, CliVersionView } from "@nouride/acp";
 
 /** An external agent's coding CLI, on its row of the agents (0.8.1). */
 export interface AgentExternal {
@@ -22,6 +22,8 @@ export interface AgentExternal {
 export interface ScannedCli {
   id: string;
   name: string;
+  /** Not yet run on a real account: offered with an Experimental label. */
+  experimental?: true;
   /** Who makes it: "Anthropic". */
   maker?: string;
   command: string;
@@ -117,7 +119,7 @@ export interface AgentCli {
 /** One account of a coding CLI, and the agents on it with whether each can answer. */
 export interface CliAccountView {
   name: string;
-  /** A shared account: whether it is signed in. One sign-in per agent: null — each agent's says. */
+  /** Whether it was signed in on the page, its token or its sign-in's files kept; null from a daemon before that was so. */
   signedIn: boolean | null;
   /** `on`: the account the agent's CLI runs on now, where it moved off this one at a limit. */
   agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];
@@ -125,9 +127,22 @@ export interface CliAccountView {
   limits?: string[];
 }
 
+/**
+ * An account's use as last read of its maker or said by its CLI (`said`), and when; `use` null where it is not known.
+ * `agents`: where each agent on the account signs in by itself, each one's own, the account's then null.
+ */
+export interface CliAccountUse {
+  use: CliUse | null;
+  at: number | null;
+  said?: boolean;
+  agents?: { id: string; use: CliUse | null; at: number | null; said?: boolean }[];
+}
+
 export interface CliAccountsView {
   id: string;
   name: string;
+  /** Not yet run on a real account: offered with an Experimental label. */
+  experimental?: true;
   /** Who makes it: "Anthropic". */
   maker?: string;
   installed: boolean;

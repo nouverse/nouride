@@ -11,6 +11,7 @@ import type {
   ChatMessage,
   ChatType,
   GatewayName,
+  LLMError,
   LLMFailure,
   LLMProvider,
   LLMSection,
@@ -30,6 +31,7 @@ import type { ToolOutputSpill } from "@/modules/llm/spill.ts";
 import type { TokenScales } from "@/modules/llm/context-scale.ts";
 import type { ActivityKind } from "@/commons/activity.ts";
 import type { ContextLine } from "./context-line.ts";
+import type { FallbackHolds } from "./fallback-holds.ts";
 import type { HarnessFacts } from "@/modules/llm/prompt/index.ts";
 import type { TurnJournal } from "@/modules/turns/journal.store.ts";
 
@@ -159,6 +161,8 @@ export interface TurnRequest {
    */
   callIds?: Set<string>;
   senderId: string;
+  /** Other ids the platform knows the sender by (`ToolContext.senderAlso`). */
+  senderAlso?: readonly string[];
   /** A `delegate` helper's turn — see `HarnessFacts.helper`. */
   helper?: boolean;
   /** The daemon started this turn, not a person — see `PromptContext.systemEvent`. */
@@ -460,9 +464,12 @@ export interface ExecutorDeps {
   onAudioRefused?: () => void;
   /**
    * The model the turn was on could not answer and a pair of its `[llm] fallbacks` is answering instead, for the rest
-   * of the turn. The caller tells the operator, once an outage (`pipeline/fallback-alert.ts`).
+   * of the turn and the agent's turns of the next `HOLD_MS` (`fallback-holds.ts`). The caller tells the operator, once
+   * an outage (`pipeline/fallback-alert.ts`). `upstream`: what a gateway in between said it tried.
    */
-  onFallback?: (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure }) => void;
+  onFallback?: (info: { from: string; fromProfile: string; to: string; toProfile: string; failure: LLMFailure; upstream?: LLMError["upstream"] }) => void;
+  /** The models of each agent passed over for their fallback a while (`fallback-holds.ts`): one for the daemon. */
+  fallbackHolds?: FallbackHolds;
   /**
    * The context window the agent's gateway states for a model, from its last listing — null when it has said nothing
    * (`llm/catalog.ts`). Read before the table of model families and after the pack's own `context_window`.

@@ -5,10 +5,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { AcpError, INTERNAL_ERROR, type CliRow } from "@nouride/acp";
+import { AcpError, BUILT_IN_CLIS, INTERNAL_ERROR, type CliRow } from "@nouride/acp";
 import { NourideError } from "@nouride/shared";
 import { AccountRotation, ACCOUNTS_SPENT, accountsOf, limitOf, OWN_MODEL, UNSAID_END_MS, type LimitMark } from "@/modules/external-agents/rotation.ts";
-import { useOf } from "@/modules/external-agents/use.ts";
+import { fullest } from "@/modules/external-agents/use.ts";
 
 const ROW = { id: "claude-code", name: "Claude Code", limit: { key: "errorKind", value: "rate_limit", resets: "rateLimit.resetsAt" } } as CliRow;
 const NOW = Date.parse("2026-11-14T13:00:00Z");
@@ -213,7 +213,9 @@ describe("the account a turn starts on", () => {
 describe("how much of an account's limits is used", () => {
   /** A count of the context as claude-agent-acp 0.107.0 sent one on the box, the windows' figures its own. */
   const update = (windows: unknown) => ({ sessionUpdate: "usage_update", used: 17_235, size: 1_000_000, _meta: { "_claude/rateLimit": { status: "allowed", resetsAt: 1794675000, rateLimitType: "five_hour", unifiedWindows: windows }, "_claude/model": "claude-sonnet-5-5" } });
-  const USE = { use: { meta: "_claude/rateLimit", windows: "unifiedWindows", used: "utilization", resets: "resetsAt" } };
+  const USE = { use: BUILT_IN_CLIS.find((row) => row.id === "claude-code")!.use };
+  /** What the row reads of an update, as the fullest window the rotation acts on. */
+  const useOf = (row: Partial<CliRow>, update: unknown, now: number) => fullest(row.use?.(update, now) ?? null, now);
   const soon = (NOW + 3 * HOUR) / 1000;
   const later = (NOW + 5 * 24 * HOUR) / 1000;
 
@@ -343,5 +345,97 @@ describe("the marks, where the daemon keeps its state", () => {
     rows.set("cli-account-limits", JSON.stringify({ good: { until: 5 }, bad: { until: "soon" }, worse: 7, loose: { until: 9, known: "yes" } }));
     expect(cliLimitsState(rows).load()).toEqual({ good: { until: 5, known: false }, loose: { until: 9, known: false } });
     expect(cliLimitsState(stateRows()).load()).toEqual({});
+  });
+});
+
+describe("a window of the account's used up, read before a message is refused", () => {
+  const window = (usedPercent: number, hours: number | null) => ({ usedPercent, minutes: 300, resetsAt: hours === null ? null : NOW + hours * HOUR });
+  const use = (creditsLeft: boolean | undefined, ...windows: ReturnType<typeof window>[]) => ({
+    limits: windows.map((each, index) => ({ id: `w${index}`, label: `w${index}`, windows: [each] })),
+    ...(creditsLeft === undefined ? {} : { creditsLeft }),
+  });
+  const OPUS = (usedPercent: number) => ({ id: "seven_day_opus", label: "Weekly, opus", models: ["opus"], windows: [window(usedPercent, 50)] });
+
+  test("on the maker's word that no credits are left, marks the account for every model until its latest full window starts again, once", () => {
+    const { turn, said, later } = rotation();
+    turn.started("nix", "rina");
+    turn.seen(ROW, "rina", use(false, window(100, 2), window(100, 30), window(40, 1)));
+    for (const model of ["fable", "opus", OWN_MODEL]) expect(turn.limited("claude-code", "rina", model)).toEqual({ until: NOW + 30 * HOUR, known: true, read: true });
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("work");
+    expect(turn.accountFor(ROW, NOX, "opus")).toBe("spare");
+    expect(turn.says("claude-code", "rina")).toEqual(["At its limit: for about 30 hours more."]);
+    turn.seen(ROW, "rina", use(false, window(100, 30)));
+    expect(said).toEqual([["cli_account_limited", { cli: "claude-code", account: "rina", model: "**", until: NOW + 30 * HOUR, known: true, read: true }]]);
+    later(31 * HOUR);
+    expect(turn.limited("claude-code", "rina", "fable")).toBeNull();
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("rina");
+  });
+
+  test("a model's own window used up marks that model alone, by the name the maker gives it", () => {
+    const { turn } = rotation();
+    turn.seen(ROW, "rina", { limits: [{ id: "five_hour", label: "5-hour", windows: [window(20, 2)] }, OPUS(100)], creditsLeft: false });
+    expect(turn.limited("claude-code", "rina", "opus")).toEqual({ until: NOW + 50 * HOUR, known: true, read: true });
+    expect(turn.limited("claude-code", "rina", "sonnet")).toBeNull();
+    expect(turn.accountFor(ROW, NIX, "sonnet")).toBe("rina");
+  });
+
+  test("with credits left, or none said, nothing is marked: an account that answered before this still does, whatever its CLI says", () => {
+    const { turn, kept } = rotation();
+    turn.started("nix", "rina");
+    turn.seen(ROW, "rina", use(true, window(100, 2)));
+    turn.seen(ROW, "rina", use(undefined, window(100, 2)));
+    turn.seen(ROW, "rina", { limits: [OPUS(100)] });
+    // The CLI's own word while it works says nothing of credits: as before, only an agent that asked marks it near.
+    turn.used(ROW, NIX, { used: 1, until: NOW + 2 * HOUR });
+    expect(kept()).toEqual({});
+    expect(turn.accountFor(ROW, NIX, "fable")).toBe("rina");
+    turn.used(ROW, { ...NIX, external: { ...NIX.external, moveAt: 90 } }, { used: 1, until: NOW + 2 * HOUR });
+    expect(kept()).toEqual({ "claude-code|rina|*": { until: NOW + 2 * HOUR, known: true, near: 1 } });
+  });
+
+  test("nothing is marked short of the end, for a window with no end or one over, or a turn on a model the maker does not name", () => {
+    const { turn, kept } = rotation();
+    turn.seen(ROW, "rina", use(false, window(99.5, 2), window(100, null), window(100, -1)));
+    turn.seen(ROW, "rina", null);
+    expect(kept()).toEqual({});
+  });
+
+  test("a later word that the window has room lifts a mark made from a read: credits left, a share below the end, an early reset; not a refusal's", async () => {
+    const { turn, kept, said } = rotation();
+    const mark = () => turn.seen(ROW, "rina", use(false, window(100, 3)));
+    mark();
+    turn.seen(ROW, "rina", use(true, window(100, 3)));
+    expect(kept()).toEqual({});
+    mark();
+    // Its CLI saying the window is used up again, credits unsaid, keeps it; saying it is at 40%, lifts it.
+    turn.seen(ROW, "rina", use(undefined, window(100, 3)));
+    expect(Object.keys(kept())).toEqual(["claude-code|rina|**"]);
+    turn.seen(ROW, "rina", use(undefined, window(40, 5)));
+    expect(kept()).toEqual({});
+    mark();
+    turn.seen(ROW, "rina", use(false, window(100, -1)));
+    expect(kept()).toEqual({});
+    // A model's mark is lifted by that model's window alone.
+    turn.seen(ROW, "rina", { limits: [OPUS(100)], creditsLeft: false });
+    turn.seen(ROW, "rina", use(undefined, window(10, 2)));
+    expect(Object.keys(kept())).toEqual(["claude-code|rina|opus"]);
+    turn.seen(ROW, "rina", { limits: [OPUS(30)] });
+    expect(kept()).toEqual({});
+    // A refusal is the CLI's own word that it did not answer: a read does not lift it.
+    turn.started("solo", "rina");
+    turn.refused(ROW, SOLO, await refusal({ errorKind: "rate_limit", rateLimit: { resetsAt: (NOW + HOUR) / 1000 } }), "fable");
+    turn.seen(ROW, "rina", use(true, window(10, 2)));
+    expect(turn.limited("claude-code", "rina", "fable")).toEqual({ until: NOW + HOUR, known: true });
+    expect(said.filter(([action]) => action === "cli_account_room")).toHaveLength(4);
+  });
+});
+
+describe("when a turn held for its accounts' limits goes on", () => {
+  test("at the first of their ends where every account's limit said its end; never where one did not, or one is not at a limit", () => {
+    const { turn } = rotation({ kept: { "claude-code|rina|fable": { until: NOW + 5 * HOUR, known: true }, "claude-code|work|fable": { until: NOW + 2 * HOUR, known: true }, "claude-code|spare|fable": { until: NOW + HOUR, known: false } } });
+    expect(turn.freeAt("claude-code", ["rina", "work"], "fable")).toBe(NOW + 2 * HOUR);
+    expect(turn.freeAt("claude-code", ["rina", "spare"], "fable")).toBeNull();
+    expect(turn.freeAt("claude-code", ["rina", "other"], "fable")).toBeNull();
+    expect(turn.freeAt("claude-code", ["rina"], "opus")).toBeNull();
   });
 });

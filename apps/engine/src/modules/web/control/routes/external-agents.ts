@@ -9,13 +9,14 @@
  * with its secret still kept could not be told from a failed delete without them.
  */
 
-import type { AgentCli, CliAccountsView, CliLoginView, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
+import type { AgentCli, CliAccountUse, CliAccountsView, CliLoginView, CliProfile, CliRoom, ScannedCli } from "@nouride/wire";
 import { PROFILE_NAME } from "@nouride/persona";
 import { EXTERNAL_PERMISSIONS, LLM_EFFORTS, type ExternalAgentConfig, type LoadedAgent } from "@nouride/shared";
 import type { ExternalSettings } from "@/modules/setup/external-agent.ts";
 import { EFFORT_CHOICES, isEffortChoice } from "@/modules/setup/agent-effort.ts";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ExternalAgents } from "@/modules/external-agents/index.ts";
+import type { UseSeen } from "@/modules/external-agents/account-use.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody } from "../payloads.ts";
 import { INCOMPLETE, NOT_RUNNING, NOT_SAVED, notSaved } from "../plain.ts";
@@ -119,6 +120,21 @@ export function registerExternalAgentRoutes(control: ControlApp, deps: ControlDe
     if (!deps.externalAgents) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
     if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
     return c.json({ clis: await deps.externalAgents.accountList(deps.registry.all(), c.req.query("fresh") === "1") } satisfies { clis: CliAccountsView[] });
+  });
+
+  /**
+   * An account's use, asked of its maker at most every few minutes or as a CLI on it last said it (`account-use.ts`):
+   * on its own, so the list of accounts does not wait on every maker. Null where it is not known.
+   */
+  control.get("/cli-accounts/:cli/:name/use", async (c) => {
+    if (!deps.externalAgents) return c.json({ error: "external agents are not available on this daemon", plain: NOT_RUNNING }, 501);
+    if (!atLeast(c.get("principal"), "operator")) return c.json({ error: "operator only" }, 403);
+    const row = deps.externalAgents.row(c.req.param("cli"));
+    if (!row) return c.json({ error: `no coding CLI "${c.req.param("cli")}" here` }, 404);
+    if (!PROFILE_NAME.test(c.req.param("name"))) return c.json({ error: "an account's name is lowercase letters, digits and dashes, at most 24" }, 400);
+    const { seen, agents } = await deps.externalAgents.useOf(row, c.req.param("name"), deps.registry.all());
+    const view = (one: UseSeen | null) => ({ use: one?.use ?? null, at: one?.at ?? null, ...(one?.said ? { said: true } : {}) });
+    return c.json({ ...view(seen), ...(agents ? { agents: agents.map((agent) => ({ id: agent.id, ...view(agent.seen) })) } : {}) } satisfies CliAccountUse);
   });
 
   /** An account added by name, before any agent uses it. Admin only. */

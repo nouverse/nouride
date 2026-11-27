@@ -94,6 +94,8 @@ export interface McpServerEdit {
   /** The secret's **name**. The value never comes through here — see `McpServerConfig.authSecret`. */
   authSecret?: string;
   authHeader?: string;
+  /** Header → secret **name** (`McpServerConfig.headerSecrets`). Written when sent, the table removed when sent empty. */
+  headerSecrets?: Record<string, string>;
   /** Variable → secret **name** (`McpServerConfig.envSecrets`). Written when sent, the table removed when sent empty. */
   envSecrets?: Record<string, string>;
   /** The library's `per_agent` (`McpServerConfig.perAgent`): written when true, removed when sent false. */
@@ -116,16 +118,15 @@ function ownedKeys(server: McpServerEdit): { set: [string, unknown][]; drop: str
     ["auth_header", server.authHeader || undefined],
   ];
   const perAgent: [string, unknown][] = server.perAgent === undefined ? [] : [["per_agent", server.perAgent || undefined]];
-  // `env` and `headers` only when sent: the form shows neither, and a save from it must not take away what was
-  // written by hand — a stdio server's env, an http server's headers.
+  // `env` only when sent: the form shows none, and a save from it must not take away what was written by hand.
   const extra: [string, unknown][] = [
     ["env", server.env && Object.keys(server.env).length ? server.env : undefined],
-    ["headers", server.headers && Object.keys(server.headers).length ? server.headers : undefined],
     ["parallel_safe", server.parallelSafe],
   ];
-  // The form does own these when it sends them: the whole set it shows, so one taken off is gone from the file.
-  const secretEnv = server.envSecrets;
-  const owned: [string, unknown][] = secretEnv === undefined ? [] : [["env_secrets", Object.keys(secretEnv).length ? secretEnv : undefined]];
+  // Owned when sent: the whole set, so one taken off is gone from the file, and a set sent empty takes the table off.
+  // Not sent (the dashboard's form shows no headers), the block's own stay.
+  const tables: [string, Record<string, string> | undefined][] = [["env_secrets", server.envSecrets], ["headers", server.headers], ["header_secrets", server.headerSecrets]];
+  const owned: [string, unknown][] = tables.filter(([, table]) => table !== undefined).map(([key, table]) => [key, Object.keys(table!).length ? table : undefined]);
   return {
     set: [...fields, ...extra, ...owned, ...perAgent].filter((field): field is [string, unknown] => field[1] !== undefined),
     drop: [...fields, ...owned, ...perAgent].filter(([, value]) => value === undefined).map(([key]) => key),

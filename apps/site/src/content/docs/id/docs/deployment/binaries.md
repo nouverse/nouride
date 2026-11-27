@@ -16,8 +16,8 @@ Ukuran di atas perkiraan, diukur dari build `linux-x64` versi 0.7. Angka RSS idl
 yang lebih lama dan belum diukur ulang.
 
 Community memakai satu akun dengan password lokal, database SQLite in-process, dan konfigurasi TOML. Nougate ada
-di proses yang sama dan mati sampai kamu memilih **Use Nougate** di setup atau menyalakannya dari halaman
-**LLM Gateway** di dashboard (`[nougate] in_process = true`). Selama ikut tapi mati, biayanya sekitar 0,5 MB binary
+di proses yang sama dan mati sampai kamu memilih **Use Nougate** di setup atau menyalakannya dari halamannya,
+**Open Nougate** di halaman **Models** dashboard (`[nougate] in_process = true`). Selama ikut tapi mati, biayanya sekitar 0,5 MB binary
 dan 1,3 MB memori; saat menyala dan idle, sekitar 3,6 MB lagi. Ia bukan proses kedua.
 
 Edisi Router, yaitu Community dengan gateway menyala, sudah menjadi bagian dari Community sejak 0.8.28: install

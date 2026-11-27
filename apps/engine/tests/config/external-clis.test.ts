@@ -5,7 +5,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { addLogSink } from "@nouride/shared";
 import { readConfigText } from "@/modules/config/global/index.ts";
+import { cliRows, parseExternalClis } from "@/modules/config/global/external-clis.ts";
 
 const BASE = `[providers.nougate]
 kind = "openai"
@@ -16,6 +18,10 @@ api_key = "nougate_key"
 provider = "nougate"
 model = "pro"
 `;
+
+/** What loading said of a person's row with a built-in one's id. */
+const said: unknown[] = [];
+addLogSink((entry) => void (entry.message.includes("has the id of one built in") && said.push(entry.data)));
 
 const read = (rows: string) => readConfigText(`${BASE}\n${rows}`, "config.toml").externalClis;
 
@@ -41,6 +47,22 @@ signed_out = ["please log in"]
 modes = { folder = "free", all = "ask" }
 `);
     expect(row).toMatchObject({ name: "My CLI", profileEnv: "MY_CLI_HOME", instructionFile: "MY.md", login: ["auth", "login"], loginNote: "It prints a code.", status: ["auth", "status"], signedOut: ["please log in"], modes: { folder: "free", all: "ask" } });
+  });
+
+  test("of the id of a row built in after it is kept in that row's place, said once at load: an install that had one goes on", () => {
+    said.splice(0);
+    {
+      // Antigravity is tried and no longer Experimental: a person's own `antigravity` from before is still theirs.
+      expect(parseExternalClis([{ id: "antigravity", command: "my-agy", args: ["acp"] }])).toMatchObject([{ id: "antigravity", command: "my-agy" }]);
+      said.splice(0);
+      // Read as a start reads it, which says what it finds: the config check holds those words and says them too.
+      const own = parseExternalClis([{ id: "cursor", name: "My Cursor", command: "my-cursor", args: ["acp"] }]);
+      expect(own).toMatchObject([{ id: "cursor", name: "My Cursor", command: "my-cursor" }]);
+      expect(said).toEqual([{ cli: "cursor", built_in: "Cursor CLI" }]);
+      const rows = cliRows(own);
+      expect(rows.filter((row) => row.id === "cursor")).toEqual([own[0]!]);
+      expect(rows.map((row) => row.id)).toEqual(["claude-code", "codex", "antigravity", "grok", "cursor"]);
+    }
   });
 
   test("is refused at load, naming the entry, where it would run the wrong thing", () => {

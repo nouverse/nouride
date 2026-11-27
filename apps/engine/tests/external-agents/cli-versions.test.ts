@@ -105,8 +105,9 @@ describe("where a CLI's version stands", () => {
     expect(cliStanding("latest", TESTED)).toBeNull();
   });
 
-  test("the built-in rows name their package and a tested range, lowest at or below highest", () => {
-    for (const row of BUILT_IN_CLIS) {
+  test("the built-in rows that were tried name their package and a tested range, lowest at or below highest", () => {
+    // An experimental one names no tested range, nor one its maker's script installs (`packages/acp/tests/clis.test.ts`).
+    for (const row of BUILT_IN_CLIS.filter((one) => !one.experimental && !one.script)) {
       expect(row.package).toStartWith("@agentclientprotocol/");
       expect(row.install).toContain(row.package!);
       expect(["update", "current"]).toContain(cliStanding(row.tested!.lowest, row.tested!)!.standing);
@@ -314,5 +315,16 @@ describe("what a CLI runs on, in `agents scan` and `doctor`", () => {
     expect(cliPartsChecks([own])).toEqual([]);
     await scanClis({ get: async () => ({ room: { enough: true, bytes: 0, needs: 0 }, clis: [own] }) } as unknown as Client);
     expect(lines).toEqual(["● mine Mine · mine-acp 1.0.0"]);
+  });
+
+  test("a CLI built in but not yet run on a real account is said to be Experimental, installed or not", async () => {
+    const grok: ScannedCli = { id: "grok", name: "Grok Build", command: "grok", install: "curl x.example.test | bash", login: true, installed: true, version: "1.0.92", experimental: true };
+    await scanClis({ get: async () => ({ room: { enough: true, bytes: 0, needs: 0 }, clis: [grok, { ...grok, id: "cursor", name: "Cursor CLI", installed: false }] }) } as unknown as Client);
+    expect(lines).toEqual([
+      "● grok Grok Build · grok 1.0.92 Experimental",
+      "    Not yet tried on a real account: it may not answer, or answer only in part.",
+      "○ cursor Cursor CLI, not installed: curl x.example.test | bash Experimental",
+      "    Not yet tried on a real account: it may not answer, or answer only in part.",
+    ]);
   });
 });

@@ -1,6 +1,6 @@
 ---
 title: External agents
-description: An agent answered by a coding CLI (Claude Code, Codex or one you add), with a channel, missions and approvals from Nouride, and Nouride's agents in your editor.
+description: An agent answered by a coding CLI (Claude Code, Codex, Antigravity, Cursor CLI, Grok Build or one you add), with a channel, missions and approvals from Nouride, and Nouride's agents in your editor.
 ---
 
 An **external agent** is a Nouride agent whose turns a coding CLI answers. You talk to it like any agent (in its
@@ -19,7 +19,14 @@ use:
 
 Each adapter carries the real CLI, signed in with that CLI's own sign-in, so your Claude or ChatGPT subscription is used
 the way its maker supports, not through a workaround: Nouride does not turn it into an API, imitate the CLI, or hand
-the sign-in to another program. What a subscription allows is still for its maker's terms to say.
+the sign-in to another program. The one thing Nouride asks with it is how much of the account is used, the question the
+CLI's own usage page asks its maker. What a subscription allows is still for its maker's terms to say.
+
+Three more are built in, each speaking ACP itself, with no adapter: Google's **Antigravity** (`agy`), **Cursor CLI**
+and xAI's **Grok Build** (`grok`). Antigravity has been tried on a real account. Cursor CLI and Grok Build are marked
+**Experimental**: each was installed, started and asked for a session on a Linux box with no account, but neither has
+answered a turn on a real account yet. The dashboard says so beside them, where CLIs are listed and where an agent's
+CLI is picked. They may not answer, or answer only in part; say so in an issue if one does not.
 
 ## Installing a CLI
 
@@ -29,6 +36,22 @@ Nouride ships no CLI. Each installs with npm, as its adapter, which carries the 
 |---|---|---|---|
 | Claude Code | `@agentclientprotocol/claude-agent-acp` | `claude-agent-acp` | Node 22 or later |
 | Codex | `@agentclientprotocol/codex-acp` | `codex-acp` | npm |
+
+Antigravity, Cursor CLI and Grok Build install with their makers' own scripts. **Set it up** on their cards asks the
+orchestrator, as it does for the two above; by hand it is one command, run as root runs `nouride tools run`:
+
+| CLI | Install | The command Nouride starts |
+|---|---|---|
+| Antigravity | `sudo nouride agents install antigravity` | `agy acp` |
+| Cursor CLI | `sudo nouride agents install cursor` | `cursor-agent --disable-auto-update acp` |
+| Grok Build | `sudo nouride agents install grok` | `grok --no-auto-update agent stdio` |
+
+It runs the maker's installer as the daemon's user, then copies what it installed into `.nouride/opt` and links it into
+`.nouride/bin`, where every agent's user runs it: the installers put the CLI in the home folder of the user that ran
+them, which the agents' users cannot read. Cursor's names its command `agent`, as Grok's does, so Cursor is started by
+a name of its own, `cursor-agent`. Their own updaters are kept off: Antigravity's by a setting, Grok's and Cursor's by a
+switch on every command Nouride starts them with (Cursor's switch was read in its code; that it holds at an update was
+not seen yet). Nouride does not check their versions against the npm registry, since none ships there.
 
 - **Linux**, installed with `install.sh`: `sudo nouride tools run -- npm i -g @agentclientprotocol/claude-agent-acp`
   (or `@agentclientprotocol/codex-acp`). `nouride tools run` runs the installer as the daemon's user, puts the program
@@ -92,18 +115,30 @@ so and offers none; `nouride agents scan` says the same.
 ## Signing in
 
 An account is one sign-in of a CLI. **Models → Coding CLIs** lists each CLI's accounts, the agents on each, and
-whether they can answer. Agents on one account share its limits, a five-hour window included. Signing in, and saving
-an agent's Brain tab, are an admin's to do. The sign-in runs on the box, and the page shows what it prints.
+whether they can answer. Every account is signed in there, once: **Add an account**, or **Sign in** on one already
+there, runs the CLI's own sign-in on the box, and the page shows what it prints. An agent is then put on the account,
+on its **Brain** tab or when you make it, and answers with that sign-in. Agents on one account share its limits, a
+five-hour window included. Signing in, and saving an agent's Brain tab, are an admin's to do.
 
-- **Claude Code** signs an account in once, on **Models → Coding CLIs**: **Add an account**, or **Sign in** on one
-  already there, runs Claude Code's own `setup-token`. Open the link it prints, sign in with your Claude subscription,
-  and paste back the code the page then shows you. Nouride keeps the long-lived token it prints in its secret store,
-  never on the page, and every agent on that account answers with it. To sign one agent in on its own instead, **Sign
-  in** on its **Brain** tab, or `nouride agents login <id>` in a terminal, signs that agent's own profile.
-- **Codex** has no sign-in to share, so each agent on an account signs in once, on its **Brain** tab or with
-  `nouride agents login <id>`, in its own folder. It prints a link and a one-time code: open the link, sign in to
-  ChatGPT and type the code into OpenAI's page, and the sign-in ends by itself. Device-code sign-in has to be switched
-  on first, in your ChatGPT account's security settings.
+- **Claude Code** runs its own `setup-token`. Open the link it prints, sign in with your Claude subscription, and paste
+  back the code the page then shows you. Nouride keeps the long-lived token it prints in its secret store, never on
+  the page, and hands it to each agent's Claude Code on the account as it starts.
+- **Codex** prints a link and a one-time code: open the link, sign in to ChatGPT and type the code into OpenAI's page,
+  and the sign-in ends by itself. Device-code sign-in has to be switched on first, in your ChatGPT account's security
+  settings.
+- **Antigravity** signs in with a Google account on a Google AI Pro or Ultra plan: it prints a link,
+  and you paste back the code Google's page shows.
+- **Cursor CLI** (Experimental) signs in with a Cursor account: it prints a link to open; the sign-in ends by itself.
+- **Grok Build** (Experimental) signs in with a Grok account on a SuperGrok or X Premium+ plan: it prints a link and a
+  code to type into xAI's page.
+
+Every CLI but Claude Code keeps its sign-in in files rather than printing a token. Those files are kept in a folder of
+the account's, in Nouride's data folder where no agent reads, and written into an agent's own folder as its CLI
+starts. A CLI renews its sign-in now and then; after each of its turns, what it renewed is copied back to the account,
+so the next agent to start on it takes the newest. Two agents on one account working at the same moment can still
+renew it under each other, and one of them is then asked to sign in again: one account per agent avoids that. An agent
+that signed in by itself before (`nouride agents login <id>` in a terminal still does) keeps that sign-in until its
+account is signed in on the page.
 
 A CLI you add signs in with its own `login` words. If its browser sign-in ends on a page on the box that does not load
 from your machine, paste that page's address back, and Nouride opens it on the box.
@@ -124,7 +159,8 @@ The chat gets one line saying which account reached its limit, until when, and w
   restart of Nouride it starts from the top of its list again, on the first account that is not at a limit.
 - Each agent moves by its own list. Agents that share an account all see that it is at its limit, and each goes to its
   own next one; nothing is switched for every agent at once, and one agent's sign-in never becomes another's.
-- When every account in the list is at its limit, nothing is sent: the agent's own model answers that message and says
+- When every account in the list is at its limit, nothing is sent. Where each limit said when it ends, the message is
+  held until the first of them ends, as below. Where one did not, the agent's own model answers that message and says
   which accounts are spent, and until when.
 
 **Before the limit.** An agent can also move on before a message is refused. On its Brain tab, under the accounts,
@@ -139,8 +175,38 @@ sent twice. It is off unless you switch it on, and offered only where the CLI sa
   its own.
 - Where every other account is near a limit too, or at one, the agent stays where it is until the limit itself.
 
-**Models → Coding CLIs** says, under an account, each limit it is at or near, and beside an agent that moved off it,
-where that agent is now. `/status` in a chat names the account the agent is on. In the pack it is the one field, as a
+### How much of an account is used
+
+**Models → Coding CLIs** shows, under each account, how much of its plan is used: each limit with the share of it
+used, a bar, and when it starts again. Nouride asks the account's maker for it at most every five minutes, the same
+question the CLI's own usage page asks, with the account's own sign-in, and between those reads takes what the CLI says
+while it works, where it says it, and says so. Where nothing says it, the account reads **How much of its plan is used
+is not known**. Where an agent's CLI renews its sign-in in its own folder (Codex, Cursor CLI, Grok Build, Antigravity,
+or Claude Code on an agent's own sign-in), each agent's is shown under its name.
+
+| CLI | What is shown |
+|---|---|
+| Claude Code | Its five-hour and weekly limits, and a model's own weekly limit where it has one |
+| Codex | Its short and weekly limits, and whether credits are left beyond them |
+| Cursor CLI | The plan used this billing cycle, split into Auto and named models where Cursor splits it |
+| Grok Build | The plan's credits used this period, read from Grok Build while an agent on the account runs |
+| Antigravity | Not known: it says nothing of its use yet |
+
+An account signed in once for its agents is passed over until a limit starts again, before a message is sent there to be
+refused, where its maker says that limit is used up and that no credits are left beyond it (Codex's credits, Claude's
+extra usage). A model's own limit passes it over for that model alone. Where the maker says credits are left, or says
+nothing of them, the account is not passed over: it answered before, and still does. A later read that shows room again
+(credits bought, extra usage turned on, a limit that started again early) lets it answer at once.
+
+A message refused for an account's limit that said when it ends, where the agent has no other account to go on with,
+is held: the chat is told the agent goes on by itself once that limit ends, and at that time it does, as if you had
+said "continue". This is so whether or not the CLI had begun to answer. It is kept across a restart. It is not held
+where you said something in that chat since (someone else in a room, or a scheduled job, does not count), or where the
+limit ends more than eight days on; then say "continue" yourself. A CLI that is signed out is not held: it is said at
+once, with its card to sign it in.
+
+**Models → Coding CLIs** also says, under an account, each limit it is at or near, and beside an agent that moved off
+it, where that agent is now. `/status` in a chat names the account the agent is on. In the pack it is the one field, as a
 list, and the share beside it:
 
 ```toml
@@ -150,8 +216,8 @@ profile = ["work", "second"]
 move_at = 90                        # optional: move on once 90% of a limit is used
 ```
 
-For a CLI that signs in once per agent, as Codex does, there is no other account to start with, so the list is not
-offered.
+For a CLI whose sign-in is files, as Codex's is, nothing tells Nouride yet that an account is at its limit, so the list
+is not offered.
 
 Which accounts go in a list is yours to decide. A subscription is one person's, and its maker's terms say what it may
 be used for: moving between several people's accounts to get past their limits may break those terms.
@@ -179,11 +245,15 @@ another is picked with **Use for …**), and what is set in `[external]` in its 
   CLI's default.
 - **What it may do without asking**: one of three presets, each the CLI's own mode:
 
-| Preset | `permissions` | Claude Code's mode | Codex's mode |
-|---|---|---|---|
-| Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` |
-| Ask when risky | `risky` | `acceptEdits` | `agent` |
-| Ask for everything | `all` | `default` | `read-only` |
+| Preset | `permissions` | Claude Code's mode | Codex's mode | Antigravity's mode |
+|---|---|---|---|---|
+| Free in its folder | `folder` | `bypassPermissions` | `agent-full-access` | `auto` |
+| Ask when risky | `risky` | `acceptEdits` | `agent` | `accept-edits` |
+| Ask for everything | `all` | `default` | `read-only` | `default` |
+
+Cursor CLI and Grok Build have no modes Nouride sets yet: they start in their own. On *Free in its folder*, whatever a
+CLI still asks before it acts, Nouride allows without asking you (Antigravity's `auto` still asks before what it cannot
+undo); on the other two presets it goes through Nouride's approvals.
 
 *Free in its folder* asks nothing, not before a push, a POST or `ssh` either. It is free only where each agent is its
 own user, a Linux service with the `nouride-run` helper, where the operating system keeps the CLI out of everything
@@ -344,8 +414,9 @@ modes = { folder = "build", all = "plan" }
 ```
 
 A secret it needs is bound to its command in `[security.exec_secrets]`; there is no `env` in the row. An `id` a
-built-in CLI has (`claude-code`, `codex`) is refused at load. A CLI you add runs as the agent's own user only where
-each agent has one, gets no skills, and signs in once per agent: there is no shared account for it.
+built-in CLI has (`claude-code`, `codex`) is refused at load. One of the three built in since (`antigravity`, `cursor`,
+`grok`) is yours: your row is kept in its place, and the start says so once, as `nouride config check` does. A CLI you add runs as the agent's own user only where
+each agent has one, gets no skills, and, with a `login`, is signed in on the account like the others.
 [Every key →](/en/docs/reference/config/#external_clis)
 
 ## Nouride in your editor

@@ -22,7 +22,7 @@ export async function mcp(
   openPrompt: () => LinePrompt = () => openLinePrompt(),
 ): Promise<void> {
   const [action] = args;
-  knownAction("mcp", action, ["add", "rm", "remove", "enable", "disable", "list", "ls", "search", "login", "logout", "tools"]);
+  knownAction("mcp", action, ["add", "rm", "remove", "enable", "disable", "list", "ls", "search", "login", "logout", "tools", "header"]);
   const flag = (name: string): string | undefined => flagValue(args, `--${name}`);
   const has = (name: string): boolean => hasFlag(args, `--${name}`);
   /** Repeatable, because argv is a list and joining it on spaces loses arguments with spaces in. */
@@ -64,6 +64,11 @@ export async function mcp(
     return;
   }
 
+  if (action === "header") {
+    await header(client, args.slice(1), flag("agent"));
+    return;
+  }
+
   if (action === "add" && flag("from")) {
     await addFromRegistry(client, args, { flag, every });
     return;
@@ -84,7 +89,9 @@ export async function mcp(
           `  --stdin                    read the credential from stdin (preferred)\n` +
           `  --token <value>            pass it inline: it ends up in shell history, in the exec\n` +
           `                             grant and in the audit log, all of which keep it forever\n` +
-          `  --header <name>            send the credential under this header instead of\n` +
+          `  --header <name>=<value>    an http server's header, repeat for each one; the value\n` +
+          `                             secret:<name> sends a secret the store holds\n` +
+          `  --header <name>            send --token under this header instead of\n` +
           `                             Authorization: Bearer, e.g. X-Api-Key\n` +
           `  --env-secret VAR=<secret>  a stdio server's credential variable, from a secret\n` +
           `                             the store holds (nouride secret set <secret>); repeat\n` +
@@ -107,6 +114,9 @@ export async function mcp(
     const transport = url ? (has("sse") ? "sse" : "streamable-http") : "stdio";
     const secretEnv = secretPairs(every("env-secret"));
     const agents = every("agent");
+    // `--header name=value` (or `=secret:<name>`) is a header of its own; a bare `--header name` is where --token goes.
+    const sent = headerPairs(every("header").filter((one) => one.includes("=")));
+    const tokenHeader = every("header").filter((one) => !one.includes("=")).at(-1);
     const result = await client.post<AckResponse & { on?: string[] }>("/mcp/library", {
       name,
       transport,
@@ -114,7 +124,9 @@ export async function mcp(
       ...(every("arg").length > 0 ? { args: every("arg") } : {}),
       ...(flag("cwd") ? { cwd: flag("cwd") } : {}),
       ...(url ? { url } : {}),
-      ...(flag("header") ? { authHeader: flag("header") } : {}),
+      ...(tokenHeader ? { authHeader: tokenHeader } : {}),
+      ...(sent.headers ? { headers: sent.headers } : {}),
+      ...(sent.headerSecrets ? { headerSecrets: sent.headerSecrets } : {}),
       ...(has("per-agent") ? { perAgent: true } : {}),
       ...(token ? { token } : {}),
       ...(secretEnv ? { envSecrets: secretEnv } : {}),
@@ -237,6 +249,45 @@ async function tools(client: Client, name: string, agent: string, choice: { only
   say(`${DIM}${answer.all ? "all" : `${on.length} of ${answer.tools.length}`} tools · ${formatBytes(sent)} of schema per request${held > 0 ? ` · ${formatBytes(held)} left out` : ""}${RESET}`);
   if (answer.unknown?.length) say(`${YELLOW}its tools list names ${answer.unknown.join(", ")}, which ${name} does not offer${RESET}`);
   say(`${DIM}choose: nouride mcp tools ${name} --agent ${agent} --only <tool,…>   all again: --all${RESET}`);
+}
+
+/** `--header name=value` and `--header name=secret:<secret>`, each as the server's literal or secret header. */
+function headerPairs(pairs: string[]): { headers?: Record<string, string>; headerSecrets?: Record<string, string> } {
+  const headers: Record<string, string> = {};
+  const headerSecrets: Record<string, string> = {};
+  for (const pair of pairs) {
+    const at = pair.indexOf("=");
+    const name = pair.slice(0, at).trim();
+    const value = pair.slice(at + 1);
+    if (!name) usageError(`--header takes name=value, not "${pair}"`, "nouride mcp add … --header x-app-tenant=acme --header authorization=secret:crm_token");
+    if (value.startsWith("secret:")) headerSecrets[name] = value.slice("secret:".length);
+    else headers[name] = value;
+  }
+  return { ...(Object.keys(headers).length > 0 ? { headers } : {}), ...(Object.keys(headerSecrets).length > 0 ? { headerSecrets } : {}) };
+}
+
+/**
+ * `nouride mcp header add <server> <name>=<value|secret:<secret>> [--agent <id>]` and `… rm <server> <name>`: one header
+ * set or taken off, the server's other keys and every agent's switch as they were. With `--agent`, that agent's own
+ * secret header over the library's.
+ */
+async function header(client: Client, args: string[], agent: string | undefined): Promise<void> {
+  const [verb, server, spec] = args.filter((arg, i) => !arg.startsWith("--") && args[i - 1] !== "--agent");
+  const usage = "usage: nouride mcp header add <server> <name>=<value|secret:name> [--agent <id>] | nouride mcp header rm <server> <name> [--agent <id>]";
+  if ((verb !== "add" && verb !== "rm") || !server || !spec) usageError(usage);
+  const query = agent ? `?agent=${encodeURIComponent(agent)}` : "";
+  if (verb === "rm") {
+    const result = await client.del<AckResponse>(`/mcp/library/${encodeURIComponent(server)}/headers/${encodeURIComponent(spec)}${query}`);
+    saidSaved(`took ${BOLD}${spec}${RESET} off ${BOLD}${server}${RESET}${agent ? ` for ${agent}` : ""}`, result, "nouride agent reload <id>");
+    return;
+  }
+  const at = spec.indexOf("=");
+  if (at <= 0) usageError(`header add takes name=value, not "${spec}"`, "nouride mcp header add crm x-app-tenant=acme");
+  const name = spec.slice(0, at);
+  const value = spec.slice(at + 1);
+  const body = value.startsWith("secret:") ? { secret: value.slice("secret:".length) } : { value };
+  const result = await client.put<AckResponse>(`/mcp/library/${encodeURIComponent(server)}/headers/${encodeURIComponent(name)}${query}`, body);
+  saidSaved(`${BOLD}${server}${RESET} sends ${BOLD}${name}${RESET}${"secret" in body ? ` from the secret ${body.secret}` : ""}${agent ? ` for ${agent}` : ""}`, result, "nouride agent reload <id>");
 }
 
 /** `--env-secret VAR=secret_name`, each naming a secret already in the store: the value never passes through argv. */

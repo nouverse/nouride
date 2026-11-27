@@ -29,14 +29,17 @@ function fakeServer(options: { autoInitialize?: boolean; version?: string; capab
   const sent: Sent[] = [];
   /** Everything the transport was told, in order: a message's method, `version:…`, `listen`. */
   const told: string[] = [];
+  /** Each message sent with headers of its own, and what they were. */
+  const withHeaders: { method: string; headers: Readonly<Record<string, string>> }[] = [];
   let closed = false;
 
   const factory = (h: McpTransportHandlers): McpTransport => {
     handlers = h;
     return {
-      send(raw) {
+      send(raw, own) {
         const message = JSON.parse(raw) as Sent;
         sent.push(message);
+        if (own) withHeaders.push({ method: message.method ?? "answer", headers: own });
         told.push(message.method ?? "answer");
         if (options.autoInitialize !== false && message.method === "initialize") {
           reply(message.id as number, {
@@ -79,7 +82,7 @@ function fakeServer(options: { autoInitialize?: boolean; version?: string; capab
     handlers?.onMessage(JSON.stringify({ jsonrpc: "2.0", ...(id === undefined ? {} : { id }), method }));
   }
 
-  return { factory, sent, told, reply, fail, raw, die, idOf, say, get closed() { return closed; } };
+  return { factory, sent, told, withHeaders, reply, fail, raw, die, idOf, say, get closed() { return closed; } };
 }
 
 const client = (server: ReturnType<typeof fakeServer>, timeoutMs = 1000) =>
@@ -164,6 +167,20 @@ describe("requests", () => {
 
     expect((await first).text).toBe("FIRST");
     expect((await second).text).toBe("SECOND");
+  });
+
+  test("a call's own headers reach the transport with that call, and with nothing else", async () => {
+    // Who the call is made for, by the host: the handshake and another call carry none of it.
+    const server = fakeServer();
+    const c = client(server);
+    await c.connect();
+    const mine = c.callTool("whoami", {}, { headers: { "x-app-sender": "telegram:555" } });
+    const theirs = c.callTool("whoami", {});
+    await Promise.resolve();
+    const ids = server.sent.filter((m) => m.method === "tools/call").map((m) => m.id as number);
+    for (const id of ids) server.reply(id, { content: [] });
+    await Promise.all([mine, theirs]);
+    expect(server.withHeaders).toEqual([{ method: "tools/call", headers: { "x-app-sender": "telegram:555" } }]);
   });
 
   test("a JSON-RPC error rejects the call that caused it", async () => {

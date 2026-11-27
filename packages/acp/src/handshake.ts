@@ -7,7 +7,7 @@
  * for every agent, and the CLI's first real turn shows the same.
  */
 
-import type { CliRow } from "./agents.ts";
+import type { CliRow } from "./clis/row.ts";
 import { steeringOffered, type InitializeResult } from "./protocol.ts";
 
 /**

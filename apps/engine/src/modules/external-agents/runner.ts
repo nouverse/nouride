@@ -9,7 +9,7 @@
  * a model. `/stop` and a shutdown are a `session/cancel`.
  */
 
-import { steeringOffered, type CliRow, type McpServer, type PlanEntry, type PromptAnswer, type RequestPermissionParams, type StopReason as AcpStopReason } from "@nouride/acp";
+import { type CliRow, type McpServer, type PlanEntry, type PromptAnswer, type RequestPermissionParams, type StopReason as AcpStopReason } from "@nouride/acp";
 import { contained, createLogger, NourideError, type ChatMessage, type ExternalPermissions, type LoadedAgent, type StopReason } from "@nouride/shared";
 import type { ExecutorDeps, TurnRequest, TurnResult } from "@/modules/llm/executor/types.ts";
 import { clockNote, withReminders } from "@/modules/llm/executor/reminders.ts";
@@ -27,7 +27,7 @@ import { isMissionChat, MISSION_GATEWAY_ID } from "@/modules/missions/gateway.ts
 import { ownFolderOf } from "@/modules/missions/worktree.ts";
 import { missionDeleteScope } from "./inside-delete.ts";
 import { promptOf, promptTakes } from "./prompt.ts";
-import { ACCOUNTS_SPENT, accountsOf, OWN_MODEL, type AccountRotation } from "./rotation.ts";
+import { ACCOUNTS_SPENT, accountsOf, limitOf, OWN_MODEL, type AccountRotation } from "./rotation.ts";
 import type { AccountUse } from "./use.ts";
 import { cliUsage, type CliContexts, type CliSpending } from "./usage.ts";
 import { merged, MidPrompt, untilSaid } from "./steering.ts";
@@ -43,9 +43,11 @@ export interface RunnerHost {
   forTurn?(agent: LoadedAgent, signal?: AbortSignal, model?: string): Promise<{ cli: CliConnection; notYet: string[] }>;
   /** The agent's CLI as this install knows it, and the accounts at a limit: a refused message may move the agent (`rotation.ts`). */
   row?(id: string): CliRow | undefined;
-  rotation?: Pick<AccountRotation, "refused" | "early" | "used">;
+  rotation?: Pick<AccountRotation, "refused" | "early" | "used" | "freeAt">;
   /** The account's use as the agent's CLI last said it; null where it said none (`use.ts`). */
   accountUse?(agentId: string): AccountUse | null;
+  /** After a turn: what the CLI changed of its account's sign-in (a refreshed token) kept as the account's (`account-sign-in.ts`). */
+  keepSignIn?(agentId: string): Promise<void>;
   /**
    * The session a conversation kept from before, for a CLI that reopens sessions; and keeping a new one, with the
    * fingerprint of the instructions it opened on (`writeInstruction`) — null where they could not be written.
@@ -138,6 +140,15 @@ export class ExternalTurnRunner {
    * account. As many times as it has accounts to move to: the last one's refusal is thrown as every account spent.
    */
   async run(req: TurnRequest): Promise<TurnResult> {
+    try {
+      return await this.onAccounts(req);
+    } finally {
+      // A refreshed token is the account's newest whatever came of the turn; failing to keep it fails nothing here.
+      await this.host.keepSignIn?.(this.agent.config.id).catch((err: unknown) => log.warn("could not keep what an agent's CLI changed of its account's sign-in", { agent_id: this.agent.config.id, error: String(err) }));
+    }
+  }
+
+  private async onAccounts(req: TurnRequest): Promise<TurnResult> {
     const external = this.agent.config.external;
     const model = this.modelOf(req);
     const row = external && this.host.row?.(external.cli);
@@ -161,8 +172,13 @@ export class ExternalTurnRunner {
         if (row && agent) this.host.rotation?.used(row, agent, this.host.accountUse?.(agent.id) ?? null);
         return moved ? { ...answered, text: `${moved}${answered.text}` } : answered;
       } catch (err) {
-        const note = req.signal?.aborted || moves <= 0 ? null : this.movedBy(err, model);
-        if (!note) throw err;
+        let note: string | null;
+        try {
+          note = req.signal?.aborted || moves <= 0 ? null : this.movedBy(err, model);
+        } catch (spent) {
+          throw this.held(spent, model);
+        }
+        if (!note) throw this.held(err, model);
         tell(note);
         if (this.worked) ask = { ...req, userMessage: { ...req.userMessage, content: GO_ON } };
       }
@@ -177,6 +193,19 @@ export class ExternalTurnRunner {
     const external = this.agent.config.external;
     const row = external && this.host.row?.(external.cli);
     return row ? (this.host.rotation?.refused(row, { id: this.agent.config.id, name: this.agent.config.displayName, external }, err, model) ?? null) : null;
+  }
+
+  /**
+   * A turn refused for its account's limit, where every account it has is at one that said its end: thrown again with
+   * the first end, so the turn is held until then (`pipeline/provider-resume.ts`). Any other failure as it was.
+   */
+  private held(err: unknown, model: string): unknown {
+    const external = this.agent.config.external;
+    const row = external && this.host.row?.(external.cli);
+    if (!row || !external || !(err instanceof NourideError) || err.retryAt !== undefined) return err;
+    const limit = err.code === ACCOUNTS_SPENT || limitOf(row, err.cause ?? err, Date.now()) !== null;
+    const at = limit ? this.host.rotation?.freeAt(row.id, accountsOf(external), model) : null;
+    return at ? new NourideError(err.code, err.message, err.userMessage, { cause: err.cause, retryAt: at }) : err;
   }
 
   /** The model a turn runs on, by the word its CLI takes: this chat's, else the pack's, else the CLI's own. */
@@ -265,6 +294,7 @@ export class ExternalTurnRunner {
      * and the folder itself are kept — deleting those is the person's call.
      */
     const deleteScope = req.gatewayId === MISSION_GATEWAY_ID && req.privateDir ? missionDeleteScope(ownFolderOf(req.privateDir, req.chatId), req.workdir) : null;
+    const free = this.host.preset(this.agent.config.external!.permissions) === "folder";
     /** What the CLI asks permission for, asked as the turn's approval, its step announced above the question. */
     const permit = (read: UpdateReader) => async (request: RequestPermissionParams) => {
       read.announce(request.toolCall.toolCallId, request.toolCall.title);
@@ -284,6 +314,7 @@ export class ExternalTurnRunner {
           ...(req.parkApprovalsMs !== undefined ? { waitMs: 0, answerableMs: req.parkApprovalsMs } : {}),
         },
         waiting: (approvalId, tool) => inOrder(() => this.deps.onActivity?.("waiting", `waiting for approval: ${tool}`, { callId: request.toolCall.toolCallId, name: tool, approvalId })),
+        ...(free ? { free } : {}),
         ...(deleteScope ? { deleteScope } : {}),
         allowedAlone: (tool, command, targets) => {
           log.info("a delete inside the mission's folder allowed without asking", { agent_id: agentId, mission: req.chatId, tool, command, targets });
@@ -357,7 +388,7 @@ export class ExternalTurnRunner {
           // A message for the turn while the prompt runs goes into it (0.8.10, `steering.ts`) — where the CLI takes one.
           const open = sessionId;
           const mid =
-            req.steer && req.steerListen && steeringOffered(cli.info)
+            req.steer && req.steerListen && cli.steers
               ? new MidPrompt({
                   take: () => req.steer?.() ?? null,
                   send: async (said) => await cli.steer(open, await promptOf(said, undefined, "", promptTakes(cli.info), this.deps.maxImageBytes)),

@@ -12,6 +12,7 @@ import { api } from "@/commons/lib/api";
 import { cliLabel } from "@/commons/lib/api.external-agents";
 import { Field } from "@/commons/components/ui/ui";
 import { Details } from "@/commons/components/ui/Details";
+import { ExperimentalBadge } from "@/commons/components/agents/ExperimentalCli";
 
 const mib = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MiB`;
 
@@ -19,7 +20,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
   const scan = useQuery({ queryKey: ["external-clis"], queryFn: () => api.externalClis(), staleTime: 60_000, retry: false });
   const clis = scan.data?.clis ?? [];
   const missing = clis.filter((cli) => !cli.installed);
-  const option = (key: string, selected: boolean, disabled: boolean, onClick: () => void, icon: React.ReactNode, label: string, detail: string) => (
+  const option = (key: string, selected: boolean, disabled: boolean, onClick: () => void, icon: React.ReactNode, label: string, detail: string, badge?: React.ReactNode) => (
     <button
       key={key}
       type="button"
@@ -29,7 +30,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
       onClick={onClick}
       className={`rounded-xl border p-2.5 text-left transition-all disabled:opacity-60 ${selected ? "border-primary/40 bg-primary/10" : "border-base-content/[0.08] hover:bg-base-200/60"}`}
     >
-      <span className="flex items-center gap-1.5 text-xs font-semibold">{icon} {label}</span>
+      <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">{icon} {label} {badge}</span>
       <span className="mt-0.5 block text-[11px] leading-snug text-base-content/65">{detail}</span>
     </button>
   );
@@ -41,7 +42,7 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
           {option("model", value === null, false, () => onChange(null), <Cpu size={13} aria-hidden="true" />, "A model", "Nouride's profiles, with fallbacks.")}
           {clis
             .filter((cli) => cli.installed)
-            .map((cli) => option(cli.id, value === cli.id, false, () => onChange(cli.id), <Terminal size={13} aria-hidden="true" />, cliLabel(cli), "Installed. Signs in after it is made."))}
+            .map((cli) => option(cli.id, value === cli.id, false, () => onChange(cli.id), <Terminal size={13} aria-hidden="true" />, cliLabel(cli), "Installed. Answers with the account picked below.", cli.experimental ? <ExperimentalBadge /> : undefined))}
         </div>
         {scan.data?.room && !scan.data.room.enough ? (
           <p className="text-warning text-xs">
@@ -51,12 +52,12 @@ export function AnsweredBy({ value, onChange }: { value: string | null; onChange
         {missing.length > 0 ? (
           <div className="space-y-1 text-xs">
             <p className="text-base-content/65">
-              Not set up on this server yet: {missing.map(cliLabel).join(", ")}. The Models page, under Coding CLIs, can ask for one.
+              Not set up on this server yet: {missing.map((cli) => `${cliLabel(cli)}${cli.experimental ? " (Experimental)" : ""}`).join(", ")}. The Models page, under Coding CLIs, can ask for one.
             </p>
             <Details>
               <ul className="text-base-content/70 space-y-1">
                 {missing.map((cli) => (
-                  <li key={cli.id} className="break-all"><span className="font-semibold">{cliLabel(cli)}</span>: {cli.install}</li>
+                  <li key={cli.id} className="break-all"><span className="font-semibold">{cliLabel(cli)}</span>{cli.experimental ? <> <ExperimentalBadge /></> : null}: {cli.install}</li>
                 ))}
               </ul>
             </Details>
@@ -76,14 +77,14 @@ export function AccountPicker({ cli, value, onChange }: { cli: string; value: st
   const accounts = useQuery({ queryKey: ["cli-accounts"], queryFn: () => api.cliAccounts(), staleTime: 60_000, retry: false });
   const row = accounts.data?.clis.find((entry) => entry.id === cli);
   // The account an agent starts on where none is added yet.
-  const known = row?.accounts.length ? row.accounts : [{ name: "default", signedIn: row?.shared ? false : null, agents: [] }];
+  const known = row?.accounts.length ? row.accounts : [{ name: "default", signedIn: false, agents: [] }];
   useEffect(() => {
     if (!known.some((account) => account.name === value)) onChange(known[0]!.name);
   }, [known, value, onChange]);
   const state = (account: (typeof known)[number]) =>
     account.signedIn === true ? "signed in" : account.signedIn === false ? (account.agents.length > 0 && account.agents.every((agent) => agent.signedIn) ? "its agents signed in" : "not signed in yet") : "signs in per agent";
   return (
-    <Field label="Account" hint={row?.shared ? `Agents on one account share its ${row.name} sign-in and its limits.` : "Each agent on an account signs in once, on its Brain tab."}>
+    <Field label="Account" hint="Agents on one account share its sign-in and its limits.">
       <div className="flex flex-wrap items-center gap-3">
         <select className="select select-sm rounded-xl" value={value} onChange={(event) => onChange(event.target.value)}>
           {known.map((account) => (

@@ -71,6 +71,15 @@ export const KEY_HINTS: readonly KeyHint[] = [
     words: "Charged per use, from the balance you top up there.",
   },
   {
+    id: "xai",
+    name: "xAI",
+    keyUrl: "https://console.x.ai",
+    kind: "openai",
+    baseUrl: "https://api.x.ai/v1",
+    cost: "per-use",
+    words: "Charged per use, from the credits you buy there. Its Grok models answer here.",
+  },
+  {
     id: "zai",
     name: "Z.ai",
     keyUrl: "https://z.ai/manage-apikey/apikey-list",

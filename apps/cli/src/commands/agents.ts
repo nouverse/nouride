@@ -5,16 +5,21 @@ import { loginCli, scanClis } from "./external-clis.ts";
 import { saidSaved } from "../saved.ts";
 import { answeredBy } from "./agent-cli.ts";
 import { updateCli, updateSteps, type InstallShared } from "./agents-update.ts";
+import { installCli } from "./agents-install.ts";
 import { skillRootCommand } from "./agent-skill-root.ts";
 import { deleteAgent } from "./agent-delete.ts";
 
-/** `nouride agents [scan|login <id>|update <cli>]`: the list, the coding CLIs this box has, a sign-in, an update. */
-/** `installShared` is the install's installer of a program for every agent, which `update` runs: the binary's entry hands it in. */
+/** `nouride agents [scan|login <id>|install <cli>|update <cli>]`: the list, the coding CLIs this box has, a sign-in, an install, an update. */
+/** `installShared` is the install's installer of a program for every agent, which `install` and `update` run: the binary's entry hands it in. */
 export async function agentsCommand(client: Client, args: string[], installShared?: InstallShared): Promise<void> {
   const [action, id] = args;
   if (!action) return agents(client);
-  knownAction("agents", action, ["scan", "login", "update"]);
+  knownAction("agents", action, ["scan", "login", "install", "update"]);
   if (action === "scan") return scanClis(client);
+  if (action === "install") {
+    if (!installShared) throw new NourideError("not_implemented", "`agents install` installs a program for every agent, and this caller handed in no installer for it");
+    return installCli(client, args.slice(1), installShared);
+  }
   if (action === "update") {
     if (!installShared) throw new NourideError("not_implemented", "`agents update` installs a program for every agent, and this caller handed in no installer for it");
     return updateCli(client, args.slice(1), updateSteps(installShared));

@@ -6,6 +6,10 @@
  * option the CLI offered for it. Nouride writes no grant: *Always* is offered only where the CLI has an always of its
  * own, and the CLI keeps that rule itself.
  *
+ * On *Free in its folder* the preset answers instead, yes for this call: a CLI with no mode that asks nothing (Antigravity's
+ * least asking still asks before what it cannot undo, and a person's own CLI may have none) asked the person for each
+ * file it wrote in its own folder, on an agent set to work without asking.
+ *
  * The tool's name and arguments are the CLI's, stable from one ask to the next, so an answer that arrives after a
  * parked question — nobody waiting — is kept, and the CLI's repeat of that call is allowed once (`approvals-kept.ts`).
  */
@@ -41,6 +45,8 @@ export async function askPermission(input: {
   approvals: ApprovalGate;
   /** The `waiting` step, once the gate has a request to name. */
   waiting: (approvalId: string, tool: string) => void | Promise<void>;
+  /** The agent is on Free in its folder, as its own user: what the CLI asks is allowed once, nobody asked. */
+  free?: boolean;
   /** A mission's turn: its own folder, where a delete is allowed without a person (`inside-delete.ts`). */
   deleteScope?: DeleteScope;
   /** Told of a delete allowed that way — what ran without a person is said where the turn's steps are. */
@@ -48,6 +54,10 @@ export async function askPermission(input: {
 }): Promise<PermissionOutcome> {
   const { request, asked } = input;
   const tool = permissionTool(input.cli, request);
+  if (input.free) {
+    const allow = request.options.find((option) => option.kind === "allow_once") ?? request.options.find((option) => option.kind === "allow_always");
+    if (allow) return { outcome: "selected", optionId: allow.optionId };
+  }
   if (input.deleteScope) {
     const verdict = insideDelete({ kind: request.toolCall.kind ?? null, rawInput: request.toolCall.rawInput }, input.deleteScope);
     const once = request.options.find((option) => option.kind === "allow_once");

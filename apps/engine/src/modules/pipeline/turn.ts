@@ -16,7 +16,7 @@
  */
 
 import { capStoredTurns } from "@/modules/llm/context.ts";
-import { createLogger, isOpenAgent, LLMError, toUserMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ChatMessage } from "@nouride/shared";
+import { createLogger, isOpenAgent, LLMError, NourideError, toUserMessage, type LoadedAgent, type MessageEnvelope, type SessionKey, type ChatMessage } from "@nouride/shared";
 import type { TurnResult } from "@/modules/llm/executor/types.ts";
 import { settleNotes } from "@/modules/tools/builtins/plan.ts";
 import { HookRegistry, ModelOverrides } from "@/modules/hooks/registry.ts";
@@ -482,7 +482,7 @@ export class TurnRunner {
     const message = toUserMessage(err);
     // What the turn did is kept however it ended, and the person is told what they need — `turn-endings.ts`.
     const cause = causeOf(controller.signal, message);
-    await endEarly(this.ctx, { key: turn.key, history: turn.upkept ?? turn.history, asked: turn.asked, journal: turn.journal, cause, envelope, agentId: agent.config.id, turnId: turn.record?.id, prompt: turn.text, message, error: String(err), close: (patch) => close(turn, patch), progress: turn.progress, retryable: err instanceof LLMError && err.retryable });
+    await endEarly(this.ctx, { key: turn.key, history: turn.upkept ?? turn.history, asked: turn.asked, journal: turn.journal, cause, envelope, agentId: agent.config.id, turnId: turn.record?.id, prompt: turn.text, message, error: String(err), close: (patch) => close(turn, patch), progress: turn.progress, ...retryOf(err) });
     // What it had done before it threw is said: a coding CLI's turn of two hours that ends at its plan's limit is not
     // a model that never answered, and its mission counts the two apart (`missions.ts`).
     tell(turn, { toolCalls: 0, worked: turn.record?.worked ?? 0, tokens: 0, failed: true, error: message, interrupted: controller.signal.reason === STOPPED_BY_PERSON || this.ctx.paused, readOutside: false });
@@ -503,4 +503,10 @@ export class TurnRunner {
     // `finish` swallows its own failures.
     void turn.progress?.finish(turn.failed ? "failed" : "ok");
   }
+}
+
+/** Whether a failed turn is taken up again by itself: a provider failing for a while, or a limit that said its end. */
+function retryOf(err: unknown): { retryable: boolean; retryAt?: number } {
+  if (err instanceof NourideError && err.retryAt !== undefined) return { retryable: true, retryAt: err.retryAt };
+  return { retryable: err instanceof LLMError && err.retryable };
 }

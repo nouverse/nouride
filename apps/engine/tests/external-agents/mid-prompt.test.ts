@@ -17,7 +17,7 @@ import { ExternalAgents } from "@/modules/external-agents/index.ts";
 import { MidPrompt, merged } from "@/modules/external-agents/steering.ts";
 import { situationOf, untold } from "@/modules/external-agents/situation.ts";
 import type { ExecutorDeps, TurnRequest } from "@/modules/llm/executor/types.ts";
-import { eventually } from "../wait.ts";
+import { eventually, sleep } from "../wait.ts";
 import { CLOCK, clockDeps } from "./fixtures/clock.ts";
 import { stderrSaid } from "./fixtures/stderr.ts";
 
@@ -148,7 +148,7 @@ describe("a message held for a running prompt", () => {
 });
 
 describe("a coding CLI's turn, steered while its prompt runs", () => {
-  function setup(env: Record<string, string>, steerHoldMs?: number, replying?: () => boolean, more: Partial<CliRow> = {}) {
+  function setup(env: Record<string, string>, steerHoldMs?: number, replying?: () => boolean, more: Partial<CliRow> = {}, approve?: () => Promise<unknown>) {
     const dir = mkdtempSync(join(tmpdir(), "mid-prompt-"));
     dirs.push(dir);
     mkdirSync(privateWorkspace(dir, "coder"), { recursive: true });
@@ -169,7 +169,7 @@ describe("a coding CLI's turn, steered while its prompt runs", () => {
     services.push(service);
     const deltas: string[] = [];
     const steps: string[] = [];
-    const deps = { ...clockDeps, approvals: { available: true }, onText: (delta: string) => void deltas.push(delta), onActivity: (kind: string) => void steps.push(kind) } as unknown as ExecutorDeps;
+    const deps = { ...clockDeps, approvals: { available: true, ...(approve ? { request: approve } : {}) }, onText: (delta: string) => void deltas.push(delta), onActivity: (kind: string) => void steps.push(kind) } as unknown as ExecutorDeps;
     const agent = { config: { id: "coder", displayName: "Coder", external: { cli: "fake" } }, persona: { identity: "" }, dir } as unknown as LoadedAgent;
     // The turn's buffer and its listener, as `turn.ts` hands them over.
     const waiting: string[] = [];
@@ -310,4 +310,51 @@ describe("a coding CLI's turn, steered while its prompt runs", () => {
     const said = await stderrSaid(await t.service.connection(t.agent), (line) => line === "tool-done" || line.startsWith("steer:"), 2);
     expect(said[0]).toBe("steer:now, please");
   }, 30_000);
+
+  describe("a CLI that takes it as a second prompt (Antigravity's, seen on the live box)", () => {
+    const BY_PROMPT: Partial<CliRow> = { steerByPrompt: { since: "1.5.0" } };
+
+    test("into the running prompt: one turn, the steered answer, the words in the transcript, and what each prompt spent", async () => {
+      const t = setup({ FAKE_MODE: "byprompt" }, undefined, undefined, BY_PROMPT);
+      const running = t.runner.run(t.req);
+      await eventually(() => t.deltas.join("").includes("Working."), 10_000, "the prompt to start");
+      t.send("use the second tab");
+      const result = await running;
+      expect(result.text).toBe("Working.Steered: use the second tab");
+      expect(result.messages.filter((message) => message.role === "user").map((message) => message.content)).toEqual([`first\n\n${CLOCK}`, "use the second tab"]);
+      expect(await stderrSaid(await t.service.connection(t.agent), (line) => line.startsWith("byprompt:"), 1)).toEqual(["byprompt:use the second tab"]);
+      // The prompt it ended answered with none; the one it went on in, with its own.
+      expect(result.externalTokens).toBe(20);
+    });
+
+    test("one there before the prompt said anything waits for its first word, then goes in: sent sooner, it raced the CLI's start", async () => {
+      const t = setup({ FAKE_MODE: "byprompt" }, undefined, undefined, BY_PROMPT);
+      t.send("early words");
+      const result = await t.runner.run(t.req);
+      expect(result.text).toBe("Working.Steered: early words");
+    });
+
+    test("while it waits on a permission the CLI refuses it: the turn's next prompt, once the running one ends", async () => {
+      // Antigravity refuses a prompt then, keeping its question open (seen on the live box).
+      const approve = async () => (await sleep(800), { status: "approved", by: "555", decision: "allow-once" });
+      const t = setup({ FAKE_MODE: "byprompt", FAKE_ASK: "1", FAKE_STEER_WAIT_MS: "300" }, 100, undefined, BY_PROMPT, approve);
+      const running = t.runner.run(t.req);
+      await t.commandOpen();
+      t.send("and the totals");
+      const result = await running;
+      expect(result.text).toEndWith("Done: and the totals");
+      const said = (await t.service.connection(t.agent)).stderrTail.filter((line) => line.startsWith("refused:") || line.startsWith("byprompt:"));
+      expect(said).toEqual(["refused:and the totals"]);
+    });
+
+    test("a version older than its row names: never sent as a prompt, the next one as before", async () => {
+      const t = setup({ FAKE_MODE: "byprompt", FAKE_STEER_WAIT_MS: "300" }, undefined, undefined, { steerByPrompt: { since: "10.0.0" } });
+      const running = t.runner.run(t.req);
+      await eventually(() => t.deltas.join("").includes("Working."), 10_000, "the prompt to start");
+      t.send("and the totals");
+      const result = await running;
+      expect(result.text).toEndWith("Done: and the totals");
+      expect((await t.service.connection(t.agent)).stderrTail.filter((line) => line.startsWith("byprompt:"))).toEqual([]);
+    });
+  });
 });

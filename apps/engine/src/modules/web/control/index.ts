@@ -61,6 +61,7 @@ import { registerSkillHubRoutes } from "./routes/skills-hub.ts";
 import { registerMcpCatalogRoutes } from "./routes/mcp-catalog.ts";
 import { registerMcpOAuthRoutes } from "./routes/mcp-oauth.ts";
 import { registerMcpRoutes } from "./routes/mcp.ts";
+import { registerMcpHeaderRoutes } from "./routes/mcp-headers.ts";
 import { registerSkillRoutes } from "./routes/skills.ts";
 import { registerMemoryRoutes } from "./routes/memory.ts";
 import { registerMemoryDocumentRoutes } from "./routes/memory-documents.ts";
@@ -153,6 +154,7 @@ export function mountControlRoutes(app: Hono, deps: ControlDeps): void {
   registerMcpOAuthRoutes(control, deps);
   // Before the agent routes: `POST /agents/:id/mcp` would otherwise be their `/agents/:id/:action`.
   registerMcpRoutes(control, deps);
+  registerMcpHeaderRoutes(control, deps);
   // `/skills*` — the pool-wide view. Registered before the agent module, which owns the per-agent
   // `/agents/:id/skills`: different prefixes, so nothing collides today, and specific-first is the
   // rule this file keeps rather than something to rediscover.

@@ -24,6 +24,11 @@
  *   `FAKE_STEER_WAIT_MS` (3 s), then answers "Done: <prompt>". Each steer goes to stderr as `steer:<words>`.
  *   `FAKE_STEER_OFFER=no`: the same CLI, not offering the extension. `FAKE_TOOL_HELPER=1`: the tool call is a
  *   helper's the CLI started itself, marked in its `_meta` as `{ fake: { startedBy: "agent-1" } }`.
+ * - `byprompt` — takes a message mid-prompt as a second `session/prompt`, as Antigravity does (seen on the live box):
+ *   a prompt says "Working." 50 ms on, and only then is running; a prompt that comes into a running one answers that
+ *   one at once, with no usage, and goes on: "Steered: <words>", its usage 20 (`byprompt:<words>` on stderr). With none,
+ *   "Done: <prompt>" after `FAKE_STEER_WAIT_MS`, usage 10. `FAKE_ASK=1`: the prompt first asks permission for a
+ *   command, and a prompt that comes while it waits is refused as Antigravity refuses it (`refused:<words>`).
  * - `held` — a CLI that starts a helper of its own in the background and keeps the prompt open for it, as Claude
  *   Code's connector does: the first prompt of a session says "Started.", opens the helper's call (marked in its
  *   `_meta` as `{ fake: { startedBy: "agent-1" } }`), says its own turn ended with a usage update that carries `cost`,
@@ -42,7 +47,7 @@
  *
  * `FAKE_LIMITED`, a list of tokens: started with one of them in `FAKE_TOKEN`, as a shared account's token reaches a real
  * CLI, every prompt is refused as an account at its limit is: the limit said as a message, then a refusal whose data is
- * `{ errorKind: "rate_limit" }`. `FAKE_LIMITED_AFTER=step`: after one step of work. Each prompt goes to stderr as
+ * `{ errorKind: "rate_limit" }`, with `rateLimit.resetsAt` where `FAKE_LIMIT_RESETS` says it, in seconds. `FAKE_LIMITED_AFTER=step`: after one step of work. Each prompt goes to stderr as
  * `prompted-as:<token> in <the profile folder's name>`.
  *
  * `FAKE_USE`, JSON by token (`{"tok-first":0.93}`): started with that token, each prompt says how much of its account's
@@ -50,6 +55,11 @@
  * that share starting again in an hour, and a long one at a tenth.
  *
  * `FAKE_TAKES`, JSON, is what it says at its handshake it takes in a prompt (`{"image":true}`); unset, text alone.
+ *
+ * `FAKE_AUTH=hangs` or `refuses`: told a method signed out, it never answers, or refuses it at once.
+ * `FAKE_AUTH_METHODS`, a list of ids: the sign-in methods its handshake offers. `FAKE_NEEDS_TOLD`: one of them, which
+ * it must be told (`authenticate`) before it opens a session, as Cursor's and Grok Build's CLIs must; each method it is
+ * told goes to stderr as `told:<id>`.
  *
  * `FAKE_EFFORTS`, JSON of each model's efforts (`{"small":["low","high"]}`), adds an effort option filed under ACP's
  * `thought_level` with an id of its own, `reasoning`, whose values follow the model as Claude Code's do: a model change
@@ -63,7 +73,7 @@
 
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
-import { AcpError, AcpServer, authRequired, type ContentBlock, type McpServer, type SessionConfigOption } from "@nouride/acp";
+import { AcpError, AcpServer, authRequired, type ContentBlock, type McpServer, type PromptUsage, type SessionChannel, type SessionConfigOption, type StopReason } from "@nouride/acp";
 import { sleep } from "../../wait.ts";
 
 const mode = process.env.FAKE_MODE ?? "";
@@ -77,9 +87,14 @@ const closed = new Set<string>();
 const heldSessions = new Map<string, () => void>();
 /** `steer` mode: each running prompt's ear for the words a steer brings. */
 const steered = new Map<string, (words: string) => void>();
+/** `byprompt` mode: each running prompt's end, by session, and the sessions waiting on a permission. */
+const byPrompt = new Map<string, () => void>();
+const asking = new Set<string>();
 /** The handshake's request ids — answered with the steering extension in `steer` mode. */
 const handshakes = new Set<unknown>();
 const text = (blocks: ContentBlock[]) => blocks.map((block) => (block.type === "text" ? block.text : "")).join("");
+/** The sign-in method it was told, where it must be told one (`FAKE_NEEDS_TOLD`). */
+let told: string | null = null;
 
 const server = new AcpServer({
   transport: {
@@ -96,9 +111,18 @@ const server = new AcpServer({
   agentInfo: { name: "fake-cli", version: "9.9.9" },
   mcpCapabilities: { http: true },
   promptCapabilities: JSON.parse(process.env.FAKE_TAKES ?? "{}") as { image?: boolean; audio?: boolean },
+  authMethods: (process.env.FAKE_AUTH_METHODS?.split(",") ?? []).map((id) => ({ id, name: id })),
   handlers: {
+    authenticate: async (methodId) => {
+      process.stderr.write(`told:${methodId}\n`);
+      // Signed out: one CLI never answers the method (Grok Build's), another refuses it at once (Cursor's).
+      if (process.env.FAKE_AUTH === "hangs") await new Promise(() => {});
+      if (process.env.FAKE_AUTH === "refuses") throw new Error("Failed to open browser for login");
+      told = methodId;
+    },
     newSession: async ({ cwd, mcpServers }) => {
       if (mode === "auth" || existsSync(join(process.env.FAKE_HOME ?? "/nonexistent", "signed-out"))) throw authRequired("Authentication required");
+      if (process.env.FAKE_NEEDS_TOLD && told !== process.env.FAKE_NEEDS_TOLD) throw authRequired("Authentication required: no auth method id provided");
       sessions += 1;
       process.stderr.write(`cwd:${cwd}\n`);
       if (mode === "overloaded") process.stderr.write("[mcp] server 'github' not found\n");
@@ -159,6 +183,7 @@ const server = new AcpServer({
         channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words ? `Steered: ${words}` : `Done: ${text(prompt)}` } });
         return "end_turn";
       }
+      if (mode === "byprompt") return await byPromptAnswer(sessionId, prompt, channel);
       if (mode === "held" || mode === "held-working") {
         const said = (words: string) => channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } });
         if (heldSessions.has(sessionId)) {
@@ -259,7 +284,8 @@ const server = new AcpServer({
           channel.update({ sessionUpdate: "tool_call_update", toolCallId: "l1", status: "completed", content: [{ type: "content", content: { type: "text", text: "clean" } }] });
         }
         channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "You have hit your limit." } });
-        throw new AcpError(-32603, "Internal error: You have hit your limit.", { errorKind: "rate_limit" });
+        const resets = process.env.FAKE_LIMIT_RESETS;
+        throw new AcpError(-32603, "Internal error: You have hit your limit.", { errorKind: "rate_limit", ...(resets ? { rateLimit: { resetsAt: Number(resets) } } : {}) });
       }
       channel.update({ sessionUpdate: "agent_thought_chunk", content: { type: "text", text: "Looking first." } });
       channel.update({ sessionUpdate: "tool_call", toolCallId: "t1", title: "echo hi", kind: "execute", name: "Bash", status: "in_progress" });
@@ -344,3 +370,41 @@ process.stdin.on("data", (chunk) => {
   }
 });
 process.stdin.on("end", () => process.exit(0));
+
+/** `byprompt` mode's prompt: one into a running prompt ends that one and goes on, refused while it waits on a permission. */
+async function byPromptAnswer(sessionId: string, prompt: ContentBlock[], channel: SessionChannel): Promise<StopReason | { stopReason: StopReason; usage: PromptUsage }> {
+  const said = (words: string) => channel.update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: words } });
+  const running = byPrompt.get(sessionId);
+  if (running && asking.has(sessionId)) {
+    process.stderr.write(`refused:${text(prompt)}\n`);
+    throw new Error(`Can't add this prompt to session ${sessionId}: the running prompt is waiting for a permission or question answer; answer it or send session/cancel, then send this prompt again`);
+  }
+  if (running) {
+    byPrompt.delete(sessionId);
+    running();
+    process.stderr.write(`byprompt:${text(prompt)}\n`);
+    said(`Steered: ${text(prompt)}`);
+    return { stopReason: "end_turn", usage: { totalTokens: 20, inputTokens: 15, outputTokens: 5, cachedReadTokens: null, cachedWriteTokens: null } };
+  }
+  await sleep(50);
+  said("Working.");
+  const ended = new Promise<"steered" | "done">((resolve) => {
+    byPrompt.set(sessionId, () => resolve("steered"));
+    setTimeout(() => resolve("done"), Number(process.env.FAKE_STEER_WAIT_MS ?? 3_000));
+  });
+  if (process.env.FAKE_ASK === "1") {
+    asking.add(sessionId);
+    const toolCall = { toolCallId: `a${sessions}`, title: "touch b.txt", kind: "execute" as const, name: "Bash", status: "pending" as const, rawInput: { command: "touch b.txt" } };
+    channel.update({ sessionUpdate: "tool_call", ...toolCall });
+    await channel.requestPermission(toolCall, [
+      { optionId: "allow", name: "Allow", kind: "allow_once" },
+      { optionId: "reject", name: "Reject", kind: "reject_once" },
+    ]);
+    asking.delete(sessionId);
+    channel.update({ sessionUpdate: "tool_call_update", toolCallId: toolCall.toolCallId, status: "completed" });
+  }
+  if ((await ended) === "steered") return "end_turn";
+  byPrompt.delete(sessionId);
+  said(`Done: ${text(prompt)}`);
+  return { stopReason: "end_turn", usage: { totalTokens: 10, inputTokens: 8, outputTokens: 2, cachedReadTokens: null, cachedWriteTokens: null } };
+}

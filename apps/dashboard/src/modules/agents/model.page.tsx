@@ -7,6 +7,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Check, RefreshCw, Sparkles } from "lucide-react";
+import { offeredProfiles } from "@/commons/lib/bundled-gateway";
 import { api } from "@/commons/lib/api";
 import { canWrite, useMe } from "@/commons/lib/session";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
@@ -36,7 +37,7 @@ export default function AgentModelPage({ agentId }: { agentId: string }) {
   const currentProvider = provider ?? agent?.provider ?? "";
   const currentModel = model ?? agent?.model ?? "";
 
-  const profiles = providers.data?.providers ?? [];
+  const profiles = offeredProfiles(providers.data?.providers ?? [], agent?.provider);
   const profile = profiles.find((entry) => entry.name === currentProvider);
 
   const saved = useSaved();

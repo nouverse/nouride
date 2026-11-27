@@ -5,7 +5,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CliRow } from "@nouride/acp";
@@ -41,7 +41,12 @@ const SHARED: CliRow = {
   status: ["-e", "process.exit(process.env.FAKE_TOKEN ? 0 : 1)"],
   sharedLogin: { args: [FAKE_SETUP], env: "FAKE_TOKEN", tokenPrefix: "fk-tok-" },
 };
-const PER_AGENT: CliRow = { ...SHARED, id: "solo", name: "Solo CLI", sharedLogin: undefined, login: ["login"], status: ["-e", "process.exit(1)"] } as CliRow;
+/**
+ * One whose sign-in is a file in its folder, as Codex's is. It fails where the accounts' folder holds `fail` (three up
+ * from the profile folder it signs in: the account's sign-in HOME, the CLI's, the accounts').
+ */
+const SOLO_LOGIN = `const fs = require("fs"); if (fs.existsSync(process.env.FAKE_HOME + "/../../../fail")) { console.log("refused"); process.exit(1); } fs.writeFileSync(process.env.FAKE_HOME + "/auth.json", "solo-token-1"); console.log("signed in")`;
+const PER_AGENT: CliRow = { ...SHARED, id: "solo", name: "Solo CLI", sharedLogin: undefined, login: ["-e", SOLO_LOGIN], status: ["-e", "process.exit(1)"] } as CliRow;
 /** One whose sign-in is a terminal UI in raw mode, as Claude Code's `setup-token` is. */
 const RAW: CliRow = { ...SHARED, id: "raw", name: "Raw CLI", sharedLogin: { args: [FAKE_RAW_SETUP], env: "FAKE_TOKEN", tokenPrefix: "fk-tok-" } };
 const RAW_NO_TOKEN: CliRow = { ...RAW, id: "bare", name: "Bare CLI", sharedLogin: { args: [FAKE_RAW_SETUP, "--no-token"], env: "FAKE_TOKEN", tokenPrefix: "fk-tok-" } };
@@ -71,7 +76,7 @@ function setup(terminal = false) {
     mkdirSync(privateWorkspace(dir, id), { recursive: true });
     return { config: { id, displayName: id[0]!.toUpperCase() + id.slice(1), external: { cli, profile } }, persona: { identity: "" }, dir } as unknown as LoadedAgent;
   };
-  return { service, secrets, agent, audits };
+  return { service, secrets, agent, audits, dir };
 }
 
 describe("coding-CLI accounts", () => {
@@ -173,12 +178,55 @@ describe("coding-CLI accounts", () => {
     expect(secrets.size).toBe(0);
   });
 
-  test("a CLI with no shared sign-in is signed in per agent: its account says so, and refuses a shared one", async () => {
-    const { service, agent } = setup();
-    const solo = (await service.accountList([agent("coder", "solo", "work")])).find((cli) => cli.id === "solo")!;
-    expect(solo.shared).toBe(false);
-    expect(solo.accounts).toEqual([{ name: "work", signedIn: null, agents: [{ id: "coder", name: "Coder", signedIn: false }] }]);
-    expect(() => service.startAccountLogin("solo", "work", "ada")).toThrow("Solo CLI signs in once per agent, on the agent's Brain tab");
+  test("a CLI whose sign-in is files is signed in on the account too, and its agents take it as their CLI starts", async () => {
+    const { service, agent, audits, dir } = setup();
+    const coder = agent("coder", "solo", "work");
+    const before = (await service.accountList([coder])).find((cli) => cli.id === "solo")!;
+    expect(before.shared).toBe(false);
+    expect(before.accounts[0]).toMatchObject({ name: "work", signedIn: false });
+
+    service.startAccountLogin("solo", "work", "ada");
+    await eventually(() => service.login("@solo/work")?.running === false, 10_000, "the sign-in to end");
+    expect(service.login("@solo/work")).toMatchObject({ exitCode: 0, signedIn: true });
+    expect(audits).toEqual([{ action: "cli_account_signed_in", actor: "ada", details: { cli: "solo", account: "work" } }]);
+    expect((await service.accountList([coder])).find((cli) => cli.id === "solo")!.accounts[0]).toMatchObject({ name: "work", signedIn: true });
+
+    // The agent's CLI, started on the account, finds the account's sign-in in its own folder.
+    await service.connection(coder);
+    expect(readFileSync(join(privateWorkspace(dir, "coder"), ".cli", "solo", "work", "auth.json"), "utf8")).toBe("solo-token-1");
+  });
+
+  test("after a turn, a token its CLI refreshed is the account's; its own CLI is not started again for it, another's is", async () => {
+    const { service, agent, dir } = setup();
+    const coder = agent("coder", "solo", "work");
+    const nox = agent("nox", "solo", "work");
+    service.startAccountLogin("solo", "work", "ada");
+    await eventually(() => service.login("@solo/work")?.running === false, 10_000, "the sign-in to end");
+    const coders = await service.connection(coder);
+    const noxes = await service.connection(nox);
+    writeFileSync(join(privateWorkspace(dir, "coder"), ".cli", "solo", "work", "auth.json"), "solo-token-2, refreshed");
+    await service.keepSignIn("coder");
+    expect(readFileSync(join(dir, ".cli-accounts", "solo", "work", "profile", "auth.json"), "utf8")).toBe("solo-token-2, refreshed");
+    expect(await service.connection(coder)).toBe(coders);
+    // Nox's CLI started with the older one: started again, and given the newest.
+    expect(await service.connection(nox)).not.toBe(noxes);
+    expect(readFileSync(join(privateWorkspace(dir, "nox"), ".cli", "solo", "work", "auth.json"), "utf8")).toBe("solo-token-2, refreshed");
+  });
+
+  test("a sign-in that fails leaves the account's sign-in as it was", async () => {
+    const { service, agent, dir } = setup();
+    service.startAccountLogin("solo", "work", "ada");
+    await eventually(() => service.login("@solo/work")?.running === false, 10_000, "the first sign-in to end");
+    writeFileSync(join(dir, ".cli-accounts", "fail"), "");
+    service.startAccountLogin("solo", "work", "ada");
+    await eventually(() => service.login("@solo/work")?.running === false, 10_000, "the second sign-in to end");
+    expect(service.login("@solo/work")).toMatchObject({ exitCode: 1, signedIn: false });
+    expect((await service.accountList([agent("coder", "solo", "work")])).find((cli) => cli.id === "solo")!.accounts[0]).toMatchObject({ signedIn: true });
+  });
+
+  test("a CLI with no sign-in Nouride can run is refused one on the account, saying so", () => {
+    const { service } = setup();
+    expect(() => service.startAccountLogin("nope", "work", "ada")).toThrow("nope has no sign-in Nouride can run");
   });
 
   test("an account is added before any agent uses it, and removed only once none does", async () => {

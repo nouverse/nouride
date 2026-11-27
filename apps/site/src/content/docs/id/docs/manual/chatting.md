@@ -179,6 +179,10 @@ pesan approval itu sendiri). "Iya" yang diketik sebagai pesan gak menjawabnya.
   helper itu yang kerja, gilirannya selesai: chat bebas, pesan kamu berikutnya jadi giliran sendiri, dan agent
   bilang hasil helper-nya waktu mereka selesai. CLI yang gak bisa menerima pesan di tengah prompt membacanya
   begitu prompt-nya selesai, dan "Got it"-nya bilang begitu: "I'll read that once what I'm running now ends."
+- **Agent yang dijawab Antigravity** (sejak 0.8.49) menerima pesan kamu dengan cara yang sama, termasuk menunggu
+  perintahnya yang lagi jalan: pesannya masuk sebagai pesan kedua ke pekerjaan yang sedang dikerjakannya, lalu dia
+  lanjut dengan pesan itu. Selagi dia menunggu approval kamu, dia gak menerima pesan, jadi pesannya dibaca begitu
+  prompt-nya selesai.
 
 Apa yang dibaca giliran itu tetap ada di percakapan. Di dashboard pesan kamu langsung muncul di bawah
 langkah-langkah agent, dengan "Got it" dan kalimat dari agent di bawahnya, dan langkah-langkahnya

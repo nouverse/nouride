@@ -20,6 +20,7 @@ import type { AuditPort } from "@/commons/audit.store.ts";
 import { GATEWAY_CARRIED } from "@/commons/build.ts";
 import { editDaemonConfig } from "@/modules/config/config-file.ts";
 import { upsertTomlTable } from "@/modules/config/edit.ts";
+import { keyBundledProfiles } from "@/modules/config/nougate-profiles.ts";
 import type { EmbeddedGateway } from "@/modules/gateways/nougate-inproc.ts";
 import { gatewayDecision, startBundledGateway, type BundledGateway, type CredentialSharing } from "@/boot/embedded-gateway.ts";
 
@@ -34,6 +35,7 @@ export async function bootGatewaySwitch(input: {
   configPath: string;
   db: SqliteDb;
   audit: Pick<AuditPort, "record">;
+  secrets: Parameters<typeof keyBundledProfiles>[0]["secrets"];
 }): Promise<{ gateway: GatewaySwitch; initialAdminPassword?: string }> {
   const decision = gatewayDecision(input.config);
   const gateway = new GatewaySwitch({
@@ -41,6 +43,11 @@ export async function bootGatewaySwitch(input: {
     decidedBy: decision.decidedBy,
     start: () => startBundledGateway({ config: input.config, db: input.db }),
     save: gatewaySaver(input),
+    // Its profiles given their key as it comes up, at a start or turned on: a new install's had none while it was off.
+    started: async (running) => {
+      const set = await keyBundledProfiles({ config: input.config, gateway: running, secrets: input.secrets });
+      if (set.length > 0) log.info("the LLM gateway's profiles given its key", { secrets: set });
+    },
   });
   return { gateway, ...(await gateway.boot(decision.on)) };
 }
@@ -90,6 +97,8 @@ export interface GatewaySwitchDeps {
   start: () => Promise<BundledGateway>;
   /** `[nougate] in_process` written, through the one config writer. */
   save: (on: boolean, actor: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  /** Once it runs, before it is handed out; a throw is said, and leaves it running. */
+  started?: (gateway: EmbeddedGateway) => Promise<void>;
 }
 
 export class GatewaySwitch implements GatewayPort {
@@ -166,7 +175,8 @@ export class GatewaySwitch implements GatewayPort {
   /** The one start: a second caller waits on the first's. */
   private launch(): Promise<BundledGateway> {
     this.starting ??= this.deps.start().then(
-      (started) => {
+      async (started) => {
+        await this.deps.started?.(started.gateway).catch((err: unknown) => log.warn("the LLM gateway runs, but what follows its start did not", { error: err instanceof Error ? err.message : String(err) }));
         this.running = started.gateway;
         this.sharing = started.credentialSharing;
         return started;

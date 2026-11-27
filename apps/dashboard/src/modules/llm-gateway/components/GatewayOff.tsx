@@ -17,7 +17,8 @@ export function GatewayOff({ locked }: { locked: boolean }) {
   const queryClient = useQueryClient();
   const turnOn = useMutation({
     mutationFn: () => api.switchLlmGateway(true),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["setup"] }),
+    // Its providers on the Models page with it: their badge says off until it is on.
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["setup"] }), queryClient.invalidateQueries({ queryKey: ["providers"] })]),
   });
 
   return (

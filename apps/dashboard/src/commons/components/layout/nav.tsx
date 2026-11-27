@@ -39,7 +39,6 @@ import {
   Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { NougateGlyph } from "@/commons/components/brand/logos";
 import { NavHighlight } from "@/commons/components/layout/NavHighlight";
 import { useNeedsYou } from "@/commons/hooks/use-needs-you";
 import { cn } from "@/commons/lib/utils";
@@ -47,7 +46,7 @@ import { cn } from "@/commons/lib/utils";
 export interface NavItem {
   to: string;
   label: string;
-  /** A Lucide icon, or anything drawn the same way — `NougateGlyph` takes `size` like one. */
+  /** A Lucide icon, or anything drawn the same way. */
   icon: LucideIcon | ComponentType<{ size?: number; className?: string }>;
   /** The other pages this one's section holds: the item is the page you are on while one of them is. */
   holds?: string[];
@@ -61,12 +60,6 @@ export interface NavItem {
    * onto — the same Pro edition in a pod has nothing behind the page.
    */
   boxOnly?: boolean;
-  /**
-   * Shown only where the build carries the LLM gateway, on or off: off, the page is where it is turned on. On a daemon
-   * older than the switch, only where it runs and the dashboard bundle beside the binary can be shown in a frame —
-   * `gatewayPage` and `gatewayDashboard` have why.
-   */
-  gatewayOnly?: boolean;
   /** A line under its name on the Settings page: what the page is for, in a person's words. */
   about?: string;
 }
@@ -130,9 +123,8 @@ export const SETTINGS: { group: string; items: NavItem[] }[] = [
   {
     group: "Models and keys",
     items: [
-      // The gateway above Models: where it runs, the models are reached through it.
-      { to: "/llm-gateway", label: "LLM Gateway", icon: NougateGlyph, adminOnly: true, gatewayOnly: true, about: "The AI accounts this box shares, and what they cost." }, // plain-words-ok: the admin page's own name, which keeps its terms
-      { to: "/models", label: "Models", icon: Cpu, adminOnly: true, about: "Which AI each agent thinks with, and the accounts it is reached through." },
+      // Nougate's page is opened from Models, where its two providers are: Models is the page you are on there.
+      { to: "/models", label: "Models", icon: Cpu, adminOnly: true, holds: ["/llm-gateway"], about: "Which AI each agent thinks with, and the accounts it is reached through." },
       { to: "/secrets", label: "Secrets", icon: KeyRound, adminOnly: true, about: "Passwords and keys the agents use, kept encrypted on this box." },
     ],
   },
@@ -175,8 +167,8 @@ export function isCurrent(item: Pick<NavItem, "to" | "holds">, pathname: string)
 }
 
 /** The pages this person may see: what is for admins, for a paired box or for a hosted gateway, only there. */
-export function visible(items: NavItem[], where: { admin: boolean; onBox: boolean; hostsGateway: boolean }): NavItem[] {
-  return items.filter((item) => (!item.adminOnly || where.admin) && (!item.exceptAdmin || !where.admin) && (!item.boxOnly || where.onBox) && (!item.gatewayOnly || where.hostsGateway));
+export function visible(items: NavItem[], where: { admin: boolean; onBox: boolean }): NavItem[] {
+  return items.filter((item) => (!item.adminOnly || where.admin) && (!item.exceptAdmin || !where.admin) && (!item.boxOnly || where.onBox));
 }
 
 const ITEM = "flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-sm transition-colors duration-150 active:scale-[0.98] lg:min-h-10";
@@ -225,7 +217,7 @@ function NavLink({ item, pathname, small = false, compact = false, className }: 
  * The menu itself, the sidebar's and More's: the page you are on is marked by the one highlight under the items, which
  * moves to the item you open. In More, the daily four are left out: the tab bar under it has them.
  */
-export function SidebarNav({ pathname, where, compact = false }: { pathname: string; where: { admin: boolean; onBox: boolean; hostsGateway: boolean }; compact?: boolean }) {
+export function SidebarNav({ pathname, where, compact = false }: { pathname: string; where: { admin: boolean; onBox: boolean }; compact?: boolean }) {
   const nav = useRef<HTMLElement>(null);
   const settings = SETTINGS.map((group) => ({ ...group, items: visible(group.items, where) })).filter((group) => group.items.length > 0);
   const inSettings = pathname === SETTINGS_HOME || settings.some((group) => group.items.some((item) => isCurrent(item, pathname)));

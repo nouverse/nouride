@@ -75,10 +75,18 @@ chat cukup dibilang modelnya sedang tidak merespons.
 
 Nougate biasanya layanan terpisah yang dijangkau lewat HTTP. Setiap instalasi Nouride juga membawanya di dalam
 daemon, di port-nya sendiri, `18256`, dan ia mati sampai kamu memintanya. Memilihnya di setup, atau **Turn on Nougate** di
-halaman **LLM Gateway** di dashboard (di bawah Settings), langsung menyalakannya tanpa restart, dan ia tetap menyala sejak itu.
+halamannya (**Open Nougate** di halaman **Models** dashboard), langsung menyalakannya tanpa restart, dan ia tetap menyala
+sejak itu.
 **Turn off** di halaman yang sama menyebutkan agent yang berhenti menjawab, lalu me-restart Nouride begitu tidak ada
 yang sedang berjalan; kalau tidak ada yang akan menyalakan Nouride lagi, setelannya disimpan dan ia mati di start
 berikutnya.
+
+**Dua provider di setiap instalasi baru.** Instalasi baru (yang database-nya belum ada waktu pertama kali start)
+dapat dua profil provider ke Nougate, `nougate-openai` dan `nougate-anthropic`, entah kamu memilih Nougate di setup
+atau tidak, dan Nougate tetap seperti yang kamu pilih: mati, kecuali kamu memilihnya. Di **Models** keduanya ditandai
+**Off** selama Nougate mati dan **No account** selama belum ada akun yang login di sana, dan pilihan model agent baru
+menawarkannya setelah ada akun. Nougate memberi keduanya key sendiri saat start, key yang sama untuk keduanya, disimpan
+sebagai secret `nougate_local_key`. Instalasi dari sebelum 0.8.49 tidak dapat ini: profil miliknya dibiarkan apa adanya.
 
 **Tidak perlu API key untuk mulai.** Langkah pertama wizard setup tetap menerima API key, dan di
 bawahnya ada **Use Nougate**: masuk dengan akun yang sudah kamu punya: Claude (Pro atau
@@ -94,8 +102,8 @@ saat akun ditambahkan, dan tiap enam jam. Model baru dari provider langsung munc
 update Nouride, dan model yang dipensiunkan hilang dari daftar. Daftar terakhir disimpan di disk, jadi restart atau
 provider yang sedang down tidak mengosongkan daftar. Provider yang belum ada akunnya tidak menampilkan model.
 
-**Satu dashboard.** Setelah setup, gateway menjadi halaman **LLM Gateway** di dashboard Nouride, untuk
-admin: akun, key gateway, pemakaian dan biaya, playground, provider kustom. Halaman itu terbuka dengan
+**Satu dashboard.** Setelah setup, gateway menjadi halaman Nougate di dashboard Nouride, dibuka lewat **Open Nougate**
+di halaman **Models**, untuk admin: akun, key gateway, pemakaian dan biaya, playground, provider kustom. Halaman itu terbuka dengan
 login Nouride-mu; tidak ada password kedua. Sejak 0.7.10 port `18256` hanya menerima key gateway:
 console miliknya di sana tidak lagi menerima login, jadi password yang dipinjamkan daemon saat start
 pertama tidak bertahan lebih lama dari password yang sudah kamu ganti. Kecualinya dashboard yang tidak
@@ -105,7 +113,9 @@ daemon saat start pertama, atau `INITIAL_ADMIN_USERNAME` dan `INITIAL_ADMIN_PASS
 Gateway-nya bind ke alamat di `HOST`, loopback kecuali kamu menyetelnya, jadi tool lain di jaringanmu
 hanya bisa menjangkau API-nya kalau kamu membukanya lebih lebar.
 
-Wizard menulis profilnya untukmu. Untuk mengarahkan profil lain ke situ secara manual:
+Setup memakai dua profil di atas, dan menulisnya kalau instalasinya belum punya: tidak ada profil ketiga miliknya
+sendiri (sebelum 0.8.49 ia menulis satu bernama `nougate`, hanya format OpenAI, yang tetap disimpan instalasi yang sudah
+punya). Untuk mengarahkan profil lain ke situ secara manual:
 
 ```toml
 [providers.local-gateway]

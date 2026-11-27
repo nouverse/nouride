@@ -28,7 +28,7 @@ describe("How to get an API key, on the Models page", () => {
       [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.includes("Add Provider"))!.click();
       await eventually(() => block(host) !== undefined, 3_000, "the form with its hints");
       expect(block(host)!.open).toBe(false);
-      expect(rows(host).map((li) => li.querySelector("a")!.textContent!.trim())).toEqual(["OpenAI", "Anthropic", "Google Gemini", "DeepSeek", "Z.ai", "OpenCode Zen", "OpenCode Go", "Command Code"]);
+      expect(rows(host).map((li) => li.querySelector("a")!.textContent!.trim())).toEqual(["OpenAI", "Anthropic", "Google Gemini", "DeepSeek", "xAI", "Z.ai", "OpenCode Zen", "OpenCode Go", "Command Code"]);
       // Each name is the way to the page where its key is made, in a tab of its own.
       const link = row(host, "Command Code").querySelector("a")!;
       expect([link.getAttribute("href"), link.getAttribute("target"), link.getAttribute("rel")]).toEqual(["https://commandcode.ai/settings/keys", "_blank", "noreferrer noopener"]);
@@ -271,7 +271,7 @@ describe("How to get an API key, in the first-run setup", () => {
     await renderPage("/setup", async (host) => {
       await eventually(() => block(host) !== undefined, 3_000, "the setup's key form with its hints");
       expect(block(host)!.open).toBe(false);
-      expect(rows(host)).toHaveLength(8);
+      expect(rows(host)).toHaveLength(9);
       // The setup's form opens with a name in it, which the form put there: it follows the pick. It stayed "openai".
       expect(field(host, "Name")?.value).toBe("openai");
       row(host, "Command Code").querySelector<HTMLButtonElement>('button[aria-label="Use Command Code"]')!.click();

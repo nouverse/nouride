@@ -151,6 +151,7 @@ nouride chat [agent]              # interactive chat, no bot token needed
 nouride agents                    # list: waiting for you, working, asleep or idle
 nouride agents scan               # the coding CLIs this box has for external agents, and what each runs on
 nouride agents login <id>         # sign an external agent's CLI in: run on the box, answered here
+nouride agents install <cli>      # Antigravity, Cursor or Grok Build, by its maker's own installer, for every agent
 nouride agents update <cli> [<version>]   # to the newest version out, or to <version>
 nouride agent sleep <id>          # takes no work until wake, through a restart too (pause works too)
 nouride agent wake  <id>          # (resume works too)
@@ -445,13 +446,16 @@ nouride mcp                                    # the library, the agents each se
 nouride mcp add --name <name> (--command <exe> | --url <url>) [--stdin] [--agent <id> …]
 nouride mcp enable|disable <name> --agent <id> # one agent's switch; --env-secret, --stdin or --own-login give it its own credential
 nouride mcp tools <name> --agent <id> [--only <tool,…> | --all]   # which of its tools that agent gets
+nouride mcp header add <server> <name>=<value|secret:<name>> [--agent <id>]   # one header set, nothing else changed
+nouride mcp header rm <server> <name> [--agent <id>]
 nouride mcp rm <name> [--agent <id>]           # out of the library, or with --agent only off for that agent
 nouride mcp login|logout --server <name> [--agent <id>]
 ```
 
 A server is added once, to the install's library, and switched on per agent (since 0.7.19); each change reloads the
 agents it reaches, so nothing restarts. `mcp add` with no flags prints the rest: `--arg` (once per argument), `--cwd`,
-`--sse`, `--header`, `--env-secret`, `--per-agent` and `--from`.
+`--sse`, `--header` (`name=value` once per header of an http server, `name=secret:<secret>` for one the store
+holds; a bare name is where `--token` goes), `--env-secret`, `--per-agent` and `--from`.
 
 Nouride can also be an MCP server for other tools (Claude Code, Cursor), serving memory as a person:
 

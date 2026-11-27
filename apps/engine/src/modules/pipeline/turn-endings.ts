@@ -54,6 +54,8 @@ export async function endEarly(
     progress: ChatProgress | undefined;
     /** A provider that failed for a while, not one that refused: the turn is tried again — `provider-resume.ts`. */
     retryable?: boolean;
+    /** A limit that said when it ends: the turn is held until then rather than tried a few minutes on. */
+    retryAt?: number;
   },
 ): Promise<void> {
   // Scheduled before the turn closes, so the person is told in the same message that it will be tried again.
@@ -61,7 +63,7 @@ export async function endEarly(
     input.cause.kind === "error" &&
     input.retryable === true &&
     input.turnId !== undefined &&
-    ctx.resumeLater?.({ id: input.turnId, agentId: input.agentId, gatewayId: input.envelope.gatewayId, chatId: input.envelope.chatId, prompt: input.prompt, messageId: input.envelope.id }) === true;
+    ctx.resumeLater?.({ id: input.turnId, agentId: input.agentId, gatewayId: input.envelope.gatewayId, chatId: input.envelope.chatId, prompt: input.prompt, messageId: input.envelope.id, senderId: input.envelope.senderId, ...(input.retryAt === undefined ? {} : { retryAt: input.retryAt }) }) === true;
   // Work another agent handed over, ended with nobody to take it up: the room is offered a way on (`way-on.ts`).
   const wayOn = !retrying && wayOnFor(ctx, input);
   const told = (ending: ClosedTurn): string =>
@@ -69,12 +71,12 @@ export async function endEarly(
       ? // The daemon is going down and cannot know for how long: what it says holds either way (`restart-resume.ts`).
         interruptionReport(ending, input.prompt, { kind: "if-soon", withinMs: INBOX_FRESH_MS })
       : retrying
-        ? [withoutRetryAdvice(input.message), retrySentence(ending)].filter(Boolean).join(" ")
+        ? [withoutRetryAdvice(input.message), retrySentence(ending, input.retryAt !== undefined)].filter(Boolean).join(" ")
         : [input.message, keptSentence(ending), wayOn ? HAND_ON_WORDS : null].filter(Boolean).join(" ");
   const status = input.cause.kind === "restart" ? "interrupted" : input.cause.kind === "error" ? "failed" : "cancelled";
   const closed = ctx.closeUnfinished(input, (ending) => {
     // The promise as data on the turn, beside the words that make it: what the boot after a restart reads.
-    input.close({ status, reply: told(ending), error: input.error, ...(retrying ? { retryPromised: true as const } : {}) });
+    input.close({ status, reply: told(ending), error: input.error, ...(retrying ? { retryPromised: true as const, ...(input.retryAt === undefined ? {} : { retryAt: input.retryAt }) } : {}) });
     // Owed until it lands, like an answer — after `/stop` nothing is sent, so nothing is owed.
     if (input.cause.kind !== "stopped") ctx.awaitDelivery(input.turnId);
   });

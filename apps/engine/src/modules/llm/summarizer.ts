@@ -51,14 +51,27 @@ export function summarizerFor(
     providers: Pick<ProviderRegistry, "get">;
     usage?: Pick<UsagePort, "record">;
   },
-  turn: { agentId: string; profile: string; sessionId?: string; turnId?: string; /** The agent's `[llm]`, for a tier. */ tiers: AgentTiers },
+  turn: {
+    agentId: string;
+    profile: string;
+    sessionId?: string;
+    turnId?: string;
+    /** The agent's `[llm]`, for a tier. */
+    tiers: AgentTiers;
+    /** The fallback a model of the agent's is passed over for now (`fallback-holds.ts`), or null. */
+    held?: (pair: { profile: string; model: string }) => { profile: string; model: string } | null;
+  },
 ): (model: string) => { provider: LLMProvider; model: string } {
   return (model) => {
-    const route = summarizerRoute(
+    const routed = summarizerRoute(
       { summaryModel: deps.config.llm.context.summaryModel, passProvider: deps.config.memory.passProvider, passModel: deps.config.memory.passModel },
       { profile: turn.profile, model },
       { agent: turn.tiers, install: deps.config.llm.defaults },
     );
+    // The turn's own model, passed over for its fallback a while: the summary is asked of the fallback too, as the turn
+    // is. Asked of the model that failed, it failed again after every turn, and the history went unsummarized.
+    const held = routed.profile === turn.profile && routed.model === model ? turn.held?.(routed) : null;
+    const route = held ? { profile: held.profile, model: held.model } : routed;
     // Each charged under the profile that answered: a fallback's call is the turn's own profile's to pay.
     const client = (profile: string) =>
       metered(

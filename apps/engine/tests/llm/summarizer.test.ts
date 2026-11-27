@@ -248,3 +248,20 @@ describe("the window a summary is sized for", () => {
     expect(summarizerWindowFor("claude-sonnet-5-5", "claude-sonnet-5-5", 180_000)).toBe(180_000);
   });
 });
+
+describe("a model passed over for its fallback a while (`fallback-holds.ts`)", () => {
+  const deps = (asked: string[]) => ({
+    config: { llm: { context: {}, defaults: { provider: "anthropic" } }, memory: {} },
+    providers: { get: (profile: string) => ({ chat: async () => (asked.push(profile), { text: "", toolCalls: [], stopReason: "stop", usage: { inputTokens: 1, outputTokens: 1 }, model: "x" }) }) as never },
+  }) as never;
+
+  test("its summary is asked of the fallback, as the turn is; a summary routed elsewhere keeps its route", () => {
+    const held = (pair: { profile: string; model: string }) => (pair.model === "gemini" ? { profile: "nougate-anthropic", model: "sonnet" } : null);
+    const on = summarizerFor(deps([]), { agentId: "nouva", profile: "nougate", tiers: { provider: "nougate", model: "gemini" }, held });
+    expect(on("gemini").model).toBe("sonnet");
+    expect(on("other").model).toBe("other");
+    const routed = summarizerFor({ ...(deps([]) as object), config: { llm: { context: { summaryModel: "haiku" }, defaults: { provider: "anthropic" } }, memory: {} } } as never, { agentId: "nouva", profile: "nougate", tiers: { provider: "nougate", model: "gemini" }, held });
+    expect(routed("gemini").model).toBe("haiku");
+  });
+});
+

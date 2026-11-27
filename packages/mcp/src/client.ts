@@ -34,7 +34,11 @@ const log = createLogger("mcp");
 
 /** How the client talks to a peer. Implemented by `stdio.ts` and `http.ts`, and by fakes in the tests. */
 export interface McpTransport {
-  send(raw: string): void;
+  /**
+   * `headers`: this message's own, beside the transport's — who a tool call is made for, where the host says so per call
+   * (`callTool`). An HTTP transport sends them; stdio has nowhere to put them.
+   */
+  send(raw: string, headers?: Readonly<Record<string, string>>): void;
   close(): Promise<void>;
   /**
    * How long the peer may say nothing before it is asked `ping` — for a transport whose death is otherwise silent.
@@ -278,10 +282,13 @@ export class McpClient {
   async callTool(
     name: string,
     args: Record<string, unknown>,
-    /** The turn's: `/stop`, the deadline and a shutdown end the call at once, and the server is told. */
-    options: { signal?: AbortSignal } = {},
+    /**
+     * `signal`, the turn's: `/stop`, the deadline and a shutdown end the call at once, and the server is told. `headers`,
+     * this call's own on an HTTP server: what the host says of whom it is made for, never anything a model wrote.
+     */
+    options: { signal?: AbortSignal; headers?: Readonly<Record<string, string>> } = {},
   ): Promise<{ text: string; isError: boolean; images: McpImage[]; structured?: unknown }> {
-    const result = (await this.send("tools/call", { name, arguments: args }, options.signal)) as McpToolCallResult;
+    const result = (await this.send("tools/call", { name, arguments: args }, options.signal, options.headers)) as McpToolCallResult;
     // The data itself too, so whoever holds the tool's `outputSchema` can check it — `text` is only how it reads.
     const structured = result?.structuredContent;
     return {
@@ -313,7 +320,7 @@ export class McpClient {
    * A request given up on at its timeout is cancelled the same way, as the spec asks — except `initialize`, which a
    * client may never cancel.
    */
-  private async send(method: string, params: unknown, signal?: AbortSignal): Promise<unknown> {
+  private async send(method: string, params: unknown, signal?: AbortSignal, headers?: Readonly<Record<string, string>>): Promise<unknown> {
     const transport = this.transport;
     if (!transport || this.closed) {
       throw new McpError(this.options.name, `"${this.options.name}" is not connected`);
@@ -361,7 +368,7 @@ export class McpClient {
       this.pending.set(id, { resolve, reject, release, method });
       signal?.addEventListener("abort", abandon, { once: true });
       try {
-        transport.send(request(id, method, params));
+        transport.send(request(id, method, params), headers);
       } catch (err) {
         release();
         this.pending.delete(id);

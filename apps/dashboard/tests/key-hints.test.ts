@@ -10,7 +10,7 @@ import { KEY_HINTS } from "@/commons/lib/key-hints";
 
 describe("the services under How to get an API key", () => {
   test("are the ones a person is likely to mean, in this order", () => {
-    expect(KEY_HINTS.map((hint) => hint.name)).toEqual(["OpenAI", "Anthropic", "Google Gemini", "DeepSeek", "Z.ai", "OpenCode Zen", "OpenCode Go", "Command Code"]);
+    expect(KEY_HINTS.map((hint) => hint.name)).toEqual(["OpenAI", "Anthropic", "Google Gemini", "DeepSeek", "xAI", "Z.ai", "OpenCode Zen", "OpenCode Go", "Command Code"]);
   });
 
   test("each has a page for its key and an address, both https, the address as the form stores it", () => {
@@ -32,6 +32,7 @@ describe("the services under How to get an API key", () => {
       anthropic: ["anthropic", "https://api.anthropic.com/v1", "https://platform.claude.com/settings/keys"],
       gemini: ["openai", "https://generativelanguage.googleapis.com/v1beta/openai", "https://aistudio.google.com/apikey"],
       deepseek: ["openai", "https://api.deepseek.com/v1", "https://platform.deepseek.com/api_keys"],
+      xai: ["openai", "https://api.x.ai/v1", "https://console.x.ai"],
       zai: ["openai", "https://api.z.ai/api/paas/v4", "https://z.ai/manage-apikey/apikey-list"],
       "opencode-zen": ["openai", "https://opencode.ai/inference/openai/v1", "https://opencode.ai/console"],
       "opencode-go": ["openai", "https://opencode.ai/inference/go/openai/v1", "https://opencode.ai/console"],

@@ -99,10 +99,16 @@ function installs(argv: readonly string[]): boolean {
 /**
  * `agents update <cli>`: up to ten minutes' wait for a turn, then an install, far past a foreground command's 30 seconds.
  * Cut off between its hold and its check, it left the CLI's agents held until a restart (the live box, 2026-11-08), so
- * it runs in the background unless the agent says otherwise, and the agent is told when it ends.
+ * it runs in the background unless the agent says otherwise, and the agent is told when it ends. `agents install <cli>`
+ * the same: its maker's installer downloads the CLI, Cursor's some hundred megabytes.
  */
 function updatesCli(argv: readonly string[]): boolean {
-  return argv[0] === "agents" && argv[1] === "update";
+  return argv[0] === "agents" && (argv[1] === "update" || argv[1] === "install");
+}
+
+/** `agents install <cli>`: a program installed for every agent, as `tools run` installs one. */
+function installsCli(argv: readonly string[]): boolean {
+  return argv[0] === "agents" && argv[1] === "install";
 }
 
 /** `cron add|update|enable` and `webhook add|rotate` — what would make or widen scheduled work without a card. */
@@ -118,6 +124,7 @@ export function createNourideCliTool(options: NourideCliOptions): Tool {
     const argv = cliArgv(args);
     if (!argv) return null;
     if (schedulesDirectly(argv)) return PROPOSE_INSTEAD;
+    if (installsCli(argv)) return options.changesSharedTools?.(ctx.agentId) === true ? null : NOT_THE_ORCHESTRATOR;
     if (argv[0] !== "tools") return null;
     if (options.changesSharedTools?.(ctx.agentId) !== true) return NOT_THE_ORCHESTRATOR;
     // What the command would refuse, refused before anyone is asked to approve it.

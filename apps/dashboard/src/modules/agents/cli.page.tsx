@@ -16,6 +16,7 @@ import { Combobox } from "@/commons/components/ui/Combobox";
 import { AskAgentButton } from "@/commons/components/agents/AskAgentButton";
 import { CliStanding, CliVersionNumbers } from "@/commons/components/agents/CliStanding";
 import { CliOwnBadge, CliPartsLine } from "@/commons/components/agents/CliParts";
+import { ExperimentalNote } from "@/commons/components/agents/ExperimentalCli";
 import { NextAccounts } from "./components/NextAccounts";
 import { Details } from "@/commons/components/ui/Details";
 import { byInstaller, goBackMessage, setUpMessage } from "@/commons/lib/set-up";
@@ -90,6 +91,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
               <span className="badge badge-sm badge-warning font-mono">not installed</span>
             ) : null}
           </div>
+          {row?.experimental ? <ExperimentalNote name={cliName} /> : null}
           {row?.installed ? <CliPartsLine parts={row.parts} /> : null}
           {row?.installed ? <CliStanding name={cliName} cli={row.id} pkg={row.package} version={row.version} standing={row.standing} ownDetails={false} /> : null}
           {/* Not there yet: asked of the orchestrator where it can install it, else whoever runs the server (0.8.19). */}
@@ -97,7 +99,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
             <div className="space-y-2">
               <p className="text-base-content/70 text-xs">{cliName} is not set up on this server yet.</p>
               {byInstaller(row.install) ? (
-                <AskAgentButton task="to set it up" message={setUpMessage(cliName)} />
+                <AskAgentButton task="to set it up" message={setUpMessage(cliName, row.install)} />
               ) : (
                 <p className="text-base-content/70 text-xs">Whoever runs this server needs to set this up.</p>
               )}

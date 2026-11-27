@@ -235,6 +235,12 @@ transport = "streamable-http"
 url = "https://mcp.example.com/mcp"
 auth_secret = "example-mcp-token"      # the NAME of a secret, never the value
 headers = { "X-Client" = "nouride" }
+header_secrets = { "x-app-key" = "example-app-key" }   # header = the NAME of a secret
+
+[servers.identity]                     # off unless written: who each call is made for
+header = "x-app-sender"
+format = "{person_key}"                # or {account}, {accounts}
+on_unknown = "omit"                    # or "fail"
 ```
 
 ```toml
@@ -289,6 +295,26 @@ variable. A value that looks like the token itself is refused at load, and so is
 server form stores what you type there under a name of its own (`mcp-lib-<server>-<variable>`, or
 `mcp-<agent>-<server>-<variable>` for an agent's own); `nouride mcp add --env-secret
 GITHUB_TOKEN=github_token` names a secret you set with `nouride secret set <name> --stdin`.
+
+**An http server's headers.** A server can take any number: `headers` for literal values and `header_secrets` for
+ones that hold a credential, each naming a secret read from the store as the server is reached (a secret not stored
+stops the connect, naming it), beside `auth_secret`, its bearer token. A header set two ways (in both tables, or the
+one the token goes under) is refused at load. `nouride mcp add … --header x-app-tenant=acme --header
+authorization=secret:crm_token` writes both kinds, and `nouride mcp header add <server> <name>=<value>` (or
+`=secret:<name>`) and `nouride mcp header rm <server> <name>` change one header later, every agent's switch left as it
+was. With `--agent <id>`, an agent's own secret header goes into its switch, over the library's; a `per_agent` server
+takes none of the library's.
+
+**Who a call is made for.** A server that scopes each request by its end user can be told who that is, in one header
+the daemon fills on every call: `[servers.identity]` above, off unless written. The value is the turn's sender as
+Nouride resolved it, never a tool's argument or anything the model wrote, which a prompt could rewrite: `{account}` is
+the account the message arrived from (`telegram:555`), `{accounts}` every address the platform names them by, that one
+first and comma-separated (on WhatsApp the phone number behind the hidden id a message arrives under), and
+`{person_key}` their key in People, whichever of their accounts they wrote from. A turn with no sender (a schedule, a
+webhook, a mission), or a sender People does not know where the format needs `{person_key}`, sends no header with
+`on_unknown = "omit"`, and with `"fail"` the call is refused and the agent told why. The header is never sent empty,
+and never with the agent's own id in its place. An agent asked by another (`ask_agent`) calls for the person the asking
+turn is for.
 
 **Logging in.** A remote server with no credential of its own (no `auth_secret`, no `Authorization` header) is tried
 with none, and one that answers by asking for a login, as Notion's and Linear's do, shows as **needs login** on its card

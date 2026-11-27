@@ -242,6 +242,12 @@ transport = "streamable-http"
 url = "https://mcp.example.com/mcp"
 auth_secret = "example-mcp-token"      # NAMA sebuah secret, bukan nilainya
 headers = { "X-Client" = "nouride" }
+header_secrets = { "x-app-key" = "example-app-key" }   # header = NAMA sebuah secret
+
+[servers.identity]                     # mati kecuali ditulis: untuk siapa tiap panggilan
+header = "x-app-sender"
+format = "{person_key}"                # atau {account}, {accounts}
+on_unknown = "omit"                    # atau "fail"
 ```
 
 ```toml
@@ -301,6 +307,26 @@ sambil menyebut variabelnya. Nilai yang kelihatan seperti token-nya sendiri dito
 yang juga diisi di `env`. Form server menyimpan apa yang kamu ketik di sana dengan nama sendiri (`mcp-lib-<server>-<variabel>`, atau
 `mcp-<agent>-<server>-<variabel>` untuk milik agent sendiri); `nouride mcp
 add --env-secret GITHUB_TOKEN=github_token` menyebut secret yang kamu isi dengan `nouride secret set <nama> --stdin`.
+
+**Header server http.** Sebuah server boleh punya header berapa pun: `headers` untuk nilai biasa dan `header_secrets`
+untuk yang berisi kredensial, masing-masing menyebut nama secret yang dibaca dari store saat server dijangkau (secret
+yang belum disimpan menghentikan koneksinya, dengan namanya disebut), di samping `auth_secret`, token bearer-nya. Header
+yang diatur dua kali (di kedua tabel, atau header tempat token dikirim) ditolak saat dimuat. `nouride mcp add …
+--header x-app-tenant=acme --header authorization=secret:crm_token` menulis keduanya, dan `nouride mcp header add
+<server> <nama>=<nilai>` (atau `=secret:<nama>`) serta `nouride mcp header rm <server> <nama>` mengubah satu header
+belakangan, tanpa menyentuh saklar agent mana pun. Dengan `--agent <id>`, header secret milik agent itu sendiri masuk ke
+saklarnya, menggantikan milik library; server `per_agent` tidak mengambil milik library sama sekali.
+
+**Untuk siapa sebuah panggilan.** Server yang membatasi tiap request menurut pengguna akhirnya bisa diberi tahu siapa
+orangnya, dalam satu header yang diisi daemon di setiap panggilan: `[servers.identity]` di atas, mati kecuali ditulis.
+Nilainya adalah pengirim giliran itu seperti yang diselesaikan Nouride, bukan argumen tool atau tulisan model, yang bisa
+diubah lewat prompt: `{account}` adalah akun asal pesan (`telegram:555`), `{accounts}` semua alamat yang dikenal platform
+untuk pengirim itu, yang tadi di depan dan dipisah koma (di WhatsApp, nomor telepon di balik ID tersembunyi tempat pesan
+datang), dan `{person_key}` kuncinya di People, dari akun mana pun dia menulis. Giliran tanpa pengirim (jadwal, webhook,
+misi), atau pengirim yang tidak dikenal People padahal format-nya butuh `{person_key}`, tidak mengirim header dengan
+`on_unknown = "omit"`, dan dengan `"fail"` panggilannya ditolak dan agent diberi tahu alasannya. Header-nya tidak pernah
+dikirim kosong, dan tidak pernah diisi ID agent itu sendiri. Agent yang ditanya agent lain (`ask_agent`) memanggil untuk
+orang yang dilayani giliran penanya.
 
 **Login.** Server jarak jauh yang gak punya kredensial sendiri (tanpa `auth_secret`, tanpa header `Authorization`)
 dicoba tanpa kredensial, dan server yang menjawab dengan minta login, seperti punya Notion dan Linear, tampil sebagai

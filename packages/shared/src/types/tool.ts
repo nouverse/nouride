@@ -44,6 +44,11 @@ export interface ToolContext {
   gatewayId: string;
   senderId: string;
   /**
+   * Other ids the platform knows the sender by (`MessageEnvelope.senderAlso`): on WhatsApp the phone number behind the
+   * hidden id a message arrives under. For what the daemon itself says of the sender, never for a model to read.
+   */
+  senderAlso?: readonly string[];
+  /**
    * What the person had open on a dashboard page as they wrote the turn's message, where that is something an agent
    * changes in place (`LiveEdit`): its kind, which one, and the thing itself. A tool that writes that kind hands its change to the page
    * (`ToolResult.liveEdit`) where it would otherwise store one. Absent in every chat but the dashboard's own.

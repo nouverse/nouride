@@ -93,16 +93,18 @@ export function launchFor(input: {
 }
 
 /**
- * A shared account's sign-in (`sharedLogin`): the CLI's words in a terminal as the daemon's user — no agent's yet — in a
- * folder of its own, dropped once it ends: the token it prints is all that is kept. Wide, so the token is on one line.
+ * An account's sign-in on the Models page: the CLI's words in a terminal as the daemon's user — no agent's yet — in a
+ * folder of its own. A shared one's (`sharedLogin`) is dropped once it ends: the token it prints is all that is kept.
+ * Another CLI's `login` leaves its sign-in in that folder, the account's then (`account-sign-in.ts`). Wide, so a token
+ * is on one line.
  */
-export function accountLaunch(row: CliRow, home: string): Launch {
-  const argv = [row.command, ...(row.sharedLogin?.args ?? [])];
+export function accountLaunch(row: CliRow, home: string, args: readonly string[] = row.sharedLogin?.args ?? []): Launch {
+  const argv = [row.command, ...args];
   const env = {
     ...buildEnv({ DEBIAN_FRONTEND: "noninteractive", GIT_TERMINAL_PROMPT: "0", NO_BROWSER: "1", ...row.env, ...(row.profileEnv ? { [row.profileEnv]: join(home, "profile") } : {}) }),
     HOME: home,
   };
-  const script = 'mkdir -p "$1" && cd "$1" && { stty cols 500 rows 50 2>/dev/null || true; } && shift && exec "$@"';
+  const script = `mkdir -p "$1"${row.profileEnv ? ' "$1/profile"' : ""} && cd "$1" && { stty cols 500 rows 50 2>/dev/null || true; } && shift && exec "$@"`;
   return { cmd: ["sh", "-c", script, "nouride-sign-in", home, ...argv], env, cwd: "/" };
 }
 

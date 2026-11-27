@@ -50,6 +50,9 @@ const SIGNED_IN: CliProfile[] = [
   { name: "home", inUse: false, signedIn: false, reason: "Codex is not signed in — sign in on the agent's Brain tab" },
 ];
 
+/** Whether the scan says the agent's CLI is built in but not yet run on a real account. */
+let experimental = false;
+
 function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfile[] = NOT_SIGNED_IN, accounts?: unknown): { posted: { path: string; body: unknown }[] } {
   const posted: { path: string; body: unknown }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -63,7 +66,7 @@ function serve(role: "admin" | "viewer", cli: AgentCli = CLI, profiles: CliProfi
     if (path === "/api/control/cli-accounts" && accounts) return json(accounts);
     if (path === "/api/control/agents/coder/cli/profiles") return json({ profiles, separate: true, models: MODELS });
     if (path === "/api/control/status") return json({ agents: [{ id: "coder", displayName: "Coder" }], gateways: [] });
-    if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "0.9.1", install: "npm i -g", login: true }] });
+    if (path === "/api/control/external-clis") return json({ room: { enough: true, bytes: 2 ** 31, needs: 2 ** 29 }, clis: [{ id: "codex", name: "Codex", command: "codex-acp", installed: true, version: "0.9.1", install: "npm i -g", login: true, ...(experimental ? { experimental: true } : {}) }] });
     return json({ error: "not found" }, 404);
   }) as typeof fetch;
   return { posted };
@@ -104,6 +107,23 @@ function type(input: HTMLInputElement, text: string): void {
 }
 
 const button = (host: HTMLElement, text: string) => [...host.querySelectorAll("button")].find((entry) => entry.textContent?.trim() === text) as HTMLButtonElement | undefined;
+
+describe("an agent's coding CLI marked Experimental", () => {
+  test("is said on its page, in the same words as on the Models page; a tried one says nothing of it", async () => {
+    for (const marked of [false, true]) {
+      experimental = marked;
+      serve("admin");
+      const { host, unmount } = await mount();
+      try {
+        const note = host.querySelector("[data-cli-experimental-note]");
+        expect(note?.textContent?.replace(/\s+/g, " ").trim() ?? null).toBe(marked ? "Experimental Codex has not yet been tried on a real account here. It may not answer, or answer only in part." : null);
+      } finally {
+        unmount();
+        experimental = false;
+      }
+    }
+  });
+});
 
 describe("the accounts an agent goes on with when its account reaches its limit", () => {
   /** A CLI whose accounts are signed in once for every agent: two signed in, one not. */
@@ -280,7 +300,7 @@ describe("an external agent's Brain tab", () => {
     }
   });
 
-  test("each account says whether it is signed in; another is used or signed in from here, and one is added on the Models page", async () => {
+  test("each account says whether it is signed in; another is used from here, and one is added and signed in on the Models page", async () => {
     const { posted } = serve("admin", { ...CLI, unavailable: null, login: null }, SIGNED_IN);
     const { host, unmount } = await mount();
     try {
@@ -288,15 +308,17 @@ describe("an external agent's Brain tab", () => {
       const [work, home] = [...host.querySelectorAll("li")];
       expect(work?.textContent).toContain("In use");
       expect(work?.textContent).toContain("Signed in");
-      expect(work?.textContent).toContain("Sign in again");
       expect(home?.textContent).toContain("Not signed in");
+      // Signed in on the Models page, where the account is added: no second place for it here.
+      expect(button(host, "Sign in")).toBeUndefined();
+      expect(button(host, "Sign in again")).toBeUndefined();
       expect(host.textContent).not.toContain("cannot answer");
       await eventually(() => !button(host, "Use for Coder")?.disabled, 2_000, "Use, once the admin is known");
       button(host, "Use for Coder")!.click();
       await eventually(() => posted.length === 1, 2_000, "the profile used");
       expect(posted[0]).toEqual({ path: "/api/control/agents/coder/cli", body: { profile: "home" } });
-      // Added on the Models page, not here.
-      expect(host.querySelector('a[href$="/models?tab=clis"]')?.textContent?.trim()).toBe("Add an account");
+      // Added and signed in on the Models page, not here.
+      expect(host.querySelector('a[href$="/models?tab=clis"]')?.textContent?.trim()).toBe("Add or sign in an account");
     } finally {
       unmount();
     }
@@ -328,13 +350,14 @@ describe("an external agent's Brain tab", () => {
     }
   });
 
-  test("one that ended without signing in keeps its terminal open, and the profile's button is still the one to sign in", async () => {
+  test("one that ended without signing in keeps its terminal open, and the account is signed in on the Models page", async () => {
+    // An agent's own sign-in, started by `nouride agents login`, is still shown here as it runs and ends.
     serve("admin", { ...CLI, login: { ...CLI.login!, running: false, exitCode: 1, signedIn: false, stopped: false } });
     const { host, unmount } = await mount();
     try {
       expect(host.textContent).toContain("The sign-in for the account work ended without signing in (exit 1).");
       expect([...host.querySelectorAll("details")].find((details) => details.querySelector("summary")?.textContent === "What the sign-in printed")?.hasAttribute("open")).toBe(true);
-      expect(button(host, "Sign in")).toBeDefined();
+      expect(host.querySelector('a[href$="/models?tab=clis"]')?.textContent?.trim()).toBe("Sign it in on the Models page");
       expect(host.textContent).not.toContain("The account work is signed in.");
     } finally {
       unmount();

@@ -219,6 +219,7 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
     ...(ctx.deps.spill ? { spill: ctx.deps.spill } : {}),
     fitImages: ctx.fitImages,
     onFallback: alertOnFallback(ctx.outages, ctx.deps.notifier, peer),
+    fallbackHolds: ctx.fallbackHolds,
     windowOf: (model) => ctx.deps.providers?.catalog?.windowNow(peer.config.llm.provider, model) ?? null,
     llm: ctx.deps.config.llm,
     // In the background it says whose work a question is for: the asking turn is over, and a question from an agent
@@ -347,6 +348,8 @@ export function startPeerTurn(ctx: TurnContext, request: PeerTurnRequest, option
         // The asking turn's: the peer's calls are audited under it, and their ids drawn from its own (`stepsInto`).
         ...(request.ctx.turnId ? { turnId: request.ctx.turnId, callIds: ctx.callIdsOf(request.ctx.turnId) } : {}),
         senderId: request.ctx.senderId,
+        // The person the asking turn is for: an MCP call the peer makes says it is made for them (`mcp-identity.ts`).
+        ...(request.ctx.senderAlso?.length ? { senderAlso: request.ctx.senderAlso } : {}),
         // A shutdown stops it at a step, as it stops any turn: one in the background is then reported by the next boot.
         ...(options.detachable ? { pause: () => ctx.paused } : {}),
         ...(nudges ? { harnessNote: nudges.take } : {}),

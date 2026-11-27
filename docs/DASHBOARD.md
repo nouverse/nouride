@@ -51,7 +51,8 @@ Groups            the rooms the agents talk in: each group, channel, thread and 
 Access            who may talk to the agents: pending · approved · denied · blocked · history
 Open agents       the agents anyone may write to, one at a time, on Access's template, a line back to Access: today and its own limits, by name · Wrote · Let in · Blocked
 Models            Model providers: endpoint, wire format, credential · Coding CLIs: each CLI,
-                  its accounts and the agents on each, a shared account's sign-in
+                  its accounts and the agents on each, a shared account's sign-in, each
+                  account's use, and an Experimental label on a CLI not yet run on an account
 LLM Gateway       the in-process Nougate's console — only on an edition that carries it
 Secrets           the secret store — names and where each resolves from, never values
 
@@ -102,7 +103,8 @@ to produce a gateway that belongs to nobody, which used to silently drop every g
 endpoint, a wire format, a credential — defined once and shared. A *model* is one agent's choice
 within it. Keeping them apart is what lets one agent move to a different deployment without touching
 the others. Coding CLIs keep the same split (0.8.1): an account is listed once, on Models → Coding CLIs, with the
-agents on it, and an external agent's Brain tab picks its CLI and account.
+agents on it, and an external agent's Brain tab picks its CLI and account. An account's use is asked on its own
+(`/cli-accounts/:cli/:name/use`) after the list, so a maker slow to answer holds up nothing on the page.
 
 **Skills is top-level *and* a tab, and both are load-bearing.** A skill is not owned by an agent —
 there is one pool in `agents/skills/` and every agent is offered all of it — so the question "who has

@@ -198,6 +198,13 @@ export interface AgentToolConfig {
   blocked: string[];
 }
 
+/** `identity` of an MCP server (`McpServerConfig.identity`). */
+export interface McpIdentityHeader {
+  header: string;
+  format: string;
+  onUnknown: "omit" | "fail";
+}
+
 export interface McpServerConfig {
   name: string;
   transport: "stdio" | "sse" | "streamable-http";
@@ -244,6 +251,20 @@ export interface McpServerConfig {
    * because the servers that want a custom header invariably want the bare key in it.
    */
   authHeader?: string;
+  /**
+   * An HTTP server's headers that hold a credential: header → the **name** of the secret, sent as the secret holds it
+   * (`header_secrets`). Beside `headers`, which are literal, and `authSecret`, the one bearer token: a scoped API wants
+   * its key in one header and a tenant's in another. Resolved at each connect; one not set stops it with its name.
+   */
+  headerSecrets?: Record<string, string>;
+  /**
+   * Who a tool call is made for, sent by the daemon in one header of each call (`identity`, off unless written): the
+   * sender of the turn as the daemon resolved it, never anything a model wrote. `format` takes `{account}` (the
+   * account it arrived from, `platform:id`), `{accounts}` (every address the platform knows them by, that one first,
+   * comma-separated) and `{person_key}` (their key in People). A turn with no sender (a schedule, a webhook, a
+   * mission), or one the format cannot be filled for, sends no header (`omit`) or is refused the call (`fail`).
+   */
+  identity?: McpIdentityHeader;
   /**
    * `"oauth"`: a person logged this remote server in through its OAuth flow (0.7.19), and its tokens are in the secret
    * store — renewed by themselves, the pair written back together. Written by the login, never by hand: a remote server
@@ -293,6 +314,8 @@ export interface AgentMcpChoice {
   envSecrets?: Record<string, string>;
   /** A remote server's credential, this agent's own: a secret's name. */
   authSecret?: string;
+  /** A remote server's credential headers this agent sets itself: header → secret name, over the library's. */
+  headerSecrets?: Record<string, string>;
   /** `own`: this agent logs the server in itself, rather than using the library's login. */
   login?: "own";
   /** The server's tools this agent gets, by the server's names (0.7.21). Absent: all of them. */
@@ -372,7 +395,7 @@ export const EXTERNAL_PERMISSIONS = ["folder", "risky", "all"] as const;
 export type ExternalPermissions = (typeof EXTERNAL_PERMISSIONS)[number];
 
 /**
- * A coding CLI the person adds (`[[external_clis]]` in config.toml, 0.8.1), beside the two built in: what starts its
+ * A coding CLI the person adds (`[[external_clis]]` in config.toml, 0.8.1), beside the built-in ones: what starts its
  * ACP mode, and what Nouride says and does around it. The shape of `@nouride/acp`'s `CliRow`, which it is used as.
  */
 export interface ExternalCliConfig {
@@ -392,7 +415,7 @@ export interface ExternalCliConfig {
 
 /** `[external]` in a pack: this agent's turns are answered by a coding CLI over the Agent Client Protocol (0.8.1). */
 export interface ExternalAgentConfig {
-  /** Which CLI: a built-in row's id (`claude-code`, `codex`) or one in `[[external_clis]]`. */
+  /** Which CLI: a built-in row's id (`claude-code`, `codex`, `antigravity`, `cursor`, `grok`) or one in `[[external_clis]]`. */
   cli: string;
   /** The profile — the CLI's sign-in and settings folder, inside the agent's own — it uses. Absent: `default`. */
   profile?: string;

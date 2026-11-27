@@ -25,7 +25,7 @@ The installer is deliberately plain POSIX `sh` and readable top to bottom. Inspe
 
     [Nougate](/en/docs/providers/nougate/), the LLM gateway that lets setup sign in to an AI account you already pay
     for instead of asking for an API key, comes with every install. It stays off until you choose **Use Nougate** in
-    setup, or turn it on from the dashboard's **LLM Gateway** page.
+    setup, or turn it on from **Open Nougate** on the dashboard's **Models** page.
 
     #### Exposing it to your LAN
 
@@ -153,8 +153,8 @@ The installer is deliberately plain POSIX `sh` and readable top to bottom. Inspe
           - ./nouride:/app/.nouride
     ```
 
-    Nougate is in the image too, off until you choose it in setup or on the **LLM Gateway** page, which is where its
-    dashboard lives. Publish `18256` as well (`- "127.0.0.1:18256:18256"`) only for tools that call the gateway
+    Nougate is in the image too, off until you choose it in setup or turn it on from its page (**Open Nougate** on
+    **Models**), which is where its dashboard lives. Publish `18256` as well (`- "127.0.0.1:18256:18256"`) only for tools that call the gateway
     directly.
 
     <Aside type="note" title="Were you on nouride-router?">

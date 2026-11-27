@@ -199,8 +199,9 @@ own `bun run test`, and running them from here fails on paths that are correct i
 **The bridge is always compiled in; so is the gateway, wherever its source is.** Every edition carries
 the WhatsApp bridge in-process (§6). The LLM gateway is otherwise a separate service reached over
 HTTP; every official build compiles it into this binary and runs it inside, on `18256`, once
-`[nougate] in_process = true` says so (setup's **Use Nougate** and the LLM Gateway page write it, and start it
-without a restart). The Router edition, the free build with it on by default, was folded into the free build in
+`[nougate] in_process = true` says so (setup's **Use Nougate** and Nougate's page, opened from Models, write it, and
+start it without a restart). A new install is given two provider profiles on it, `nougate-openai` and
+`nougate-anthropic`, off with it until it runs (`modules/config/nougate-profiles.ts`). The Router edition, the free build with it on by default, was folded into the free build in
 0.8.28:
 
 | build | what it carries |

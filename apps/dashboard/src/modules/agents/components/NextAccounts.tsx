@@ -31,7 +31,7 @@ export function NextAccounts({ agentId, agentName, data, admin, onSaved }: { age
     mutationFn: () => api.setAgentCli(agentId, { profile: accountList(data.profile, next), ...(earlyChanged ? { move_at: moveAt } : {}) }),
     onSuccess: onSaved,
   });
-  // One sign-in per agent: there is no other account to start its CLI with.
+  // A CLI whose sign-in is files: nothing yet tells it is at a limit, so nothing would move it to the next.
   if (!cli?.shared) return null;
   const more = addable(cli.accounts, [data.profile, ...next]);
   // A figure that is not a percent from 1 to 99 is not saved: Save waits for one.

@@ -6,10 +6,11 @@
  * `mcp.ts` for why the gate and the untrusted marking are the engine's and not `@nouride/mcp`'s.
  */
 
-import { createLogger, type Tool } from "@nouride/shared";
+import { createLogger, type McpIdentityHeader, type Person, type Tool } from "@nouride/shared";
 import { McpAuthRequiredError, McpError, argumentProblems, type McpImage, type McpTool } from "@nouride/mcp";
 import { toolGrantKey } from "@nouride/policy";
 import { lookAtReturned, type ReadImages } from "./builtins/read-image.ts";
+import { identityHeaders } from "./mcp-identity.ts";
 
 /**
  * Separates the server from the tool in a qualified name.
@@ -37,7 +38,7 @@ export interface McpToolCaller {
   callTool(
     name: string,
     args: Record<string, unknown>,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; headers?: Readonly<Record<string, string>> },
   ): Promise<{ text: string; isError: boolean; images?: McpImage[]; structured?: unknown }>;
 }
 
@@ -69,6 +70,10 @@ export interface BuildMcpToolsOptions {
    * and a call to it refused naming this setting — so what it would cost stays measurable for the page that offers it.
    */
   only?: { tools: readonly string[]; where: string };
+  /** The server's `identity`: who each call is made for, in the header it names (`mcp-identity.ts`). */
+  identity?: McpIdentityHeader;
+  /** The install's People, as they are now: what `{person_key}` is read from. */
+  people?: () => readonly Person[];
 }
 
 /**
@@ -216,9 +221,12 @@ function buildOne(name: string, options: BuildMcpToolsOptions, remote: McpTool):
       // Again here, for any caller that reaches a tool without the executor: a call the server would refuse is never sent.
       const refused = checkArguments(args);
       if (refused) return { content: refused, isError: true };
+      // Who the call is made for, from the turn the daemon resolved, before anything is sent.
+      const who = identityHeaders(options.identity, ctx, options.people?.() ?? [], server);
+      if ("refused" in who) return { content: who.refused, isError: true, metadata: { mcp_server: server, mcp_tool: remote.name } };
       try {
         // The turn's signal, so `/stop` and the deadline end the call now and the server is told.
-        const result = await client.callTool(remote.name, args, { signal: ctx.signal });
+        const result = await client.callTool(remote.name, args, { signal: ctx.signal, ...(Object.keys(who.headers).length > 0 ? { headers: who.headers } : {}) });
         // A result that breaks its own declared shape is handed over as an error naming what is wrong, never as the data:
         // the model would otherwise act on fields that are missing or of the wrong kind. A reported failure is not held to
         // the schema — it carries an explanation, not the answer.

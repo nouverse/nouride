@@ -64,6 +64,12 @@ async function handshakeOf(row: CliRow, command: readonly string[]): Promise<{ v
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
+  // By default the CLIs the workflow installs, its npm ones; one installed another way is checked by name, where it is.
+  const byDefault = BUILT_IN_CLIS.filter((row) => row.package !== undefined);
+  if (args.length === 1 && args[0] === "--list") {
+    console.log(byDefault.map((row) => row.id).join(" "));
+    process.exit(0);
+  }
   // What the workflow installs: the rows' own packages, so a CLI added to them is checked with no edit there.
   if (args.length === 1 && args[0] === "--packages") {
     console.log(BUILT_IN_CLIS.flatMap((row) => (row.package ? [`${row.package}@latest`] : [])).join(" "));
@@ -74,10 +80,10 @@ if (import.meta.main) {
   const standIn = end === -1 ? [] : args.slice(end + 1);
   const only = own[0] === "--only" ? own[1] : undefined;
   if ((own.length > 0 && !only) || own.length > 2 || (standIn.length > 0 && !only)) {
-    console.error("Usage: bun run scripts/cli-handshake.ts [--only <cli> [-- <command …>]]");
+    console.error("Usage: bun run scripts/cli-handshake.ts [--list | --packages | --only <cli> [-- <command …>]]");
     process.exit(2);
   }
-  const rows = BUILT_IN_CLIS.filter((row) => !only || row.id === only);
+  const rows = only ? BUILT_IN_CLIS.filter((row) => row.id === only) : byDefault;
   if (rows.length === 0) {
     console.error(`No built-in CLI "${only}": ${BUILT_IN_CLIS.map((row) => row.id).join(", ")}`);
     process.exit(2);

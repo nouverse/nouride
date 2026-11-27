@@ -6,6 +6,7 @@ import type { ProviderProfileView } from "@nouride/wire";
 import type { ProviderKind } from "@nouride/shared";
 import { atLeast } from "@/modules/users/auth.ts";
 import type { ProviderField } from "@/modules/config/settings/providers.ts";
+import { bundledOrigin, bundledState } from "@/modules/config/nougate-profiles.ts";
 import type { ControlApp, ControlDeps } from "../types.ts";
 import { jsonBody, providerHeaders } from "../payloads.ts";
 import { NOT_CHANGED, NO_SETTINGS, notSaved, probed } from "../plain.ts";
@@ -22,7 +23,13 @@ const PROVIDER_FIELDS: Record<ProviderField, string> = {
 export function registerProviderRoutes(control: ControlApp, deps: ControlDeps): void {
   control.get("/providers", (c) => {
     if (!deps.settings) return c.json({ providers: [], editable: false } satisfies { providers: ProviderProfileView[]; editable: boolean });
-    return c.json({ providers: deps.settings.providerProfiles(), editable: true } satisfies { providers: ProviderProfileView[]; editable: boolean });
+    // A profile on the gateway this build carries says where it stands: off, no account, or ready (`nougate-profiles.ts`).
+    const gateway = { origin: deps.llmGateway?.carried && deps.ctx.config ? bundledOrigin(deps.ctx.config) : null, running: deps.llmGateway?.current() ?? null };
+    const providers = deps.settings.providerProfiles().map((profile) => {
+      const bundled = bundledState(profile.baseUrl, gateway);
+      return bundled ? { ...profile, bundled } : profile;
+    });
+    return c.json({ providers, editable: true } satisfies { providers: ProviderProfileView[]; editable: boolean });
   });
 
   control.post("/providers", async (c) => {

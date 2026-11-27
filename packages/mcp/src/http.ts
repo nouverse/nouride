@@ -158,15 +158,15 @@ export function streamableHttpTransport(options: HttpTransportOptions): McpTrans
       handlers.onMessage(trimmed);
     };
 
-    const post = async (raw: string): Promise<void> => {
+    const post = async (raw: string, own: Readonly<Record<string, string>> = {}): Promise<void> => {
       const id = requestIdOf(raw);
       try {
         const answered = await authorizedFetch(
           options.url,
           { method: "POST", body: raw, signal: AbortSignal.any([abort.signal, AbortSignal.timeout(timeoutMs)]) },
           // Both, because the server chooses: a plain result comes back as JSON, a result with
-          // progress notifications ahead of it comes back as a stream.
-          sessionHeaders({ "content-type": "application/json", accept: "application/json, text/event-stream" }),
+          // progress notifications ahead of it comes back as a stream. Then the message's own.
+          { ...sessionHeaders({ "content-type": "application/json", accept: "application/json, text/event-stream" }), ...own },
           options.auth,
         );
         if ("loginNeeded" in answered) {
@@ -274,10 +274,10 @@ export function streamableHttpTransport(options: HttpTransportOptions): McpTrans
     };
 
     return {
-      send(raw) {
+      send(raw, own) {
         // Deliberately not awaited. `send` is void by contract, and the reply — success or the
         // synthesised failure above — reaches the client through `onMessage` either way.
-        lastPost = post(raw);
+        lastPost = post(raw, own);
       },
       protocolVersion(negotiated) {
         version = negotiated;
@@ -327,17 +327,17 @@ export function sseTransport(options: HttpTransportOptions): McpTransportFactory
     let closed = false;
 
     let endpoint: string | undefined;
-    const backlog: string[] = [];
+    const backlog: { raw: string; own?: Readonly<Record<string, string>> }[] = [];
     /** The negotiated version, on every POST after `initialize` — the header is the spec's for any MCP over HTTP. */
     let version: string | undefined;
 
-    const post = async (raw: string, to: string): Promise<void> => {
+    const post = async (raw: string, to: string, own: Readonly<Record<string, string>> = {}): Promise<void> => {
       const id = requestIdOf(raw);
       try {
         const answered = await authorizedFetch(
           to,
           { method: "POST", body: raw, signal: AbortSignal.any([abort.signal, AbortSignal.timeout(timeoutMs)]) },
-          { "content-type": "application/json", ...(version ? { "mcp-protocol-version": version } : {}), ...options.headers },
+          { "content-type": "application/json", ...(version ? { "mcp-protocol-version": version } : {}), ...options.headers, ...own },
           options.auth,
         );
         if ("loginNeeded" in answered) {
@@ -372,7 +372,7 @@ export function sseTransport(options: HttpTransportOptions): McpTransportFactory
           if (closed) return;
           // Every message so far is held for an endpoint this stream will never announce: each call is told why, and
           // `initialize` among them fails the connect with `McpAuthRequiredError`.
-          for (const queued of backlog.splice(0)) loginNeeded(handlers, requestIdOf(queued), answered.loginNeeded, options.url);
+          for (const queued of backlog.splice(0)) loginNeeded(handlers, requestIdOf(queued.raw), answered.loginNeeded, options.url);
           handlers.onClose(LOGIN_NEEDED);
           return;
         }
@@ -397,7 +397,7 @@ export function sseTransport(options: HttpTransportOptions): McpTransportFactory
             // the stream's own URL covers both.
             endpoint = new URL(event.data.trim(), options.url).toString();
             log.debug("sse endpoint announced", { url: options.url, endpoint });
-            for (const queued of backlog.splice(0)) void post(queued, endpoint);
+            for (const queued of backlog.splice(0)) void post(queued.raw, endpoint, queued.own);
             continue;
           }
           handlers.onMessage(event.data);
@@ -410,13 +410,13 @@ export function sseTransport(options: HttpTransportOptions): McpTransportFactory
     })();
 
     return {
-      send(raw) {
+      send(raw, own) {
         const to = endpoint;
         if (!to) {
-          backlog.push(raw);
+          backlog.push({ raw, ...(own ? { own } : {}) });
           return;
         }
-        void post(raw, to);
+        void post(raw, to, own);
       },
       protocolVersion(negotiated) {
         version = negotiated;

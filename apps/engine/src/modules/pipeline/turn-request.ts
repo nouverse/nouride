@@ -319,6 +319,8 @@ export function turnRequest(
       ? { senderName: envelope.senderName }
       : {}),
     ...(envelope.senderVerified ? { senderVerified: true } : {}),
+    // The sender's other ids, for what the daemon says of them to an MCP server (`mcp-identity.ts`), never the prompt.
+    ...(envelope.senderAlso?.length ? { senderAlso: envelope.senderAlso } : {}),
     // What the page holds open, for the tool that changes it: only where the daemon knows that kind of thing.
     ...(envelope.page?.liveEdit && ctx.deps.liveEdits?.knows(envelope.page.liveEdit.kind) ? { liveEdit: envelope.page.liveEdit } : {}),
     // The *matched* person goes everywhere, DMs included. That is the whole point — a household

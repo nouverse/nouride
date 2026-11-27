@@ -75,9 +75,16 @@ antigravity, claudecode)`, for whoever reads the turn; the chat is told only tha
 
 Nougate is normally a separate service reached over HTTP. Every Nouride install also carries it inside
 the daemon, on its own port, `18256`, and it stays off until you ask for it. Choosing it in setup, or
-**Turn on Nougate** on the dashboard's **LLM Gateway** page (under Settings), starts it at once, without a restart, and keeps it on
-from then on. **Turn off** on the same page names the agents that stop answering, then restarts Nouride once nothing is
+**Turn on Nougate** on its page (**Open Nougate** on the dashboard's **Models** page), starts it at once, without a
+restart, and keeps it on from then on. **Turn off** on the same page names the agents that stop answering, then restarts Nouride once nothing is
 running; where nothing would start Nouride again, it is saved and stops at the next start.
+
+**Two providers on every new install.** A new install (one whose database is not there yet when it first starts)
+is given two provider profiles on it, `nougate-openai` and `nougate-anthropic`, whether or not you choose Nougate in
+setup, and Nougate stays as you left it: off, unless you chose it. On **Models** they are marked **Off** while it is
+off and **No account** while no account is signed in there, and an agent's model picker offers them only once one
+is. Nougate gives them their key itself as it starts, the same key for both, kept as the secret `nougate_local_key`.
+An install from before 0.8.49 is not given them: its own profiles are left as they are.
 
 **No API key needed to start.** The setup wizard's first step still takes an API key, and under it
 offers **Use Nougate**: sign in to an account you already have, one of Claude (Pro or Max),
@@ -92,8 +99,8 @@ account is added, and every six hours. A model the provider releases shows up in
 update of Nouride, and one it retires leaves. The last list is kept on disk, so a restart or an outage of the
 provider does not empty the list. A provider with no account signed in lists no models.
 
-**One dashboard.** After setup the gateway is the **LLM Gateway** page in the Nouride dashboard, for
-admins: accounts, gateway keys, usage and cost, the playground, custom providers. It opens with your
+**One dashboard.** After setup the gateway is Nougate's page in the Nouride dashboard, opened with **Open Nougate**
+on the **Models** page, for admins: accounts, gateway keys, usage and cost, the playground, custom providers. It opens with your
 Nouride sign-in; there is no second password. Since 0.7.10 port `18256` takes gateway keys only: its
 own console there no longer signs anyone in, so the password the daemon lent it at first start does
 not outlive the one you changed. The exception is a dashboard that cannot show the page (the
@@ -103,7 +110,9 @@ your `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`. The gateway
 binds to the address in `HOST`, loopback unless you set it, so other tools on your network reach its
 API only when you set it wider.
 
-The wizard writes the profile for you. To point another profile at it by hand:
+Setup uses the two profiles above, and writes them where an install has not got them yet: no third one of its own
+(before 0.8.49 it wrote one named `nougate`, on the OpenAI wire alone, which an install that has it keeps). To point
+another profile at it by hand:
 
 ```toml
 [providers.local-gateway]

@@ -17,11 +17,17 @@ export class NourideError extends Error {
   /** Safe to show a chat user. Never contains paths, tokens, or stack frames. */
   readonly userMessage: string;
   readonly code: string;
+  /**
+   * When what failed passes by itself, in ms: a plan's limit that said when it ends. The turn is taken up again then
+   * (`pipeline/provider-resume.ts`). Absent: nothing says it passes.
+   */
+  readonly retryAt?: number;
 
-  constructor(code: string, message: string, userMessage?: string, options?: ErrorOptions) {
+  constructor(code: string, message: string, userMessage?: string, options?: ErrorOptions & { retryAt?: number }) {
     super(message, options);
     this.code = code;
     this.userMessage = userMessage ?? "Something went wrong on my side.";
+    if (options?.retryAt !== undefined) this.retryAt = options.retryAt;
   }
 }
 

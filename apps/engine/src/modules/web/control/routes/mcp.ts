@@ -21,7 +21,7 @@ import { NOT_CHANGED, NOT_SAVED, NO_SETTINGS, notSaved } from "../plain.ts";
 type Body = Record<string, unknown>;
 
 /** Each field a save of a connector can be refused for, as the Connectors page and an agent's tab name it. */
-const MCP_FIELDS: Record<McpField, string> = {
+export const MCP_FIELDS: Record<McpField, string> = {
   name: "the connector's name",
   command: "the program it starts",
   url: "the connector's address",
@@ -33,7 +33,7 @@ const MCP_FIELDS: Record<McpField, string> = {
 };
 
 /** The packs as the library's writers need them. */
-function packsOf(deps: ControlDeps): McpPacks {
+export function packsOf(deps: ControlDeps): McpPacks {
   return {
     agentsDir: deps.ctx.config.daemon.agentsDir,
     agents: () => deps.registry.all().map((agent) => ({ id: agent.config.id, dir: agent.dir, mcp: agent.config.mcp ?? {} })),
@@ -63,6 +63,7 @@ function serverOf(body: Body): McpServerEdit {
     ...(typeof body.url === "string" && body.url ? { url: body.url } : {}),
     ...(table(body.env) ? { env: table(body.env)! } : {}),
     ...(table(body.headers) ? { headers: table(body.headers)! } : {}),
+    ...(table(body.headerSecrets) ? { headerSecrets: table(body.headerSecrets)! } : {}),
     ...(typeof body.authHeader === "string" && body.authHeader ? { authHeader: body.authHeader } : {}),
     ...(typeof body.perAgent === "boolean" ? { perAgent: body.perAgent } : {}),
   };
@@ -70,11 +71,13 @@ function serverOf(body: Body): McpServerEdit {
 
 /** A server as the pages show it: secrets as "set or not", never their names. */
 function shown(server: McpServerConfig, hasSecret: (name: string) => boolean) {
-  const { authSecret, envSecrets, loginAs: _loginAs, auth: _auth, ...rest } = server;
+  const { authSecret, envSecrets, headerSecrets, loginAs: _loginAs, auth: _auth, ...rest } = server;
   return {
     ...rest,
     hasCredential: Boolean(authSecret && hasSecret(authSecret)),
     envSecrets: Object.entries(envSecrets ?? {}).map(([variable, name]) => ({ name: variable, set: hasSecret(name) })),
+    // As the variables are: which header, and whether its secret is there, never the secret's name.
+    ...(headerSecrets ? { headerSecrets: Object.entries(headerSecrets).map(([header, name]) => ({ name: header, set: hasSecret(name) })) } : {}),
   };
 }
 
