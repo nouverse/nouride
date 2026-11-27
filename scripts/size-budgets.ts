@@ -35,12 +35,12 @@ export const BUDGET: Record<string, Budget> = {
     why: "the dashboard chat's routes together: upload, send with its page and a first message's model and effort, live, transcripts, files, delete, each answer held to the wire's type and to whose it is",
   },
   "apps/engine/src/modules/external-agents/index.ts": {
-    lines: 604,
-    why: "the service the agents' CLIs run under: connections, sessions, sign-ins, models, lent tools and what they made, parts, versions, a turn's account, use per sign-in, a followed session's leftovers",
+    lines: 652,
+    why: "the service the agents' CLIs run under: connections, sessions, sign-ins (an account's, of token or files), models, lent tools, parts, versions, a turn's account, use per sign-in, leftovers",
   },
   "apps/engine/src/modules/external-agents/runner.ts": {
-    lines: 420,
-    why: "one turn of a CLI from its session to its answer: each prompt with its steering, its usage, what its lent calls made, the lookout for a turn held for helpers, a limit's end, the message kept as sent",
+    lines: 428,
+    why: "one turn of a CLI from its session to its answer: each prompt, its steering, usage, lent calls, helpers, a limit's end, the message kept as sent, its account's renewed sign-in kept after it",
   },
   "apps/engine/src/modules/cron/cron.store.ts": {
     lines: 498,
@@ -123,8 +123,8 @@ export const BUDGET: Record<string, Budget> = {
 /** Test files over `MAX_TEST_CODE_LINES`; new cases go in a file of their own. */
 export const TEST_BUDGET: Record<string, Budget> = {
   "apps/engine/tests/external-agents/runner.test.ts": {
-    lines: 1_040,
-    why: "a CLI's turns against the fake CLI, every case on the one `setup` that starts it: its accounts, their limits and use, its sign-in, go through the same service and session as the rest",
+    lines: 1_059,
+    why: "a CLI's turns against the fake CLI, every case on the one `setup` that starts it: its accounts, their limits and use, its sign-in and the keeping of it, through the same service and session",
   },
   "apps/engine/tests/pipeline/pipeline.test.ts": {
     lines: 3_849,

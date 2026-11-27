@@ -115,24 +115,30 @@ so and offers none; `nouride agents scan` says the same.
 ## Signing in
 
 An account is one sign-in of a CLI. **Models → Coding CLIs** lists each CLI's accounts, the agents on each, and
-whether they can answer. Agents on one account share its limits, a five-hour window included. Signing in, and saving
-an agent's Brain tab, are an admin's to do. The sign-in runs on the box, and the page shows what it prints.
+whether they can answer. Every account is signed in there, once: **Add an account**, or **Sign in** on one already
+there, runs the CLI's own sign-in on the box, and the page shows what it prints. An agent is then put on the account,
+on its **Brain** tab or when you make it, and answers with that sign-in. Agents on one account share its limits, a
+five-hour window included. Signing in, and saving an agent's Brain tab, are an admin's to do.
 
-- **Claude Code** signs an account in once, on **Models → Coding CLIs**: **Add an account**, or **Sign in** on one
-  already there, runs Claude Code's own `setup-token`. Open the link it prints, sign in with your Claude subscription,
-  and paste back the code the page then shows you. Nouride keeps the long-lived token it prints in its secret store,
-  never on the page, and every agent on that account answers with it. To sign one agent in on its own instead, **Sign
-  in** on its **Brain** tab, or `nouride agents login <id>` in a terminal, signs that agent's own profile.
-- **Codex** has no sign-in to share, so each agent on an account signs in once, on its **Brain** tab or with
-  `nouride agents login <id>`, in its own folder. It prints a link and a one-time code: open the link, sign in to
-  ChatGPT and type the code into OpenAI's page, and the sign-in ends by itself. Device-code sign-in has to be switched
-  on first, in your ChatGPT account's security settings.
-- **Antigravity** (Experimental) signs in with a Google account on a Google AI Pro or Ultra plan, once per agent, on
-  its **Brain** tab: `agy acp --login` prints a link, and you paste back the code Google's page shows.
-- **Cursor CLI** (Experimental) signs in with a Cursor account, once per agent: `cursor-agent login` prints a link to
-  open; the sign-in ends by itself.
-- **Grok Build** (Experimental) signs in with a Grok account on a SuperGrok or X Premium+ plan, once per agent:
-  `grok login --device-code` prints a link and a code to type into xAI's page.
+- **Claude Code** runs its own `setup-token`. Open the link it prints, sign in with your Claude subscription, and paste
+  back the code the page then shows you. Nouride keeps the long-lived token it prints in its secret store, never on
+  the page, and hands it to each agent's Claude Code on the account as it starts.
+- **Codex** prints a link and a one-time code: open the link, sign in to ChatGPT and type the code into OpenAI's page,
+  and the sign-in ends by itself. Device-code sign-in has to be switched on first, in your ChatGPT account's security
+  settings.
+- **Antigravity** (Experimental) signs in with a Google account on a Google AI Pro or Ultra plan: it prints a link,
+  and you paste back the code Google's page shows.
+- **Cursor CLI** (Experimental) signs in with a Cursor account: it prints a link to open; the sign-in ends by itself.
+- **Grok Build** (Experimental) signs in with a Grok account on a SuperGrok or X Premium+ plan: it prints a link and a
+  code to type into xAI's page.
+
+Every CLI but Claude Code keeps its sign-in in files rather than printing a token. Those files are kept in a folder of
+the account's, in Nouride's data folder where no agent reads, and written into an agent's own folder as its CLI
+starts. A CLI renews its sign-in now and then; after each of its turns, what it renewed is copied back to the account,
+so the next agent to start on it takes the newest. Two agents on one account working at the same moment can still
+renew it under each other, and one of them is then asked to sign in again: one account per agent avoids that. An agent
+that signed in by itself before (`nouride agents login <id>` in a terminal still does) keeps that sign-in until its
+account is signed in on the page.
 
 A CLI you add signs in with its own `login` words. If its browser sign-in ends on a page on the box that does not load
 from your machine, paste that page's address back, and Nouride opens it on the box.
@@ -175,8 +181,8 @@ sent twice. It is off unless you switch it on, and offered only where the CLI sa
 used, a bar, and when it starts again. Nouride asks the account's maker for it at most every five minutes, the same
 question the CLI's own usage page asks, with the account's own sign-in, and between those reads takes what the CLI says
 while it works, where it says it, and says so. Where nothing says it, the account reads **How much of its plan is used
-is not known**. A CLI that signs in once per agent (Codex, Cursor CLI, Grok Build, Antigravity, or Claude Code on an
-agent's own sign-in) shows each agent's own, under its name: each agent's sign-in may be a different account.
+is not known**. Where an agent's CLI renews its sign-in in its own folder (Codex, Cursor CLI, Grok Build, Antigravity,
+or Claude Code on an agent's own sign-in), each agent's is shown under its name.
 
 | CLI | What is shown |
 |---|---|
@@ -210,8 +216,8 @@ profile = ["work", "second"]
 move_at = 90                        # optional: move on once 90% of a limit is used
 ```
 
-For a CLI that signs in once per agent, as Codex does, there is no other account to start with, so the list is not
-offered.
+For a CLI whose sign-in is files, as Codex's is, nothing tells Nouride yet that an account is at its limit, so the list
+is not offered.
 
 Which accounts go in a list is yours to decide. A subscription is one person's, and its maker's terms say what it may
 be used for: moving between several people's accounts to get past their limits may break those terms.
@@ -409,7 +415,7 @@ modes = { folder = "build", all = "plan" }
 A secret it needs is bound to its command in `[security.exec_secrets]`; there is no `env` in the row. An `id` a
 built-in CLI has (`claude-code`, `codex`) is refused at load. One of a built-in CLI marked Experimental (`antigravity`,
 `cursor`, `grok`) is yours: your row is kept in its place, and the start says so once, as `nouride config check` does. A CLI you add runs as the agent's own user only where
-each agent has one, gets no skills, and signs in once per agent: there is no shared account for it.
+each agent has one, gets no skills, and, with a `login`, is signed in on the account like the others.
 [Every key →](/en/docs/reference/config/#external_clis)
 
 ## Nouride in your editor

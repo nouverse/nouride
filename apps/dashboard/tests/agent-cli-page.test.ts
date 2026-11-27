@@ -300,7 +300,7 @@ describe("an external agent's Brain tab", () => {
     }
   });
 
-  test("each account says whether it is signed in; another is used or signed in from here, and one is added on the Models page", async () => {
+  test("each account says whether it is signed in; another is used from here, and one is added and signed in on the Models page", async () => {
     const { posted } = serve("admin", { ...CLI, unavailable: null, login: null }, SIGNED_IN);
     const { host, unmount } = await mount();
     try {
@@ -308,15 +308,17 @@ describe("an external agent's Brain tab", () => {
       const [work, home] = [...host.querySelectorAll("li")];
       expect(work?.textContent).toContain("In use");
       expect(work?.textContent).toContain("Signed in");
-      expect(work?.textContent).toContain("Sign in again");
       expect(home?.textContent).toContain("Not signed in");
+      // Signed in on the Models page, where the account is added: no second place for it here.
+      expect(button(host, "Sign in")).toBeUndefined();
+      expect(button(host, "Sign in again")).toBeUndefined();
       expect(host.textContent).not.toContain("cannot answer");
       await eventually(() => !button(host, "Use for Coder")?.disabled, 2_000, "Use, once the admin is known");
       button(host, "Use for Coder")!.click();
       await eventually(() => posted.length === 1, 2_000, "the profile used");
       expect(posted[0]).toEqual({ path: "/api/control/agents/coder/cli", body: { profile: "home" } });
-      // Added on the Models page, not here.
-      expect(host.querySelector('a[href$="/models?tab=clis"]')?.textContent?.trim()).toBe("Add an account");
+      // Added and signed in on the Models page, not here.
+      expect(host.querySelector('a[href$="/models?tab=clis"]')?.textContent?.trim()).toBe("Add or sign in an account");
     } finally {
       unmount();
     }
@@ -348,13 +350,14 @@ describe("an external agent's Brain tab", () => {
     }
   });
 
-  test("one that ended without signing in keeps its terminal open, and the profile's button is still the one to sign in", async () => {
+  test("one that ended without signing in keeps its terminal open, and the account is signed in on the Models page", async () => {
+    // An agent's own sign-in, started by `nouride agents login`, is still shown here as it runs and ends.
     serve("admin", { ...CLI, login: { ...CLI.login!, running: false, exitCode: 1, signedIn: false, stopped: false } });
     const { host, unmount } = await mount();
     try {
       expect(host.textContent).toContain("The sign-in for the account work ended without signing in (exit 1).");
       expect([...host.querySelectorAll("details")].find((details) => details.querySelector("summary")?.textContent === "What the sign-in printed")?.hasAttribute("open")).toBe(true);
-      expect(button(host, "Sign in")).toBeDefined();
+      expect(host.querySelector('a[href$="/models?tab=clis"]')?.textContent?.trim()).toBe("Sign it in on the Models page");
       expect(host.textContent).not.toContain("The account work is signed in.");
     } finally {
       unmount();

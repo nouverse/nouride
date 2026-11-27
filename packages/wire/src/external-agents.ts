@@ -119,7 +119,7 @@ export interface AgentCli {
 /** One account of a coding CLI, and the agents on it with whether each can answer. */
 export interface CliAccountView {
   name: string;
-  /** A shared account: whether it is signed in. One sign-in per agent: null — each agent's says. */
+  /** Whether it was signed in on the page, its token or its sign-in's files kept; null from a daemon before that was so. */
   signedIn: boolean | null;
   /** `on`: the account the agent's CLI runs on now, where it moved off this one at a limit. */
   agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];

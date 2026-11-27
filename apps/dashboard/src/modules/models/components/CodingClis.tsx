@@ -3,8 +3,9 @@
  * sign-ins external agents answer with — with the agents on each and whether each can answer. Where sign-ins are
  * managed, apart from which account an agent uses (its Brain tab): mixed together, they were hard to follow.
  *
- * One rule for a person to learn: green answers, amber needs a sign-in, with the button beside it. A CLI that signs an
- * account in once (Claude Code) has the button on the account; any other has it on each agent, on its Brain tab.
+ * One rule for a person to learn: green answers, amber needs a sign-in, with the button beside it, on the account, for
+ * every CLI: an account is signed in where it is added, and an agent is put on it. An account named a sign-in nowhere
+ * once, for a CLI whose sign-in is files: each agent signed in on its own Brain tab, which the account did not say.
  *
  * In plain words (0.8.19): the people who read this are not technical. A CLI that is not there yet is one line and a
  * button that asks the orchestrator to set it up, in a chat message the person sends; how it works (ACP, the registry,
@@ -13,7 +14,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { CheckCircle2, ExternalLink, Info, KeyRound, LogIn, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { cliLabel } from "@/commons/lib/api.external-agents";
@@ -101,13 +101,13 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
   const add = useMutation({
     mutationFn: async (account: string) => {
       await api.addCliAccount(cli.id, account);
-      if (cli.shared) await api.startAccountLogin(cli.id, account);
+      if (cli.canLogin) await api.startAccountLogin(cli.id, account);
       return account;
     },
     onSuccess: (account) => {
       setAdding(false);
       setName("");
-      if (cli.shared) setSigning(account);
+      if (cli.canLogin) setSigning(account);
       onChanged();
     },
   });
@@ -116,7 +116,7 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
   return (
     <Card
       title={cliLabel(cli)}
-      description={cli.shared ? "Each account is signed in once, here, and every agent on it answers with it." : `Each agent on an account signs in once, on its own Brain tab: ${cli.name} has no sign-in to share.`}
+      description="Each account is signed in once, here, and every agent on it answers with it."
     >
       <div className="space-y-3 text-sm">
         {cli.experimental ? <ExperimentalNote name={cli.name} /> : null}
@@ -167,7 +167,7 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
             <form className="flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (nameOk) add.mutate(name); }}>
               <input className="input input-sm font-mono rounded-xl w-48" value={name} placeholder="e.g. team" onChange={(event) => setName(event.target.value.toLowerCase())} autoFocus />
               <button type="submit" className="btn btn-primary btn-sm gap-1" disabled={!nameOk || add.isPending}>
-                {cli.shared ? <><LogIn size={14} aria-hidden="true" /> Add and sign in</> : <><Plus size={14} aria-hidden="true" /> Add</>}
+                <LogIn size={14} aria-hidden="true" /> Add and sign in
               </button>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAdding(false); setName(""); }}>Cancel</button>
               <p className="text-base-content/65 w-full text-xs">A name for you to tell accounts apart: lowercase letters, digits and dashes.</p>
@@ -196,14 +196,12 @@ function AccountRow({ cli, account, admin, signing, onSignIn, onChanged }: { cli
         ) : account.signedIn === false && account.agents.length > 0 && account.agents.every((agent) => agent.signedIn) ? (
           // Its agents signed in on their own before accounts were shared (0.8.1, the live box): they answer.
           <span className="text-base-content/65 text-xs">Each agent signed in on its own. Sign in here once to share one sign-in</span>
-        ) : account.signedIn === false ? (
-          <Amber text="Not signed in" />
         ) : (
-          <span className="text-base-content/65 text-xs">One sign-in per agent</span>
+          <Amber text="Not signed in" />
         )}
         {account.agents.length > 1 ? <span className="text-base-content/65 text-xs">(its agents share its limits)</span> : null}
         <span className="ml-auto flex gap-2">
-          {cli.shared && cli.installed && !signing ? (
+          {cli.canLogin && cli.installed && !signing ? (
             <button type="button" className={`btn btn-xs gap-1 ${account.signedIn ? "btn-ghost" : "btn-primary"}`} disabled={!admin || start.isPending} onClick={() => start.mutate()}>
               <LogIn size={13} aria-hidden="true" /> {account.signedIn ? "Sign in again" : "Sign in"}
             </button>
@@ -227,9 +225,6 @@ function AccountRow({ cli, account, admin, signing, onSignIn, onChanged }: { cli
               <span>{agent.name}</span>
               {/* Moved to another of its accounts while this one is at its limit. */}
               {agent.on ? <span className="text-info">on {agent.on} now</span> : null}
-              {!agent.signedIn && !cli.shared ? (
-                <Link to="/agents/$agentId/cli" params={{ agentId: agent.id }} className="link link-primary">Sign in</Link>
-              ) : null}
             </li>
           ))}
         </ul>
@@ -241,7 +236,7 @@ function AccountRow({ cli, account, admin, signing, onSignIn, onChanged }: { cli
   );
 }
 
-/** A shared account's sign-in, polled while it runs; when it ends, the accounts are asked again. */
+/** An account's sign-in, polled while it runs; when it ends, the accounts are asked again. */
 function AccountSignIn({ cli, account, admin, onEnded }: { cli: CliAccountsView; account: string; admin: boolean; onEnded: () => void }) {
   const queryClient = useQueryClient();
   const key = ["cli-account-login", cli.id, account];

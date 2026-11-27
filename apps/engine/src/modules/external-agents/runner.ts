@@ -46,6 +46,8 @@ export interface RunnerHost {
   rotation?: Pick<AccountRotation, "refused" | "early" | "used" | "freeAt">;
   /** The account's use as the agent's CLI last said it; null where it said none (`use.ts`). */
   accountUse?(agentId: string): AccountUse | null;
+  /** After a turn: what the CLI changed of its account's sign-in (a refreshed token) kept as the account's (`account-sign-in.ts`). */
+  keepSignIn?(agentId: string): Promise<void>;
   /**
    * The session a conversation kept from before, for a CLI that reopens sessions; and keeping a new one, with the
    * fingerprint of the instructions it opened on (`writeInstruction`) — null where they could not be written.
@@ -138,6 +140,15 @@ export class ExternalTurnRunner {
    * account. As many times as it has accounts to move to: the last one's refusal is thrown as every account spent.
    */
   async run(req: TurnRequest): Promise<TurnResult> {
+    try {
+      return await this.onAccounts(req);
+    } finally {
+      // A refreshed token is the account's newest whatever came of the turn; failing to keep it fails nothing here.
+      await this.host.keepSignIn?.(this.agent.config.id).catch((err: unknown) => log.warn("could not keep what an agent's CLI changed of its account's sign-in", { agent_id: this.agent.config.id, error: String(err) }));
+    }
+  }
+
+  private async onAccounts(req: TurnRequest): Promise<TurnResult> {
     const external = this.agent.config.external;
     const model = this.modelOf(req);
     const row = external && this.host.row?.(external.cli);

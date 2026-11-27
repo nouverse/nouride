@@ -120,25 +120,30 @@ sekitar 330 MB dan Codex sekitar 190 MB, dan saat kerja lebih dari itu. Kalau pe
 ## Login
 
 Satu akun adalah satu login ke sebuah CLI. **Models → Coding CLIs** menampilkan akun tiap CLI, agent di tiap akun, dan
-apakah mereka bisa menjawab. Agent di akun yang sama berbagi limit akun itu, termasuk jendela lima jam-nya. Login dan
-menyimpan tab Brain sebuah agent itu urusan admin. Login-nya jalan di box, dan halamannya menampilkan apa yang dicetak.
+apakah mereka bisa menjawab. Setiap akun di-login-kan di situ, sekali: **Add an account**, atau **Sign in** di akun yang
+sudah ada, menjalankan login milik CLI itu sendiri di box, dan halamannya menampilkan apa yang dicetak. Setelah itu
+agent tinggal dipasang ke akun itu, di tab **Brain**-nya atau waktu dibuat, dan menjawab pakai login tersebut. Agent di
+akun yang sama berbagi limit akun itu, termasuk jendela lima jam-nya. Login dan menyimpan tab Brain sebuah agent itu
+urusan admin.
 
-- **Claude Code** cukup login sekali per akun, di **Models → Coding CLIs**: **Add an account**, atau **Sign in** di akun
-  yang sudah ada, menjalankan `setup-token` milik Claude Code sendiri. Buka link yang dicetak, login pakai langganan
-  Claude kamu, lalu tempel balik kode yang ditunjukkan halaman itu. Nouride menyimpan token jangka panjang yang
-  dicetaknya di secret store, gak pernah di halaman, dan semua agent di akun itu menjawab pakai token tersebut. Kalau mau
-  satu agent login sendiri, **Sign in** di tab **Brain**-nya, atau `nouride agents login <id>` di terminal, me-login-kan
-  profil milik agent itu sendiri.
-- **Codex** gak punya login yang bisa dibagi, jadi tiap agent di sebuah akun login sekali, di tab **Brain**-nya atau
-  lewat `nouride agents login <id>`, di folder-nya sendiri. Dia mencetak link dan kode sekali pakai: buka link-nya,
-  login ke ChatGPT, ketik kodenya di halaman OpenAI, dan login-nya selesai sendiri. Login device-code harus dinyalakan
-  dulu, di pengaturan keamanan akun ChatGPT kamu.
-- **Antigravity** (Experimental) login dengan akun Google yang berlangganan Google AI Pro atau Ultra, sekali per agent,
-  di tab **Brain**-nya: `agy acp --login` mencetak link, dan kamu tempel balik kode yang ditampilkan halaman Google.
-- **Cursor CLI** (Experimental) login dengan akun Cursor, sekali per agent: `cursor-agent login` mencetak link untuk
-  dibuka; login-nya selesai sendiri.
-- **Grok Build** (Experimental) login dengan akun Grok yang berlangganan SuperGrok atau X Premium+, sekali per agent:
-  `grok login --device-code` mencetak link dan kode untuk diketik di halaman xAI.
+- **Claude Code** menjalankan `setup-token` miliknya sendiri. Buka link yang dicetak, login pakai langganan Claude kamu,
+  lalu tempel balik kode yang ditunjukkan halaman itu. Nouride menyimpan token jangka panjang yang dicetaknya di secret
+  store, gak pernah di halaman, dan memberikannya ke Claude Code tiap agent di akun itu waktu dinyalakan.
+- **Codex** mencetak link dan kode sekali pakai: buka link-nya, login ke ChatGPT, ketik kodenya di halaman OpenAI, dan
+  login-nya selesai sendiri. Login device-code harus dinyalakan dulu, di pengaturan keamanan akun ChatGPT kamu.
+- **Antigravity** (Experimental) login dengan akun Google yang berlangganan Google AI Pro atau Ultra: dia mencetak link,
+  dan kamu tempel balik kode yang ditampilkan halaman Google.
+- **Cursor CLI** (Experimental) login dengan akun Cursor: dia mencetak link untuk dibuka; login-nya selesai sendiri.
+- **Grok Build** (Experimental) login dengan akun Grok yang berlangganan SuperGrok atau X Premium+: dia mencetak link dan
+  kode untuk diketik di halaman xAI.
+
+Semua CLI selain Claude Code menyimpan login-nya dalam file, bukan mencetak token. File itu disimpan di folder milik
+akun, di folder data Nouride yang gak bisa dibaca agent, lalu ditulis ke folder agent waktu CLI-nya dinyalakan. Sebuah
+CLI sesekali memperbarui login-nya; setelah tiap gilirannya, yang diperbarui disalin balik ke akun, jadi agent
+berikutnya yang menyala di akun itu dapat yang terbaru. Dua agent di satu akun yang bekerja di saat yang sama masih bisa
+saling menimpa pembaruannya, dan salah satunya lalu diminta login lagi: satu akun per agent menghindari itu. Agent yang
+dulu login sendiri (`nouride agents login <id>` di terminal masih bisa) tetap memakai login itu sampai akunnya
+di-login-kan di halaman.
 
 CLI yang kamu tambahkan sendiri login pakai kata-kata `login`-nya sendiri. Kalau login lewat browser-nya berakhir di
 halaman di box yang gak bisa dibuka dari mesin kamu, tempel balik alamat halaman itu, dan Nouride membukanya di box.
@@ -184,9 +189,9 @@ ditawarkan kalau CLI-nya menyebut pemakaian akun.
 persentase yang terpakai, sebuah bar, dan kapan limit itu mulai lagi. Nouride menanyakannya ke pembuat akun paling
 sering tiap lima menit, pertanyaan yang sama yang ditanyakan halaman pemakaian CLI-nya, dengan login akun itu sendiri,
 dan di antara pembacaan itu memakai apa yang dikatakan CLI-nya selagi bekerja, kalau dia mengatakannya, dan menyebutnya
-begitu. Kalau gak ada yang mengatakannya, akun itu bertuliskan **How much of its plan is used is not known**. CLI yang
-login sekali per agent (Codex, Cursor CLI, Grok Build, Antigravity, atau Claude Code dengan login milik agent sendiri)
-menampilkan pemakaian tiap agent, di bawah namanya: login tiap agent bisa saja akun yang berbeda.
+begitu. Kalau gak ada yang mengatakannya, akun itu bertuliskan **How much of its plan is used is not known**. Kalau CLI
+sebuah agent memperbarui login-nya di folder agent itu sendiri (Codex, Cursor CLI, Grok Build, Antigravity, atau Claude
+Code dengan login milik agent sendiri), pemakaian tiap agent ditampilkan di bawah namanya.
 
 | CLI | Yang ditampilkan |
 |---|---|
@@ -221,8 +226,8 @@ profile = ["work", "second"]
 move_at = 90                        # opsional: pindah begitu 90% dari sebuah limit terpakai
 ```
 
-Untuk CLI yang login sekali per agent, seperti Codex, gak ada akun lain untuk dipakai menyala, jadi daftarnya gak
-ditawarkan.
+Untuk CLI yang login-nya berupa file, seperti Codex, Nouride belum bisa tahu kapan sebuah akun kena limit, jadi
+daftarnya gak ditawarkan.
 
 Akun mana yang masuk daftar, kamu yang memutuskan. Satu langganan itu milik satu orang, dan ketentuan pembuatnya yang
 mengatur boleh dipakai untuk apa: berpindah-pindah di antara akun beberapa orang untuk melewati limit mereka bisa
@@ -426,7 +431,7 @@ Secret yang dia butuhkan diikat ke perintahnya di `[security.exec_secrets]`; bar
 dengan CLI bawaan (`claude-code`, `codex`) ditolak saat dimuat. `id` milik CLI bawaan yang ditandai Experimental
 (`antigravity`, `cursor`, `grok`) jadi milikmu: baris kamu dipakai menggantikannya, dan start menyebutnya sekali, sama
 seperti `nouride config check`. CLI tambahan jalan sebagai user agent itu sendiri hanya
-kalau tiap agent punya user sendiri, gak dapat skill, dan login sekali per agent: gak ada akun bersama untuknya.
+kalau tiap agent punya user sendiri, gak dapat skill, dan, kalau punya `login`, di-login-kan di akun seperti yang lain.
 [Semua key →](/id/docs/reference/config/#external_clis)
 
 ## Nouride di editor kamu

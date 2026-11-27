@@ -500,8 +500,8 @@ modes = { folder = "build", all = "plan" }   # tiap preset sebagai id mode CLI i
 
 Id yang sama dengan CLI bawaan ditolak saat dimuat, begitu juga id yang ditulis dua kali; key yang gak dibaca
 diperingatkan. Gak ada `env`: secret yang dibutuhkan CLI diikat ke perintahnya di `[security.exec_secrets]` milik agent.
-CLI tambahan jalan sebagai user milik agent hanya kalau tiap agent punya user sendiri, gak dapat skill, dan login sekali
-per agent.
+CLI tambahan jalan sebagai user milik agent hanya kalau tiap agent punya user sendiri, gak dapat skill, dan, kalau punya
+`login`, di-login-kan di akun seperti yang lain.
 
 Per agent, di `config.toml` pack-nya:
 

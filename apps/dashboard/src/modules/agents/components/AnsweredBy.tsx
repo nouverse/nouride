@@ -77,14 +77,14 @@ export function AccountPicker({ cli, value, onChange }: { cli: string; value: st
   const accounts = useQuery({ queryKey: ["cli-accounts"], queryFn: () => api.cliAccounts(), staleTime: 60_000, retry: false });
   const row = accounts.data?.clis.find((entry) => entry.id === cli);
   // The account an agent starts on where none is added yet.
-  const known = row?.accounts.length ? row.accounts : [{ name: "default", signedIn: row?.shared ? false : null, agents: [] }];
+  const known = row?.accounts.length ? row.accounts : [{ name: "default", signedIn: false, agents: [] }];
   useEffect(() => {
     if (!known.some((account) => account.name === value)) onChange(known[0]!.name);
   }, [known, value, onChange]);
   const state = (account: (typeof known)[number]) =>
     account.signedIn === true ? "signed in" : account.signedIn === false ? (account.agents.length > 0 && account.agents.every((agent) => agent.signedIn) ? "its agents signed in" : "not signed in yet") : "signs in per agent";
   return (
-    <Field label="Account" hint={row?.shared ? `Agents on one account share its ${row.name} sign-in and its limits.` : "Each agent on an account signs in once, on its Brain tab."}>
+    <Field label="Account" hint="Agents on one account share its sign-in and its limits.">
       <div className="flex flex-wrap items-center gap-3">
         <select className="select select-sm rounded-xl" value={value} onChange={(event) => onChange(event.target.value)}>
           {known.map((account) => (

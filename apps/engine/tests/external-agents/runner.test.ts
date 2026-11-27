@@ -1133,6 +1133,27 @@ describe("an account at its limit, and the agent's next one", () => {
     expect(asked).toBe(2);
   });
 
+  test("a turn ended, failed or not, has what its CLI changed of the account's sign-in kept; a failure to keep it fails nothing", async () => {
+    const { ExternalTurnRunner } = await import("@/modules/external-agents/runner.ts");
+    const coder = { config: { id: "coder", displayName: "Coder", external: { cli: "fake", profile: "work" } }, persona: { identity: "" } } as unknown as LoadedAgent;
+    const kept: string[] = [];
+    const host = {
+      connection: async () => {
+        throw new Error("refused");
+      },
+      row: () => ({ id: "fake", name: "Fake CLI" }),
+      keepSignIn: async (agentId: string) => {
+        kept.push(agentId);
+        throw new Error("the folder could not be read");
+      },
+      setUnavailable: () => {},
+    } as never;
+    const turn = { agent: coder, toolset: { definitions: [], get: () => undefined }, history: [], userMessage: { role: "user", content: "hello" }, gateway: "telegram", gatewayId: "telegram:coder", chatId: "555" } as unknown as TurnRequest;
+    // The turn's own failure is what is thrown, not the keeping's.
+    await expect(new ExternalTurnRunner(coder, {} as ExecutorDeps, host).run(turn)).rejects.toThrow("refused");
+    expect(kept).toEqual(["coder"]);
+  });
+
   test("every account at its limit is said with each, and the agent is not one that cannot answer", async () => {
     const { service, runner, req } = setup({ row: limited("tok-first,tok-second"), tokens: TOKENS, external: BOTH });
     await expect(runner.run(req("push the fix"))).rejects.toThrow("Every account of Coder is at its limit: first (it did not say until when), second (it did not say until when).");

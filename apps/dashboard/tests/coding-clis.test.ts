@@ -29,7 +29,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 const CLIS: CliAccountsView[] = [
   { id: "claude-code", name: "Claude Code", maker: "Anthropic", installed: true, version: "0.95.0", install: "npm i -g", shared: true, canLogin: true, accounts: [{ name: "team", signedIn: false, agents: [{ id: "nix", name: "Nix", signedIn: false }, { id: "nox", name: "Nox", signedIn: false }] }] },
-  { id: "codex", name: "Codex", installed: true, version: "0.9.1", install: "npm i -g codex-acp", shared: false, canLogin: true, accounts: [{ name: "work", signedIn: null, agents: [{ id: "coder", name: "Coder", signedIn: false }] }] },
+  { id: "codex", name: "Codex", installed: true, version: "0.9.1", install: "npm i -g codex-acp", shared: false, canLogin: true, accounts: [{ name: "work", signedIn: false, agents: [{ id: "coder", name: "Coder", signedIn: false }] }] },
   { id: "gemini", name: "Gemini CLI", installed: false, install: "npm i -g gemini-acp", shared: false, canLogin: true, accounts: [] },
   { id: "mine", name: "Mine", installed: false, install: "download mine-acp from mine.example.test onto the PATH", shared: false, canLogin: false, accounts: [] },
 ];
@@ -168,15 +168,17 @@ describe("Coding CLIs on the Models page", () => {
     }
   });
 
-  test("a shared account is signed in on its row, for all its agents; a per-agent CLI sends each agent to its Brain tab", async () => {
+  test("every account is signed in on its row, for all its agents, whatever its CLI keeps its sign-in in", async () => {
     const { posted } = serve();
     const { host, unmount } = await mount();
     try {
       expect(host.textContent).toContain("Each account is signed in once, here, and every agent on it answers with it.");
       expect(host.textContent).toContain("its agents share its limits");
-      expect(host.textContent).toContain("Each agent on an account signs in once, on its own Brain tab");
-      expect(host.textContent).toContain("One sign-in per agent");
-      expect(host.querySelector('a[href$="/agents/coder/cli"]')?.textContent).toBe("Sign in");
+      // Codex's account too, which named a sign-in nowhere and sent each agent to its own Brain tab.
+      expect(host.textContent).not.toContain("on its own Brain tab");
+      expect(host.textContent).not.toContain("One sign-in per agent");
+      expect(host.querySelector('a[href$="/agents/coder/cli"]')).toBeNull();
+      await eventually(() => [...host.querySelectorAll("button")].filter((one) => one.textContent?.trim() === "Sign in").length === 2, 2_000, "a Sign in on each account");
       // A missing CLI a package manager installs: one plain line, and the orchestrator asked to set it up in a message
       // the person sends; the command under Details, for whoever runs the server (0.8.19).
       expect(plainText(host)).toContain("Gemini CLI is not set up on this server yet.");
@@ -207,9 +209,11 @@ describe("Coding CLIs on the Models page", () => {
     }
   });
 
-  test("a shared account whose agents signed in on their own says so, not that it is signed out", async () => {
+  test("an account whose agents signed in on their own says so, not that it is signed out", async () => {
     const answering = structuredClone(CLIS);
     answering[0]!.accounts[0]!.agents = answering[0]!.accounts[0]!.agents.map((agent) => ({ ...agent, signedIn: true }));
+    // Codex's too: its agent signed in on its Brain tab, as every Codex agent had to before its account could be.
+    answering[1]!.accounts[0]!.agents = answering[1]!.accounts[0]!.agents.map((agent) => ({ ...agent, signedIn: true }));
     serve();
     const fetchWith = globalThis.fetch;
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => (new URL(String(input), "http://localhost").pathname === "/api/control/cli-accounts" ? json({ clis: answering }) : fetchWith(input, init))) as typeof fetch;

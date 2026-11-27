@@ -2,13 +2,14 @@
  * Coding-CLI accounts (0.8.1): what the Models page lists under Coding CLIs — each CLI, its accounts, and the agents on
  * each with whether they can answer. An agent's account is its `[external] profile`.
  *
- * Two kinds, by what the CLI can do, the same on the page:
- * - **shared** — a CLI with a `sharedLogin` (Claude Code's `setup-token`) signs an account in once; the long-lived token
- *   it prints is kept in the secret store and handed to each agent's CLI on that account as it starts. Every agent on it
- *   answers once it is signed in.
- * - **one sign-in per agent** — any other CLI (Codex's ChatGPT sign-in) has no token to share:
- *   copying one sign-in into several agents' folders would have them refresh it out from under each other, so each
- *   agent on the account signs in once, in its own folder, and the page says which have.
+ * Every account is signed in once, on the page, and every agent put on it answers with that sign-in. Two ways, by
+ * what the CLI can do:
+ * - **a token** — a CLI with a `sharedLogin` (Claude Code's `setup-token`) prints a long-lived token, kept in the secret
+ *   store and handed to each agent's CLI on that account as it starts.
+ * - **files** — any other CLI (Codex's ChatGPT sign-in, Antigravity's Google one) keeps its sign-in in files: they are
+ *   kept in a folder of the account's and written into each agent's folder as its CLI starts, what a CLI refreshed
+ *   copied back after its turn (`account-sign-in.ts`). An agent may still sign in by itself on its Brain tab, as each
+ *   had to before; an account signed in here is written over that at its CLI's next start.
  *
  * Either way the agent runs inside the CLI itself, signed in with the CLI's own sign-in; nothing takes a sign-in out of
  * a CLI for anything else but asking its maker how much of the account is used (`account-use.ts`), the request the
@@ -23,8 +24,8 @@ import type { ScannedCli } from "./scan.ts";
 
 export interface CliAccountView {
   name: string;
-  /** A shared account: whether its token is kept. One sign-in per agent: null — each agent's line says. */
-  signedIn: boolean | null;
+  /** Whether it was signed in here: its token kept, or its sign-in's files. */
+  signedIn: boolean;
   /** `on`: the account the agent's CLI runs on now, where it moved off this one at a limit (`rotation.ts`). */
   agents: { id: string; name: string; signedIn: boolean | null; on?: string }[];
   /** The limits this account is at now, a sentence a model; absent where it is at none. */
@@ -56,6 +57,10 @@ export interface AccountsDeps {
   file?: { load(): Record<string, string[]>; save(accounts: Record<string, string[]>): void };
   /** The secret store, for shared accounts' tokens. Absent: none can be shared (a test's service). */
   tokens?: { get(name: string): string | undefined; set(name: string, value: string): Promise<void>; delete(name: string): Promise<boolean> };
+  /** Whether an account of a CLI whose sign-in is files was signed in here (`account-sign-in.ts`). Absent: none was. */
+  signedIn?: (row: CliRow, account: string) => boolean;
+  /** That sign-in, gone with the account. */
+  forget?: (cli: string, account: string) => void;
 }
 
 /** Where a shared account's token is kept in the secret store: a name of its own, the CLI's and the account's. */
@@ -100,6 +105,7 @@ export class CliAccounts {
     if (users.length > 0) return { ok: false, error: `${users.join(", ")} ${users.length === 1 ? "uses" : "use"} it. Move ${users.length === 1 ? "it" : "them"} to another account first.`, users };
     const kept = this.deps.file?.load() ?? {};
     this.deps.file?.save({ ...kept, [cli]: (kept[cli] ?? []).filter((entry) => entry !== name) });
+    this.deps.forget?.(cli, name);
     try {
       return { ok: true, tokenRemoved: (await this.deps.tokens?.delete(tokenSecretName(cli, name))) ?? false };
     } catch (err) {
@@ -135,7 +141,7 @@ export class CliAccounts {
           on.push({ id: agent.config.id, name: agent.config.displayName, signedIn: inUse?.signedIn ?? null, ...(now && now !== name ? { on: now } : {}) });
         }
         const limits = turn?.says(row.id, name) ?? [];
-        accounts.push({ name, signedIn: row.sharedLogin ? this.token(row, name) !== undefined : null, agents: on, ...(limits.length > 0 ? { limits } : {}) });
+        accounts.push({ name, signedIn: row.sharedLogin ? this.token(row, name) !== undefined : (this.deps.signedIn?.(row, name) ?? false), agents: on, ...(limits.length > 0 ? { limits } : {}) });
       }
       views.push({
         id: row.id,

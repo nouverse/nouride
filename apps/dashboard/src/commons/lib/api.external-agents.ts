@@ -29,7 +29,6 @@ export const externalAgentsApi = {
   /** Asks the CLI on each profile, so it takes seconds; `fresh` asks again rather than take the last answer. */
   agentCliProfiles: (id: string, fresh = false) => request<{ profiles: CliProfile[]; separate: boolean; models: { value: string; name?: string }[] }>(`${control}/agents/${id}/cli/profiles${fresh ? "?fresh=1" : ""}`),
   /** On the profile the agent answers with, or on the one named — a new name is a new profile. */
-  startCliLogin: (id: string, profile?: string) => post<{ login: CliLoginView }>(`${control}/agents/${id}/cli/login`, profile ? { profile } : {}),
   answerCliLogin: (id: string, text: string) => post<{ login: CliLoginView }>(`${control}/agents/${id}/cli/login/answer`, { text }),
   stopCliLogin: (id: string) => post<{ ok: true }>(`${control}/agents/${id}/cli/login/stop`, {}),
 };

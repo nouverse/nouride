@@ -486,7 +486,8 @@ modes = { folder = "build", all = "plan" }   # each preset as the CLI's own mode
 
 An id a built-in CLI has is refused at load, and so is an id written twice; a key it does not read is warned about.
 There is no `env`: a secret the CLI needs is bound to its command in the agent's `[security.exec_secrets]`. A CLI you add
-runs as the agent's own user only where each agent has one, gets no skills, and signs in once per agent.
+runs as the agent's own user only where each agent has one, gets no skills, and, with a `login`, is signed in on the
+account like the others.
 
 Per agent, in its pack's `config.toml`:
 

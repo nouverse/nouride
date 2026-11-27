@@ -6,7 +6,7 @@
 
 import type { ProjectSkills } from "@nouride/persona";
 import type { GlobalConfig } from "@nouride/shared";
-import { totalMemoryBytes, type CommandIsolation } from "@nouride/runtime";
+import { join, totalMemoryBytes, type CommandIsolation } from "@nouride/runtime";
 import type { SecretStore } from "@nouride/secrets";
 import { cliAccountsState, cliLeftRunningState, cliLimitsState, cliNewestState, externalEffortsState, externalInstructionsState, externalModelsState, externalSessionsState, externalVersionsState } from "@/commons/daemon-state.ts";
 import type { StateRows } from "@/commons/daemon-state.store.ts";
@@ -24,6 +24,8 @@ export function startExternalAgents(params: { config: GlobalConfig; state: State
     rows: () => cliRows(params.config.externalClis),
     agentsOn: params.agentsOn,
     workspaceDir: () => params.config.daemon.workspaceDir,
+    // An account's sign-in of a CLI that has no token to share: in the data folder, which no agent reads.
+    signInsDir: () => join(params.config.daemon.dataDir, "cli-accounts"),
     secretsFor: (agentId, argv) => params.childEnv.forCommand(agentId, argv).env,
     sessions: externalSessionsState(params.state),
     instructions: externalInstructionsState(params.state),
