@@ -13,8 +13,9 @@
  * - **Learn shared knowledge** lets the pass suggest what every agent should know; each one still
  *   waits for a person, since it is read in every chat.
  *
- * "Skip for now" turns all of it off. Everything is under Dashboard → Memory afterwards, where the
- * words can be longer.
+ * One way on, Finish setup, which saves the switches as they are: turned off here, each is off. A second button that
+ * turned all of them off beside it was one choice too many on the last step: one call to action.
+ * Everything is under Dashboard → Memory afterwards, where the words can be longer.
  */
 
 import { useNavigate } from "@tanstack/react-router";
@@ -96,14 +97,9 @@ export function MemoryStep() {
       <p className="text-base-content/65 text-xs">Uses your model once a night. You can change this any time in Dashboard → Memory.</p>
 
       {finish.error ? <ErrorNote error={finish.error} /> : null}
-      <div className="flex flex-col gap-2 sm:flex-row-reverse">
-        <button type="button" className="btn btn-primary rounded-xl sm:flex-1" disabled={busy} onClick={() => finish.mutate(choice)}>
-          {finish.isPending ? <Loader2 size={16} className="animate-spin" /> : null} Finish setup
-        </button>
-        <button type="button" className="btn btn-ghost rounded-xl" disabled={busy} onClick={() => finish.mutate({ ...choice, remember: false })}>
-          Skip for now
-        </button>
-      </div>
+      <button type="button" className="btn btn-primary w-full rounded-xl" disabled={busy} onClick={() => finish.mutate(choice)}>
+        {finish.isPending ? <Loader2 size={16} className="animate-spin" /> : null} Finish setup
+      </button>
     </div>
   );
 }
