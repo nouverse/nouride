@@ -65,7 +65,7 @@ export function gatewayOffer(state: SetupState | null | undefined): { mount: str
   return offered?.mount && !offered.locked && !offered.on ? { mount: offered.mount, on: false } : null;
 }
 
-/** Whether the LLM Gateway page is in the menu: it can show the gateway, or there is a switch on it to turn. */
+/** Whether the Models page offers Nougate's page: it can show the gateway, or there is a switch on it to turn. */
 export function gatewayPage(state: SetupState | null | undefined): boolean {
   return gatewayDashboard(state) !== null || gatewaySwitch(state) !== null;
 }
@@ -96,10 +96,10 @@ export function nougateConsoleUrl(baseUrl: string): string | null {
 }
 
 /**
- * Whether a provider endpoint is the gateway this daemon hosts — which has no console of its own to
- * link to (`nougateConsoleUrl` says null for loopback) but does have the LLM Gateway page.
+ * The provider profiles an agent's model picker offers: one on the Nougate this server carries only once it can answer,
+ * on with an account signed in there. Off, it would be picked first on a new install (it is listed first) and answer
+ * nothing. The one the agent is on now stays, so its page shows what it uses.
  */
-export function isBundledEndpoint(baseUrl: string, state: SetupState | null | undefined): boolean {
-  const origin = state?.bundledGateway?.baseUrl?.replace(/\/+$/, "");
-  return gatewayDashboard(state) !== null && !!origin && baseUrl.trim().startsWith(`${origin}/`);
+export function offeredProfiles<T extends { name: string; bundled?: "off" | "no-account" | "ready" }>(profiles: readonly T[], current?: string): T[] {
+  return profiles.filter((profile) => !profile.bundled || profile.bundled === "ready" || profile.name === current);
 }

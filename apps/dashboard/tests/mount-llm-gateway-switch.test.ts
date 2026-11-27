@@ -154,16 +154,24 @@ test("turned off where nothing restarts Nouride, the page says it stops at the n
   expect(html).not.toMatch(/<button[^>]*>(?:(?!<\/button>).)*Turn off/);
 });
 
-test("the LLM Gateway page is in the menu whenever the build carries it, and not where it does not", async () => {
-  const menu = async (bundledGateway: unknown) => {
-    answer({ "/setup/state": { status: 200, body: { ...FINISHED, bundledGateway } } });
-    return renderPage("/settings");
+test("Nougate's page is opened from Models whenever the build carries it, not from the menu, and its providers say where it stands", async () => {
+  const models = async (bundledGateway: unknown, providers: unknown[] = []) => {
+    answer({ "/setup/state": { status: 200, body: { ...FINISHED, bundledGateway } }, "/providers": { status: 200, body: { providers, editable: true } } });
+    return renderPage("/models");
   };
-  expect(await menu(OFF)).toContain("LLM Gateway");
-  expect(await menu({ available: false, carried: false })).not.toContain("LLM Gateway");
+  expect(await models(OFF)).toContain("Open Nougate");
+  expect(await models({ available: false, carried: false })).not.toContain("Open Nougate");
   // A daemon older than the switch: only where the page can show it, as before.
-  expect(await menu({ available: true, mount: "/llm-gateway", dashboard: true })).toContain("LLM Gateway");
-  expect(await menu({ available: false })).not.toContain("LLM Gateway");
+  expect(await models({ available: true, mount: "/llm-gateway", dashboard: true })).toContain("Open Nougate");
+  expect(await models({ available: false })).not.toContain("Open Nougate");
+  answer({ "/setup/state": { status: 200, body: { ...FINISHED, bundledGateway: OFF } } });
+  expect(await renderPage("/settings")).not.toContain("LLM Gateway");
+  // A new install's provider, Nougate off: said off, not as a key missing, which Nougate gives it itself.
+  const off = { name: "nougate-openai", kind: "openai", baseUrl: "http://127.0.0.1:18256/openai/v1", apiKeySecret: "nougate_api_key", hasCredential: false, builtIn: false, headers: {}, bundled: "off" };
+  const page = await models(OFF, [off]);
+  expect(page).toMatch(/>Off</);
+  expect(page).not.toContain("No Key Set");
+  expect(await models(OFF, [{ ...off, bundled: "no-account" }])).toContain("No account");
 });
 
 test("a container under the image's old name is told the new one, and a dismissed notice stays dismissed for the session", async () => {

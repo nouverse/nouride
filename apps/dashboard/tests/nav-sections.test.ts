@@ -82,20 +82,20 @@ describe("a section's tabs", () => {
 
 describe("what a person may see", () => {
   const settings = SETTINGS.flatMap((group) => group.items);
-  test("a member sees no admin page, a box's page only on a paired box, the gateway only where it is hosted", () => {
+  test("a member sees no admin page, and a box's page only on a paired box", () => {
     const shown = (where: Parameters<typeof visible>[1]) => visible(settings, where).map((one) => one.label);
     // Open agents beside Access, as Access is: anyone may see an open agent's limits and its blocked; who wrote is an admin's.
-    expect(shown({ admin: false, onBox: true, hostsGateway: true })).toEqual(["Access", "Open agents", "My Account", "Logs", "Update"]);
+    expect(shown({ admin: false, onBox: true })).toEqual(["Access", "Open agents", "My Account", "Logs", "Update"]);
     // An admin reaches Logs and Update as tabs of System, in the menu itself: neither is listed a second time under Settings.
-    expect(shown({ admin: true, onBox: true, hostsGateway: true })).not.toContain("Logs");
-    expect(shown({ admin: true, onBox: true, hostsGateway: true })).not.toContain("Update");
-    expect(shown({ admin: true, onBox: false, hostsGateway: false })).not.toContain("My Box");
-    expect(shown({ admin: true, onBox: false, hostsGateway: false })).not.toContain("LLM Gateway");
-    expect(shown({ admin: true, onBox: true, hostsGateway: true })).toEqual(expect.arrayContaining(["My Box", "LLM Gateway", "Models", "Secrets"]));
+    expect(shown({ admin: true, onBox: true })).not.toContain("Logs");
+    expect(shown({ admin: true, onBox: true })).not.toContain("Update");
+    expect(shown({ admin: true, onBox: false })).not.toContain("My Box");
+    expect(shown({ admin: true, onBox: true })).toEqual(expect.arrayContaining(["My Box", "Models", "Secrets"]));
   });
 
-  test("the LLM Gateway comes first among models and keys, above Models", () => {
-    expect(SETTINGS[0]!.items.map((one) => one.label)).toEqual(["LLM Gateway", "Models", "Secrets"]);
+  test("Nougate's page is opened from Models, not the menu: Models is the page you are on there", () => {
+    expect(SETTINGS[0]!.items.map((one) => one.label)).toEqual(["Models", "Secrets"]);
+    expect(SETTINGS[0]!.items[0]!.holds).toEqual(["/llm-gateway"]);
   });
 
   test("every page of Settings says what it is for, in a line", () => {

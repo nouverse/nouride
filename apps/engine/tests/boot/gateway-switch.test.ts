@@ -37,6 +37,31 @@ function harness(over: Partial<GatewaySwitchDeps> & { fail?: string } = {}) {
   return { sw, calls, gateway };
 }
 
+describe("what follows its start", () => {
+  test("runs before it is handed out, at boot and turned on: its profiles have their key before a turn asks", async () => {
+    const seen: (EmbeddedGateway | null)[] = [];
+    // Looked at after a wait of its own, as storing a key waits: one not waited for would find it handed out by then.
+    const looking = (sw: () => GatewaySwitch) => async () => {
+      await Promise.resolve();
+      seen.push(sw().current());
+    };
+    const on: ReturnType<typeof harness> = harness({ started: looking(() => on.sw) });
+    await on.sw.turnOn("admin");
+    const boot: ReturnType<typeof harness> = harness({ started: looking(() => boot.sw) });
+    await boot.sw.boot(true);
+    // Not yet the current one while it ran, then the current one.
+    expect(seen).toEqual([null, null]);
+    expect([on.sw.current(), boot.sw.current()]).toEqual([on.gateway, boot.gateway]);
+  });
+
+  test("a throw there is said, and leaves it running and written on", async () => {
+    const { sw, calls, gateway } = harness({ started: async () => { throw new Error("the key could not be stored"); } });
+    expect(await sw.turnOn("admin")).toEqual({ ok: true, started: true, saved: true });
+    expect(sw.current()).toBe(gateway);
+    expect(calls.saved).toEqual([true]);
+  });
+});
+
 describe("turned on after boot", () => {
   test("starts it, then writes the setting, and it is the gateway every reader gets from then on", async () => {
     const { sw, calls, gateway } = harness();

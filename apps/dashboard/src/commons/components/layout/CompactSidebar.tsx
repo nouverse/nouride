@@ -24,7 +24,7 @@ export function CompactSidebar({
   signOut,
 }: {
   pathname: string;
-  where: { admin: boolean; onBox: boolean; hostsGateway: boolean };
+  where: { admin: boolean; onBox: boolean };
   onExpand: () => void;
   theme: Theme;
   toggleTheme: () => void;

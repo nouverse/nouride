@@ -12,7 +12,6 @@ import { useState } from "react";
 import { ArrowUpRight, BookOpen, MessagesSquare } from "lucide-react";
 import { api } from "@/commons/lib/api";
 import { isPairedBox } from "@/commons/lib/api.appliance";
-import { gatewayPage } from "@/commons/lib/bundled-gateway";
 import { COMMUNITY_URL, DOCS_URL } from "@/commons/lib/docs";
 import { isAdmin, useMe } from "@/commons/lib/session";
 import { SETTINGS, visible, type NavItem } from "@/commons/components/layout/nav";
@@ -29,9 +28,8 @@ function matches(item: NavItem, words: string): boolean {
 export default function SettingsPage() {
   // The shell's own queries, asked again by the same keys: answered from the cache, not the daemon.
   const me = useMe();
-  const setup = useQuery({ queryKey: ["setup"], queryFn: api.setupState });
   const health = useQuery({ queryKey: ["health"], queryFn: api.health, staleTime: 60_000 });
-  const where = { admin: isAdmin(me.data ?? null), onBox: isPairedBox(health.data), hostsGateway: gatewayPage(setup.data ?? null) };
+  const where = { admin: isAdmin(me.data ?? null), onBox: isPairedBox(health.data) };
   const [query, setQuery] = useState("");
   const words = query.trim().toLowerCase();
   const groups = SETTINGS.map((group) => ({ group: group.group, items: visible(group.items, where).filter((item) => matches(item, words)) })).filter((group) => group.items.length > 0);

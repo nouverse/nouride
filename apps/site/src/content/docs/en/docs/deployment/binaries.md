@@ -16,8 +16,8 @@ Sizes are approximate, measured on `linux-x64` builds of 0.7. The idle RSS figur
 release and has not been re-measured since.
 
 Community is one account with a local password, an in-process SQLite database, and TOML configuration. Nougate
-is in the same process and stays off until you choose **Use Nougate** in setup or turn it on from the
-dashboard's **LLM Gateway** page (`[nougate] in_process = true`). Carried and off, it costs about 0.5 MB of
+is in the same process and stays off until you choose **Use Nougate** in setup or turn it on from its page,
+**Open Nougate** on the dashboard's **Models** page (`[nougate] in_process = true`). Carried and off, it costs about 0.5 MB of
 binary and 1.3 MB of memory; on and idle, about 3.6 MB more. It is not a second process.
 
 The Router edition, which was Community with the gateway on, is part of Community since 0.8.28: install Community,

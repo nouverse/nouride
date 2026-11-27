@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { HeadlineField } from "@/commons/components/ui/HeadlineField";
 import { useEffect, useRef, useState } from "react";
+import { offeredProfiles } from "@/commons/lib/bundled-gateway";
 import { api } from "@/commons/lib/api";
 import { Card, ErrorNote, Field } from "@/commons/components/ui/ui";
 import { Combobox } from "@/commons/components/ui/Combobox";
@@ -78,7 +79,7 @@ export function NewAgentForm({
   }, [presets.data, preset]);
 
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers, retry: false });
-  const profiles = providers.data?.providers ?? [];
+  const profiles = offeredProfiles(providers.data?.providers ?? []);
   const profile = profiles.find((entry) => entry.name === provider);
 
   /**

@@ -142,8 +142,8 @@ that turns it on: the code is not in there.
 
 ### Nougate in the container
 
-Nougate is off until you choose **Use Nougate** in setup or turn it on from the **LLM Gateway** page. Its
-dashboard is that page, behind the same sign-in, and it keeps its state, its accounts, providers and
+Nougate is off until you choose **Use Nougate** in setup or turn it on from its page (**Open Nougate** on
+**Models**). Its dashboard is that page, behind the same sign-in, and it keeps its state, its accounts, providers and
 `nougate.db`, in `./nouride/nougate/data/`, inside the same single volume mount. Publish port `18256` as well only
 for what calls the gateway directly: other tools with a gateway key, or its standalone console at
 `http://<your-ip>:18256/frontend/`:

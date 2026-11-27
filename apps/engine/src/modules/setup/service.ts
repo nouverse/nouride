@@ -16,6 +16,7 @@ import { cleanHeadline, HEADLINE_MAX } from "./identity-headline.ts";
 import { LOCAL_GATEWAY_ID, TERMINAL_SENDER } from "@/modules/gateways/local.ts";
 import { join, listDir, parseToml, removePath, writeTextFileAtomic } from "@nouride/runtime";
 import { editDaemonConfig } from "@/modules/config/config-file.ts";
+import { keyBundledProfiles, NOUGATE_PROFILES, writeNougateProfiles } from "@/modules/config/nougate-profiles.ts";
 import { saveProvider as saveProfile } from "@/modules/config/settings/providers.ts";
 import { createLogger, type AgentAccess, type GlobalConfig } from "@nouride/shared";
 import type { SecretStore } from "@nouride/secrets";
@@ -38,15 +39,6 @@ const log = createLogger("setup");
 
 /** The profile the wizard writes when no name is given. The secret it names is the Models page's rule: `<name>_api_key`. */
 export const SETUP_PROFILE = "default";
-
-/**
- * The profile "Use Nougate LLM Gateway" writes, named after the gateway as the wizard's old offer
- * named it — so a profile filled in by hand on an earlier version is the same profile, not a second.
- */
-export const GATEWAY_PROFILE = "nougate";
-
-/** What the daemon's own key is called on the gateway's API Keys page — so nobody revokes it unknowingly. */
-const GATEWAY_KEY_NAME = "Nouride agents";
 
 const VALID_AGENT_ID = /^[a-z][a-z0-9-]{1,31}$/;
 
@@ -284,17 +276,16 @@ export class SetupService {
   }
 
   /**
-   * Point the daemon at the gateway it hosts, with a key it mints itself — the wizard's "Use Nougate
-   * LLM Gateway".
+   * Point the daemon at the gateway it hosts, with a key it mints itself — the wizard's "Use Nougate".
    *
    * The person signs in to an account (Claude, ChatGPT, Copilot…) through the gateway's own dashboard
    * API first; that is what makes a model answer, and it is theirs to do. Everything after it is
-   * plumbing they should never see: a gateway key, the secret it is stored under, a provider
-   * profile. So none of it is asked for.
+   * plumbing they should never see: a gateway key, the secret it is stored under, the provider
+   * profiles. So none of it is asked for. The profiles are the two every new install has
+   * (`config/nougate-profiles.ts`), written here where they are not yet: no third one of the wizard's own.
    *
-   * Refused before any account is signed in. The profile would save and the agent step would offer
-   * models no account can serve — the first message would fail with an error about a provider the
-   * person never chose.
+   * Refused before any account is signed in. The profiles would offer the agent step models no account
+   * can serve — the first message would fail with an error about a provider the person never chose.
    *
    * Pressing it twice reuses the key (`ensureHostKey` hands back one that still verifies), so the
    * gateway's API Keys page does not fill up with copies.
@@ -306,22 +297,14 @@ export class SetupService {
     const models = gateway.connectedModels();
     if (models.length === 0) return { ok: false, error: "Sign in to at least one account first." };
 
-    // The secret the profile already names, when there is one: its key is handed back while it still verifies.
-    const secretName = this.deps.config.providers[GATEWAY_PROFILE]?.apiKeySecret ?? `${GATEWAY_PROFILE}_api_key`;
-    const { key, minted } = await gateway.ensureHostKey(GATEWAY_KEY_NAME, this.deps.secrets.resolve(secretName) ?? null);
-    const saved = await this.saveProvider({
-      kind: "openai",
-      name: GATEWAY_PROFILE,
-      baseUrl: `${gateway.url}/openai/v1`,
-      apiKey: key,
-      actor: input.actor,
-      // The gateway is in this process and the key was minted a moment ago; there is nothing a
-      // round trip through its port would tell us that `connectedModels` has not.
-      skipProbe: true,
-    });
-    if (!saved.ok) return saved;
+    const written = await writeNougateProfiles({ configPath: this.deps.configPath, config: this.deps.config });
+    if (!written.ok) return written;
+    const keyed = await keyBundledProfiles({ config: this.deps.config, gateway, secrets: this.deps.secrets });
+    // A client built before its key was set is let go: the next call through each profile takes the one stored now.
+    for (const profile of NOUGATE_PROFILES) this.deps.providers.forget(profile.name);
+    for (const name of written.written) this.deps.audit?.record({ action: "provider_configured", actor: input.actor, details: { profile: name, base_url: this.deps.config.providers[name]?.baseUrl ?? "" } });
 
-    log.info("connected to the bundled gateway", { minted_key: minted, models: models.length, actor: input.actor });
+    log.info("connected to the bundled gateway", { profiles: written.written, keys_set: keyed.length, models: models.length, actor: input.actor });
     return { ok: true, models };
   }
 

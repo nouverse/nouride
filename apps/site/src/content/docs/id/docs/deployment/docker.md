@@ -145,8 +145,8 @@ yang bisa menyalakannya: kodenya memang gak ada di dalam.
 
 ### Nougate di dalam container
 
-Nougate mati sampai kamu memilih **Use Nougate** di setup atau menyalakannya dari halaman **LLM Gateway**.
-Dashboard-nya adalah halaman itu, dengan login yang sama, dan ia menyimpan state-nya, yaitu akun, provider, dan
+Nougate mati sampai kamu memilih **Use Nougate** di setup atau menyalakannya dari halamannya (**Open Nougate** di
+**Models**). Dashboard-nya adalah halaman itu, dengan login yang sama, dan ia menyimpan state-nya, yaitu akun, provider, dan
 `nougate.db`, di `./nouride/nougate/data/`, tetap di dalam satu volume mount yang sama. Publish port `18256` juga
 hanya untuk yang memanggil gateway secara langsung: tool lain dengan key gateway, atau console mandirinya di
 `http://<ip-kamu>:18256/frontend/`:

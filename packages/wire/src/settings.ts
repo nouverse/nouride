@@ -29,4 +29,9 @@ export interface ProviderProfileView {
   builtIn: boolean;
   /** Its extra headers by name. A saved value is `null`, never sent, but for `{session}`: the one that is no secret. */
   headers: Record<string, string | null>;
+  /**
+   * On the gateway this build carries (Nougate): off, on with no account signed in there, or ready. Absent for any
+   * other profile. An agent's model picker offers one only when it is ready.
+   */
+  bundled?: "off" | "no-account" | "ready";
 }

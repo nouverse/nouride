@@ -63,10 +63,11 @@ System                                                                        (a
 
 Settings
   Models and keys
-    LLM Gateway     Nougate di dalam daemon: nyala atau mati, akun, pemakaian (admin)
     Models          Model providers: endpoint, wire format, kredensial;       (admin)
                     Coding CLIs: akun tiap CLI dan login-nya;
                     Model tiers (tombol): tiga tingkat, milik tiap helper
+                    Open Nougate (tombol): halaman Nougate di dalam daemon:
+                    nyala atau mati, akun, pemakaian
     Secrets         kredensial, untuk apa masing-masing, password backup      (admin)
   Reaching out
     Integrations    aplikasi AI lain yang menjangkau memori, satu key per aplikasi (admin)

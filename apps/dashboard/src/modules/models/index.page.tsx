@@ -14,13 +14,14 @@ import { api } from "@/commons/lib/api";
 import type { ProviderProfileView } from "@nouride/wire";
 import { Card, EmptyState, ErrorNote, Field, PageHeader } from "@/commons/components/ui/ui";
 import { useConfirm } from "@/commons/components/ui/confirm";
-import { isBundledEndpoint, nougateConsoleUrl } from "@/commons/lib/bundled-gateway";
+import { gatewayPage, nougateConsoleUrl } from "@/commons/lib/bundled-gateway";
 import { useSaved } from "@/commons/hooks/use-saved";
 import { useProviderDraft } from "@/commons/hooks/use-provider-draft";
 import { ExtraHeaders } from "@/commons/components/providers/ExtraHeaders";
 import { Count, SegmentedTabs } from "@/commons/components/ui/SegmentedTabs";
 import { StickyBar } from "@/commons/components/ui/StickyBar";
 import { ModelTiersButton } from "./components/ModelTiers";
+import { OpenNougate, ProfileBadge } from "./components/ProviderState";
 import { CodingClis } from "./components/CodingClis";
 import { ListLoading } from "@/commons/components/ui/Spinner";
 import { PAGE_ASKS } from "@/commons/components/agents/page-asks";
@@ -35,6 +36,7 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
   const queryClient = useQueryClient();
   const providers = useQuery({ queryKey: ["providers"], queryFn: api.providers });
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const setup = useQuery({ queryKey: ["setup"], queryFn: api.setupState });
   const [adding, setAdding] = useState(false);
   const [source, setSource] = useState<"providers" | "clis">(tab ?? "providers");
 
@@ -54,6 +56,8 @@ export default function ModelsPage({ tab }: { tab?: "clis" | undefined } = {}) {
         actions={
           source === "clis" ? undefined : (
             <div className="flex flex-wrap items-center gap-2">
+              {/* Nougate's own page, where its accounts are signed in: opened from here, beside its two providers. */}
+              {gatewayPage(setup.data) ? <OpenNougate /> : null}
               <ModelTiersButton />
               <button
                 type="button"
@@ -160,8 +164,7 @@ function ProfileCard({
 
   const console_ = nougateConsoleUrl(profile.baseUrl);
   // The gateway this daemon hosts has no console to link to, but it does have a page here.
-  const { data: setup } = useQuery({ queryKey: ["setup"], queryFn: api.setupState });
-  const bundled = isBundledEndpoint(profile.baseUrl, setup);
+  const bundled = profile.bundled;
   const { ask, dialog } = useConfirm();
 
   return (
@@ -187,12 +190,10 @@ function ProfileCard({
           )}
           {bundled && (
             <Link to="/llm-gateway" className="btn btn-ghost btn-xs rounded-lg font-medium gap-1 hover:bg-base-200">
-              LLM Gateway {/* plain-words-ok: the admin page's own name, as the menu has it */}
+              Open Nougate
             </Link>
           )}
-          <span className={`badge badge-sm shrink-0 whitespace-nowrap font-semibold ${profile.hasCredential ? "badge-success shadow-xs" : "badge-error shadow-xs"}`}>
-            {profile.hasCredential ? "Key Active" : "No Key Set"}
-          </span>
+          <ProfileBadge profile={profile} />
           <button
             type="button"
             className="btn btn-ghost btn-xs rounded-lg font-medium hover:bg-base-200"

@@ -25,7 +25,7 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
 
     [Nougate](/id/docs/providers/nougate/), LLM gateway yang membuat setup cukup masuk ke akun AI yang sudah kamu
     bayar alih-alih meminta API key, ikut di setiap instalasi. Ia mati sampai kamu memilih **Use Nougate** di setup,
-    atau menyalakannya dari halaman **LLM Gateway** di dashboard.
+    atau menyalakannya lewat **Open Nougate** di halaman **Models** dashboard.
 
     #### Membuka ke LAN
 
@@ -153,8 +153,8 @@ Script installer sengaja ditulis dalam POSIX `sh` polos dan bisa dibaca dari ata
           - ./nouride:/app/.nouride
     ```
 
-    Nougate juga ada di image ini, mati sampai kamu memilihnya di setup atau di halaman **LLM Gateway**, tempat
-    dashboard-nya berada. Buka port `18256` juga (`- "127.0.0.1:18256:18256"`) hanya untuk tool yang memanggil gateway
+    Nougate juga ada di image ini, mati sampai kamu memilihnya di setup atau menyalakannya dari halamannya (**Open
+    Nougate** di **Models**), tempat dashboard-nya berada. Buka port `18256` juga (`- "127.0.0.1:18256:18256"`) hanya untuk tool yang memanggil gateway
     secara langsung.
 
     <Aside type="note" title="Sebelumnya pakai nouride-router?">

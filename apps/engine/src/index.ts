@@ -53,6 +53,7 @@ import { SkillsWatch } from "@/boot/skills-watch.ts";
 import { startControlPlane } from "@/boot/control-plane.ts";
 import { maskOutbound } from "@/commons/egress.ts";
 import { bootGatewaySwitch } from "@/boot/gateway-switch.ts";
+import { nougateProfilesAtFirstStart } from "@/modules/config/nougate-profiles.ts";
 import { bringConfigForward } from "@/boot/config-forward.ts";
 import { EDITION, GATEWAY_CARRIED } from "@/commons/build.ts";
 import { installShutdown } from "@/boot/shutdown.ts";
@@ -128,6 +129,8 @@ export async function runDaemon(): Promise<void> {
   // The config file this daemon reads and writes: the one it started from, or where one would be.
   const configPath = source ?? defaultConfigPath();
 
+  // A new install is one whose database is not there before this start (`config/nougate-profiles.ts`).
+  const newInstall = !(await fileExists(join(config.daemon.dataDir, "nouride.db")));
   // Opening the stores (`boot/stores.ts`). An agent is read from the registry, which loads below, only once a command runs.
   const stores = await openStores({ config, configPath, progress, agent: (id) => registry.get(id) });
   const {
@@ -135,6 +138,8 @@ export async function runDaemon(): Promise<void> {
     roomMessages, attachmentIndex, recoveredTurns, orphanedTurns, usage, integrity, audit, credentialsDir, childEnv, cron,
     logs, logStore, access, jobWakes, jobs, uploads, notes, accounts, autoApprove, grants, toolGrants,
   } = stores;
+  // The profiles of the gateway the build carries, on a new install: there to find on the Models page, off until on.
+  await nougateProfilesAtFirstStart({ newInstall, carried: GATEWAY_CARRIED, configPath, config });
 
   const builtinSkillsDir = resolveBuiltinSkillsDir();
   // One cache for the daemon: entries are keyed by directory, so two agents naming the same project
@@ -183,7 +188,7 @@ export async function runDaemon(): Promise<void> {
    * starts here, and for the first-run password it shares with the dashboard. A switch rather than the gateway: off
    * now, it can be turned on later without a restart (`boot/gateway-switch.ts`).
    */
-  const { gateway: nougate, initialAdminPassword } = await bootGatewaySwitch({ config, configPath, db, audit });
+  const { gateway: nougate, initialAdminPassword } = await bootGatewaySwitch({ config, configPath, db, audit, secrets });
 
   /**
    * An edition that cannot do external sign-in, asked to do external sign-in.

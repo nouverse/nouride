@@ -15,7 +15,7 @@ import { SecretStore } from "@nouride/secrets";
 import { readTextFileIfExists } from "@nouride/runtime";
 import { AgentRegistry } from "@nouride/persona";
 import { ProviderRegistry } from "@/modules/llm/providers.ts";
-import { GATEWAY_PROFILE, SetupService } from "@/modules/setup/service.ts";
+import { SetupService } from "@/modules/setup/service.ts";
 import { DEFAULT_CONFIG } from "@/modules/config/defaults.ts";
 
 let root: string;
@@ -99,23 +99,23 @@ describe("Use Nougate LLM Gateway", () => {
     expect(result.ok).toBe(false);
     expect(fake.minted()).toBe(0);
     expect(await readTextFileIfExists(configPath)).toBeNull();
-    expect(secrets.resolve(`${GATEWAY_PROFILE}_api_key`)).toBeUndefined();
+    expect(secrets.resolve("nougate_local_key")).toBeUndefined();
     expect(setup.state().hasProvider).toBe(false);
   });
 
-  test("the key is minted by the daemon, stored as a secret, and named — never written — in config", async () => {
+  test("the two profiles every new install has, no third of its own: the key minted, stored as a secret, named in config", async () => {
     const fake = fakeGateway(["codex:gpt-5.1", "codex:gpt-5.1-mini"]);
     const { setup, secrets } = await service(fake.gateway);
     const result = await setup.useBundledGateway({ actor: "owner" });
 
     expect(result).toEqual({ ok: true, models: ["codex:gpt-5.1", "codex:gpt-5.1-mini"] });
     // Named as the Models page names a profile's key: one writer for both.
-    expect(secrets.resolve("nougate_api_key")).toBe("sk-nou-minted-1");
+    expect(secrets.resolve("nougate_local_key")).toBe("sk-nou-minted-1");
 
     const config = (await readTextFileIfExists(configPath)) ?? "";
-    expect(config).toContain("[providers.nougate]");
-    expect(config).toContain('base_url = "http://127.0.0.1:18256/openai/v1"');
-    expect(config).toContain('api_key = "nougate_api_key"');
+    expect(config).toContain('[providers.nougate-openai]\nkind = "openai"\nbase_url = "http://127.0.0.1:18256/openai/v1"\napi_key = "nougate_local_key"');
+    expect(config).toContain('[providers.nougate-anthropic]\nkind = "anthropic"\nbase_url = "http://127.0.0.1:18256/anthropic/v1"\napi_key = "nougate_local_key"');
+    expect(config).not.toContain("[providers.nougate]");
     expect(config).not.toContain("sk-nou-");
     expect(setup.state().hasProvider).toBe(true);
   });
@@ -129,9 +129,11 @@ describe("Use Nougate LLM Gateway", () => {
     writeFileSync(configPath, '[providers.nougate]\nkind = "openai"\nbase_url = "http://127.0.0.1:18256/openai/v1"\napi_key = "my_gate_key"\n');
 
     await setup.useBundledGateway({ actor: "owner" });
-    expect(fake.asked).toEqual(["sk-own-key"]);
+    // Its key offered back first, and kept; the two profiles beside it have their own.
+    expect(fake.asked).toEqual(["sk-own-key", null]);
     expect((await readTextFileIfExists(configPath)) ?? "").toContain('api_key = "my_gate_key"');
-    expect(secrets.inventory().map((entry) => entry.name)).toEqual(["my_gate_key"]);
+    expect(secrets.resolve("my_gate_key")).toBe("sk-own-key");
+    expect(secrets.inventory().map((entry) => entry.name).sort()).toEqual(["my_gate_key", "nougate_local_key"]);
   });
 
   test("pressing it again reuses the stored key rather than minting another", async () => {
