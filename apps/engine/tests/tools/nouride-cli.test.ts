@@ -176,7 +176,9 @@ describe("it covers what exec covers", () => {
     await tool.execute({ args: ["--json", "agents", "update", "codex", "2.5.0"] }, ctx);
     await tool.execute({ args: ["agents", "update", "codex"], background: false }, ctx);
     await tool.execute({ args: ["agents", "scan"] }, ctx);
-    expect(seen.map((args) => args.background)).toEqual([true, true, false, undefined]);
+    // An install by its maker's script downloads the CLI: Cursor's is some hundred megabytes.
+    await tool.execute({ args: ["agents", "install", "cursor"] }, ctx);
+    expect(seen.map((args) => args.background)).toEqual([true, true, false, undefined, true]);
   });
 
   test("it tells `exec` the call is the tool, on the context and not in the arguments", async () => {
@@ -336,6 +338,16 @@ describe("the programs every agent runs (0.8.0)", () => {
     // And what the policy decides is decided on the same words: asked, never answered by `balanced` itself.
     expect(tool("nouva").gate!({ args: ["--json", "approvals", "allow-always"] }, ctx)).toMatchObject({ action: "ask", hardlineClass: "access" });
     expect(tool("nouva").gate!({ args: ["--json", "agent", "external", "kuro", "claude-code"] }, ctx)).toMatchObject({ action: "ask", hardlineClass: "config" });
+  });
+
+  test("a coding CLI installed by its maker's script is the orchestrator's to install, as `tools run` is (0.8.49)", async () => {
+    const install = { args: ["agents", "install", "antigravity"] };
+    expect(tool("nox").gate!(install, ctx)).toMatchObject({ action: "refuse", reason: expect.stringContaining("Only the orchestrator installs") });
+    expect(tool("nox").gate!({ args: ["--json", "agents", "install", "grok"] }, ctx)).toMatchObject({ action: "refuse" });
+    expect(tool("nouva").gate!(install, ctx)).not.toMatchObject({ action: "refuse" });
+    expect((await tool("nouva").execute({ ...install, background: false }, ctx)).content).toContain("argv: agents install antigravity");
+    // The rest of `agents` stays everyone's.
+    expect(tool("nox").gate!({ args: ["agents", "scan"] }, ctx)).not.toMatchObject({ action: "refuse" });
   });
 
   test("and every other command is everyone's, as before", async () => {

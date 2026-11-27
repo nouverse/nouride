@@ -36,7 +36,9 @@ export const grok: CliRow = {
   experimental: true,
   command: "grok",
   args: ["--no-auto-update", "agent", "stdio"],
-  install: "curl -fsSL https://x.ai/cli/install.sh | bash, then sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok, so every agent's user finds it",
+  install: "nouride agents install grok",
+  // Its installer leaves `~/.grok/bin/grok`, a link to the one file beside it (seen on Linux, 1.0.92).
+  script: { url: "https://x.ai/cli/install.sh", binary: ".grok/bin/grok" },
   // Its own updater off for every command it is started with, its version and its sign-in too.
   versionArgs: ["--no-auto-update", "--version"],
   profileEnv: "GROK_HOME",

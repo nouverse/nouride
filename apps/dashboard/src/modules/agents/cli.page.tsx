@@ -99,7 +99,7 @@ export default function AgentCliPage({ agentId }: { agentId: string }) {
             <div className="space-y-2">
               <p className="text-base-content/70 text-xs">{cliName} is not set up on this server yet.</p>
               {byInstaller(row.install) ? (
-                <AskAgentButton task="to set it up" message={setUpMessage(cliName)} />
+                <AskAgentButton task="to set it up" message={setUpMessage(cliName, row.install)} />
               ) : (
                 <p className="text-base-content/70 text-xs">Whoever runs this server needs to set this up.</p>
               )}

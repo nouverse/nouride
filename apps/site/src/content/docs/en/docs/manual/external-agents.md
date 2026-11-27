@@ -37,21 +37,21 @@ Nouride ships no CLI. Each installs with npm, as its adapter, which carries the 
 | Claude Code | `@agentclientprotocol/claude-agent-acp` | `claude-agent-acp` | Node 22 or later |
 | Codex | `@agentclientprotocol/codex-acp` | `codex-acp` | npm |
 
-The three marked Experimental install with their makers' own scripts, as the user that runs them, and then are put
-where every agent's user finds them:
+The three marked Experimental install with their makers' own scripts. **Set it up** on their cards asks the
+orchestrator, as it does for the two above; by hand it is one command, run as root runs `nouride tools run`:
 
 | CLI | Install | The command Nouride starts |
 |---|---|---|
-| Antigravity | `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, then `sudo install -m 755 ~/.local/bin/agy /usr/local/bin/agy` | `agy acp` |
-| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, then `sudo rm -rf /opt/cursor-agent && sudo cp -r "$(dirname "$(readlink -f ~/.local/bin/agent)")" /opt/cursor-agent && sudo ln -sf /opt/cursor-agent/cursor-agent /usr/local/bin/cursor-agent` | `cursor-agent --disable-auto-update acp` |
-| Grok Build | `curl -fsSL https://x.ai/cli/install.sh \| bash`, then `sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok` | `grok --no-auto-update agent stdio` |
+| Antigravity | `sudo nouride agents install antigravity` | `agy acp` |
+| Cursor CLI | `sudo nouride agents install cursor` | `cursor-agent --disable-auto-update acp` |
+| Grok Build | `sudo nouride agents install grok` | `grok --no-auto-update agent stdio` |
 
-Cursor's installer puts it in your own home folder, which the agents' users cannot read, and names its command `agent`,
-as Grok's does on the same box: so it is copied to `/opt/cursor-agent` and started by a name of its own,
-`cursor-agent`. Their own updaters are kept off: Antigravity's by a setting, Grok's and Cursor's by a switch on every
-command Nouride starts them with (Cursor's switch was read in its code; that it holds at an update was not seen yet).
-Each is updated by running its install again. Nouride does not check their versions against the npm registry, since
-none ships there.
+It runs the maker's installer as the daemon's user, then copies what it installed into `.nouride/opt` and links it into
+`.nouride/bin`, where every agent's user runs it: the installers put the CLI in the home folder of the user that ran
+them, which the agents' users cannot read. Cursor's names its command `agent`, as Grok's does, so Cursor is started by
+a name of its own, `cursor-agent`. Their own updaters are kept off: Antigravity's by a setting, Grok's and Cursor's by a
+switch on every command Nouride starts them with (Cursor's switch was read in its code; that it holds at an update was
+not seen yet). Nouride does not check their versions against the npm registry, since none ships there.
 
 - **Linux**, installed with `install.sh`: `sudo nouride tools run -- npm i -g @agentclientprotocol/claude-agent-acp`
   (or `@agentclientprotocol/codex-acp`). `nouride tools run` runs the installer as the daemon's user, puts the program

@@ -19,6 +19,15 @@ export interface CliRow {
   /** How a person installs it — Nouride ships no CLI. */
   install: string;
   /**
+   * Installed by its maker's own script, not a package: the script's address, and where under the installing
+   * user's HOME it leaves the CLI (`binary`; `folder`: the CLI is the whole folder that file is in, not the file alone).
+   * `nouride agents install <id>` runs it as `nouride tools run` installs, copies the CLI into the install's shared
+   * `opt/<id>` and links it into its `bin` as `command`, where every agent's user runs it: the installers put it in
+   * their own user's HOME, which no agent's user reads, and the card had no Set it up for it. Absent: a package, or a
+   * person's own CLI.
+   */
+  script?: { url: string; binary: string; folder?: true };
+  /**
    * The npm package that carries it (0.8.24): its newest version is read from the registry, and an update installs it.
    * Absent: a person's own CLI, updated the way it was installed.
    */

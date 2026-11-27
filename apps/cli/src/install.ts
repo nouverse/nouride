@@ -24,7 +24,7 @@ export interface Install {
   start(): Promise<void>;
   /** `nouride stop`: signal the running daemon and wait for it to go. */
   stop(): Promise<void>;
-  /** A program installed for every agent, as `nouride tools run` does: what `agents update` installs a coding CLI with. */
+  /** A program installed for every agent, as `nouride tools run` does: what `agents install` and `agents update` install a coding CLI with. */
   installShared: InstallShared;
   setup: Local;
   service: Local;

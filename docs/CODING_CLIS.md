@@ -15,7 +15,9 @@ through Nouride's own gate. Nothing that drives a CLI names one. Everything a CL
    explained there), and add it to the list in `clis/index.ts`. The fields most CLIs need:
    - `command` and `args`: what starts its ACP mode.
    - `install`, and `package` with `tested` where it ships on npm (Nouride then reads its newest version and offers
-     updates); a CLI installed another way leaves `package` out and is updated the way it was installed.
+     updates). A CLI its maker installs with a script of its own gives `script` instead (the script's address, and
+     where under HOME it leaves the CLI), and its `install` is `nouride agents install <id>`: the card's Set it up then
+     asks the orchestrator to run it, as it does an npm one.
    - `profileEnv` and `profileFiles`: the variable that points it at a profile folder (its sign-in and settings), and
      files a new profile starts with, such as the setting that keeps it from updating itself. Absent: its `HOME`.
    - `modes`: Nouride's three presets as the session modes the CLI offers.

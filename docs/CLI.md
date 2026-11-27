@@ -514,11 +514,12 @@ as `config.toml.bak.1`, the agent reloaded, the change in the audit log. `add` p
 relative path is read against where the command runs. Admin only; the agent's Skills tab does the same, and an agent
 asks for one itself with its `skill_root` tool, which an admin answers in the chat at every approval level.
 
-### `nouride agents scan` · `nouride agents login <id>` · `nouride agents update <cli>`
+### `nouride agents scan` · `nouride agents login <id>` · `nouride agents install <cli>` · `nouride agents update <cli>`
 
 ```bash
 nouride agents scan                # the coding CLIs this box has for external agents, and what each runs on — looked at now
 nouride agents login coder         # sign coder's CLI in, on its own profile
+nouride agents install antigravity  # a CLI its maker installs with its own script, for every agent (0.8.49)
 nouride agents update claude-code  # to the newest version out, checked before its agents work
 nouride agents update claude-code 0.95.0   # the way back, after a version failed its check
 ```
@@ -529,6 +530,11 @@ is named by what it runs on (0.8.38), read from the files installed: the CLI's o
 it ("Claude Code 2.1.323, in claude-agent-acp 0.107.0"), then Node against what the adapter asks for, a warning where
 it is under that, and the adapter's other packages. The adapter's version alone said nothing of which models the CLI
 has. On a box whose agents' commands have less than 512 MiB it says so in one line and lists none.
+
+`install` (0.8.49) is for the three CLIs whose makers install them with a script of their own (Antigravity, Cursor,
+Grok Build): it runs that installer as `tools run` runs one, copies the CLI into `.nouride/opt/<cli>` and links it into
+`.nouride/bin`, where every agent's user runs it. An installed one is left as it is. Through the `nouride` tool only
+the orchestrator runs it, as only it runs `tools run`; Set it up on the CLI's card asks it to.
 
 For each built-in CLI that is installed, a second line says where its version stands (0.8.24): against the lowest and
 highest versions of its package this Nouride was tested with, and the newest the npm registry has published, read at

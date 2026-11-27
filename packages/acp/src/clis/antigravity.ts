@@ -14,7 +14,9 @@ export const antigravity: CliRow = {
   experimental: true,
   command: "agy",
   args: ["acp"],
-  install: "curl -fsSL https://antigravity.google/cli/install.sh | bash, then sudo install -m 755 ~/.local/bin/agy /usr/local/bin/agy, so every agent's user finds it",
+  install: "nouride agents install antigravity",
+  // Its installer leaves one file, `~/.local/bin/agy` (seen on Linux, 1.5.18).
+  script: { url: "https://antigravity.google/cli/install.sh", binary: ".local/bin/agy" },
   versionArgs: ["--version"],
   // Its own updater off: it is updated the way it was installed, by running the install again.
   env: { AGY_CLI_DISABLE_AUTO_UPDATE: "true" },

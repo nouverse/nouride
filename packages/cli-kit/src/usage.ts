@@ -143,6 +143,8 @@ ${BOLD}Talking to a running daemon${RESET}
   nouride agents                   List agents and their state
   nouride agents scan              The coding CLIs this box has: what each runs on, its versions, and what is out
   nouride agents login <id>        Sign an external agent's CLI in: run on the box, answered here a line at a time
+  nouride agents install <cli>     A coding CLI its maker installs with its own script (Antigravity, Cursor, Grok
+                                   Build), installed for every agent
   nouride agents update <cli> [<version>]   A coding CLI to the newest version out, tested here or not, or to
                                    <version>; installed as tools run installs, then checked before its agents work
   nouride acp [--agent <id>]       An agent in Zed or another ACP editor: the editor runs this, on this machine

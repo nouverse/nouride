@@ -38,21 +38,22 @@ itu sendiri:
 | Claude Code | `@agentclientprotocol/claude-agent-acp` | `claude-agent-acp` | Node 22 ke atas |
 | Codex | `@agentclientprotocol/codex-acp` | `codex-acp` | npm |
 
-Tiga yang ditandai Experimental di-install dengan skrip pembuatnya sendiri, sebagai user yang menjalankannya, lalu
-ditaruh di tempat yang ditemukan user setiap agent:
+Tiga yang ditandai Experimental di-install dengan skrip pembuatnya sendiri. **Set it up** di kartunya meminta
+orkestrator, sama seperti dua di atas; kalau manual cukup satu perintah, dijalankan root seperti `nouride tools run`:
 
 | CLI | Install | Perintah yang dijalankan Nouride |
 |---|---|---|
-| Antigravity | `curl -fsSL https://antigravity.google/cli/install.sh \| bash`, lalu `sudo install -m 755 ~/.local/bin/agy /usr/local/bin/agy` | `agy acp` |
-| Cursor CLI | `curl https://cursor.com/install -fsS \| bash`, lalu `sudo rm -rf /opt/cursor-agent && sudo cp -r "$(dirname "$(readlink -f ~/.local/bin/agent)")" /opt/cursor-agent && sudo ln -sf /opt/cursor-agent/cursor-agent /usr/local/bin/cursor-agent` | `cursor-agent --disable-auto-update acp` |
-| Grok Build | `curl -fsSL https://x.ai/cli/install.sh \| bash`, lalu `sudo install -m 755 ~/.grok/bin/grok /usr/local/bin/grok` | `grok --no-auto-update agent stdio` |
+| Antigravity | `sudo nouride agents install antigravity` | `agy acp` |
+| Cursor CLI | `sudo nouride agents install cursor` | `cursor-agent --disable-auto-update acp` |
+| Grok Build | `sudo nouride agents install grok` | `grok --no-auto-update agent stdio` |
 
-Installer Cursor menaruhnya di folder home kamu sendiri, yang gak bisa dibaca user para agent, dan menamai perintahnya
-`agent`, sama seperti installer Grok di box yang sama: jadi dia disalin ke `/opt/cursor-agent` dan dijalankan dengan
-nama sendiri, `cursor-agent`. Updater bawaan mereka dimatikan: milik Antigravity lewat sebuah setelan, milik Grok dan
-Cursor lewat sebuah switch di setiap perintah yang dijalankan Nouride (switch Cursor dibaca dari kodenya; bahwa dia
-bertahan saat ada update belum terlihat). Masing-masing di-update dengan menjalankan install-nya lagi. Nouride gak
-mengecek versinya ke registry npm, karena gak ada yang rilis di sana.
+Perintah itu menjalankan installer pembuatnya sebagai user daemon, lalu menyalin hasilnya ke `.nouride/opt` dan
+menautkannya ke `.nouride/bin`, tempat user setiap agent menjalankannya: installer-nya menaruh CLI di folder home user
+yang menjalankannya, yang gak bisa dibaca user para agent. Installer Cursor menamai perintahnya `agent`, sama seperti
+installer Grok, jadi Cursor dijalankan dengan nama sendiri, `cursor-agent`. Updater bawaan mereka dimatikan: milik
+Antigravity lewat sebuah setelan, milik Grok dan Cursor lewat sebuah switch di setiap perintah yang dijalankan Nouride
+(switch Cursor dibaca dari kodenya; bahwa dia bertahan saat ada update belum terlihat). Nouride gak mengecek versinya ke
+registry npm, karena gak ada yang rilis di sana.
 
 - **Linux**, yang di-install pakai `install.sh`: `sudo nouride tools run -- npm i -g @agentclientprotocol/claude-agent-acp`
   (atau `@agentclientprotocol/codex-acp`). `nouride tools run` menjalankan installer sebagai user daemon, menaruh

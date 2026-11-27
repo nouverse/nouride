@@ -139,7 +139,7 @@ function CliCard({ cli, admin, onChanged, onRecheck }: { cli: CliAccountsView; a
             {/* The orchestrator installs with a package manager, as `tools run` does; one that installs otherwise is for
                 whoever runs the server, and the page says so rather than asking for what cannot be done. */}
             {byInstaller(cli.install) ? (
-              <AskAgentButton task="to set it up" message={setUpMessage(cli.name)} />
+              <AskAgentButton task="to set it up" message={setUpMessage(cli.name, cli.install)} />
             ) : (
               <p className="text-base-content/70 text-xs">Whoever runs this server needs to set this up.</p>
             )}

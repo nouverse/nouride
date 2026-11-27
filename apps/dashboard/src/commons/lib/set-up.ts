@@ -4,10 +4,11 @@
  */
 
 /**
- * An install the orchestrator can run for you: a package manager's, as `nouride tools run` takes (`cli/commands/tools.ts`).
- * One a person added that installs some other way it cannot, and the page says who can instead.
+ * An install the orchestrator can run for you: a package manager's, as `nouride tools run` takes (`cli/commands/tools.ts`),
+ * or `nouride agents install`, for a built-in CLI its maker installs with its own script. One a person added
+ * that installs some other way it cannot, and the page says who can instead.
  */
-export const byInstaller = (install: string): boolean => /^(npm|bun|pipx|uv|pip3?|cargo|go|rustup) /.test(install);
+export const byInstaller = (install: string): boolean => /^(npm|bun|pipx|uv|pip3?|cargo|go|rustup|nouride agents install) /.test(install);
 
 /**
  * A coding CLI updated to the newest version this Nouride was tested with, or put back to the version before a failed
@@ -20,6 +21,11 @@ export const updateMessage = (name: string, cli: string): string =>
 export const goBackMessage = (name: string, cli: string, version: string): string =>
   `Please put ${name} on this server back to ${version} with \`nouride agents update ${cli} ${version}\`, and tell me how it went.`; // plain-words-ok: the agent is told the command to run
 
-/** What the orchestrator is asked, for the person to read and send. */
-export const setUpMessage = (name: string): string =>
-  `Please install ${name} on this server, with what Nouride needs to use it as an agent (its ACP adapter), and tell me when it is ready to sign in.`; // plain-words-ok: the agent is told what to install, in the words it knows
+/**
+ * What the orchestrator is asked, for the person to read and send: by the command that installs it where Nouride has
+ * one, else what to install.
+ */
+export const setUpMessage = (name: string, install: string): string =>
+  install.startsWith("nouride ")
+    ? `Please install ${name} on this server with \`${install}\`, and tell me when it is ready to sign in.` // plain-words-ok: the agent is told the command to run
+    : `Please install ${name} on this server, with what Nouride needs to use it as an agent (its ACP adapter), and tell me when it is ready to sign in.`; // plain-words-ok: the agent is told what to install, in the words it knows

@@ -151,6 +151,7 @@ nouride chat [agent]              # interactive chat, no bot token needed
 nouride agents                    # list: waiting for you, working, asleep or idle
 nouride agents scan               # the coding CLIs this box has for external agents, and what each runs on
 nouride agents login <id>         # sign an external agent's CLI in: run on the box, answered here
+nouride agents install <cli>      # Antigravity, Cursor or Grok Build, by its maker's own installer, for every agent
 nouride agents update <cli> [<version>]   # to the newest version out, or to <version>
 nouride agent sleep <id>          # takes no work until wake, through a restart too (pause works too)
 nouride agent wake  <id>          # (resume works too)
